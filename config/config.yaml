@@ -1,0 +1,2 @@
+fq_dir: "/nfs/neurocluster/sequencers/foetalRNAseq/240925_A00748_0596_AHL5JFDSXC_fastq"
+MERGE_FQ_JSON: "../config/samples.json" 

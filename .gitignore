@@ -1,0 +1,11 @@
+.DS_Store
+resources/
+results/.DS_Store
+results/02PARSE/.DS_Store
+results/02PARSE/
+results/02PARSE/combine/
+results/02PARSE/combine/.DS_Store
+results/02PARSE/combine/all-sample/.DS_Store
+results/02PARSE/combine/all-sample/DGE_filtered/count_matrix.mtx
+results/02PARSE/combine/all-sample/report/tscp_counts.csv
+workflow/.DS_Store
