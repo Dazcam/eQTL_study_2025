@@ -72,10 +72,10 @@ rule run_parse:
              split-pipe \
                --mode all \
                --kit WT_mega \
-               --chemistry v1 \
+               --chemistry v2 \
                --genome_dir {params.refdir} \
                --fq1 {input.r1} \
-               --fq2 {input.r1} \
+               --fq2 {input.r2} \
                --samp_list ../config/sample-list.txt \
                --output_dir ../results/02PARSE/{wildcards.sample} 2> {log}
               """
@@ -91,7 +91,7 @@ rule run_parse_combine:
         """
         split-pipe \
         --mode comb \
-        ../results/02PARSE/2 \
+        --sublibraries ../results/02PARSE/2 \
         ../results/02PARSE/3 \
         ../results/02PARSE/4 \
         ../results/02PARSE/5 \
