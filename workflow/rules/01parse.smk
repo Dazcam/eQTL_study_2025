@@ -48,8 +48,7 @@ rule cat_fqs:
             r2 = "../results/01MRGD_fqs/{sample}_R2.fastq.gz"
     log:    r1 = "../results/00LOG/01MRGD_fqs/{sample}_R1.log",
             r2 = "../results/00LOG/01MRGD_fqs/{sample}_R2.log"
-    params: indir = config['fq_dir'], 
-            outdir = "../results/01MRGD_fqs/"
+    params: outdir = "../results/01MRGD_fqs/"
 #    priority: 10
     shell:
         """
@@ -83,7 +82,7 @@ rule run_parse:
 rule run_parse_combine:
     input:  expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
     output: "../results/02PARSE/combine/run.done"
-    conda: "../envs/Parse.yml"
+    conda: "../envs/parse.yml"
     resources: threads = 16, mem_mb = 128000, time="1-0:00:00"
     message: "Combining Parse for fastq files"
     log:     "../results/00LOG/02parse/run_parse_combine.log"
