@@ -1,0 +1,609 @@
+################################################################################
+# Program                   split-pipe v1.3.1
+# Run date                  2024-11-08 05:28:51.690755+0
+# Run on                    ccs9034 (x86_64 Linux) by c.c1477909
+# System                    376.4G (404109557760) RAM and 40 CPUs
+# PID                       115861
+################################################################################
+#
+#                ------ >>> Command line <<< -----------------
+#
+/scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/split-pipe \
+--mode all \
+--reuse \
+--kit WT_mega \
+--chemistry v2 \
+--genome_dir ../resources/refs/hg38 \
+--fq1 ../results/01MRGD_fqs/16_plate1_R1.fastq.gz \
+--fq2 ../results/01MRGD_fqs/16_plate1_R2.fastq.gz \
+--samp_list ../config/sample-list_plate1.txt \
+--output_dir ../results/02PARSE/16_plate1
+#
+#                ------ >>> Initialization messages <<< ------
+#
+# Current python version 3.10.0 >= min version v3.10
+# Mode 'all'; Not using any prior run process definitions
+# Setting threads to 32 (ncpu=40, initial nthreads=0 limited to 32) (init threads)
+# Set bc_amp_seq for chemistry v2 (set chem defaults)
+# Kit set to WT_mega, given (init kit)
+# WARNING: Cleaned sample name '17671' >--> 'sample_17671'
+# WARNING: Cleaned sample name '17754' >--> 'sample_17754'
+# WARNING: Cleaned sample name '17756' >--> 'sample_17756'
+# WARNING: Cleaned sample name '17812' >--> 'sample_17812'
+# WARNING: Cleaned sample name '17936' >--> 'sample_17936'
+# WARNING: Cleaned sample name '18121' >--> 'sample_18121'
+# WARNING: Cleaned sample name '19043' >--> 'sample_19043'
+# WARNING: Cleaned sample name '14501' >--> 'sample_14501'
+# WARNING: Cleaned sample name '14812' >--> 'sample_14812'
+# WARNING: Cleaned sample name '14862' >--> 'sample_14862'
+# WARNING: Cleaned sample name '17940' >--> 'sample_17940'
+# WARNING: Cleaned sample name '15237' >--> 'sample_15237'
+# WARNING: Cleaned sample name '15091' >--> 'sample_15091'
+# WARNING: Cleaned sample name '15135' >--> 'sample_15135'
+# WARNING: Cleaned sample name '15070' >--> 'sample_15070'
+# WARNING: Cleaned sample name '14521' >--> 'sample_14521'
+# WARNING: Cleaned sample name '14524' >--> 'sample_14524'
+# WARNING: Cleaned sample name '14619' >--> 'sample_14619'
+# WARNING: Cleaned sample name '16972' >--> 'sample_16972'
+# WARNING: Cleaned sample name '12034' >--> 'sample_12034'
+# WARNING: Cleaned sample name '12036' >--> 'sample_12036'
+# WARNING: Cleaned sample name '17162' >--> 'sample_17162'
+# WARNING: Cleaned sample name '17486' >--> 'sample_17486'
+# WARNING: Cleaned sample name '17923' >--> 'sample_17923'
+# WARNING: Cleaned sample name '18048' >--> 'sample_18048'
+# WARNING: Cleaned sample name '11449' >--> 'sample_11449'
+# WARNING: Cleaned sample name '12047' >--> 'sample_12047'
+# WARNING: Cleaned sample name '11875' >--> 'sample_11875'
+# WARNING: Cleaned sample name '14746' >--> 'sample_14746'
+# WARNING: Cleaned sample name '17048' >--> 'sample_17048'
+# WARNING: Cleaned sample name '17053' >--> 'sample_17053'
+# WARNING: Cleaned sample name '18372' >--> 'sample_18372'
+# WARNING: Cleaned sample name '17921' >--> 'sample_17921'
+# WARNING: Cleaned sample name '12570' >--> 'sample_12570'
+# WARNING: Cleaned sample name '11511' >--> 'sample_11511'
+# WARNING: Cleaned sample name '15611' >--> 'sample_15611'
+# WARNING: Cleaned sample name '13142' >--> 'sample_13142'
+# WARNING: Cleaned sample name '12993' >--> 'sample_12993'
+# WARNING: Cleaned sample name '13117' >--> 'sample_13117'
+# WARNING: Cleaned sample name '11396' >--> 'sample_11396'
+# WARNING: Cleaned sample name '11654' >--> 'sample_11654'
+# WARNING: Cleaned sample name '11928' >--> 'sample_11928'
+# WARNING: Cleaned sample name '12152' >--> 'sample_12152'
+# WARNING: Cleaned sample name '14473' >--> 'sample_14473'
+# WARNING: Cleaned sample name '14402' >--> 'sample_14402'
+# WARNING: Cleaned sample name '14404' >--> 'sample_14404'
+# WARNING: Cleaned sample name '15626' >--> 'sample_15626'
+# WARNING: Cleaned sample name '17071' >--> 'sample_17071'
+# WARNING: Cleaned sample name '17072' >--> 'sample_17072'
+# WARNING: Cleaned sample name '17086' >--> 'sample_17086'
+# WARNING: Cleaned sample name '17109' >--> 'sample_17109'
+# WARNING: Cleaned sample name '17160' >--> 'sample_17160'
+# WARNING: Cleaned sample name '17167' >--> 'sample_17167'
+# WARNING: Cleaned sample name '17175' >--> 'sample_17175'
+# WARNING: Cleaned sample name '17198' >--> 'sample_17198'
+# WARNING: Cleaned sample name '17264' >--> 'sample_17264'
+# WARNING: Cleaned sample name '17369' >--> 'sample_17369'
+# WARNING: Cleaned sample name '17629' >--> 'sample_17629'
+# WARNING: Cleaned sample name '17630' >--> 'sample_17630'
+# Set 96 samples, from list ../config/sample-list_plate1.txt (init sample_list)
+# Set run_name 16_plate1 (init run_name)
+# Use_case behavior set to normal (init use_case)
+# Setting up run-time env; Use_case normal, Mode all, Kit WT_mega Chem v2
+# Checking run env (conda); timeout 30
+# Checking called executables; timeout 30
+# Version info: 2.7.11b /scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/STAR
+# Version info: samtools 1.21 /scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/samtools
+# WARNING: 'fastqc' command not found; May need to install
+# WARNING: 'fastqc' is optional; Will skip use
+# Version info:  which: no fastqc in (/scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin:/apps/languages/miniforge3/24.3.0-0/condabin:/apps/languages/miniforge3/24.3.0-0/bin:/apps/genomics/magma/1.08/el7/AVX512/intel-2019/serial/magma-1.08:/scratch/c.c1477909/fetal_brain_snATACseq_V3_010323/resources/cellranger/cellranger-atac-2.1.0:/scratch/c.c1477909/cellRanger/cellranger-5.0.1:/usr/lib64/qt-3.3/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/slurm/23.02.7/el7/bin:/opt/slurm/23.02.7/el7/sbin:/scratch/c.c1477909/fetal_brain_snATACseq_V1_070222/resources/homer/bin:/scratch/c.c1477909/fetal_brain_imprinting_290422/resources/ASElux/bin)
+# Version info: gzip 1.5 /usr/bin/gzip
+# Version info: pigz 2.8 /scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/pigz
+# Version info: UnZip 6.00 of 20 April 2009, by Info-ZIP.  Maintained by C. Spieler.  Send /scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/unzip
+# Scoring fastq data against 3 kits, chemistry v2
+# Sampling 1000000 R2 reads (from 100000 to 1100000)
+#   WT_mini (n24_v4) = 0.12
+#   WT (n99_v5) = 0.481
+#   WT_mega (n198_v5) = 0.888
+# Best scoring kit = WT_mega, 0.888
+#2 Given and guessed kit match: WT_mega
+# Set barcodes for kit WT_mega chemistry v2 (set kit defaults)
+# Set dge_cell_max for kit WT_mega chemistry v2 (set kit defaults)
+# Set comb_max_sublibs for kit WT_mega (set kit defaults)
+# Genome ../resources/refs/hg38 version 1.3.1 >= min v1.3.0
+# Setting up genome files
+# Copy ../resources/refs/hg38/all_genes.csv to ../results/02PARSE/16_plate1/process/all_genes.csv
+# Setting up samples
+# Added 'all-sample' sample; ['all-sample', '14493_FC,14493_Thal,14493_WGE,sample_17671,sample_17754,sample_17756,sample_17812,sample_17936,sample_18121,sample_19043,sample_14501,sample_14812,sample_14862,sample_17940,sample_15237,14510_FC,14510_Hipp,14510_Thal,sample_15091,sample_15135,sample_15070,sample_14521,sample_14524,sample_14619,sample_16972,sample_12034,sample_12036,sample_17162,sample_17486,sample_17923,14611_FC,16114_FC,16114_Hipp,16114_Thal,16114_WGE,sample_18048,17804_Hipp,17804_Thal,17804_WGE,sample_11449,sample_12047,sample_11875,sample_14746,sample_17048,sample_17053,sample_18372,sample_17921,sample_12570,sample_11511,sample_15611,sample_13142,17809_FC,17809_Thal,17809_WGE,13008_A,sample_12993,sample_13117,sample_11396,sample_11654,sample_11928,sample_12152,sample_14473,sample_14402,sample_14404,sample_15626,sample_17071,17883_FC,17883_Hipp,17883_Thal,17883_WGE,12972_FC,12972_Hipp,12971_FC,13823_FC,14483_FC,sample_17072,sample_17086,sample_17109,sample_17160,sample_17167,sample_17175,18184_FC,18184_Thal,18184_WGE,sample_17198,sample_17264,sample_17369,sample_17629,sample_17630,18190_FC,18190_Thal,18190_WGE,18351_FC,18351_Hipp,18351_Thal,18351_WGE']
+# Set up 97 samples
+# Opening log ../results/02PARSE/16_plate1/split-pipe_v1_3_1.log (bumped 2 prior version(s))
+#
+#                ------ >>> Parameter settings <<< -----------
+#
+# use_case                  normal
+# mode                      all
+# chemistry                 v2
+# kit                       WT_mega	(96 wells)
+# kit_source                given
+# parfile                   <Not set>
+# logfile                   ../results/02PARSE/16_plate1/split-pipe_v1_3_1.log
+# run_name                  16_plate1	(automatic)
+# input_dir                 <Not set>
+# output_dir                ../results/02PARSE/16_plate1/
+# parent_dir                <Not set>
+# fq1                       ../results/01MRGD_fqs/16_plate1_R1.fastq.gz
+# fq2                       ../results/01MRGD_fqs/16_plate1_R2.fastq.gz
+# sublib_list               <Not set>
+# sublib_pref               <Not set>
+# sublib_suff               <Not set>
+# sublibraries              <Not set>
+# samp_list                 ../config/sample-list_plate1.txt
+# samp_sltab                <Not set>
+# sample                    Item_1_of_97	['14493_FC', 'A1 (1)']
+# sample                    Item_2_of_97	['14493_Thal', 'A2 (1)']
+# sample                    Item_3_of_97	['14493_WGE', 'A3 (1)']
+# sample                    Item_4_of_97	['sample_17671', 'A4 (1)']
+# sample                    Item_5_of_97	['sample_17754', 'A5 (1)']
+# sample                    Item_6_of_97	['sample_17756', 'A6 (1)']
+# sample                    Item_7_of_97	['sample_17812', 'A7 (1)']
+# sample                    Item_8_of_97	['sample_17936', 'A8 (1)']
+# sample                    Item_9_of_97	['sample_18121', 'A9 (1)']
+# sample                    Item_10_of_97	['sample_19043', 'A10 (1)']
+# sample                    Item_11_of_97	['sample_14501', 'A11 (1)']
+# sample                    Item_12_of_97	['sample_14812', 'A12 (1)']
+# sample                    Item_13_of_97	['sample_14862', 'B1 (1)']
+# sample                    Item_14_of_97	['sample_17940', 'B2 (1)']
+# sample                    Item_15_of_97	['sample_15237', 'B3 (1)']
+# sample                    Item_16_of_97	['14510_FC', 'B4 (1)']
+# sample                    Item_17_of_97	['14510_Hipp', 'B5 (1)']
+# sample                    Item_18_of_97	['14510_Thal', 'B6 (1)']
+# sample                    Item_19_of_97	['sample_15091', 'B7 (1)']
+# sample                    Item_20_of_97	['sample_15135', 'B8 (1)']
+# sample                    Item_21_of_97	['sample_15070', 'B9 (1)']
+# sample                    Item_22_of_97	['sample_14521', 'B10 (1)']
+# sample                    Item_23_of_97	['sample_14524', 'B11 (1)']
+# sample                    Item_24_of_97	['sample_14619', 'B12 (1)']
+# sample                    Item_25_of_97	['sample_16972', 'C1 (1)']
+# sample                    Item_26_of_97	['sample_12034', 'C2 (1)']
+# sample                    Item_27_of_97	['sample_12036', 'C3 (1)']
+# sample                    Item_28_of_97	['sample_17162', 'C4 (1)']
+# sample                    Item_29_of_97	['sample_17486', 'C5 (1)']
+# sample                    Item_30_of_97	['sample_17923', 'C6 (1)']
+# sample                    Item_31_of_97	['14611_FC', 'C7 (1)']
+# sample                    Item_32_of_97	['16114_FC', 'C8 (1)']
+# sample                    Item_33_of_97	['16114_Hipp', 'C9 (1)']
+# sample                    Item_34_of_97	['16114_Thal', 'C10 (1)']
+# sample                    Item_35_of_97	['16114_WGE', 'C11 (1)']
+# sample                    Item_36_of_97	['sample_18048', 'C12 (1)']
+# sample                    Item_37_of_97	['17804_Hipp', 'D1 (1)']
+# sample                    Item_38_of_97	['17804_Thal', 'D2 (1)']
+# sample                    Item_39_of_97	['17804_WGE', 'D3 (1)']
+# sample                    Item_40_of_97	['sample_11449', 'D4 (1)']
+# sample                    Item_41_of_97	['sample_12047', 'D5 (1)']
+# sample                    Item_42_of_97	['sample_11875', 'D6 (1)']
+# sample                    Item_43_of_97	['sample_14746', 'D7 (1)']
+# sample                    Item_44_of_97	['sample_17048', 'D8 (1)']
+# sample                    Item_45_of_97	['sample_17053', 'D9 (1)']
+# sample                    Item_46_of_97	['sample_18372', 'D10 (1)']
+# sample                    Item_47_of_97	['sample_17921', 'D11 (1)']
+# sample                    Item_48_of_97	['sample_12570', 'D12 (1)']
+# sample                    Item_49_of_97	['sample_11511', 'E1 (1)']
+# sample                    Item_50_of_97	['sample_15611', 'E2 (1)']
+# sample                    Item_51_of_97	['sample_13142', 'E3 (1)']
+# sample                    Item_52_of_97	['17809_FC', 'E4 (1)']
+# sample                    Item_53_of_97	['17809_Thal', 'E5 (1)']
+# sample                    Item_54_of_97	['17809_WGE', 'E6 (1)']
+# sample                    Item_55_of_97	['13008_A', 'E7 (1)']
+# sample                    Item_56_of_97	['sample_12993', 'E8 (1)']
+# sample                    Item_57_of_97	['sample_13117', 'E9 (1)']
+# sample                    Item_58_of_97	['sample_11396', 'E10 (1)']
+# sample                    Item_59_of_97	['sample_11654', 'E11 (1)']
+# sample                    Item_60_of_97	['sample_11928', 'E12 (1)']
+# sample                    Item_61_of_97	['sample_12152', 'F1 (1)']
+# sample                    Item_62_of_97	['sample_14473', 'F2 (1)']
+# sample                    Item_63_of_97	['sample_14402', 'F3 (1)']
+# sample                    Item_64_of_97	['sample_14404', 'F4 (1)']
+# sample                    Item_65_of_97	['sample_15626', 'F5 (1)']
+# sample                    Item_66_of_97	['sample_17071', 'F6 (1)']
+# sample                    Item_67_of_97	['17883_FC', 'F7 (1)']
+# sample                    Item_68_of_97	['17883_Hipp', 'F8 (1)']
+# sample                    Item_69_of_97	['17883_Thal', 'F9 (1)']
+# sample                    Item_70_of_97	['17883_WGE', 'F10 (1)']
+# sample                    Item_71_of_97	['12972_FC', 'F11 (1)']
+# sample                    Item_72_of_97	['12972_Hipp', 'F12 (1)']
+# sample                    Item_73_of_97	['12971_FC', 'G1 (1)']
+# sample                    Item_74_of_97	['13823_FC', 'G2 (1)']
+# sample                    Item_75_of_97	['14483_FC', 'G3 (1)']
+# sample                    Item_76_of_97	['sample_17072', 'G4 (1)']
+# sample                    Item_77_of_97	['sample_17086', 'G5 (1)']
+# sample                    Item_78_of_97	['sample_17109', 'G6 (1)']
+# sample                    Item_79_of_97	['sample_17160', 'G7 (1)']
+# sample                    Item_80_of_97	['sample_17167', 'G8 (1)']
+# sample                    Item_81_of_97	['sample_17175', 'G9 (1)']
+# sample                    Item_82_of_97	['18184_FC', 'G10 (1)']
+# sample                    Item_83_of_97	['18184_Thal', 'G11 (1)']
+# sample                    Item_84_of_97	['18184_WGE', 'G12 (1)']
+# sample                    Item_85_of_97	['sample_17198', 'H1 (1)']
+# sample                    Item_86_of_97	['sample_17264', 'H2 (1)']
+# sample                    Item_87_of_97	['sample_17369', 'H3 (1)']
+# sample                    Item_88_of_97	['sample_17629', 'H4 (1)']
+# sample                    Item_89_of_97	['sample_17630', 'H5 (1)']
+# sample                    Item_90_of_97	['18190_FC', 'H6 (1)']
+# sample                    Item_91_of_97	['18190_Thal', 'H7 (1)']
+# sample                    Item_92_of_97	['18190_WGE', 'H8 (1)']
+# sample                    Item_93_of_97	['18351_FC', 'H9 (1)']
+# sample                    Item_94_of_97	['18351_Hipp', 'H10 (1)']
+# sample                    Item_95_of_97	['18351_Thal', 'H11 (1)']
+# sample                    Item_96_of_97	['18351_WGE', 'H12 (1)']
+# sample                    Item_97_of_97	['all-sample', 'A1:H12 (96)', ['14493_FC', '14493_Thal', '14493_WGE', 'sample_17671', 'sample_17754', 'sample_17756', 'sample_17812', 'sample_17936', 'sample_18121', 'sample_19043', 'sample_14501', 'sample_14812', 'sample_14862', 'sample_17940', 'sample_15237', '14510_FC', '14510_Hipp', '14510_Thal', 'sample_15091', 'sample_15135', 'sample_15070', 'sample_14521', 'sample_14524', 'sample_14619', 'sample_16972', 'sample_12034', 'sample_12036', 'sample_17162', 'sample_17486', 'sample_17923', '14611_FC', '16114_FC', '16114_Hipp', '16114_Thal', '16114_WGE', 'sample_18048', '17804_Hipp', '17804_Thal', '17804_WGE', 'sample_11449', 'sample_12047', 'sample_11875', 'sample_14746', 'sample_17048', 'sample_17053', 'sample_18372', 'sample_17921', 'sample_12570', 'sample_11511', 'sample_15611', 'sample_13142', '17809_FC', '17809_Thal', '17809_WGE', '13008_A', 'sample_12993', 'sample_13117', 'sample_11396', 'sample_11654', 'sample_11928', 'sample_12152', 'sample_14473', 'sample_14402', 'sample_14404', 'sample_15626', 'sample_17071', '17883_FC', '17883_Hipp', '17883_Thal', '17883_WGE', '12972_FC', '12972_Hipp', '12971_FC', '13823_FC', '14483_FC', 'sample_17072', 'sample_17086', 'sample_17109', 'sample_17160', 'sample_17167', 'sample_17175', '18184_FC', '18184_Thal', '18184_WGE', 'sample_17198', 'sample_17264', 'sample_17369', 'sample_17629', 'sample_17630', '18190_FC', '18190_Thal', '18190_WGE', '18351_FC', '18351_Hipp', '18351_Thal', '18351_WGE']]
+# genome_dir                ../resources/refs/hg38/
+# genome_name               <Not set>
+# genes                     <Not set>
+# fasta                     <Not set>
+# gfasta                    <Not set>
+# targeted_list             <Not set>
+# genome_min_version        v1.3.0
+# parent_min_version        v1.3.0
+# python_min_version        v3.10
+# nthreads                  32	(automatic)
+# max_threads               32
+# rseed                     42
+# reuse                     True
+# make_allwell              False
+# make_allsample            True
+# samp_wells_unique         True
+# keep_going                True
+# keep_temps                False
+# no_compress               False
+# gzip_compresslevel        4
+# log_memory_use            True
+# one_step                  False
+# until_step                <Not set>
+# start_timeout             30
+# bc_save_data_clean        True
+# bc_amp_seq                NNNNNNNNNN33333333GTGGCCGATGTTTCGCATCGGCGTACGACT22222222ATCCACGTGCTTGAGACTGTGG11111111
+# bc_round_set              Item_1_of_3	['bc1', 'n198_v5', '198 barcodes,  96 wells; rows A-H, cols 1-12']
+# bc_round_set              Item_2_of_3	['bc2', 'v1', ' 96 barcodes,  96 wells; rows A-H, cols 1-12']
+# bc_round_set              Item_3_of_3	['bc3', 'v1', ' 96 barcodes,  96 wells; rows A-H, cols 1-12']
+# bc_edit_dist              2
+# kit_score_warn            0.7
+# kit_score_min             0.1
+# kit_score_remain_frac     0.2
+# kit_score_skip            False
+# tso_seq                   AACGCAGAGTGAATGGG
+# tso_read_limit            15
+# fastq_samp_slice          [100000, 1100000]
+# mkref_id_for_no_name      True
+# mkref_gtf_guess_min       1
+# mkref_min_genes           1
+# mkref_min_exons           1
+# mkref_max_gtf_not_fas     0
+# mkref_gtf_dict_stepsize   10000
+# mkref_star_splicing       True
+# mkref_star_genomesaindexnbases 14
+# mkref_star_genomesasparsed 2
+# mkref_star_limitgenomegenerateram 24000000000
+# mkref_star_extra_args     <Not set>
+# tcr_analysis              False
+# bcr_analysis              False
+# immune_genome             <Not set>
+# immune_use_imgt_db        False
+# immune_kmer               21
+# immune_read_thresh        2
+# immune_trim               <Not set>
+# focal_barcoding           False
+# crsp_analysis             False
+# crsp_guides               <Not set>
+# crsp_use_star             False
+# crsp_guide_offset         0
+# crsp_pref_samp_len        10
+# crsp_match_hamming_dist   1
+# inqc_fastqc_run           True
+# inqc_fastqc_show_warn     False
+# inqc_min_reads            100000
+# inqc_min_good_r1len_frac  0.5
+# inqc_min_good_r2len_frac  0.9
+# inqc_min_perf_frac        0.3
+# inqc_warn_perf_frac       0.5
+# pre_min_r1_len            45
+# pre_check_name_match      True
+# pre_check_name_r1r2       True
+# pre_name_mismatch_stop    1
+# pre_head_keep_seq_index   True
+# pre_head_regex            @(\S+)\s+([12])\S*:(\S*)$
+# pre_perfect_bc_cell_thresh 0.92
+# pre_keep_no_bc_fq         False
+# align_min_start_reads     50000
+# align_star_outfiltermultimapnmax 3
+# align_star_keep_no_map    False
+# align_star_extra_args     <Not set>
+# post_warn_map_frac        0.33
+# post_min_map_frac         0.1
+# post_samtools_extra_args  <Not set>
+# mol_min_mapq_score        255
+# mol_samtools_extra_args   <Not set>
+# dge_min_start_tscp        10000
+# dge_copy_dge_genes_file   True
+# dge_save_express_gene_file True
+# dge_ssc_xstep_size        1000
+# dge_ssc_xstep_ndup        5
+# dge_species_purity_thresh 0.9
+# dge_tscp_cut_given        <Not set>
+# dge_tscp_cut_min          30
+# dge_tscp_cut_max          <Not set>
+# dge_tscp_cut_scale_fac    1.0
+# dge_cell_est              <Not set>
+# dge_cell_given            <Not set>
+# dge_cell_gxfold           3
+# dge_cell_min              10
+# dge_cell_auc_min          0.4
+# dge_cell_max              150000
+# dge_cell_scale_by_frac    True
+# dge_cell_hard_min         5
+# dge_cell_list             <Not set>
+# dge_gene_cell_min         3
+# dge_tscp_cut_umin         10
+# dge_gene_cell_umin        1
+# dge_tscp_cut_targeted_min 15
+# dge_tscp_cut_targeted_umin 5
+# dge_gene_cell_targeted_min 2
+# dge_tscp_read_min         1
+# dge_gene_tscp_min         1
+# dge_tscp_read_fb_min      1
+# dge_gene_tscp_fb_min      1
+# dge_gene_tscp_fb_umin     1
+# dge_tscp_read_fb_umin     1
+# comb_new_tscp             False
+# comb_unfilt_dge           True
+# comb_max_sublibs          16
+# ana_scanpy_verbosity      <Not set>
+# ana_save_anndata          True
+# ana_mem_eff_cell_thresh   100000
+# ana_norm_target_sum       10000
+# ana_scale_max_value       10
+# ana_scale_zero_center     True
+# ana_pca_min_hvar          100
+# ana_pca_dim_max           50
+# ana_pca_dim_min           10
+# ana_pca_dim_targeted_max  10
+# ana_pca_irlbpy            True
+# ana_cluster_min_bc        30
+# ana_cluster_1base         True
+# ana_save_umap             True
+# ana_umap_n_neighbors      50
+# ana_umap_min_dist         0.5
+# ana_cluster_alg           leiden
+# ana_ctab_top_n            20
+# ana_ctab_sco_min_den      0.01
+# ana_gene_cell_min         3
+# rep_save_figs             True
+# rep_plate_min_zero        True
+# rep_umap_subsamp          15000
+# rep_umap_ss_clus_min      10
+# rep_umap_norm_fac         10000.0
+# rep_umap_fb_zero_nc       True
+# rep_gene_def_url          https://www.ncbi.nlm.nih.gov/gene/?term={gene_id}
+# rep_gene_url              <Not set>
+# rep_alt_sty_fmt           False
+# clean_per_step            False
+# clean_make_summaries_zip  True
+# map_targ_genome_dir_path  map_targs
+# map_targ                  <Not set>
+# map_targ_kmer_len         30
+# map_targ_kmer_step        1
+# map_targ_kmer_search_max  41
+# map_targ_kmer_search_step 10
+#
+#                ------ >>> Run details <<< ------------------
+#
+# Run_plan step_1_of_9	InQC
+# Run_plan step_2_of_9	PreProcess
+# Run_plan step_3_of_9	Align
+# Run_plan step_4_of_9	PostProcess
+# Run_plan step_5_of_9	Molinfo
+# Run_plan step_6_of_9	DGE
+# Run_plan step_7_of_9	Analysis
+# Run_plan step_8_of_9	Report
+# Run_plan step_9_of_9	Clean
+#
+# Genome_specs mkref version split-pipe v1.3.1
+# Genome_specs mkref date   2024-10-23
+# Genome_specs genome_dir   ../resources/refs/hg38
+# Genome_specs number_genes hg38  78932
+# Genome_specs in_fasta     hg38  ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+# Genome_specs in_gtf       hg38  ../resources/refs/Homo_sapiens.GRCh38.113.gtf.gz
+#
+# Kit_score Processing:     Score kit barcodes
+# Kit_score Given kit:      WT_mega
+# Kit_score Total screened: 3
+# Kit_score Score WT_mini (n24_v4)         = 0.12
+# Kit_score Score WT (n99_v5)              = 0.481
+# Kit_score Score WT_mega (n198_v5)        = 0.888    <---- using
+#
+############################  Plate sample layout  ############################
+# Plate_samples            1   2   3   4   5   6   7   8   9  10  11  12
+# Plate_samples    Wells                                                
+# Plate_samples    A       1   2   3   4   5   6   7   8   9  10  11  12
+# Plate_samples    B      13  14  15  16  17  18  19  20  21  22  23  24
+# Plate_samples    C      25  26  27  28  29  30  31  32  33  34  35  36
+# Plate_samples    D      37  38  39  40  41  42  43  44  45  46  47  48
+# Plate_samples    E      49  50  51  52  53  54  55  56  57  58  59  60
+# Plate_samples    F      61  62  63  64  65  66  67  68  69  70  71  72
+# Plate_samples    G      73  74  75  76  77  78  79  80  81  82  83  84
+# Plate_samples    H      85  86  87  88  89  90  91  92  93  94  95  96
+#
+################################################################################
+
+
+# Starting memory profile tracing
+# Memory log ../results/02PARSE/16_plate1/process/mem_profile.txt (bumped 2 prior version(s))
+#2 Call: /scratch/c.c1477909/.conda/envs/spipe-1.3.1/lib/python3.10/site-packages/splitpipe/scripts/mem_loop.py --outfile ../results/02PARSE/16_plate1/process/mem_profile.txt --number 604800 --seconds 2 --pid 115861 --quiet --append --prefix 'Tstep' 
+# Time	Starting split-pipe v1.3.1	2024-11-08 05:28:52.080362+0
+# Saved env info ../results/02PARSE/16_plate1/process/run_proc_def.json (bumped 3 prior version(s))
+# Saved barcode data ../results/02PARSE/16_plate1/process/barcode_data.csv
+#2 MemStatus: InQC  3.7G proc, 1.6G rss, 2.1G vms, 15.2% usd, 319.1G avail
+#2 DskStatus: InQC  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+# >> Running InQC
+#2 MemStatus: InQC  3.7G proc, 1.6G rss, 2.1G vms, 15.2% usd, 319.1G avail
+#2 DskStatus: InQC  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+# Input fastq R1: ../results/01MRGD_fqs/16_plate1_R1.fastq.gz, 108.2G, (116169161000), 10/24/2024
+# Input fastq R2: ../results/01MRGD_fqs/16_plate1_R2.fastq.gz, 86.1G, (92437806935), 10/24/2024
+# Checking fastq read lengths
+# Sampling 1000000 R1 reads (from 100000 to 1100000)
+#2 R1 fastq read length good fraction: 1.0
+#2 R2 fastq read length good fraction: 1.0
+# Checking perfect barcode fractions
+# Perfrect barcode fractions: [0.7496, 0.8297, 0.9109]
+# fastQC not found; Skipping
+#2 MemStatus: InQC  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: InQC  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+#2 MemStatus: InQC  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: InQC  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+# << Running InQC; Status True; Duration 0:00:07.94
+
+#2 MemStatus: Preprocess  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: Preprocess  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+# >> Running Preprocess
+#2 MemStatus: Preprocess  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: Preprocess  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+# Skipping preprocess and using existing outputs
+#2 Outputs: ['../results/02PARSE/16_plate1/process/barcode_head.fastq.gz']
+#2 MemStatus: Preprocess  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: Preprocess  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+#2 MemStatus: Preprocess  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: Preprocess  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+# << Running Preprocess; Status True; Duration 0:00:00.13
+
+#2 MemStatus: Alignment  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: Alignment  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+# >> Running Alignment
+#2 MemStatus: Alignment  4.8G proc, 2.1G rss, 2.7G vms, 15.4% usd, 318.5G avail
+#2 DskStatus: Alignment  '/./' 1.1P total, 988.6T (85.73%) used, 164.6T (14.27%) free
+#2 Read Dataframe: Dims 18 x 1, Mem 288B (288) from ../results/02PARSE/16_plate1/process/pre_align_stats.csv
+#2 Read Dataframe: Dims 6 x 1, Mem 96B (96) from ../results/02PARSE/16_plate1/process/sequencing_stats.csv
+#2 No map targets to screen
+# # Subproc: Call:   /scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/STAR --genomeDir ../resources/refs/hg38 --runThreadN 32 --readFilesIn ../results/02PARSE/16_plate1/process/barcode_head.fastq.gz --outFileNamePrefix ../results/02PARSE/16_plate1/process/barcode_head --outSAMtype BAM Unsorted --readFilesCommand zcat --outFilterMultimapNmax 3
+# # Subproc: Status: Success
+# # Subproc: Output: (first 100 char)
+# 	/scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/STAR-avx2 --genomeDir ../resources/refs/hg38 --runT
+# # Subproc: Duration 1:15:51.12
+# STAR output saved to ../results/02PARSE/16_plate1/process/STAR_align_sdtout.txt
+# Alignment result: 983512350 reads of 1276596972 map uniquely; 77.04%
+# Wrote 18 x 2 table to ../results/02PARSE/16_plate1/process/pre_align_stats.csv
+#2 PF_STAT_PIPE Row_1_of_20                                value
+#2 PF_STAT_PIPE Row_2_of_20  statistic                          
+#2 PF_STAT_PIPE Row_3_of_20  bc1_perfrac                    0.75
+#2 PF_STAT_PIPE Row_4_of_20  bc2_perfrac                    0.83
+#2 PF_STAT_PIPE Row_5_of_20  bc3_perfrac                   0.911
+#2 PF_STAT_PIPE Row_6_of_20  bc_edit_dist_0           1195230966
+#2 PF_STAT_PIPE Row_7_of_20  bc_edit_dist_1             80494891
+#2 PF_STAT_PIPE Row_8_of_20  bc_edit_dist_2            181949859
+#2 PF_STAT_PIPE Row_9_of_20  bc_edit_dist_NA           208657406
+#2 PF_STAT_PIPE Row_10_of_20  number_of_reads          1666856766
+#2 PF_STAT_PIPE Row_11_of_20  number_of_tscp            430387354
+#2 PF_STAT_PIPE Row_12_of_20  reads_align_input        1276596972
+#2 PF_STAT_PIPE Row_13_of_20  reads_align_multimap       34318192
+#2 PF_STAT_PIPE Row_14_of_20  reads_align_unique        983512350
+#2 PF_STAT_PIPE Row_15_of_20  reads_ambig_bc               523644
+#2 PF_STAT_PIPE Row_16_of_20  reads_map_transcriptome   885840803
+#2 PF_STAT_PIPE Row_17_of_20  reads_too_many_loci        92789219
+#2 PF_STAT_PIPE Row_18_of_20  reads_too_short                   0
+#2 PF_STAT_PIPE Row_19_of_20  reads_tso_trim            626338677
+#2 PF_STAT_PIPE Row_20_of_20  reads_valid_barcode      1276596972
+#2 Compressing ../results/02PARSE/16_plate1/process/barcode_headSJ.out.tab
+#2 MemStatus: Alignment  4.8G proc, 2.1G rss, 2.7G vms, 20.3% usd, 300.0G avail
+#2 DskStatus: Alignment  '/./' 1.1P total, 988.5T (85.72%) used, 164.6T (14.27%) free
+#2 MemStatus: Alignment  4.8G proc, 2.1G rss, 2.7G vms, 20.3% usd, 300.0G avail
+#2 DskStatus: Alignment  '/./' 1.1P total, 988.5T (85.72%) used, 164.6T (14.27%) free
+# << Running Alignment; Status True; Duration 1:15:53.36
+
+#2 MemStatus: Postprocess  4.8G proc, 2.1G rss, 2.7G vms, 20.3% usd, 300.0G avail
+#2 DskStatus: Postprocess  '/./' 1.1P total, 988.5T (85.72%) used, 164.6T (14.27%) free
+# >> Running Postprocess
+#2 MemStatus: Postprocess  4.8G proc, 2.1G rss, 2.7G vms, 20.3% usd, 300.0G avail
+#2 DskStatus: Postprocess  '/./' 1.1P total, 988.5T (85.72%) used, 164.6T (14.27%) free
+# # Subproc: Call:   /scratch/c.c1477909/.conda/envs/spipe-1.3.1/bin/samtools sort -n --threads 32 -T ../results/02PARSE/16_plate1/process/barcode_headAligned_sorted -o ../results/02PARSE/16_plate1/process/barcode_headAligned_sorted.bam ../results/02PARSE/16_plate1/process/barcode_headAligned.out.bam
+# # Subproc: Status: Success
+# # Subproc: Output: (first 100 char)
+# [bam_sort_core] merging from 15 files and 32 in-memory blocks...
+# 
+# # Subproc: Duration 1:13:50.66
+#2 MemStatus: Postprocess  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Postprocess  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+#2 MemStatus: Postprocess  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Postprocess  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# << Running Postprocess; Status True; Duration 1:13:50.91
+
+#2 MemStatus: Molinfo  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Molinfo  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# >> Running Molinfo
+#2 MemStatus: Molinfo  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Molinfo  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# Skipping Molinfo and using existing outputs
+#2 Outputs: ['../results/02PARSE/16_plate1/process/tscp_assignment.csv.gz']
+#2 MemStatus: Molinfo  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Molinfo  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+#2 MemStatus: Molinfo  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Molinfo  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# << Running Molinfo; Status True; Duration 0:00:00.20
+
+#2 MemStatus: DGE  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: DGE  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# >> Running DGE
+#2 MemStatus: DGE  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: DGE  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# Skipping DGE and using existing outputs
+#2 Outputs: ['../results/02PARSE/16_plate1/14493_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/14493_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/14493_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17671/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17754/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17756/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17812/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17936/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_18121/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_19043/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14501/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14812/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14862/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17940/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_15237/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/14510_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/14510_Hipp/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/14510_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_15091/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_15135/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_15070/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14521/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14524/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14619/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_16972/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_12034/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_12036/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17162/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17486/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17923/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/14611_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/16114_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/16114_Hipp/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/16114_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/16114_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_18048/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17804_Hipp/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17804_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17804_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_11449/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_12047/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_11875/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14746/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17048/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17053/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_18372/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17921/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_12570/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_11511/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_15611/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_13142/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17809_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17809_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17809_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/13008_A/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_12993/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_13117/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_11396/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_11654/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_11928/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_12152/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14473/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14402/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_14404/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_15626/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17071/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17883_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17883_Hipp/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17883_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/17883_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/12972_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/12972_Hipp/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/12971_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/13823_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/14483_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17072/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17086/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17109/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17160/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17167/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17175/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18184_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18184_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18184_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17198/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17264/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17369/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17629/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/sample_17630/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18190_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18190_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18190_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18351_FC/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18351_Hipp/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18351_Thal/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/18351_WGE/DGE_filtered/count_matrix.mtx', '../results/02PARSE/16_plate1/all-sample/DGE_filtered/count_matrix.mtx']
+#2 MemStatus: DGE  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: DGE  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+#2 MemStatus: DGE  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: DGE  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# << Running DGE; Status True; Duration 0:00:02.17
+
+#2 MemStatus: Analysis  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Analysis  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# >> Running Analysis
+#2 MemStatus: Analysis  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Analysis  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# Skipping Analysis and using existing outputs
+#2 Outputs: ['../results/02PARSE/16_plate1/14493_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/14493_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/14493_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17671/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17754/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17756/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17812/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17936/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_18121/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_19043/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14501/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14812/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14862/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17940/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_15237/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/14510_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/14510_Hipp/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/14510_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_15091/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_15135/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_15070/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14521/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14524/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14619/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_16972/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_12034/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_12036/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17162/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17486/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17923/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/14611_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/16114_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/16114_Hipp/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/16114_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/16114_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_18048/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17804_Hipp/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17804_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17804_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_11449/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_12047/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_11875/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14746/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17048/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17053/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_18372/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17921/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_12570/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_11511/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_15611/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_13142/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17809_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17809_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17809_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/13008_A/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_12993/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_13117/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_11396/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_11654/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_11928/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_12152/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14473/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14402/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_14404/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_15626/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17071/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17883_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17883_Hipp/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17883_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/17883_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/12972_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/12972_Hipp/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/12971_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/13823_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/14483_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17072/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17086/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17109/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17160/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17167/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17175/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18184_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18184_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18184_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17198/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17264/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17369/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17629/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/sample_17630/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18190_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18190_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18190_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18351_FC/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18351_Hipp/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18351_Thal/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/18351_WGE/report/cluster_assignment.csv', '../results/02PARSE/16_plate1/all-sample/report/cluster_assignment.csv']
+#2 MemStatus: Analysis  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Analysis  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+#2 MemStatus: Analysis  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Analysis  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# << Running Analysis; Status True; Duration 0:00:00.50
+
+#2 MemStatus: Reports  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Reports  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# >> Running Reports
+#2 MemStatus: Reports  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Reports  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# Skipping Reports and using existing outputs
+#2 Outputs: ['../results/02PARSE/16_plate1/14493_FC_analysis_summary.html', '../results/02PARSE/16_plate1/14493_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/14493_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17671_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17754_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17756_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17812_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17936_analysis_summary.html', '../results/02PARSE/16_plate1/sample_18121_analysis_summary.html', '../results/02PARSE/16_plate1/sample_19043_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14501_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14812_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14862_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17940_analysis_summary.html', '../results/02PARSE/16_plate1/sample_15237_analysis_summary.html', '../results/02PARSE/16_plate1/14510_FC_analysis_summary.html', '../results/02PARSE/16_plate1/14510_Hipp_analysis_summary.html', '../results/02PARSE/16_plate1/14510_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/sample_15091_analysis_summary.html', '../results/02PARSE/16_plate1/sample_15135_analysis_summary.html', '../results/02PARSE/16_plate1/sample_15070_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14521_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14524_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14619_analysis_summary.html', '../results/02PARSE/16_plate1/sample_16972_analysis_summary.html', '../results/02PARSE/16_plate1/sample_12034_analysis_summary.html', '../results/02PARSE/16_plate1/sample_12036_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17162_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17486_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17923_analysis_summary.html', '../results/02PARSE/16_plate1/14611_FC_analysis_summary.html', '../results/02PARSE/16_plate1/16114_FC_analysis_summary.html', '../results/02PARSE/16_plate1/16114_Hipp_analysis_summary.html', '../results/02PARSE/16_plate1/16114_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/16114_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/sample_18048_analysis_summary.html', '../results/02PARSE/16_plate1/17804_Hipp_analysis_summary.html', '../results/02PARSE/16_plate1/17804_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/17804_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/sample_11449_analysis_summary.html', '../results/02PARSE/16_plate1/sample_12047_analysis_summary.html', '../results/02PARSE/16_plate1/sample_11875_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14746_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17048_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17053_analysis_summary.html', '../results/02PARSE/16_plate1/sample_18372_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17921_analysis_summary.html', '../results/02PARSE/16_plate1/sample_12570_analysis_summary.html', '../results/02PARSE/16_plate1/sample_11511_analysis_summary.html', '../results/02PARSE/16_plate1/sample_15611_analysis_summary.html', '../results/02PARSE/16_plate1/sample_13142_analysis_summary.html', '../results/02PARSE/16_plate1/17809_FC_analysis_summary.html', '../results/02PARSE/16_plate1/17809_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/17809_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/13008_A_analysis_summary.html', '../results/02PARSE/16_plate1/sample_12993_analysis_summary.html', '../results/02PARSE/16_plate1/sample_13117_analysis_summary.html', '../results/02PARSE/16_plate1/sample_11396_analysis_summary.html', '../results/02PARSE/16_plate1/sample_11654_analysis_summary.html', '../results/02PARSE/16_plate1/sample_11928_analysis_summary.html', '../results/02PARSE/16_plate1/sample_12152_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14473_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14402_analysis_summary.html', '../results/02PARSE/16_plate1/sample_14404_analysis_summary.html', '../results/02PARSE/16_plate1/sample_15626_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17071_analysis_summary.html', '../results/02PARSE/16_plate1/17883_FC_analysis_summary.html', '../results/02PARSE/16_plate1/17883_Hipp_analysis_summary.html', '../results/02PARSE/16_plate1/17883_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/17883_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/12972_FC_analysis_summary.html', '../results/02PARSE/16_plate1/12972_Hipp_analysis_summary.html', '../results/02PARSE/16_plate1/12971_FC_analysis_summary.html', '../results/02PARSE/16_plate1/13823_FC_analysis_summary.html', '../results/02PARSE/16_plate1/14483_FC_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17072_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17086_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17109_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17160_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17167_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17175_analysis_summary.html', '../results/02PARSE/16_plate1/18184_FC_analysis_summary.html', '../results/02PARSE/16_plate1/18184_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/18184_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17198_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17264_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17369_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17629_analysis_summary.html', '../results/02PARSE/16_plate1/sample_17630_analysis_summary.html', '../results/02PARSE/16_plate1/18190_FC_analysis_summary.html', '../results/02PARSE/16_plate1/18190_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/18190_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/18351_FC_analysis_summary.html', '../results/02PARSE/16_plate1/18351_Hipp_analysis_summary.html', '../results/02PARSE/16_plate1/18351_Thal_analysis_summary.html', '../results/02PARSE/16_plate1/18351_WGE_analysis_summary.html', '../results/02PARSE/16_plate1/all-sample_analysis_summary.html']
+#2 MemStatus: Reports  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Reports  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+#2 MemStatus: Reports  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Reports  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# << Running Reports; Status True; Duration 0:00:00.33
+
+#2 MemStatus: Clean  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Clean  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# >> Running Clean
+#2 MemStatus: Clean  4.8G proc, 2.1G rss, 2.7G vms, 18.5% usd, 306.7G avail
+#2 DskStatus: Clean  '/./' 1.1P total, 988.7T (85.74%) used, 164.4T (14.26%) free
+# Status:successfully (0 problems)
+# Creating zip archive; 101 of 101 files
+# Created new zip archive: ../results/02PARSE/16_plate1/all_summaries.zip
+#2 Checking to remove 7 working/temp files
+#2   Removed 7
+#2 Not compressing temp files
+#2 MemStatus: Clean  4.8G proc, 2.1G rss, 2.7G vms, 17.4% usd, 311.0G avail
+#2 DskStatus: Clean  '/./' 1.1P total, 988.6T (85.74%) used, 164.5T (14.26%) free
+#2 MemStatus: Clean  4.8G proc, 2.1G rss, 2.7G vms, 17.4% usd, 311.1G avail
+#2 DskStatus: Clean  '/./' 1.1P total, 988.6T (85.74%) used, 164.5T (14.26%) free
+# << Running Clean; Status True; Duration 0:00:42.03
+
+# Saved env info ../results/02PARSE/16_plate1/process/run_proc_def.json (bumped 4 prior version(s))
+# Saved barcode data ../results/02PARSE/16_plate1/process/barcode_data.csv
+# Finished successfully (0 problems)
+# Time	Total elapsed split-pipe v1.3.1	2:30:40.20
+# Time	All done split-pipe v1.3.1	2024-11-08 07:59:32.283151+0
