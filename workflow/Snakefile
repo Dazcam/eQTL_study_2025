@@ -4,11 +4,10 @@ include: 'rules/01parse.smk'
 
 rule all:
     input:
-        "../resources/refs/ref.done",
+#        "../resources/refs/ref.done",
 #        #expand("../resources/fqs/{sample}", sample=samples) 
 #        expand("../resources/fqs/concat/{sample_id}_R{read}.fastq.gz", sample_id = config['samples'], read = [1,2]),
 #        expand("../results/{sample_id}/run.done", sample_id = config['samples']) 
-#        expand("../results/01MRGD_fqs/{sample}_R{read}.fastq.gz", sample = ALL_SAMPLES, read = [1,2]),
+#        expand("../results/01MRGD_fqs/{sample}_R{read}.fastq.gz", sample = ALL_SAMPLES, read = [1,2])
 #        expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
-         "../results/02PARSE/combine/run.done"
-  
+         "../results/02PARSE/combine_plate1/run.done"
