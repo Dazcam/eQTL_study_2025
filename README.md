@@ -15,4 +15,4 @@ FOR MARK:
 - Slurm paramters are set in: config/profile/config.yaml
 - Jobs sbatched via snakemake.sh
 - rule all is in Snakefile
-- Some logs and benchmarks in reports dir
+- Some logs and benchmarks in workflow/reports dir
