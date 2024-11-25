@@ -70,7 +70,7 @@ rule run_parse:
     params:  refdir = "../resources/refs/hg38",
     priority: 50
     benchmark: "reports/benchmarks/{sample}.run_parse.benchmark.txt"
-    resources: threads = 32, mem_mb = 256000, time="10-0:00:00"
+    resources: threads = 32, mem_mb = 360000, time="10-0:00:00"
     message: "Running Parse"
     log:     "../results/00LOG/02PARSE/run_parse_{sample}.log"
     shell:
@@ -92,31 +92,31 @@ rule run_parse_combine:
     input:  expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
     output: "../results/02PARSE/combine_plate1/run.done" 
 #    conda: "../envs/parse.yml"
-    resources: threads = 32, mem_mb = 256000, time="3-0:00:00"
+    resources: threads = 32, mem_mb = 360000, time="3-0:00:00"
     benchmark: "reports/benchmarks/run_parse_combine.benchmark.txt"
     message: "Combining Parse for fastq files"
     log:     "../results/00LOG/02parse/run_parse_combine.log"
     shell:
         """
-        split-pipe \
         source activate spipe-1.3.1
+        split-pipe \
         --mode comb \
-        --sublibraries ../results/02PARSE/2 \
-        ../results/02PARSE/3 \
-        ../results/02PARSE/4 \
-        ../results/02PARSE/5 \
-        ../results/02PARSE/6 \
-        ../results/02PARSE/7 \
-        ../results/02PARSE/8 \
-        ../results/02PARSE/9 \
-        ../results/02PARSE/10 \
-        ../results/02PARSE/11 \
-        ../results/02PARSE/12 \
-        ../results/02PARSE/13 \
-        ../results/02PARSE/14 \
-        ../results/02PARSE/15 \
-        ../results/02PARSE/16 \
-        --output_dir ../results/02PARSE/combine 2> {log}
+        --sublibraries ../results/02PARSE/2_plate1 \
+        ../results/02PARSE/3_plate1 \
+        ../results/02PARSE/4_plate1 \
+        ../results/02PARSE/5_plate1 \
+        ../results/02PARSE/6_plate1 \
+        ../results/02PARSE/7_plate1 \
+        ../results/02PARSE/8_plate1 \
+        ../results/02PARSE/9_plate1 \
+        ../results/02PARSE/10_plate1 \
+        ../results/02PARSE/11_plate1 \
+        ../results/02PARSE/12_plate1 \
+        ../results/02PARSE/13_plate1 \
+        ../results/02PARSE/14_plate1 \
+        ../results/02PARSE/15_plate1 \
+        ../results/02PARSE/16_plate1 \
+        --output_dir ../results/02PARSE/combine_plate1 2> {log}
         touch {output}
 	"""
 
