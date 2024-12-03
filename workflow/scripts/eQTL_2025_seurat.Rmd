@@ -1,0 +1,234 @@
+---
+title: "Plate 1 - First Pass (2)"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Experiment Details {.tabset}
+
+***
+
++ Plate 1: 96 samples, on MEGA kit v2, 60 samples DC, 36 samples CT
++ Sequenced 15 sub-libraries X 3 runs (one sublibrary substandard)
++ ~30 Billion reads
++ Parse workflow has a low [doublet rate](https://support.parsebiosciences.com/hc/en-us/articles/360053107311-What-is-the-expected-doublet-rate#:~:text=Doublet%20rates%20are%20low%2C%20less,through%20the%20Whole%20Transcriptome%20workflow.): ~3% per 100K cells
+
+***
+
++ FC samples included
+
++ 2 filtering steps
++ Stage 1
+  + Remove cells with < 300 genes OR < 500 reads
+  + Remove samples with fewer than 500 cells
++ Stage 2
+  + UMI - 3 Median absolute deviations
+  + Genes - 3 Median absolute deviations
+  + Mito - 5%
+  + Ribo - 5%
+  + Filtering MT genes and MALAT1 removed
+  
++ Harmony run
++ Explore FC distribution in clusters
++ Bio Psych label transfer
+
+### QC {.tabset}
+
+#### Counts by sample {.tabset}
+
+##### Boxplots
+
+```{r tscp_gene_boxplt , results='asis', fig.dim = c(10,10), echo=FALSE}
+tscp_gene_boxplt 
+```
+
+
+***
+
+##### Median counts
+
+```{r median_cnt_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
+median_cnt_tbl
+```
+
+***
+
+#### Filter 1 {.tabset}
+
+##### Low counts
+
+```{r samples_low_cnts_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
+samples_low_cnts_tbl
+```
+
+***
+
+##### Counts post-filter 1
+
+```{r cell_cnts_post_filt_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
+cell_cnts_post_filt_tbl
+```
+
+***
+
+##### Median counts post-filter 1
+
+```{r median_cnt_post_filt_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
+median_cnt_post_filt_tbl
+```
+
+***
+
+##### Boxplots post-filter 1
+
+```{r tscp_gene_post_filt_boxplt, results='asis', fig.dim = c(10,10), echo=FALSE}
+tscp_gene_post_filt_boxplt
+```
+
+
+
+
+
+#### Filter 2 {.tabset}
+
+##### All filters
+
+***
+
+```{r filt_all_counts_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
+filt_all_counts_tbl
+```
+
+***
+
+### Seurat {.tabset}
+
+#### Clusters pre-harmony {.tabset}
+
+***
+
+```{r resolution_cnts, results = 'asis', fig.dim = c(20, 20), echo = FALSE, results="asis"}
+for(i in resolution_set) {
+  cat("##### Counts ", i, "\n", sep = "")
+  get_meta_col_counts(seurat_obj, paste0('RNA_snn_res.', i)) |>
+    #print(n = Inf) |>
+    arrange(desc(n)) |>
+    flextable() |> 
+    set_caption(caption = "Seurat clusters: cell counts") |>
+    theme_vanilla() |>
+    flextable_to_rmd()
+  cat('\n\n')
+}
+```
+
+***
+
+```{r resolution, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+for(i in resolution_set) {
+  cat("##### Plots ", i , "\n", sep = "")
+  plot_subset <- res_plotlist[grep(i, names(res_plotlist), ignore.case = TRUE)]
+  #plot_subset <- res_plotlist[names(res_plotlist)]
+  plot(cowplot::plot_grid(plotlist = plot_subset, ncol = 2))
+  cat("\n\n")
+}
+```
+
+***
+
+#### Integration Plots {.tabset}
+
+```{r harmony_cnts, results = 'asis', fig.dim = c(20, 20), echo = FALSE, results="asis"}
+for(i in resolution_set) {
+  cat("##### Counts ", i, "\n", sep = "")
+  get_meta_col_counts(seurat_obj, paste0('harmony_clusters_', i)) |>
+    #print(n = Inf) |>
+    arrange(desc(n)) |>
+    flextable() |> 
+    set_caption(caption = "Seurat clusters: cell counts") |>
+    theme_vanilla() |>
+    flextable_to_rmd()
+  cat('\n\n')
+}
+```
+
+***
+
+```{r Integration, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+for(i in resolution_set) {
+  cat("  \n##### Plots **", i , "**\n", sep = "")
+  plot_subset <- integration_plotlist[grep(i, names(integration_plotlist), ignore.case = TRUE)]
+  plot(cowplot::plot_grid(plotlist = plot_subset, ncol = 2))
+  cat("  \n")
+}
+```
+
+#### Violin Plots {.tabset}
+
+```{r violin, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+for(i in 1:length(violin_plt_list)) {
+  cat("##### Violin ", i, "\n", sep = "")
+  plot(violin_plt_list[[i]])
+  cat("\n\n")
+}
+```
+
+#### Cluster Assignment {.tabset}
+
+##### Biol Psych vln
+
+***
+```{r biol_pysch_vln_plots, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+print(biol_psych_vln_plot)
+```
+
+***
+
+##### Public 2017 vln
+
+***
+
+```{r public_vln_plots, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+print(public_vln_plot)
+```
+
+***
+
+##### Label transfer 1
+
+***
+
+```{r label_transfer_1, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+#print(cowplot::plot_grid(harm_umap, cam_umap, poulio_umap, nowakowski_umap))
+```
+
+##### Label transfer 2
+
+***
+
+```{r label_transfer_2, fig.dim = c(20, 60), echo = FALSE, results="asis"}
+print(cowplot::plot_grid(cam_fcx_plt, cam_ge_plt, cam_hip_plt, cam_tha_plt, cam_cer_plt, ncol = 1))
+```
+
+
+##### FCX clusters {.tabset}
+
+##### Clusters
+
+***
+
+```{r fcx_fact_clusters, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+print(cowplot::plot_grid(fcx_umap_plt, fcx_feat_plt))
+```
+
+***
+
+##### Barplot
+
+***
+
+```{r fcx_fact_barplt, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+print(fcx_fact_barplt)
+```
+
+***

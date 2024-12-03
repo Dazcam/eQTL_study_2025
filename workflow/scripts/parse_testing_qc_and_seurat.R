@@ -20,10 +20,10 @@ library(harmony)
 library(clustifyr)
 
 # Set variables  ----------------------------------------------------------------------
-root_dir <- '/Users/darren/Desktop/parse_testing/'
+root_dir <- '/Users/darren/Desktop/eQTL_study_2025/'
 config_dir <- paste0(root_dir, 'config/')
-results_dir <- paste0(root_dir, 'results/01PARSE/')
-combine_dir <- paste0(results_dir, 'combine/')
+results_dir <- paste0(root_dir, 'results/02PARSE/')
+combine_dir <- paste0(results_dir, 'combine_plate1/')
 mat_dir <- paste0(combine_dir, 'all-sample/DGE_filtered/')
 report_dir <- paste0(combine_dir, 'all-sample/report/')
 script_dir <- paste0(root_dir, 'workflow/scripts/')
@@ -127,7 +127,7 @@ Pouliodakis_fig1c_genes <- c(
   'VIM', 'PTPRZ1', 'SOX2', 'SLC1A3', 'HES1', 'HOPX'
 )
 # Load functions ----------------------------------------------------------------------
-source(paste0(root_dir, 'workflow/scripts/parse_testing_functions.R'))
+source(paste0(root_dir, 'workflow/scripts/eQTL_2025_functions.R'))
 options(ggrepel.max.overlaps = Inf)
 
 ## Parse QC - pre-Seurat  -------------------------------------------------------------
@@ -218,6 +218,10 @@ sce_obj <- get_cell_outliers(sce_obj, 3, 'higher', 5, 5,
 outlier_plt <- create_outlier_plots(sce_obj, sce_obj$umi_outlier, sce_obj$genes_outlier, sce_obj$mito_outlier,
                                     sce_obj$ribo_outlier, 'nCount_RNA', 'nFeature_RNA', 'sample')
 
+
+  
+  
+
 # Identify doublets
 sce_obj <- scDblFinder(sce_obj, dbr = 0.0003, samples = sce_obj$sample)
 table(sce_obj$scDblFinder.class)
@@ -250,8 +254,6 @@ pca_plot <- DimHeatmap(seurat_obj, dims = 20:40, cells = 500, balanced = TRUE)
 # Create resolution plots for comparison
 res_plotlist <- create_resolution_plotlist(seurat_obj, resolution = resolution_set,
                                            meta_id = 'sample', gene_set = claire_genes)
-
-
 
 # Plot QCs
 cluster_qc_plot <- create_cluster_qc_plot(seurat_obj, 30, 'sample', 'RNA_snn_res.0.3')
