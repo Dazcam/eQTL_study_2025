@@ -8,8 +8,10 @@ results/02PARSE/combine/.DS_Store
 results/02PARSE/combine/all-sample/.DS_Store
 results/02PARSE/combine/all-sample/DGE_filtered/count_matrix.mtx
 results/02PARSE/combine/all-sample/report/tscp_counts.csv
+results/03SEURAT/
 workflow/.DS_Store
 workflow/reports/previous_runs/24-11-07/*.html
 workflow/reports/previous_runs/24-11-11/*.html
 results/01MRGD_fqs/
 workflow/reports/24-11-25-plate1/*.html
+workflow/reports/markdown/

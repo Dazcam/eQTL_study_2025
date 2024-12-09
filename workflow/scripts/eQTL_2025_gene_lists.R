@@ -1,4 +1,10 @@
-# Set features
+#--------------------------------------------------------------------------------------
+#
+#    Gene lists and colour schemes
+#
+#--------------------------------------------------------------------------------------
+
+## Info  ------------------------------------------------------------------------------# Set features
 pfc_features <- c("GAD1", "SLC17A7", "EOMES", "GLI3", "OLIG1", 
                   "MKI67", "C3", "ITM2A", "SST", "CALB2", 
                   "SCGN", "TLE3", "FEZF2", "CRYM", "LHX2")
@@ -14,6 +20,25 @@ tha_features <- c("EOMES", "GLI3", "OLIG1", "MKI67", "C3",
 cer_features <- c("GAD1", "EOMES", "GLI3", "OLIG1", "MKI67", 
                   "C3", "ITM2A", "CA8", "ITPR1", "RBFOX3", 
                   "RELN")
+
+
+eneral_genes <- c('SLC17A7', 'SLC17A6', 'SLC17A8', # VGLUT1-3
+                  'SLC6A1', 'SLC6A13', 'SLC6A11', 'SLC6A12', # GABA transporters
+                  'SST', 'NPY', 'GAD1', 'GAD2', 'PVALB', 'CALB2', 'VIP', # InN markers
+                  'C3', 'C1QB',                           # MG markers
+                  'AQP4', 'SOX9', 'GFAP',        # Astrocytes 
+                  'OLIG1', 'OLIG2', 'MBP',                # Oligodendrocytes
+                  'PDGRFA', 'PMP2',
+                  'EOMES', 'EBF1', 'ABCB1') 
+
+cholinergic_genes <- c('CHRNA2', 'CHRNA3', 'CHRNA4', 'CHRNA5', 'CHRNA6',  # Nicotinic (brain)
+                       'CHRNA7', 'CHRNA9', 'CHRNA10', 'CHRNB2', 'CHRNB4', # Nicotinic (brain)
+                       'CHRM1', 'CHRM2', 'CHRM3', 'CHRM4', 'CHRM5', # Muscarinic (brain)
+                       'D1BR', # D5 Dopamine receptor (input for dopamine in Str)
+                       'ACHE', # Acetylcholinesterase
+                       'SLC18A3', # Vesicular acetylcholine transporter
+                       'ZIC4', 'LHX6', 'GBX2', 'FGF8', 'FGF17', 'DBX1') # https://doi.org/10.3389/fnmol.2019.00204 
+
 claire_genes <- c(
   "PDGFRA",  #OPC
   "C3", #Microglia
@@ -174,8 +199,50 @@ mg_genes <- c(
   "HLA-DRA"  # MHC class II
 )
 
+small_populations <- c('VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
+                       'ACTA2', 'RGS5', 'ALDH1A1',      # Smooth muscle cells
+                       'SLC38A2', 'SLC4A10', 'SLC26A2', 'SLC47A1', 'FXYD5',  # Fibroblast
+                       'ATP1B1', 'COL4A1', 'COL4A2', 'COL15A1', 'COLA1',
+                       'COL3A1',
+                       'TM4SF1', 'SLC38A5', 'CYTL1', 'BMX', 'MGP',    # Endothelial
+                       'FBLN5', 'ELN', 'IGFBP4', 'CLU')
+
+
+# general
+fibroblast <- c('SLC38A2', 'SLC4A10', 'SLC26A2', 'SLC47A1', 'FXYD5', 
+                'ATP1B1', 'COL4A1', 'COL4A2', 'COL15A1', 'COLA1',
+                'COL3A1')
+
+endothelial <- c('TM4SF1', 'SLC38A5', 'CYTL1', 'BMX', 'MGP',
+                 'FBLN5', 'ELN', 'IGFBP4', 'CLU')
+
+pericytes <- c('VTN', 'KCNJ8', 'ABCC9', 'ART3')
+
+bergmann <- c('NPY', 'TNC', 'LINC01727', 'FST', 'MT2A', 'PIFO', 'RSPH1')
+kozareva <- c('PPP1R17', 'GABRA6', 'EOMES', 'LYPD6', 'PRKCD', 'SORC3', 
+              'PTPRK', 'PRKCD', 'NXPH1', 'CDH22', 'KLHL1', 'ALDH1A3', 'SLC6A5', 'HTR2A', 'EDIL3',
+              'DCN', 'KCNJ8', 'MRC1', 'FIT1', 'FOXJ1', 'SLC6A5', 'GRM2', 'SST', 'PTPRC')
+leuko <- c("PTPRC", "SKAP1", "ARHGAP15", "PRKCH", "IKZF1", "STAT4", "DOCK8", 
+           "CD247", "TC2N", "IQGAP2", "FYB1", "SAMD3", "BCL11B", "CARD11", 
+           "EMB", "ETS1", "HLA-E", "LCP1", "CD96", "THEMIS", "STK17B", "APBB1IP", 
+           "IKZF3", "TNFAIP8", "CLEC2D", "GNG2", "CCL5", "CD53", "FLI1", 
+           "ZC3HAV1")
+
+
 discreet_cols_n23 <- c('#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
                        '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', 
                        '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', 
                        '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', 
                        '#cccccc', '#000000', '#ebb501')
+
+# Colours
+greens <- c('#3CBB75FF', '#00FF00A5','#006400', '#B7FFB7', '#10A53DFF',
+            '#95D840FF', '#9DC183',  '#708238', '#55C667FF', '#73D055FF',
+            '#567D46')
+
+ExN_blues <- c('#76B5C5', '#00BDD2', '#CEE5FD', '#00B6EB', '#ABDBE3',
+               '#1E81B0', '#B8D2EB', '#779CBA')
+
+reds <- c('#FAA0A0', '#FF5959', '#F75151', '#EF0029', '#D2042D')
+
+purples <- c('#B200ED',  '#DCBEFF', '#6F2DA8')

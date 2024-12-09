@@ -1,5 +1,5 @@
 ---
-title: "Plate 1 - First Pass (2)"
+title: "Plate 1 - First Pass (3)"
 author: "Darren Cameron"
 date: "`r Sys.Date()`"
 output: html_document
@@ -9,40 +9,37 @@ output: html_document
 
 ***
 
-+ Plate 1: 96 samples, on MEGA kit v2, 60 samples DC, 36 samples CT
-+ Sequenced 15 sub-libraries X 3 runs (one sublibrary substandard)
-+ ~30 Billion reads
++ Plate 1: 96 samples(60/36), on MEGA kit v2, seq 15 sub-lib X 3 runs
++ Plate 2: 96 samples (88/8), on MEGA kit v2, seq 16 sub-lib X 3 runs
++ ~30 Billion reads per plate
 + Parse workflow has a low [doublet rate](https://support.parsebiosciences.com/hc/en-us/articles/360053107311-What-is-the-expected-doublet-rate#:~:text=Doublet%20rates%20are%20low%2C%20less,through%20the%20Whole%20Transcriptome%20workflow.): ~3% per 100K cells
 
 ***
 
-+ FC samples included
-
-+ 2 filtering steps
-+ Stage 1
-  + Remove cells with < 300 genes OR < 500 reads
-  + Remove samples with fewer than 500 cells
-+ Stage 2
-  + UMI - 3 Median absolute deviations
-  + Genes - 3 Median absolute deviations
-  + Mito - 5%
-  + Ribo - 5%
-  + Filtering MT genes and MALAT1 removed
-  
-+ Harmony run
-+ Explore FC distribution in clusters
-+ Bio Psych label transfer
+- FC samples included
+- 2 filtering steps
+- Stage 1
+  - Remove cells with < 300 genes OR < 500 reads
+  - Remove samples with fewer than 500 cells
+- Stage 2
+  - UMI - 3 Median absolute deviations
+  - Genes - 3 Median absolute deviations
+  - Mito - 5%
+  - Ribo - 5%
+  - Filtering MT genes and MALAT1 removed
+- Harmony run
+- Bio Psych label transfer
+- Explore FC distribution in clusters
 
 ### QC {.tabset}
 
-#### Counts by sample {.tabset}
+#### Pre-filter counts {.tabset}
 
 ##### Boxplots
 
 ```{r tscp_gene_boxplt , results='asis', fig.dim = c(10,10), echo=FALSE}
 tscp_gene_boxplt 
 ```
-
 
 ***
 
@@ -54,15 +51,25 @@ median_cnt_tbl
 
 ***
 
-#### Filter 1 {.tabset}
-
-##### Low counts
+##### Low count cells
 
 ```{r samples_low_cnts_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
 samples_low_cnts_tbl
 ```
 
 ***
+
+##### Metadata
+
+```{r seurat_metadata, results='asis', fig.dim = c(10,10), echo=FALSE}
+metadata_lst[['seurat_meta']] |>
+  flextable() |> 
+  set_caption(caption = "Seurat object metadata") |>
+  theme_vanilla() |>
+  flextable_to_rmd()
+```
+
+#### Filter 1 {.tabset}
 
 ##### Counts post-filter 1
 
@@ -86,15 +93,36 @@ median_cnt_post_filt_tbl
 tscp_gene_post_filt_boxplt
 ```
 
-
-
-
+***
 
 #### Filter 2 {.tabset}
 
-##### All filters
+##### Counts post-filter 2
+
+```{r cell_cnts_final_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
+cell_cnts_final_tbl
+```
 
 ***
+
+##### Median counts post-filter 2
+
+```{r median_cnt_final_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
+median_cnt_final_tbl
+```
+
+***
+
+##### Boxplots post-filter 2
+
+```{r tscp_gene_final_boxplt, results='asis', fig.dim = c(10,10), echo=FALSE}
+tscp_gene_final_boxplt
+```
+
+***
+
+##### All filters
+
 
 ```{r filt_all_counts_tbl, results='asis', fig.dim = c(10,10), echo=FALSE}
 filt_all_counts_tbl
@@ -108,7 +136,7 @@ filt_all_counts_tbl
 
 ***
 
-```{r resolution_cnts, results = 'asis', fig.dim = c(20, 20), echo = FALSE, results="asis"}
+```{r resolution_cnts, results = 'asis', fig.dim = c(20, 20), echo=FALSE, results="asis", message=FALSE}
 for(i in resolution_set) {
   cat("##### Counts ", i, "\n", sep = "")
   get_meta_col_counts(seurat_obj, paste0('RNA_snn_res.', i)) |>
@@ -138,7 +166,7 @@ for(i in resolution_set) {
 
 #### Integration Plots {.tabset}
 
-```{r harmony_cnts, results = 'asis', fig.dim = c(20, 20), echo = FALSE, results="asis"}
+```{r harmony_cnts, results = 'asis', fig.dim = c(20, 20), echo = FALSE, results="asis",message=FALSE}
 for(i in resolution_set) {
   cat("##### Counts ", i, "\n", sep = "")
   get_meta_col_counts(seurat_obj, paste0('harmony_clusters_', i)) |>
@@ -163,15 +191,7 @@ for(i in resolution_set) {
 }
 ```
 
-#### Violin Plots {.tabset}
-
-```{r violin, fig.dim = c(20, 20), echo = FALSE, results="asis"}
-for(i in 1:length(violin_plt_list)) {
-  cat("##### Violin ", i, "\n", sep = "")
-  plot(violin_plt_list[[i]])
-  cat("\n\n")
-}
-```
+***
 
 #### Cluster Assignment {.tabset}
 
@@ -179,7 +199,7 @@ for(i in 1:length(violin_plt_list)) {
 
 ***
 ```{r biol_pysch_vln_plots, fig.dim = c(20, 20), echo = FALSE, results="asis"}
-print(biol_psych_vln_plot)
+print(vln_plt_lst[['biol_psych_vln_plot']])
 ```
 
 ***
@@ -189,17 +209,27 @@ print(biol_psych_vln_plot)
 ***
 
 ```{r public_vln_plots, fig.dim = c(20, 20), echo = FALSE, results="asis"}
-print(public_vln_plot)
+print(vln_plt_lst[['public_vln_plot']])
 ```
 
 ***
+
+```{r violin, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+for(i in tail(names(violin_plt_lst), -2)) {
+  cat("##### ", i , "\n", sep = "")
+  plot_subset <- violin_plt_list[grep(i, names(violin_plt_list), ignore.case = TRUE)]
+  #plot_subset <- res_plotlist[names(res_plotlist)]
+  plot(cowplot::plot_grid(plotlist = plot_subset))
+  cat("\n\n")
+}
+```
 
 ##### Label transfer 1
 
 ***
 
 ```{r label_transfer_1, fig.dim = c(20, 20), echo = FALSE, results="asis"}
-#print(cowplot::plot_grid(harm_umap, cam_umap, poulio_umap, nowakowski_umap))
+print(cowplot::plot_grid(harm_umap, cam_fcx_umap, poulio_umap, nowakowski_umap))
 ```
 
 ##### Label transfer 2
@@ -210,16 +240,26 @@ print(public_vln_plot)
 print(cowplot::plot_grid(cam_fcx_plt, cam_ge_plt, cam_hip_plt, cam_tha_plt, cam_cer_plt, ncol = 1))
 ```
 
+***
 
-##### FCX clusters {.tabset}
+#### FCX clusters {.tabset}
 
 ##### Clusters
 
 ***
 
-```{r fcx_fact_clusters, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+```{r fcx_fact_clusters, fig.dim = c(20, 10), echo = FALSE, results="asis"}
 print(cowplot::plot_grid(fcx_umap_plt, fcx_feat_plt))
 ```
+
+##### Clusters (split)
+
+***
+
+```{r fcx_fact_clusters_split, fig.dim = c(10, 10), echo = FALSE, results="asis"}
+print(fcx_umap_split_plt)
+```
+
 
 ***
 
@@ -229,6 +269,26 @@ print(cowplot::plot_grid(fcx_umap_plt, fcx_feat_plt))
 
 ```{r fcx_fact_barplt, fig.dim = c(20, 20), echo = FALSE, results="asis"}
 print(fcx_fact_barplt)
+```
+
+***
+
+##### Barplot (pcw)
+
+***
+
+```{r fcx_pcw_barplt, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+print(fcx_pcw_barplt)
+```
+
+***
+
+##### Counts
+
+***
+
+```{r fcx_fact_counts, fig.dim = c(20, 20), echo = FALSE, results="asis"}
+fcx_in_clust_tbl
 ```
 
 ***
