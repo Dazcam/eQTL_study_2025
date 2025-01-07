@@ -29,7 +29,8 @@ sc.settings.set_figure_params(dpi=100, fontsize=10, dpi_save=400,
 # Set root dir
 
 sc.settings.verbosity = 4
-if 'snakemake' in locals() or 'snakemake' in globals():
+#if 'snakemake' in locals() or 'snakemake' in globals():
+if os.path.exists('/scratch/c.c1477909/eQTL_study_2025/'):
     root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
     os.environ['OMP_NUM_THREADS'] = '16'
 else:
