@@ -15,3 +15,5 @@ workflow/reports/previous_runs/24-11-11/*.html
 results/01MRGD_fqs/
 workflow/reports/24-11-25-plate1/*.html
 workflow/reports/markdown/
+workflow/scripts/.ipynb_checkpoints/
+workflow/scripts/__pycache__/
