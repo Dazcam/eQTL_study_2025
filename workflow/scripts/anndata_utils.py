@@ -10,40 +10,92 @@ from ipywidgets import Tab, Output
 from memory_profiler import profile
 
 
-##########  QC FUNCTIONS  ############  
+##########  LOAD FUNCTIONS  ############  
 @profile
-def load_and_dwnsmple_anndata(ann_dir, n_cells):
+def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
     """
-    Load an AnnData object from the specified directory and downsample it to a fixed number of cells.
-
+    Load, process, and merge AnnData objects with optional downsampling.
+    
     Parameters:
-    ann_dir (str): The directory containing the AnnData file (assumed to be named 'anndata.h5ad').
-    n_cells (int): The number of cells to retain in the downsampled AnnData object.
-
+        downsample_cells (int, optional): Number of cells to randomly downsample to. If None, no downsampling is performed.
+        *adata_dirs (str): Full paths to AnnData files. Each path should point to an .h5ad file.
+        
     Returns:
-    AnnData: A downsampled AnnData object.
-
-    Raises:
-    FileNotFoundError: If the specified AnnData file does not exist in the directory.
-    ValueError: If n_cells is greater than the total number of cells in the AnnData object.
+        AnnData: A merged and processed AnnData object, or the single input AnnData if only one is provided.
     """
-    try:
-        # Attempt to load the AnnData object
-        adata_obj = sc.read(ann_dir + 'anndata.h5ad')
-    except FileNotFoundError:
-        raise FileNotFoundError(f"The file 'anndata.h5ad' was not found in the directory: {ann_dir}")
+    # If no adata directories are provided, raise an error
+    if len(adata_dirs) == 0:
+        raise ValueError("At least one adata directory must be provided.")
+    
+    adata_list = []   
+    
+    # Extract plate numbers from the file paths
+    plate_numbers = [re.search(r'plate(\d+)', adata_dir).group(1) for adata_dir in adata_dirs]
 
-    if n_cells > adata_obj.n_obs:
-        raise ValueError(f"n_cells ({n_cells}) cannot be greater than the total number of cells in the AnnData object ({adata_obj.n_obs}).")
+    # Report how many plates will be processed and downsampling details
+    if downsample_cells is not None:
+        print(f"Processing {len(adata_dirs)} plate(s) with downsampling to {downsample_cells} cells per plate.")
+    else:
+        print(f"Processing {len(adata_dirs)} plate(s), no downsampling applied.")
 
-    # Perform downsampling
-    random_indices = np.random.choice(adata_obj.n_obs, n_cells, replace=False)
-    adata_obj = adata_obj[random_indices, :].copy()
+    for i, adata_dir in enumerate(adata_dirs):
+        # Load the AnnData object directly from the full file path
+        print(f"Loading plate {plate_numbers[i]} from {adata_dir} ...")
+        adata = sc.read(adata_dir)
+        
+        # Check if 'plate' column exists and add it only if not present
+        if 'plate' not in adata.obs.columns and len(adata_dirs) > 1:
+            adata.obs['plate'] = 'plate' + plate_numbers[i]
+        
+        # Avoid duplicating plate prefix in obs_names
+        if not adata.obs_names.str.startswith(f"plate{plate_numbers[i]}_").any():
+            adata.obs_names = f"plate{plate_numbers[i]}_" + adata.obs_names
 
-    # Trigger garbage collection to free unused memory
+        # Log dimensions
+        print(f"Plate {plate_numbers[i]} dimensions: {adata.shape}")
+        print(f"Plate {plate_numbers[i]} matrix dimensions: {adata.X.shape}")
+ 
+        # Optional downsampling
+        if downsample_cells is not None and downsample_cells < adata.n_obs:
+            random_indices = np.random.choice(adata.n_obs, downsample_cells, replace=False)
+            adata = adata[random_indices, :].copy()
+        
+        adata_list.append(adata)
+
+    # If more than one adata object, find common genes across all datasets
+    if len(adata_list) > 1:
+        common_genes = adata_list[0].var_names
+        for adata in adata_list[1:]:
+            common_genes = common_genes.intersection(adata.var_names)
+        
+        print(f"Common genes across all plates: {common_genes.shape[0]}")
+        
+        # Subset all adata objects for common genes
+        for i, adata in enumerate(adata_list):
+            adata_list[i] = adata[:, common_genes]
+    else:
+        print(f"Only one plate processed; no need to find common genes.")
+        
+    # Concatenate the AnnData objects if more than one
+    if len(adata_list) > 1:
+        print(f"Merging plates ...")
+        adata_mrg = sc.concat(adata_list, join='inner')
+    else:
+        adata_mrg = adata_list[0]
+    
+    # Remove 'hg38' from gene names
+    adata_mrg.var.index = adata_mrg.var.index.str.replace('_hg38', '')
+
+    # Cleanup to release memory
+    del adata_list
     gc.collect()
 
-    return adata_obj
+    print(adata_mrg)
+
+    return adata_mrg
+
+
+##########  QC FUNCTIONS  ############  
 
 def create_counts_per_sample_boxplt(ann_obj):
     """
@@ -321,7 +373,7 @@ def create_umap_visualisations(adata, resolutions, leiden_prefix="leiden"):
 
 def plot_filtered_violin(
     adata, 
-    gene_set, 
+    gene_sets,  # Gene sets are now a list of tuples (name, gene_set)
     groupby_base, 
     resolutions=None, 
     row_palette=None, 
@@ -329,12 +381,12 @@ def plot_filtered_violin(
     **kwargs
 ):
     """
-    Plot a stacked violin plot for a filtered gene set, ignoring missing genes and reporting missing ones,
+    Plot stacked violin plots for multiple gene sets, ignoring missing genes and reporting missing ones,
     with support for multiple resolutions.
 
     Parameters:
         adata (AnnData): The AnnData object containing the data.
-        gene_set (list): List of genes to plot.
+        gene_sets (list of tuples): List of tuples where each tuple is (name, gene_set).
         groupby_base (str): Base name of the groupby key (e.g., 'leiden').
         resolutions (list, optional): List of resolutions for which to plot violin plots. Default is None.
         row_palette (list or dict, optional): Color palette for rows. Default is None.
@@ -345,19 +397,25 @@ def plot_filtered_violin(
         - A tab widget if running in a Jupyter notebook.
         - A list of matplotlib figures if not using a Jupyter notebook.
     """
-    # Separate valid and missing genes
-    valid_genes = [gene for gene in gene_set if gene in adata.var_names or gene in getattr(adata.raw, 'var_names', [])]
-    missing_genes = [gene for gene in gene_set if gene not in valid_genes]
+    # Separate valid and missing genes for each gene set
+    valid_gene_sets = []
+    missing_gene_sets = []
 
-    # Report missing genes
-    if missing_genes:
-        print(f"Genes not found in dataset: {', '.join(missing_genes)}")
+    for name, gene_set in gene_sets:
+        valid_genes = [gene for gene in gene_set if gene in adata.var_names or gene in getattr(adata.raw, 'var_names', [])]
+        missing_genes = [gene for gene in gene_set if gene not in valid_genes]
+        
+        valid_gene_sets.append(valid_genes)
+        missing_gene_sets.append(missing_genes)
+
+        # Report missing genes for each gene set
+        if missing_genes:
+            print(f"Genes not found in dataset for gene set {name}: {', '.join(missing_genes)}")
     
-    if not valid_genes:
-        print("None of the genes in the provided gene set are present in the dataset.")
+    # Check if any valid gene set exists
+    if not any(valid_gene_sets):
+        print("None of the genes in the provided gene sets are present in the dataset.")
         return None
-
-    print(f"Plotting {len(valid_genes)} genes out of {len(gene_set)} provided.")
 
     # Default to a single resolution if none are provided
     if resolutions is None:
@@ -372,33 +430,36 @@ def plot_filtered_violin(
 
     for res in resolutions:
         groupby = f"{groupby_base}_{res}" if res else groupby_base
-        print(f"Generating plot for resolution: {res if res else 'default'}")
+        print(f"Generating plots for resolution: {res if res else 'default'}")
 
-        if in_jupyter:
-            # Generate plot and store as a widget for tab
-            output = Output()
-            with output:
-                sc.pl.stacked_violin(
+        for i, ((name, gene_set), valid_genes) in enumerate(zip(gene_sets, valid_gene_sets)):
+            print(f"Plotting gene set {name} with {len(valid_genes)} genes out of {len(gene_set)} provided.")
+            
+            if in_jupyter:
+                # Generate plot and store as a widget for tab
+                output = Output()
+                with output:
+                    sc.pl.stacked_violin(
+                        adata, 
+                        valid_genes, 
+                        groupby=groupby, 
+                        row_palette=row_palette, 
+                        swap_axes=swap_axes, 
+                        **kwargs
+                    )
+                tabs.append((f"{name}: {res}", output))  # Include gene set name in the tab title
+            else:
+                # Generate plot and store figure
+                fig = sc.pl.stacked_violin(
                     adata, 
                     valid_genes, 
                     groupby=groupby, 
                     row_palette=row_palette, 
                     swap_axes=swap_axes, 
+                    show=False,  # Suppress inline plotting
                     **kwargs
                 )
-            tabs.append((f"Resolution {res}", output))
-        else:
-            # Generate plot and store figure
-            fig = sc.pl.stacked_violin(
-                adata, 
-                valid_genes, 
-                groupby=groupby, 
-                row_palette=row_palette, 
-                swap_axes=swap_axes, 
-                show=False,  # Suppress inline plotting
-                **kwargs
-            )
-            plots.append(fig)
+                plots.append(fig)
 
     # Return appropriate output
     if in_jupyter:
@@ -413,4 +474,3 @@ def plot_filtered_violin(
         return tab_widget
     else:
         return plots
-
