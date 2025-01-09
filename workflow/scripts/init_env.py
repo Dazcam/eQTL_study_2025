@@ -42,7 +42,7 @@ if os.path.exists('/scratch/c.c1477909/eQTL_study_2025/'):
     os.environ['OMP_NUM_THREADS'] = '16'
 else:
     root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
-    plate = 'plate2'
+    plate = 'plate1'
 
 script_dir = root_dir + 'scripts/'
 results_dir = root_dir + 'results/'

@@ -431,8 +431,9 @@ def plot_filtered_violin(
     for res in resolutions:
         groupby = f"{groupby_base}_{res}" if res else groupby_base
         print(f"Generating plots for resolution: {res if res else 'default'}")
-
-        for i, ((name, gene_set), valid_genes) in enumerate(zip(gene_sets, valid_gene_sets)):
+    
+        for i, (gene_set_tuple, valid_genes) in enumerate(zip(gene_sets, valid_gene_sets)):
+            name, gene_set = gene_set_tuple
             print(f"Plotting gene set {name} with {len(valid_genes)} genes out of {len(gene_set)} provided.")
             
             if in_jupyter:
@@ -460,6 +461,7 @@ def plot_filtered_violin(
                     **kwargs
                 )
                 plots.append(fig)
+
 
     # Return appropriate output
     if in_jupyter:
