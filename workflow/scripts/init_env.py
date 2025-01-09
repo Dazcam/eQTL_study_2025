@@ -34,11 +34,19 @@ sc.settings.verbosity = 4
 #if 'snakemake' in locals() or 'snakemake' in globals():
 if os.path.exists('/scratch/c.c1477909/eQTL_study_2025/'):
     root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
+    # Print all arguments to see what is passed
+    print(f"sys.argv: {sys.argv}")
+
+    # Extract plate value from sys.argv
     plate = None
     for arg in sys.argv:
-        if arg.startswith('--plate'):
+        # If it's in the form '--plate plate2', split by space
+        if '=' in arg:
             plate = arg.split('=')[1]
-            
+        else:
+            plate = arg.split()[1]  # For '--plate plate2' formatif arg.startswith('--plate'):
+
+    print(f"Plate argument passed: {plate}")            
 
     print(f"Processing plate: {plate}")
     os.environ['OMP_NUM_THREADS'] = '16'
