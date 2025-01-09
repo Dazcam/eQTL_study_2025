@@ -8,8 +8,10 @@ rule scanpy_qc:
     log:     "../results/00LOG/03SCANPY/scanpy_qc_{plate}.log"
     shell:
         r"""
-        jupyter nbconvert --to html --execute {input.nb} --output {output} \
+        jupyter nbconvert --to html --execute scripts/scanpy_qc.ipynb \
+        --output {output} \
         --ExecutePreprocessor.kernel_name=python3 \
-        --ExecutePreprocessor.extra_arguments='--plate {wildcards.plate}' > {log} 2>&1
+        --ExecutePreprocessor.extra_arguments="--plate {wildcards.plate}" >> {log} 2>&1
+        echo "Arguments passed: --plate {wildcards.plate}" >> {log}
         """
 
