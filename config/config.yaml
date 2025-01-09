@@ -1,1 +1,2 @@
 MERGE_FQ_JSON: "../config/samples_plate1_subset.json" 
+plate: ['plate1', 'plate2'] 

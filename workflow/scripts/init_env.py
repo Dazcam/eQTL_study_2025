@@ -16,6 +16,8 @@ import numba
 from memory_profiler import profile
 import ipywidgets as widgets
 
+print(sys.argv)
+
 warnings.simplefilter("ignore", FutureWarning)
 warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", RuntimeWarning)
