@@ -32,15 +32,22 @@ sc.settings.verbosity = 4
 #if 'snakemake' in locals() or 'snakemake' in globals():
 if os.path.exists('/scratch/c.c1477909/eQTL_study_2025/'):
     root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
+    plate = None
+    for arg in sys.argv:
+        if arg.startswith('--plate'):
+            plate = arg.split('=')[1]
+            
+
+    print(f"Processing plate: {plate}")
     os.environ['OMP_NUM_THREADS'] = '16'
 else:
     root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
+    plate = 'plate2'
 
 script_dir = root_dir + 'scripts/'
 results_dir = root_dir + 'results/'
 data_dir = results_dir + '02PARSE/'
-plate1_dir = data_dir + 'combine_plate1/all-sample/DGE_filtered/'
-plate2_dir = data_dir + 'combine_plate2/all-sample/DGE_filtered/'
+plate_path = data_dir + f'combine_{plate}/all-sample/DGE_filtered/anndata.h5ad'
 scanpy_dir = results_dir + '03SCANPY/'
 sc.settings.figdir = results_dir + '/figs/'
 sys.path.append(script_dir)  # Add the directory containing custom scripts to sys.path
