@@ -31,52 +31,43 @@ def setup_logging(plate):
     )
     logger = logging.getLogger()
     return logger
-from pathlib import Path
 
-# Main function to encapsulate script behavior
-def main():
+# Setup logging
+logger = setup_logging(plate)
+logger.info("Plate variable detected: %s", plate)
+logger.info("Processing plate: %s", plate)
 
-    # Setup logging
-    logger = setup_logging(plate)
-    logger.info("Plate variable detected: %s", plate)
-    logger.info("Processing plate: %s", plate)
+# Suppress warnings
+warnings.simplefilter("ignore", FutureWarning)
+warnings.simplefilter("ignore", UserWarning)
+warnings.simplefilter("ignore", RuntimeWarning)
 
-    # Suppress warnings
-    warnings.simplefilter("ignore", FutureWarning)
-    warnings.simplefilter("ignore", UserWarning)
-    warnings.simplefilter("ignore", RuntimeWarning)
+# Initialize interactive table mode
+init_notebook_mode(all_interactive=True)
 
-    # Initialize interactive table mode
-    init_notebook_mode(all_interactive=True)
+# Adjust Scanpy figure defaults
+sc.settings.set_figure_params(
+    dpi=100, fontsize=10, dpi_save=400,
+    facecolor='white', figsize=(12, 6), format='png'
+)
 
-    # Adjust Scanpy figure defaults
-    sc.settings.set_figure_params(
-        dpi=100, fontsize=10, dpi_save=400,
-        facecolor='white', figsize=(12, 6), format='png'
-    )
+# Set root directory
+sc.settings.verbosity = 4
 
-    # Set root directory
-    sc.settings.verbosity = 4
+if os.path.exists('/scratch/'):
+     os.environ['OMP_NUM_THREADS'] = '16'
 
-    if os.path.exists('/scratch/'):
-         os.environ['OMP_NUM_THREADS'] = '16'
- 
-    script_dir = workflow_dir + 'workflow/scripts/'
-    results_dir = root_dir + 'results/'
-    data_dir = results_dir + '02PARSE/'
-    plate_path = data_dir + f'combine_{plate}/all-sample/DGE_filtered/anndata.h5ad'
-    scanpy_dir = results_dir + '03SCANPY/'
-    sc.settings.figdir = results_dir + '/figs/'
-    sys.path.append(script_dir)
+script_dir = workflow_dir + 'workflow/scripts/'
+results_dir = root_dir + 'results/'
+data_dir = results_dir + '02PARSE/'
+plate_path = data_dir + f'combine_{plate}/all-sample/DGE_filtered/anndata.h5ad'
+scanpy_dir = results_dir + '03SCANPY/'
+sc.settings.figdir = results_dir + '/figs/'
+sys.path.append(script_dir)
 
-    # Log important directories
-    logger.info("Script initialized. Root directory: %s", root_dir)
-    logger.info("Data directory: %s", data_dir)
-    logger.info("Saving to directory: %s", scanpy_dir)
-    logger.info("Directory exists: %s", os.path.exists(scanpy_dir))
-
-
-# Ensure script runs only when executed directly
-if __name__ == "__main__":
-    main()
-
+# Log important directories
+logger.info("Script initialized. Root directory: %s", root_dir)
+logger.info("Data directory: %s", data_dir)
+logger.info("Saving to directory: %s", scanpy_dir)
+logger.info("Directory exists: %s", os.path.exists(scanpy_dir))
+logger.info(f"plate_path set to: {plate_path}")
