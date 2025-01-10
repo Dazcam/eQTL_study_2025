@@ -3,15 +3,14 @@ rule scanpy_qc:
              nb = "scripts/scanpy_qc.ipynb"
     output:  "../results/03SCANPY/scanpy_qc_{plate}.html"
     conda:   "../envs/eqtl_study.yml"
+    params:  "{wildcards.plate}"
     resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
     message: "Running Scanpy in Jupyter notebook and producing HTML output"
     log:     "../results/00LOG/03SCANPY/scanpy_qc_{plate}.log"
     shell:
         r"""
-        jupyter nbconvert --to html --execute scripts/scanpy_qc.ipynb \
+        export PLATE={params}
+        jupyter nbconvert --to html --execute {input.nb} \
         --output {output} \
-        --ExecutePreprocessor.kernel_name=python3 \
-        --ExecutePreprocessor.extra_arguments="--plate {wildcards.plate}" >> {log} 2>&1
-        echo "Arguments passed: --plate {wildcards.plate}" >> {log}
+        --ExecutePreprocessor.kernel_name=python3 >> {log} 2>&1
         """
-
