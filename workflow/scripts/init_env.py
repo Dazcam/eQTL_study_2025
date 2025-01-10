@@ -16,7 +16,7 @@ import numba
 from memory_profiler import profile
 import ipywidgets as widgets
 import logging  # Import the logging module
-
+from pathlib import Path
 
 # Function to configure logging dynamically
 def setup_logging(plate):
@@ -31,17 +31,22 @@ def setup_logging(plate):
     )
     logger = logging.getLogger()
     return logger
-
+from pathlib import Path
 
 # Main function to encapsulate script behavior
 def main():
     # Detect the environment and set plate
     if os.path.exists('/scratch/'):
-        plate = os.getenv("PLATE")
-        if not plate:
-            raise ValueError("Environment variable 'PLATE' is not set.")
+        # Extract plate identifier from snakemake.output['nb']
+        try:
+            input_path = snakemake.output['nb']  # Snakemake injects this variable at runtime
+            plate = Path(input_path).stem.split('_')[-1]  # Extract the plate identifier
+            print(f"Running on Hawk. Plate set to: {plate}")       
+        except Exception as e:
+            raise ValueError(f"Failed to extract plate from snakemake.output['nb']: {e}")
     else:
-        plate = "local_plate"  # Placeholder for local debugging or development
+        plate = "plate1"  # Placeholder for local debugging or development
+        print(f"Running locally. Plate set to: {plate}")
 
     # Setup logging
     logger = setup_logging(plate)
