@@ -35,17 +35,6 @@ from pathlib import Path
 
 # Main function to encapsulate script behavior
 def main():
-    # Detect the environment and set plate
-    if os.path.exists('/scratch/'):
-        # Extract plate identifier from snakemake.output['nb']
-        try:
-            plate=param1
-            print(f"Running on Hawk. Plate set to: {plate}")       
-        except Exception as e:
-            raise ValueError(f"Failed to extract plate from snakemake.output['nb']: {e}")
-    else:
-        plate = "plate1"  # Placeholder for local debugging or development
-        print(f"Running locally. Plate set to: {plate}")
 
     # Setup logging
     logger = setup_logging(plate)
@@ -68,12 +57,6 @@ def main():
 
     # Set root directory
     sc.settings.verbosity = 4
-    if os.path.exists('/scratch/c.c1477909/eQTL_study_2025/'):
-        root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
-        os.environ['OMP_NUM_THREADS'] = '16'
-    else:
-        root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
-
     script_dir = root_dir + 'scripts/'
     results_dir = root_dir + 'results/'
     data_dir = results_dir + '02PARSE/'
