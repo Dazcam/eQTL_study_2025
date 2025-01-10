@@ -68,11 +68,11 @@ def main():
 
     # Set root directory
     sc.settings.verbosity = 4
-    if os.path.exists('/scratch/c.c1477909/eQTL_study_2025/'):
-        root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
+    if os.path.exists('/scratch/'):
+        root_dir = '/scratch/c.c1477909/eQTL_study_2025/workflow/'
         os.environ['OMP_NUM_THREADS'] = '16'
     else:
-        root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
+        root_dir = '/Users/darren/Desktop/eQTL_study_2025/workflow/'
 
     script_dir = root_dir + 'scripts/'
     results_dir = root_dir + 'results/'

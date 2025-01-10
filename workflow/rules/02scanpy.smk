@@ -12,5 +12,5 @@ rule scanpy_qc:
     shell:
              "echo 'Running on: {params.pm_path}' >> {log} && "
              "echo 'Using PATH: $PATH' >> {log} && "
-             "{params.pm_path} {input.nb} {params.nb_out} -p param1 {params.plate} >> {log} 2>&1 && "
+             "{params.pm_path} {input.nb} {params.nb_out} -p plate {params.plate} >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {output} >> {log} 2>&1"
