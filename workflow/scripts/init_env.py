@@ -39,8 +39,7 @@ def main():
     if os.path.exists('/scratch/'):
         # Extract plate identifier from snakemake.output['nb']
         try:
-            input_path = snakemake.output['nb']  # Snakemake injects this variable at runtime
-            plate = Path(input_path).stem.split('_')[-1]  # Extract the plate identifier
+            plate=param1
             print(f"Running on Hawk. Plate set to: {plate}")       
         except Exception as e:
             raise ValueError(f"Failed to extract plate from snakemake.output['nb']: {e}")
