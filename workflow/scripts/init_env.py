@@ -18,56 +18,70 @@ import ipywidgets as widgets
 import logging  # Import the logging module
 from pathlib import Path
 
-# Function to configure logging dynamically
-def setup_logging(plate):
-    log_filename = f"../../results/00LOG/03SCANPY/scanpy_qc_{plate}.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler(log_filename)
-        ]
+def initialize_env(plate):
+    """
+    Initialize the environment for the script, including logging, settings, and paths.
+    Accepts `plate` as an argument.
+    """
+    # Function to configure logging dynamically
+    def setup_logging(plate):
+        log_filename = f"/scratch/c.c1477909/eQTL_study_2025/results/00LOG/03SCANPY/scanpy_qc_{plate}.log"
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler(log_filename)
+            ]
+        )
+        logger = logging.getLogger()
+        return logger
+
+    # Setup logging
+    logger = setup_logging(plate)
+    logger.info("Plate variable detected: %s", plate)
+    logger.info("Processing plate: %s", plate)
+
+    # Suppress warnings
+    warnings.simplefilter("ignore", FutureWarning)
+    warnings.simplefilter("ignore", UserWarning)
+    warnings.simplefilter("ignore", RuntimeWarning)
+
+    # Initialize interactive table mode
+    init_notebook_mode(all_interactive=True)
+
+    # Adjust Scanpy figure defaults
+    sc.settings.set_figure_params(
+        dpi=100, fontsize=10, dpi_save=400,
+        facecolor='white', figsize=(12, 6), format='png'
     )
-    logger = logging.getLogger()
-    return logger
 
-# Setup logging
-logger = setup_logging(plate)
-logger.info("Plate variable detected: %s", plate)
-logger.info("Processing plate: %s", plate)
+    # Set root directory
+    sc.settings.verbosity = 4
 
-# Suppress warnings
-warnings.simplefilter("ignore", FutureWarning)
-warnings.simplefilter("ignore", UserWarning)
-warnings.simplefilter("ignore", RuntimeWarning)
+    # Set thread environment variable if on a specific system
+    if os.path.exists('/scratch/'):
+        os.environ['OMP_NUM_THREADS'] = '16'
+        root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
+    else:
+        root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
 
-# Initialize interactive table mode
-init_notebook_mode(all_interactive=True)
+    # Define and set paths
+    script_dir = root_dir + 'workflow/scripts/'
+    results_dir = root_dir + 'results/'
+    data_dir = results_dir + '02PARSE/'
+    plate_path = data_dir + f'combine_{plate}/all-sample/DGE_filtered/anndata.h5ad'
+    scanpy_dir = results_dir + '03SCANPY/'
+    sc.settings.figdir = results_dir + '/figs/'
+    sys.path.append(script_dir)
 
-# Adjust Scanpy figure defaults
-sc.settings.set_figure_params(
-    dpi=100, fontsize=10, dpi_save=400,
-    facecolor='white', figsize=(12, 6), format='png'
-)
+    # Log important directories
+    logger.info("Script initialized. Root directory: %s", root_dir)
+    logger.info("Data directory: %s", data_dir)
+    logger.info("Saving to directory: %s", scanpy_dir)
+    logger.info("Directory exists: %s", os.path.exists(scanpy_dir))
+    logger.info(f"plate_path set to: {plate_path}")
 
-# Set root directory
-sc.settings.verbosity = 4
+    # Return logger and paths as needed
+    return logger, root_dir, plate_path, scanpy_dir 
 
-if os.path.exists('/scratch/'):
-     os.environ['OMP_NUM_THREADS'] = '16'
-
-script_dir = workflow_dir + 'workflow/scripts/'
-results_dir = root_dir + 'results/'
-data_dir = results_dir + '02PARSE/'
-plate_path = data_dir + f'combine_{plate}/all-sample/DGE_filtered/anndata.h5ad'
-scanpy_dir = results_dir + '03SCANPY/'
-sc.settings.figdir = results_dir + '/figs/'
-sys.path.append(script_dir)
-
-# Log important directories
-logger.info("Script initialized. Root directory: %s", root_dir)
-logger.info("Data directory: %s", data_dir)
-logger.info("Saving to directory: %s", scanpy_dir)
-logger.info("Directory exists: %s", os.path.exists(scanpy_dir))
-logger.info(f"plate_path set to: {plate_path}")
