@@ -250,7 +250,7 @@ def is_running_in_jupyter():
     except NameError:
         return False  # Standard Python interpreter
 
-@profile
+#@profile
 def load_and_process_data(downsample_cells=None, *adata_dirs):
     """
     Load, process, and merge AnnData objects with optional downsampling.
