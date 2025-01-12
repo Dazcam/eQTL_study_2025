@@ -8,6 +8,7 @@ import scanpy as sc
 import seaborn as sns
 import scipy.io as sio
 import scanpy.external as sce
+import matplotlib
 import matplotlib.pyplot as plt
 import gc
 import warnings
