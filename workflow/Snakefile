@@ -12,4 +12,5 @@ rule all:
 #        expand("../results/01MRGD_fqs/{sample}_R{read}.fastq.gz", sample = ALL_SAMPLES, read = [1,2])
 #        expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
 #         "../results/02PARSE/combine_plate1/run.done"
-         expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate'])
+         expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
+         "../results/03SCANPY/scanpy_clustering.html"
