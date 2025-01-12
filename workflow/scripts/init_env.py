@@ -24,8 +24,22 @@ def initialize_env(plate):
     Accepts `plate` as an argument.
     """
     # Function to configure logging dynamically
+
+    
     def setup_logging(plate):
-        log_filename = f"/scratch/c.c1477909/eQTL_study_2025/results/00LOG/03SCANPY/scanpy_qc_{plate}.log"
+        if os.path.exists('/scratch/'):
+            root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
+        else:
+            root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
+
+        log_dir = os.path.join(root_dir, "results/00LOG/03SCANPY")
+        os.makedirs(log_dir, exist_ok=True)
+
+        if 'plate' in plate: 
+            log_filename = os.path.join(log_dir, f"scanpy_qc_{plate}.log")
+        else:
+            log_filename = os.path.join(log_dir, f"scanpy_{plate}.log")
+            
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s',
