@@ -11,7 +11,7 @@ from memory_profiler import profile
 
 
 ##########  LOAD FUNCTIONS  ############  
-@profile
+#@profile
 def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
     """
     Load, process, and merge AnnData objects with optional downsampling.
@@ -175,6 +175,7 @@ def create_counts_per_sample_boxplt(ann_obj):
 def filter_anndata(
     adata, 
     min_genes_per_cell=300, 
+    max_genes_per_cell=6000,
     min_counts_per_cell=500, 
     min_cells_per_gene=5, 
     min_cells_per_sample=10
@@ -189,6 +190,8 @@ def filter_anndata(
         This object will be modified in place.
     min_genes_per_cell : int, optional
         Minimum number of genes required to keep a cell (default: 300).
+    max_genes_per_cell : int, optional
+        Maximum number of genes allowed in a cell to keep that cell (default: 6000).
     min_counts_per_cell : int, optional
         Minimum number of total counts (reads) required to keep a cell (default: 500).
     min_cells_per_gene : int, optional
@@ -203,33 +206,41 @@ def filter_anndata(
     """
     print(f"Dimensions before applying filter: {adata.shape}")
 
-    # Step 1: Filter cells based on minimum number of genes
-    num_cells_before = adata.shape[0]
-    sc.pp.filter_cells(adata, min_genes=min_genes_per_cell)
-    num_cells_after = adata.shape[0]
+    if min_genes_per_cell is not None:
+        # Step 1: Filter cells based on minimum number of genes
+        num_cells_before = adata.shape[0]
+        sc.pp.filter_cells(adata, min_genes=min_genes_per_cell)
+        num_cells_after = adata.shape[0]
 
-    # Step 2: Filter cells based on minimum total counts (reads)
-    num_cells_before = adata.shape[0]
-    sc.pp.filter_cells(adata, min_counts=min_counts_per_cell)
-    num_cells_after = adata.shape[0]
+    if max_genes_per_cell is not None:
+        # Step 2: Filter cells based on maximum number of genes
+        num_cells_before = adata.shape[0]
+        sc.pp.filter_cells(adata, max_genes=max_genes_per_cell)
+        num_cells_after = adata.shape[0]
 
-    # Step 3: Filter genes based on minimum number of cells expressing them
-    num_genes_before = adata.shape[1]
-    sc.pp.filter_genes(adata, min_cells=min_cells_per_gene)
-    num_genes_after = adata.shape[1]
+    if min_counts_per_cell is not None:
+        # Step 3: Filter cells based on minimum total counts (reads)
+        num_cells_before = adata.shape[0]
+        sc.pp.filter_cells(adata, min_counts=min_counts_per_cell)
+        num_cells_after = adata.shape[0]
 
-    # Step 4: Filter samples based on minimum number of cells
-    valid_samples = adata.obs['sample'].value_counts() >= min_cells_per_sample
-    valid_sample_ids = valid_samples[valid_samples].index
-    num_samples_before = adata.obs['sample'].nunique()
-    valid_cells = adata.obs['sample'].isin(valid_sample_ids)  # Boolean mask for valid cells
-    adata._inplace_subset_obs(valid_cells)  # In-place filtering of cells
-    num_samples_after = adata.obs['sample'].nunique()
-    print(f"filtered out {num_samples_before - num_samples_after} samples with < {min_cells_per_sample} cells.")
+    if min_cells_per_gene is not None:
+        # Step 4: Filter genes based on minimum number of cells expressing them
+        num_genes_before = adata.shape[1]
+        sc.pp.filter_genes(adata, min_cells=min_cells_per_gene)
+        num_genes_after = adata.shape[1]
+    
+    if min_cells_per_sample is not None:
+        # Step 5: Filter samples based on minimum number of cells
+        num_samples_before = adata.obs['sample'].nunique()
+        valid_samples = adata.obs['sample'].value_counts() >= min_cells_per_sample
+        valid_sample_ids = valid_samples[valid_samples].index
+        valid_cells = adata.obs['sample'].isin(valid_sample_ids)  # Boolean mask for valid cells
+        adata._inplace_subset_obs(valid_cells)  # In-place filtering of cells
+        num_samples_after = adata.obs['sample'].nunique()
+        print(f"filtered out {num_samples_before - num_samples_after} samples with < {min_cells_per_sample} cells.")
 
     print(f"Dimensions after applying filter: {adata.shape}")
-
-
 
 ########## General functions ##########
 def is_running_in_jupyter():
