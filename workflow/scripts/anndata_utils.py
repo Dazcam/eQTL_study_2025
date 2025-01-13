@@ -242,6 +242,130 @@ def filter_anndata(
 
     print(f"Dimensions after applying filter: {adata.shape}")
 
+
+def detect_mad_outliers_per_sample(adata, group_column, target_column, threshold=3, log=False, use_median=True, outlier_column="mad_outlier"):
+    """
+    Detect MAD-based outliers per sample group in an AnnData object.
+    
+    Parameters:
+    - adata: AnnData object containing observation data.
+    - group_column: Column in `adata.obs` to group data by (e.g., 'sample').
+    - target_column: Column in `adata.obs` to calculate outliers on (e.g., 'total_counts').
+    - threshold: Number of MADs or standard deviations to define outliers.
+    - log: Whether to log-transform the target data before analysis.
+    - use_median: If True, use median and MAD; otherwise, use mean and standard deviation.
+    - outlier_column: Name of the output column in `adata.obs` to store outlier flags.
+    
+    Returns:
+    - None: Modifies `adata.obs` in place by adding a new column with outlier flags.
+    """
+    def is_outlier(data):
+        if log:
+            data = np.log1p(data)
+        
+        if use_median:
+            center = np.median(data)
+            deviation = np.median(np.abs(data - center))  # MAD
+        else:
+            center = np.mean(data)
+            deviation = np.std(data)  # Standard deviation
+        
+        lower_bound = center - threshold * deviation
+        upper_bound = center + threshold * deviation
+        
+        return (data < lower_bound) | (data > upper_bound)
+    
+    adata.obs[outlier_column] = adata.obs.groupby(group_column)[target_column].transform(
+        lambda x: is_outlier(x)
+    )
+
+
+def filter_cells_and_genes(
+    adata,
+    mito_threshold=5,
+    ribo_threshold=5,
+    remove_doublets=True,
+    remove_mad_outliers=True
+):
+    """
+    Apply filters to cells and genes in the AnnData object, modifying in place.
+    
+    Cell filters:
+        - Mitochondrial gene percentage > mito_threshold (default: 5%)
+        - Ribosomal gene percentage > ribo_threshold (default: 5%)
+        - MAD outliers (optional)
+        - Predicted doublets (optional)
+    
+    Gene filters:
+        - Remove mitochondrial genes (MT-)
+        - Remove MALAT1
+    
+    Parameters:
+        adata (AnnData): The AnnData object to filter (modified in place).
+        mito_threshold (float, optional): Threshold percentage for mitochondrial genes. Default is 5.
+        ribo_threshold (float, optional): Threshold percentage for ribosomal genes. Default is 5.
+        remove_doublets (bool, optional): Whether to remove predicted doublets. Default is True.
+        remove_mad_outliers (bool, optional): Whether to remove MAD outliers. Default is True.
+    """
+    print(f"Applying cell filters with thresholds: mito > {mito_threshold}%, ribo > {ribo_threshold}%")
+    
+    # Convert 'predicted_doublet' to boolean if needed
+    if remove_doublets and 'predicted_doublet' in adata.obs.columns:
+        adata.obs['predicted_doublet'] = adata.obs['predicted_doublet'].astype(bool)
+
+    # Apply mitochondrial and ribosomal filters
+    adata.obs['mito_gt_threshold'] = adata.obs['pct_counts_mt'] > mito_threshold
+    adata.obs['ribo_gt_threshold'] = adata.obs['pct_counts_ribo'] > ribo_threshold
+
+    # Determine which filters to apply
+    columns_to_check = ['mito_gt_threshold', 'ribo_gt_threshold']
+    if remove_doublets:
+        columns_to_check.append('predicted_doublet')
+    if remove_mad_outliers:
+        columns_to_check.append('mad_outlier')
+
+    # Create a boolean column indicating if the cell is an outlier
+    adata.obs['is_outlier'] = adata.obs[columns_to_check].astype(bool).any(axis=1)
+
+    # Create a summary table for all filtering criteria
+    filter_counts = {
+        "mito_gt_threshold": adata.obs['mito_gt_threshold'].sum(),
+        "ribo_gt_threshold": adata.obs['ribo_gt_threshold'].sum(),
+    }
+    if remove_doublets:
+        filter_counts["predicted_doublet"] = adata.obs['predicted_doublet'].sum()
+    if remove_mad_outliers:
+        filter_counts["mad_outlier"] = adata.obs['mad_outlier'].sum()
+
+    filter_counts["is_outlier"] = adata.obs['is_outlier'].sum()
+
+    # Print the summary table
+    print("Counts of outliers for removal:")
+    for key, value in filter_counts.items():
+        print(f"  {key}: {value}")
+
+    # Filter cells in place
+    print(f"Dimensions before cell filter: {adata.shape}")
+    adata._inplace_subset_obs(adata.obs['is_outlier'] == False)  # Apply cell filter in place
+    print(f"Dimensions after cell filter: {adata.shape}")
+    gc.collect()
+
+    # Applying gene filters
+    print("Applying gene filters: remove mitochondrial genes and MALAT1")
+    
+    # Identify mitochondrial genes
+    mito_genes = adata.var_names.str.startswith('MT-')  # For human
+    
+    # Add MALAT1 to the removal list
+    genes_to_remove = mito_genes | (adata.var_names == 'MALAT1')
+
+    # Subset genes in place
+    adata._inplace_subset_var(~genes_to_remove)  # Apply gene filter in place
+
+    # Confirm changes
+    print(f"Number of genes removed: {genes_to_remove.sum()}")
+    print(f"Dimensions after gene filter: {adata.shape}")
+
 ########## General functions ##########
 def is_running_in_jupyter():
     """
@@ -261,125 +385,62 @@ def is_running_in_jupyter():
     except NameError:
         return False  # Standard Python interpreter
 
-#@profile
-def load_and_process_data(downsample_cells=None, *adata_dirs):
-    """
-    Load, process, and merge AnnData objects with optional downsampling.
-    
-    Parameters:
-        downsample_cells (int, optional): Number of cells to randomly downsample to. If None, no downsampling is performed.
-        *adata_dirs (str): Paths to AnnData directories. Each directory should contain an 'anndata.h5ad' file.
-        
-    Returns:
-        AnnData: A merged and processed AnnData object.
-    """
-    adata_list = []   
-    
-    # Extract plate numbers from the directory paths
-    plate_numbers = [re.search(r'plate(\d+)', adata_dir).group(1) for adata_dir in adata_dirs]
 
-    # Report how many plates will be processed and downsampling details
-    if downsample_cells != None:
-        print(f"Processing {len(adata_dirs)} plates with downsampling to {downsample_cells} cells per plate.")
-    else:
-        print(f"Processing {len(adata_dirs)} plates, no downsampling applied.")
-
-    for i, adata_dir in enumerate(adata_dirs):
-        # Load the AnnData object
-        print(f"Loading plate {plate_numbers[i]} ...")
-        adata = sc.read(adata_dir + 'anndata.h5ad')
-        
-        # Assign unique plate information to cell ids and metadata
-        adata.obs['plate'] = 'plate' + plate_numbers[i]
-        adata.obs_names = f"plate{plate_numbers[i]}_" + adata.obs_names
-
-        # Log dimensions
-        print(f"Plate {plate_numbers[i]} dimensions: {adata.shape}")
-        print(f"Plate {plate_numbers[i]} matrix Dimensions: {adata.X.shape}")
- 
-        # Optional downsampling
-        if downsample_cells is not None and downsample_cells < adata.n_obs:
-            random_indices = np.random.choice(adata.n_obs, downsample_cells, replace=False)
-            adata = adata[random_indices, :].copy()
-        
-        adata_list.append(adata)
-
-    # Find common genes across all datasets
-    # Optionally handle common genes only if more than one plate
-    if len(adata_list) > 1:
-        common_genes = adata_list[0].var_names
-        for adata in adata_list[1:]:
-            common_genes = common_genes.intersection(adata.var_names)
-        
-        print(f"Common genes across all plates: {common_genes.shape[0]}")
-        
-        # Subset all adata objects for common genes
-        for i, adata in enumerate(adata_list):
-            adata_list[i] = adata[:, common_genes]
-    else:
-        print(f"Only one plate processed; no need to find common genes.")
-        
-    # Concatenate the AnnData objects
-    print(f"Merging plates ...")
-    adata_mrg = sc.concat(adata_list, join='inner')
-
-    # Remove 'hg38' from gene names
-    adata_mrg.var.index = adata_mrg.var.index.str.replace('_hg38', '')
-
-    # Cleanup to release memory
-    del adata_list
-    gc.collect()
-
-    print(adata_mrg)
-
-    return adata_mrg
 
 
 ##########  VISUALISATION FUNCTIONS  ############  
-def create_umap_visualisations(adata, resolutions, leiden_prefix="leiden"):
+def plot_doublet_umaps(ann_obj):
+
+    ann_obj.obs["predicted_doublet"] = ann_obj.obs["predicted_doublet"].astype("category")
+    sc.pp.normalize_total(ann_obj) # Norm to median total count
+    sc.pp.log1p(ann_obj)
+    sc.pp.highly_variable_genes(ann_obj, n_top_genes=2000, flavor="seurat_v3")
+    sc.tl.pca(ann_obj, svd_solver='arpack')
+    sc.pp.neighbors(ann_obj)
+    sc.tl.leiden(ann_obj)
+    sc.pl.umap(ann_obj, color=['leiden'])
+
+    return sc.pl.umap(adata, color = ["leiden", "predicted_doublet", "doublet_score"], wspace = 0.1)
+        
+def create_umap_visualisations(adata, resolutions, leiden_prefix="leiden", clustering_algorithm="Leiden"):
     """
-    Creates UMAP visualizations for multiple Leiden clustering resolutions.
+    Creates a multi-panel UMAP visualization for multiple Leiden clustering resolutions.
     
     Parameters:
     - adata: AnnData object with UMAP coordinates and Leiden clusters computed.
     - resolutions: List of resolution values used for Leiden clustering.
     - leiden_prefix: Prefix used for Leiden cluster keys in adata.obs.
+    - clustering_algorithm: The clustering algorithm used (default is "Leiden").
 
     Returns:
-    - If in a Jupyter environment, returns a tab widget with UMAP plots for each resolution.
-    - Otherwise, returns a list of matplotlib figures for each resolution.
+    - A matplotlib figure with multiple panels, one for each resolution.
     """
-    # Check if in a Jupyter environment
-    in_jupyter = is_running_in_jupyter()
+    # Calculate number of rows and columns for the subplots grid
+    num_plots = len(resolutions)
+    num_cols = 3  # Adjust based on your layout preference
+    num_rows = (num_plots + num_cols - 1) // num_cols  # Ceiling division
     
-    plots = []
-    tabs = []
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 5, num_rows * 5))
     
-    for res in resolutions:
-        fig, ax = plt.subplots(figsize=(8, 6))
+    # Flatten axes array for easy indexing
+    axes = axes.flatten()
+
+    # Loop through resolutions and plot each UMAP
+    for i, res in enumerate(resolutions):
+        ax = axes[i]
         sc.pl.umap(adata, color=f'{leiden_prefix}_{res}', ax=ax, show=False)
         
-        if in_jupyter:
-            # Save the figure as a widget for the tab
-            output = widgets.Output()
-            with output:
-                plt.show()
-            tabs.append((f"Resolution {res}", output))
-        else:
-            # Append figure for non-Jupyter environments
-            plots.append(fig)
+        # Set title with clustering algorithm and resolution
+        ax.set_title(f'{clustering_algorithm} - Resolution {res}', fontsize=10)
     
-    if in_jupyter:
-        # Create and return a tab widget
-        tab_widget = widgets.Tab()
-        tab_widget.children = [content for _, content in tabs]
-        for i, (title, _) in enumerate(tabs):
-            tab_widget.set_title(i, title)
-        return tab_widget
-    else:
-        # Return a list of figures
-        return plots
-
+    # Hide unused subplots (if any)
+    for j in range(i + 1, len(axes)):
+        axes[j].axis('off')
+    
+    # Adjust layout to avoid overlap
+    plt.tight_layout()
+    
+    return fig
 
 def plot_filtered_violin(
     adata, 
@@ -388,12 +449,13 @@ def plot_filtered_violin(
     resolutions=None, 
     row_palette=None, 
     swap_axes=True, 
+    clustering_algorithm="Leiden",  # Optional: Add clustering algorithm to title
     **kwargs
 ):
     """
     Plot stacked violin plots for multiple gene sets, ignoring missing genes and reporting missing ones,
-    with support for multiple resolutions.
-
+    with support for multiple resolutions in a multi-panel format.
+    
     Parameters:
         adata (AnnData): The AnnData object containing the data.
         gene_sets (list of tuples): List of tuples where each tuple is (name, gene_set).
@@ -401,11 +463,11 @@ def plot_filtered_violin(
         resolutions (list, optional): List of resolutions for which to plot violin plots. Default is None.
         row_palette (list or dict, optional): Color palette for rows. Default is None.
         swap_axes (bool, optional): Whether to swap axes. Default is True.
+        clustering_algorithm (str, optional): Clustering algorithm used (e.g., "Leiden").
         **kwargs: Additional keyword arguments passed to `sc.pl.stacked_violin`.
 
     Returns:
-        - A tab widget if running in a Jupyter notebook.
-        - A list of matplotlib figures if not using a Jupyter notebook.
+        - A tuple (fig, axes) containing the figure and axes objects.
     """
     # Separate valid and missing genes for each gene set
     valid_gene_sets = []
@@ -431,58 +493,61 @@ def plot_filtered_violin(
     if resolutions is None:
         resolutions = [""]
     
-    # Determine execution environment
-    in_jupyter = is_running_in_jupyter()
-
-    # Prepare plots
-    plots = []
-    tabs = []
-
-    for res in resolutions:
-        groupby = f"{groupby_base}_{res}" if res else groupby_base
-        print(f"Generating plots for resolution: {res if res else 'default'}")
+    # Calculate number of rows and columns for the subplots grid
+    num_plots = len(gene_sets) * len(resolutions)
+    num_cols = 3  # Adjust based on your layout preference
+    num_rows = (num_plots + num_cols - 1) // num_cols  # Ceiling division
     
-        for i, (gene_set_tuple, valid_genes) in enumerate(zip(gene_sets, valid_gene_sets)):
-            name, gene_set = gene_set_tuple
-            print(f"Plotting gene set {name} with {len(valid_genes)} genes out of {len(gene_set)} provided.")
-            
-            if in_jupyter:
-                # Generate plot and store as a widget for tab
-                output = Output()
-                with output:
-                    sc.pl.stacked_violin(
-                        adata, 
-                        valid_genes, 
-                        groupby=groupby, 
-                        row_palette=row_palette, 
-                        swap_axes=swap_axes, 
-                        **kwargs
-                    )
-                tabs.append((f"{name}: {res}", output))  # Include gene set name in the tab title
-            else:
-                # Generate plot and store figure
-                fig = sc.pl.stacked_violin(
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 5, num_rows * 5))
+    
+    # Flatten axes array for easy indexing
+    axes = axes.flatten()
+
+    # Temporarily suppress the specific warning inside the function
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)  # Suppress all UserWarnings
+        
+        # Loop through resolutions and plot each gene set
+        plot_idx = 0
+        for res in resolutions:
+            groupby = f"{groupby_base}_{res}" if res else groupby_base
+            print(f"Generating plots for resolution: {res if res else 'default'}")
+        
+            for i, (gene_set_tuple, valid_genes) in enumerate(zip(gene_sets, valid_gene_sets)):
+                name, gene_set = gene_set_tuple
+                print(f"Plotting gene set {name} with {len(valid_genes)} genes out of {len(gene_set)} provided.")
+                
+                ax = axes[plot_idx]
+                sc.pl.stacked_violin(
                     adata, 
                     valid_genes, 
                     groupby=groupby, 
                     row_palette=row_palette, 
                     swap_axes=swap_axes, 
+                    ax=ax, 
                     show=False,  # Suppress inline plotting
                     **kwargs
                 )
-                plots.append(fig)
+                
+                # Set title with gene set name and resolution
+                ax.set_title(f'{name} - {clustering_algorithm} - Resolution {res}' if res else f'{name} - {clustering_algorithm}')
+                plot_idx += 1
 
+        # Hide unused subplots (if any)
+        for j in range(plot_idx, len(axes)):
+            axes[j].axis('off')
 
-    # Return appropriate output
-    if in_jupyter:
-        # Create a tab widget
-        tab_widget = Tab()
-        tab_widget.children = [content for _, content in tabs]
+        # Rotate the legend and position it above the plot
+        for ax in axes[:plot_idx]:  # Only apply to axes that have a plot
+            legend = ax.get_legend()
+            if legend:
+                legend.set_bbox_to_anchor((0.5, 1.1))  # Position legend above the plot area
+                legend.set_loc("center")
+                legend.set_frame_on(False)
+                for label in legend.get_texts():
+                    label.set_rotation(0)  # No rotation, keeping legend horizontally aligned
 
-        # Set tab titles
-        for i, (title, _) in enumerate(tabs):
-            tab_widget.set_title(i, title)
+    # Adjust layout to avoid overlap
+    plt.tight_layout()
 
-        return tab_widget
-    else:
-        return plots
+    return fig, axes  # Return both figure and axes for further customization
