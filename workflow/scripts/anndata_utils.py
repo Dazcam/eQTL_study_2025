@@ -96,7 +96,6 @@ def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
 
 
 ##########  QC FUNCTIONS  ############  
-
 def create_counts_per_sample_boxplt(ann_obj):
     """
     Create a two-panelled boxplot visualizing total counts and feature counts per sample.
@@ -170,6 +169,7 @@ def create_counts_per_sample_boxplt(ann_obj):
 
     # Return figure and axes objects
     return fig, axes
+
 
 ##########  Filtering functions  ##########
 def filter_anndata(
@@ -336,7 +336,6 @@ def load_and_process_data(downsample_cells=None, *adata_dirs):
 
 
 ##########  VISUALISATION FUNCTIONS  ############  
-
 def create_umap_visualisations(adata, resolutions, leiden_prefix="leiden"):
     """
     Creates UMAP visualizations for multiple Leiden clustering resolutions.
