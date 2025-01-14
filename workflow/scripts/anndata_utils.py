@@ -8,7 +8,7 @@ import ipywidgets as widgets
 from IPython import get_ipython
 from ipywidgets import Tab, Output
 from memory_profiler import profile
-
+import warnings
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
