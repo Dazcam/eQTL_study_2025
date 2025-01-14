@@ -10,7 +10,6 @@ from ipywidgets import Tab, Output
 from memory_profiler import profile
 import warnings
 
-
 ##########  LOAD FUNCTIONS  ############  
 #@profile
 def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
