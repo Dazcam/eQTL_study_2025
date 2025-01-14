@@ -84,17 +84,17 @@ def initialize_env(plate):
     # Define and set paths
     script_dir = root_dir + 'workflow/scripts/'
     results_dir = root_dir + 'results/'
-    data_dir = results_dir + '02PARSE/'
-    plate_path = data_dir + f'combine_{plate}/all-sample/DGE_filtered/anndata.h5ad'
+    parse_dir = results_dir + '02PARSE/'
+    plate_path = parse_dir + f'combine_{plate}/all-sample/DGE_filtered/anndata.h5ad'
     scanpy_dir = results_dir + '03SCANPY/'
     sc.settings.figdir = results_dir + '/figs/'
     sys.path.append(script_dir)
 
     # Log important directories
     logger.info("Script initialized. Root directory: %s", root_dir)
-    logger.info("Data directory: %s", data_dir)
-    logger.info("Saving to directory: %s", scanpy_dir)
-    logger.info("Directory exists: %s", os.path.exists(scanpy_dir))
+    logger.info("Parse directory: %s", parse_dir)
+    logger.info("Scanpy directory: %s", scanpy_dir)
+    logger.info("Scanpy directory exists: %s", os.path.exists(scanpy_dir))
     logger.info(f"plate_path set to: {plate_path}")
 
     # Return logger and paths as needed
