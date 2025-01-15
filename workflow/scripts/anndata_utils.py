@@ -401,7 +401,7 @@ def plot_doublet_umaps(ann_obj):
     sc.tl.leiden(ann_obj)
     sc.pl.umap(ann_obj, color=['leiden'])
 
-    return sc.pl.umap(adata, color = ["leiden", "predicted_doublet", "doublet_score"], wspace = 0.1)
+    return sc.pl.umap(ann_obj, color = ["leiden", "predicted_doublet", "doublet_score"], wspace = 0.1)
         
 def create_umap_visualisations(adata, resolutions, leiden_prefix="leiden", clustering_algorithm="Leiden"):
     """
