@@ -286,7 +286,8 @@ def filter_cells_and_genes(
     mito_threshold=5,
     ribo_threshold=5,
     remove_doublets=True,
-    remove_mad_outliers=True
+    remove_mad_outliers=True,
+    genes_to_remove=None,
 ):
     """
     Apply filters to cells and genes in the AnnData object, modifying in place.
@@ -298,16 +299,29 @@ def filter_cells_and_genes(
         - Predicted doublets (optional)
     
     Gene filters:
-        - Remove mitochondrial genes (MT-)
-        - Remove MALAT1
-    
+        - Remove specified genes
+        - Default to removing mitochondrial genes and MALAT1 if not specified
+
     Parameters:
         adata (AnnData): The AnnData object to filter (modified in place).
         mito_threshold (float, optional): Threshold percentage for mitochondrial genes. Default is 5.
         ribo_threshold (float, optional): Threshold percentage for ribosomal genes. Default is 5.
         remove_doublets (bool, optional): Whether to remove predicted doublets. Default is True.
         remove_mad_outliers (bool, optional): Whether to remove MAD outliers. Default is True.
+        genes_to_remove (list, optional): List of gene names (or lists of genes) to remove. Default is None.
     """
+    # Error checking for input parameters
+    if not isinstance(mito_threshold, (int, float)) or mito_threshold < 0:
+        raise ValueError("mito_threshold must be a non-negative number.")
+    if not isinstance(ribo_threshold, (int, float)) or ribo_threshold < 0:
+        raise ValueError("ribo_threshold must be a non-negative number.")
+    if not isinstance(remove_doublets, bool):
+        raise ValueError("remove_doublets must be a boolean value.")
+    if not isinstance(remove_mad_outliers, bool):
+        raise ValueError("remove_mad_outliers must be a boolean value.")
+    if genes_to_remove is not None and not isinstance(genes_to_remove, list):
+        raise ValueError("genes_to_remove must be a list or None.")
+    
     print(f"Applying cell filters with thresholds: mito > {mito_threshold}%, ribo > {ribo_threshold}%")
     
     # Convert 'predicted_doublet' to boolean if needed
@@ -349,23 +363,28 @@ def filter_cells_and_genes(
     print(f"Dimensions before cell filter: {adata.shape}")
     adata._inplace_subset_obs(adata.obs['is_outlier'] == False)  # Apply cell filter in place
     print(f"Dimensions after cell filter: {adata.shape}")
-    gc.collect()
 
     # Applying gene filters
-    print("Applying gene filters: remove mitochondrial genes and MALAT1")
+    print("Applying gene filters based on specified genes to remove")
     
-    # Identify mitochondrial genes
-    mito_genes = adata.var_names.str.startswith('MT-')  # For human
-    
-    # Add MALAT1 to the removal list
-    genes_to_remove = mito_genes | (adata.var_names == 'MALAT1')
+    # Flatten the genes_to_remove into a single list, if provided
+    if genes_to_remove is not None:
+        flat_genes_to_remove = set(
+            gene for sublist in genes_to_remove for gene in (sublist if isinstance(sublist, list) else [sublist])
+        )
+    else:
+        flat_genes_to_remove = set()
 
     # Subset genes in place
-    adata._inplace_subset_var(~genes_to_remove)  # Apply gene filter in place
+    genes_to_keep = ~adata.var_names.isin(flat_genes_to_remove)
+    print(f"Number of genes to remove: {len(flat_genes_to_remove - set(adata.var_names))}")
+    print(f"Number of genes remaining after filter: {genes_to_keep.sum()}")
+    adata._inplace_subset_var(genes_to_keep)  # Apply gene filter in place
 
     # Confirm changes
-    print(f"Number of genes removed: {genes_to_remove.sum()}")
     print(f"Dimensions after gene filter: {adata.shape}")
+
+
 
 ########## General functions ##########
 def is_running_in_jupyter():
