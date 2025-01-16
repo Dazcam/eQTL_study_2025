@@ -82,6 +82,8 @@ def initialize_env(plate):
         root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
 
     # Define and set paths
+    resources_dir = root_dir + 'resources/'
+    sheets_dir = resources_dir + 'sheets/'
     script_dir = root_dir + 'workflow/scripts/'
     results_dir = root_dir + 'results/'
     parse_dir = results_dir + '02PARSE/'
@@ -95,8 +97,9 @@ def initialize_env(plate):
     logger.info("Parse directory: %s", parse_dir)
     logger.info("Scanpy directory: %s", scanpy_dir)
     logger.info("Scanpy directory exists: %s", os.path.exists(scanpy_dir))
+    logger.info("Sheets directory: %s", sheets_dir)
     logger.info(f"plate_path set to: {plate_path}")
 
     # Return logger and paths as needed
-    return logger, root_dir, plate_path, scanpy_dir 
+    return logger, root_dir, sheets_dir, plate_path, scanpy_dir 
 
