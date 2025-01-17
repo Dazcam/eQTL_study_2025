@@ -265,4 +265,5 @@ dependencies:
       - scikit-image==0.25.0
       - scrublet==0.2.3
       - tifffile==2024.12.12
+      - xlrd==2.0.1
 prefix: /scratch/c.c1477909/.conda/envs/eqtl_study
