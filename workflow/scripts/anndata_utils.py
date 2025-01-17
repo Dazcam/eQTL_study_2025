@@ -572,6 +572,9 @@ def plot_filtered_violin(
 
     return fig, axes  # Return both figure and axes for further customization
 
+import os
+import matplotlib.pyplot as plt
+
 def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leiden'):
     """
     Generate a stacked bar plot showing the percentage of cells in each cluster per sample,
@@ -609,11 +612,11 @@ def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leide
 
     # Define the cluster labels and colors
     clusters = percentage_table.columns
-    colors = plt.cm.tab10(range(len(clusters)))  # Use a colormap for cluster colors
+    cluster_colors = adata.uns[f'{clustering_param}_colors']  # Use Scanpy's cluster colors
 
     # Plot the stacked bar plot
     fig, ax = plt.subplots(figsize=(30, 6))
-    percentage_table.plot(kind='bar', stacked=True, ax=ax, color=colors, width=0.8)
+    percentage_table.plot(kind='bar', stacked=True, ax=ax, color=cluster_colors[:len(clusters)], width=0.8)
 
     # Customize the plot
     ax.set_title('Percentage of Cells from Each Cluster per Sample', fontsize=16)
