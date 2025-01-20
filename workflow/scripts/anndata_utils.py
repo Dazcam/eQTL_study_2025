@@ -632,3 +632,43 @@ def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leide
 
     # Return the plot and the pivot table
     return fig
+
+def plot_umap_grid(ann_obj, obs_columns, grid_size=(2, 2), figsize=(10, 8), save_path=None):
+    """
+    Generate a grid of UMAP plots for specified obs columns in a Scanpy AnnData object.
+
+    Parameters:
+        ann_obj (AnnData): The Scanpy AnnData object containing UMAP coordinates and metadata.
+        obs_columns (list): List of obs columns to color UMAP plots by.
+        grid_size (tuple): Grid size for the plots (rows, columns). Defaults to (2, 2).
+        figsize (tuple): Figure size for the entire grid. Defaults to (10, 8).
+        save_path (str): Optional path to save the figure. Defaults to None.
+
+    Returns:
+        None
+    """
+    num_plots = len(obs_columns)
+    rows, cols = grid_size
+
+    # Ensure enough rows and columns to fit all plots
+    if rows * cols < num_plots:
+        raise ValueError(f"Grid size {grid_size} is too small for {num_plots} plots.")
+    
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    axes = axes.flatten()  # Flatten axes for easy indexing
+
+    for i, column in enumerate(obs_columns):
+        sc.pl.umap(ann_obj, color=column, ax=axes[i], show=False, title=column)
+    
+    # Remove unused subplots
+    for j in range(num_plots, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.tight_layout()
+
+    # Save the figure if a path is specified
+    if save_path:
+        plt.savefig(save_path)
+        print(f"Figure saved to {save_path}")
+
+    plt.show()
