@@ -384,6 +384,30 @@ def filter_cells_and_genes(
     # Confirm changes
     print(f"Dimensions after gene filter: {adata.shape}")
 
+def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=True):
+    """
+    Identifies genes with at least `min_reads` in at least `min_samples` in the dataset.
+    
+    Parameters:
+    - adata: AnnData object containing gene expression data.
+    - min_reads: Minimum number of reads required per cell/sample.
+    - min_samples: Minimum number of samples/cells that must meet the `min_reads` threshold.
+    - inplace: If True, filters genes directly in `adata`. If False, returns a mask.
+
+    Returns:
+    - If `inplace=True`: Modifies `adata` by retaining only the filtered genes.
+    - If `inplace=False`: Returns a boolean mask of the genes that meet the criteria.
+    """
+    # Count the number of samples with at least `min_reads` for each gene
+    gene_mask = (adata.X >= min_reads).sum(axis=0).A1 >= min_samples
+
+    if inplace:
+        # Subset the AnnData object to retain only the filtered genes
+        adata._inplace_subset_var(gene_mask)
+    else:
+        # Return the mask for external usage
+        return gene_mask
+
 
 
 ########## General functions ##########
@@ -571,9 +595,6 @@ def plot_filtered_violin(
     plt.tight_layout()
 
     return fig, axes  # Return both figure and axes for further customization
-
-import os
-import matplotlib.pyplot as plt
 
 def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leiden'):
     """
