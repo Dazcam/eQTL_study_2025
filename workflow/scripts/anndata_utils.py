@@ -398,8 +398,11 @@ def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=Tru
     - If `inplace=True`: Modifies `adata` by retaining only the filtered genes.
     - If `inplace=False`: Returns a boolean mask of the genes that meet the criteria.
     """
-    # Count the number of samples with at least `min_reads` for each gene
-    gene_mask = (adata.X >= min_reads).sum(axis=0).A1 >= min_samples
+    # Handle both sparse and dense matrices
+    if isinstance(adata.X, np.ndarray):  # Dense array
+        gene_mask = (adata.X >= min_reads).sum(axis=0) >= min_samples
+    else:  # Sparse matrix
+        gene_mask = (adata.X >= min_reads).sum(axis=0).A1 >= min_samples
 
     if inplace:
         # Subset the AnnData object to retain only the filtered genes
@@ -407,8 +410,6 @@ def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=Tru
     else:
         # Return the mask for external usage
         return gene_mask
-
-
 
 ########## General functions ##########
 def is_running_in_jupyter():
