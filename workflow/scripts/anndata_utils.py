@@ -10,6 +10,7 @@ from IPython import get_ipython
 from ipywidgets import Tab, Output
 from memory_profiler import profile
 import warnings
+import scipy.sparse as sp
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
@@ -402,22 +403,26 @@ def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=Tru
     if verbose:
         print(f"Dataset dimensions: {adata.shape}")
         print(f"Filtering genes with min_reads={min_reads} and min_samples={min_samples}.")
-    
-    # Handle both sparse and dense matrices
-    if isinstance(adata.X, np.ndarray):  # Dense array
-        if verbose:
-            print("Processing as a dense matrix.")
-        boolean_matrix = (adata.X >= min_reads)
-        if verbose:
-            print(f"Boolean matrix: {boolean_matrix.sum()} total non-zero entries.")
-        gene_mask = boolean_matrix.sum(axis=0) >= min_samples
-    else:  # Sparse matrix
+
+    # Determine if the matrix is sparse or dense
+    is_sparse = not isinstance(adata.X, np.ndarray)
+
+    # Process sparse matrix
+    if is_sparse:
         if verbose:
             print("Processing as a sparse matrix.")
-        boolean_matrix = (adata.X >= min_reads)
+        boolean_matrix = (adata.X >= min_reads).astype(int)  # Sparse boolean matrix
         if verbose:
-            print(f"Boolean matrix (sparse): {boolean_matrix.nnz} total non-zero entries.")
-        gene_mask = boolean_matrix.sum(axis=0).A1 >= min_samples
+            print(f"Sparse matrix: {boolean_matrix.nnz} total non-zero entries.")
+        gene_mask = boolean_matrix.sum(axis=0).A1 >= min_samples  # Sum across samples, convert to 1D array
+    # Process dense matrix
+    else:
+        if verbose:
+            print("Processing as a dense matrix.")
+        boolean_matrix = (adata.X >= min_reads)  # Dense boolean matrix
+        if verbose:
+            print(f"Dense matrix: {boolean_matrix.sum()} total non-zero entries.")
+        gene_mask = boolean_matrix.sum(axis=0) >= min_samples  # Sum across samples
 
     # Debugging: Inspect mask
     if verbose:
