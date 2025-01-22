@@ -384,32 +384,57 @@ def filter_cells_and_genes(
     # Confirm changes
     print(f"Dimensions after gene filter: {adata.shape}")
 
-def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=True):
+def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=True, verbose=False):
     """
-    Identifies genes with at least `min_reads` in at least `min_samples` in the dataset.
+    Identifies genes with at least `min_reads` in at least `min_samples` in the dataset, with optional debugging output.
     
     Parameters:
     - adata: AnnData object containing gene expression data.
     - min_reads: Minimum number of reads required per cell/sample.
     - min_samples: Minimum number of samples/cells that must meet the `min_reads` threshold.
     - inplace: If True, filters genes directly in `adata`. If False, returns a mask.
+    - verbose: If True, prints detailed debugging information.
 
     Returns:
     - If `inplace=True`: Modifies `adata` by retaining only the filtered genes.
     - If `inplace=False`: Returns a boolean mask of the genes that meet the criteria.
     """
+    if verbose:
+        print(f"Dataset dimensions: {adata.shape}")
+        print(f"Filtering genes with min_reads={min_reads} and min_samples={min_samples}.")
+    
     # Handle both sparse and dense matrices
     if isinstance(adata.X, np.ndarray):  # Dense array
-        gene_mask = (adata.X >= min_reads).sum(axis=0) >= min_samples
+        if verbose:
+            print("Processing as a dense matrix.")
+        boolean_matrix = (adata.X >= min_reads)
+        if verbose:
+            print(f"Boolean matrix: {boolean_matrix.sum()} total non-zero entries.")
+        gene_mask = boolean_matrix.sum(axis=0) >= min_samples
     else:  # Sparse matrix
-        gene_mask = (adata.X >= min_reads).sum(axis=0).A1 >= min_samples
+        if verbose:
+            print("Processing as a sparse matrix.")
+        boolean_matrix = (adata.X >= min_reads)
+        if verbose:
+            print(f"Boolean matrix (sparse): {boolean_matrix.nnz} total non-zero entries.")
+        gene_mask = boolean_matrix.sum(axis=0).A1 >= min_samples
 
+    # Debugging: Inspect mask
+    if verbose:
+        print(f"Number of genes passing the filter: {gene_mask.sum()} out of {adata.shape[1]} total genes.")
+
+    # If in-place, subset the AnnData object
     if inplace:
-        # Subset the AnnData object to retain only the filtered genes
+        if verbose:
+            print("Filtering genes in place.")
         adata._inplace_subset_var(gene_mask)
+        if verbose:
+            print(f"New dataset dimensions after filtering: {adata.shape}")
     else:
-        # Return the mask for external usage
+        if verbose:
+            print("Returning the gene mask.")
         return gene_mask
+
 
 ########## General functions ##########
 def is_running_in_jupyter():
