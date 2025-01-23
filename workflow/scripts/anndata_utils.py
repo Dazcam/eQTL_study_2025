@@ -11,6 +11,7 @@ from ipywidgets import Tab, Output
 from memory_profiler import profile
 import warnings
 import scipy.sparse as sp
+from scipy.sparse import csr_matrix
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
@@ -387,12 +388,13 @@ def filter_cells_and_genes(
 
 def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=True, verbose=False):
     """
-    Identifies genes with at least `min_reads` in at least `min_samples` in the dataset, with optional debugging output.
+    Optimized function to filter genes by aggregating read counts at the sample level.
+    Designed for large datasets with sparse matrix support.
     
     Parameters:
     - adata: AnnData object containing gene expression data.
-    - min_reads: Minimum number of reads required per cell/sample.
-    - min_samples: Minimum number of samples/cells that must meet the `min_reads` threshold.
+    - min_reads: Minimum number of reads required per gene per sample.
+    - min_samples: Minimum number of samples that must meet the `min_reads` threshold.
     - inplace: If True, filters genes directly in `adata`. If False, returns a mask.
     - verbose: If True, prints detailed debugging information.
 
@@ -404,29 +406,52 @@ def filter_genes_by_read_count(adata, min_reads=10, min_samples=100, inplace=Tru
         print(f"Dataset dimensions: {adata.shape}")
         print(f"Filtering genes with min_reads={min_reads} and min_samples={min_samples}.")
 
-    # Determine if the matrix is sparse or dense
-    is_sparse = not isinstance(adata.X, np.ndarray)
+    # Ensure 'sample' exists in `obs`
+    if 'sample' not in adata.obs:
+        raise ValueError("The 'sample' column is missing in adata.obs. Please define the sample groupings.")
 
-    # Process sparse matrix
-    if is_sparse:
-        if verbose:
-            print("Processing as a sparse matrix.")
-        boolean_matrix = (adata.X >= min_reads).astype(int)  # Sparse boolean matrix
-        if verbose:
-            print(f"Sparse matrix: {boolean_matrix.nnz} total non-zero entries.")
-        gene_mask = boolean_matrix.sum(axis=0).A1 >= min_samples  # Sum across samples, convert to 1D array
-    # Process dense matrix
-    else:
-        if verbose:
-            print("Processing as a dense matrix.")
-        boolean_matrix = (adata.X >= min_reads)  # Dense boolean matrix
-        if verbose:
-            print(f"Dense matrix: {boolean_matrix.sum()} total non-zero entries.")
-        gene_mask = boolean_matrix.sum(axis=0) >= min_samples  # Sum across samples
+    # Map sample group indices
+    unique_samples, sample_indices = np.unique(adata.obs['sample'], return_inverse=True)
+    if verbose:
+        print(f"Found {len(unique_samples)} unique samples.")
 
-    # Debugging: Inspect mask
+    # Create a sparse matrix to map samples to rows
+    sample_mapping = csr_matrix((np.ones_like(sample_indices), (sample_indices, np.arange(len(sample_indices)))),
+                                 shape=(len(unique_samples), adata.shape[0]))
+
+    if verbose:
+        print("Sample mapping matrix constructed.")
+
+    # Aggregate read counts by sample using sparse matrix multiplication
+    X = adata.X
+    if not isinstance(X, csr_matrix):
+        X = csr_matrix(X)  # Ensure the matrix is in sparse format
+    sample_aggregation = sample_mapping @ X
+
+    if verbose:
+        print("Sparse matrix aggregation completed.")
+
+    # Apply filtering criteria
+    if verbose:
+        print("Applying filtering criteria: minimum reads per sample and minimum samples per gene.")
+    gene_mask = (sample_aggregation >= min_reads).sum(axis=0).A1 >= min_samples
+
     if verbose:
         print(f"Number of genes passing the filter: {gene_mask.sum()} out of {adata.shape[1]} total genes.")
+
+    # Plot gene retention across varying sample thresholds
+    if verbose or True:  # Always plot as requested
+        thresholds = range(1, len(unique_samples) + 1)
+        gene_counts = [(sample_aggregation >= min_reads).sum(axis=0) >= t for t in thresholds]
+        gene_counts = [mask.sum() for mask in gene_counts]
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(thresholds, gene_counts, marker='o')
+        plt.xlabel("Minimum Samples")
+        plt.ylabel("Number of Genes Passing Filter")
+        plt.title("Gene Retention Across Sample Thresholds")
+        plt.grid(True)
+        plt.show()
 
     # If in-place, subset the AnnData object
     if inplace:
