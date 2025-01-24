@@ -777,30 +777,54 @@ def plot_umap_grid(ann_obj, obs_columns, grid_size=(2, 2), figsize=(10, 8), save
 
     plt.show()
 
-
-def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False):
+def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False, recalculate_columns=True):
     """
     Create a stacked figure with boxplots and an optional stacked percentage barplot.
     
     Parameters:
     - adata: AnnData object.
-    - sample_column: Column in `adata.obs` to use as sample IDs for the x-axis.
+    - sample_column: Column in `adata.obs` to use as sample IDs for x-axis.
     - color_column: Column in `adata.obs` to determine cell types or classes for the barplot.
-                    If None, the barplot is skipped.
     - barplot: Whether to include the stacked barplot (default: False).
+    - recalculate_columns: Whether to check and potentially recalculate `n_counts` and `n_genes` columns in `adata.obs` (default: True).
     """
-    # Ensure columns are strings for consistency
+    # Ensure sample_column is a string
     adata.obs[sample_column] = adata.obs[sample_column].astype(str)
+
+    if recalculate_columns:
+        print("Checking if recalculation of 'n_counts' and 'n_genes' is necessary...")
+
+        # Recalculate n_counts and n_genes
+        recalculated_n_counts = adata.X.sum(axis=1).A1 if issparse(adata.X) else adata.X.sum(axis=1)
+        recalculated_n_genes = np.array((adata.X > 0).sum(axis=1)).flatten() if issparse(adata.X) else (adata.X > 0).sum(axis=1)
+
+        # Compare with existing columns
+        if ('n_counts' in adata.obs and np.allclose(recalculated_n_counts, adata.obs['n_counts'])) and \
+           ('n_genes' in adata.obs and np.all(recalculated_n_genes == adata.obs['n_genes'])):
+            print("No changes detected in 'n_counts' and 'n_genes'. Columns remain unchanged.")
+        else:
+            print("Differences detected. Updating 'n_counts' and 'n_genes' columns in the adata object...")
+            adata.obs['n_counts'] = recalculated_n_counts
+            adata.obs['n_genes'] = recalculated_n_genes
 
     # Get sample order and group data
     sample_order = adata.obs[sample_column].unique()
     umi_counts = adata.obs.groupby(sample_column)["n_counts"].apply(list)
     gene_counts = adata.obs.groupby(sample_column)["n_genes"].apply(list)
 
+    # Extract Scanpy's color palette for the color_column (if applicable)
+    cluster_colors = None
+    if color_column:
+        cluster_colors = adata.uns.get(f'{color_column}_colors', None)
+
+    # Calculate proportions for barplot
+    proportions = None
+    if color_column and barplot:
+        proportions = adata.obs.groupby([sample_column, color_column]).size().unstack(fill_value=0)
+        proportions = proportions.div(proportions.sum(axis=1), axis=0)  # Normalize to percentages
+
     # Initialize figure
-    n_plots = 3 if barplot and color_column else 2  # Include barplot only if barplot=True and color_column is provided
-    fig, axs = plt.subplots(n_plots, 1, figsize=(15, 10 if n_plots == 2 else 12), sharex=True, 
-                             gridspec_kw={'height_ratios': [1, 1, 2] if n_plots == 3 else [1, 1]})
+    fig, axs = plt.subplots(3 if barplot else 2, 1, figsize=(15, 10), sharex=True, gridspec_kw={'height_ratios': [1, 1, 2] if barplot else [1, 1]})
 
     # Boxplot for UMIs per cell
     umi_data = pd.DataFrame({'Sample': np.repeat(sample_order, [len(umi_counts[s]) for s in sample_order]),
@@ -811,7 +835,7 @@ def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False):
     axs[0].tick_params(axis='x')
     axs[0].set_xticklabels(umi_data['Sample'].unique(), rotation=90, fontsize=7)
 
-    # Calculate and add median for UMIs
+    # Add median annotation for UMIs
     umi_median = np.median(np.concatenate([umi_counts[s] for s in sample_order]))
     axs[0].text(0.02, 0.95, f'Median: {int(umi_median):,} UMIs', transform=axs[0].transAxes, 
                 ha="left", va="top", fontsize=10, bbox=dict(facecolor="white", alpha=0.8, edgecolor="none"))
@@ -825,28 +849,22 @@ def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False):
     axs[1].tick_params(axis='x')
     axs[1].set_xticklabels(gene_data['Sample'].unique(), rotation=90, fontsize=7)
 
-    # Calculate and add median for genes
+    # Add median annotation for genes
     gene_median = np.median(np.concatenate([gene_counts[s] for s in sample_order]))
     axs[1].text(0.02, 0.95, f'Median: {int(gene_median):,} genes', transform=axs[1].transAxes, 
                 ha="left", va="top", fontsize=10, bbox=dict(facecolor="white", alpha=0.8, edgecolor="none"))
 
     # Stacked barplot for cell class proportions
-    if barplot and color_column:
-        # Extract Scanpy's color palette for the color_column
-        cluster_colors = adata.uns.get(f'{color_column}_colors', None)
-        if cluster_colors is None:
-            raise ValueError(f"Color palette for {color_column} not found in `adata.uns`.")
-
-        # Calculate proportions
-        proportions = adata.obs.groupby([sample_column, color_column]).size().unstack(fill_value=0)
-        proportions = proportions.div(proportions.sum(axis=1), axis=0)  # Normalize to percentages
-
+    if barplot and color_column and proportions is not None:
         proportions.plot(kind="bar", stacked=True, ax=axs[2], width=1, legend=False, color=cluster_colors)
         axs[2].set_ylabel("Cell class proportions")
         axs[2].set_xlabel("Sample")
         axs[2].tick_params(axis='x')
         axs[2].set_xticklabels(proportions.index, rotation=90, fontsize=7)
-        axs[2].legend(bbox_to_anchor=(1.05, 1), loc="upper left", title=color_column)
+        if cluster_colors:
+            axs[2].legend(bbox_to_anchor=(1.05, 1), loc="upper left", title=color_column)
 
     plt.tight_layout()
     plt.show()
+
+
