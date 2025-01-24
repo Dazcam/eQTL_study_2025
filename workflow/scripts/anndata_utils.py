@@ -12,6 +12,7 @@ from memory_profiler import profile
 import warnings
 import scipy.sparse as sp
 from scipy.sparse import csr_matrix
+from scipy.sparse import issparse
 import seaborn as sns
 
 ##########  LOAD FUNCTIONS  ############  
