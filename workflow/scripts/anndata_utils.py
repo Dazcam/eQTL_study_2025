@@ -12,6 +12,7 @@ from memory_profiler import profile
 import warnings
 import scipy.sparse as sp
 from scipy.sparse import csr_matrix
+import seaborn as sns
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
@@ -485,10 +486,36 @@ def is_running_in_jupyter():
     except NameError:
         return False  # Standard Python interpreter
 
-
-
-
 ##########  VISUALISATION FUNCTIONS  ############  
+def plot_gene_read_distribution(adata):
+    """
+    Plots the distribution of total reads per gene in an AnnData object.
+
+    Parameters:
+    - adata: AnnData object containing gene expression data.
+
+    Outputs:
+    - Prints basic statistics (total, min, max, median, mean reads per gene).
+    - Displays a histogram of the distribution of total reads per gene.
+    """
+    # Calculate total reads per gene
+    gene_total_reads = np.array(adata.X.sum(axis=0)).flatten()
+
+    # Print basic statistics
+    print(f"Total genes: {len(gene_total_reads)}")
+    print(f"Minimum reads per gene: {gene_total_reads.min()}")
+    print(f"Maximum reads per gene: {gene_total_reads.max()}")
+    print(f"Median reads per gene: {np.median(gene_total_reads)}")
+    print(f"Mean reads per gene: {gene_total_reads.mean()}")
+
+    # Plot the distribution
+    plt.figure(figsize=(10, 6))
+    sns.histplot(gene_total_reads, bins=50, kde=True, log_scale=True)
+    plt.xlabel("Total Reads per Gene")
+    plt.ylabel("Frequency")
+    plt.title("Distribution of Total Reads per Gene")
+    plt.show()
+
 def plot_doublet_umaps(ann_obj):
 
     ann_obj.obs["predicted_doublet"] = ann_obj.obs["predicted_doublet"].astype("category")
@@ -748,4 +775,78 @@ def plot_umap_grid(ann_obj, obs_columns, grid_size=(2, 2), figsize=(10, 8), save
         plt.savefig(save_path)
         print(f"Figure saved to {save_path}")
 
+    plt.show()
+
+
+def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False):
+    """
+    Create a stacked figure with boxplots and an optional stacked percentage barplot.
+    
+    Parameters:
+    - adata: AnnData object.
+    - sample_column: Column in `adata.obs` to use as sample IDs for the x-axis.
+    - color_column: Column in `adata.obs` to determine cell types or classes for the barplot.
+                    If None, the barplot is skipped.
+    - barplot: Whether to include the stacked barplot (default: False).
+    """
+    # Ensure columns are strings for consistency
+    adata.obs[sample_column] = adata.obs[sample_column].astype(str)
+
+    # Get sample order and group data
+    sample_order = adata.obs[sample_column].unique()
+    umi_counts = adata.obs.groupby(sample_column)["n_counts"].apply(list)
+    gene_counts = adata.obs.groupby(sample_column)["n_genes"].apply(list)
+
+    # Initialize figure
+    n_plots = 3 if barplot and color_column else 2  # Include barplot only if barplot=True and color_column is provided
+    fig, axs = plt.subplots(n_plots, 1, figsize=(15, 10 if n_plots == 2 else 12), sharex=True, 
+                             gridspec_kw={'height_ratios': [1, 1, 2] if n_plots == 3 else [1, 1]})
+
+    # Boxplot for UMIs per cell
+    umi_data = pd.DataFrame({'Sample': np.repeat(sample_order, [len(umi_counts[s]) for s in sample_order]),
+                             'UMIs': np.concatenate([umi_counts[s] for s in sample_order])})
+    sns.boxplot(data=umi_data, x="Sample", y="UMIs", ax=axs[0], color="white", fliersize=1, linewidth=1)
+    axs[0].set_ylabel("Number of UMIs per cell")
+    axs[0].set_xlabel("")
+    axs[0].tick_params(axis='x')
+    axs[0].set_xticklabels(umi_data['Sample'].unique(), rotation=90, fontsize=7)
+
+    # Calculate and add median for UMIs
+    umi_median = np.median(np.concatenate([umi_counts[s] for s in sample_order]))
+    axs[0].text(0.02, 0.95, f'Median: {int(umi_median):,} UMIs', transform=axs[0].transAxes, 
+                ha="left", va="top", fontsize=10, bbox=dict(facecolor="white", alpha=0.8, edgecolor="none"))
+
+    # Boxplot for genes per cell
+    gene_data = pd.DataFrame({'Sample': np.repeat(sample_order, [len(gene_counts[s]) for s in sample_order]),
+                              'Genes': np.concatenate([gene_counts[s] for s in sample_order])})
+    sns.boxplot(data=gene_data, x="Sample", y="Genes", ax=axs[1], color="white", fliersize=1, linewidth=1)
+    axs[1].set_ylabel("Number of genes per cell")
+    axs[1].set_xlabel("")
+    axs[1].tick_params(axis='x')
+    axs[1].set_xticklabels(gene_data['Sample'].unique(), rotation=90, fontsize=7)
+
+    # Calculate and add median for genes
+    gene_median = np.median(np.concatenate([gene_counts[s] for s in sample_order]))
+    axs[1].text(0.02, 0.95, f'Median: {int(gene_median):,} genes', transform=axs[1].transAxes, 
+                ha="left", va="top", fontsize=10, bbox=dict(facecolor="white", alpha=0.8, edgecolor="none"))
+
+    # Stacked barplot for cell class proportions
+    if barplot and color_column:
+        # Extract Scanpy's color palette for the color_column
+        cluster_colors = adata.uns.get(f'{color_column}_colors', None)
+        if cluster_colors is None:
+            raise ValueError(f"Color palette for {color_column} not found in `adata.uns`.")
+
+        # Calculate proportions
+        proportions = adata.obs.groupby([sample_column, color_column]).size().unstack(fill_value=0)
+        proportions = proportions.div(proportions.sum(axis=1), axis=0)  # Normalize to percentages
+
+        proportions.plot(kind="bar", stacked=True, ax=axs[2], width=1, legend=False, color=cluster_colors)
+        axs[2].set_ylabel("Cell class proportions")
+        axs[2].set_xlabel("Sample")
+        axs[2].tick_params(axis='x')
+        axs[2].set_xticklabels(proportions.index, rotation=90, fontsize=7)
+        axs[2].legend(bbox_to_anchor=(1.05, 1), loc="upper left", title=color_column)
+
+    plt.tight_layout()
     plt.show()
