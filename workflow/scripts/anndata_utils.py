@@ -14,6 +14,8 @@ import scipy.sparse as sp
 from scipy.sparse import csr_matrix
 from scipy.sparse import issparse
 import seaborn as sns
+from matplotlib import MatplotlibDeprecationWarning
+import logging
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
@@ -597,6 +599,15 @@ def plot_filtered_violin(
     Returns:
         - A tuple (fig, axes) containing the figure and axes objects.
     """
+
+    # Suppress warnings
+    warnings.filterwarnings("ignore", category=UserWarning)
+    warnings.filterwarnings("ignore", category=MatplotlibDeprecationWarning)
+
+    # Suppress matplotlib/seaborn logs
+    logging.getLogger("matplotlib").setLevel(logging.ERROR)
+    logging.getLogger("seaborn").setLevel(logging.ERROR)
+
     # Separate valid and missing genes for each gene set
     valid_gene_sets = []
     missing_gene_sets = []
@@ -792,21 +803,43 @@ def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False, 
     # Ensure sample_column is a string
     adata.obs[sample_column] = adata.obs[sample_column].astype(str)
 
+    def detect_data_type(matrix):
+        """
+        Detect the type of data in adata.X.
+        Returns: 'raw_counts', 'log_normalized', or 'unknown'
+        """
+        # Extract a small subset of the matrix
+        subset = matrix[:5, :5].toarray() if issparse(matrix) else matrix[:5, :5]
+        
+        # Check if all values are non-negative integers (raw counts)
+        if np.all(subset >= 0) and np.all(np.isclose(subset, subset.astype(int))):
+            return 'raw_counts'
+        
+        # Check if values appear log-normalized (e.g., <= 1, often log-scaled)
+        if np.all(subset <= 10):  # Arbitrary threshold for log-normalized data
+            return 'log_normalized'
+        
+        # If it doesn't match the above patterns, return 'unknown'
+        return 'unknown'
+
     if recalculate_columns:
-        print("Checking if recalculation of 'n_counts' and 'n_genes' is necessary...")
+        # Detect data type
+        data_type = detect_data_type(adata.X)
+        if data_type == 'raw_counts':
+            print("Recalculating 'n_counts' and 'n_genes'...")
+            recalculated_n_counts = adata.X.sum(axis=1).A1 if issparse(adata.X) else adata.X.sum(axis=1)
+            recalculated_n_genes = np.array((adata.X > 0).sum(axis=1)).flatten() if issparse(adata.X) else (adata.X > 0).sum(axis=1)
 
-        # Recalculate n_counts and n_genes
-        recalculated_n_counts = adata.X.sum(axis=1).A1 if issparse(adata.X) else adata.X.sum(axis=1)
-        recalculated_n_genes = np.array((adata.X > 0).sum(axis=1)).flatten() if issparse(adata.X) else (adata.X > 0).sum(axis=1)
-
-        # Compare with existing columns
-        if ('n_counts' in adata.obs and np.allclose(recalculated_n_counts, adata.obs['n_counts'])) and \
-           ('n_genes' in adata.obs and np.all(recalculated_n_genes == adata.obs['n_genes'])):
-            print("No changes detected in 'n_counts' and 'n_genes'. Columns remain unchanged.")
+            # Compare with existing columns
+            if ('n_counts' in adata.obs and np.allclose(recalculated_n_counts, adata.obs['n_counts'])) and \
+               ('n_genes' in adata.obs and np.all(recalculated_n_genes == adata.obs['n_genes'])):
+                print("No changes detected in 'n_counts' and 'n_genes'. Columns remain unchanged.")
+            else:
+                print("Differences detected. Updating 'n_counts' and 'n_genes' columns in the adata object...")
+                adata.obs['n_counts'] = recalculated_n_counts
+                adata.obs['n_genes'] = recalculated_n_genes
         else:
-            print("Differences detected. Updating 'n_counts' and 'n_genes' columns in the adata object...")
-            adata.obs['n_counts'] = recalculated_n_counts
-            adata.obs['n_genes'] = recalculated_n_genes
+            print("Skipping recalculation of 'n_counts' and 'n_genes' due to non-raw data in `adata.X`.")
 
     # Get sample order and group data
     sample_order = adata.obs[sample_column].unique()
@@ -867,5 +900,3 @@ def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False, 
 
     plt.tight_layout()
     plt.show()
-
-
