@@ -691,64 +691,6 @@ def plot_filtered_violin(
 
     return fig, axes  # Return both figure and axes for further customization
 
-def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leiden'):
-    """
-    Generate a stacked bar plot showing the percentage of cells in each cluster per sample,
-    and save the pivot table as an Excel file.
-
-    Parameters:
-        adata: AnnData
-            The annotated data matrix.
-        output_dir: str
-            Directory where the Excel file will be saved.
-        clustering_param: str
-            The clustering parameter to base the clusters on (e.g., 'leiden', 'leiden_0.5').
-
-    Returns:
-        fig: matplotlib.figure.Figure
-            The generated figure.
-    """
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Extract sample and cluster information
-    df = adata.obs[['sample', clustering_param]]
-
-    # Count the number of cells per sample and cluster
-    counts = df.groupby(['sample', clustering_param]).size().reset_index(name='cell_count')
-
-    # Pivot the table to get clusters as columns
-    pivot_table = counts.pivot(index='sample', columns=clustering_param, values='cell_count').fillna(0)
-
-    # Calculate the total number of cells per sample
-    pivot_table['total_cells'] = pivot_table.sum(axis=1)
-
-    # Convert counts to percentages
-    percentage_table = pivot_table.div(pivot_table['total_cells'], axis=0).drop(columns=['total_cells']) * 100
-
-    # Define the cluster labels and colors
-    clusters = percentage_table.columns
-    cluster_colors = adata.uns[f'{clustering_param}_colors']  # Use Scanpy's cluster colors
-
-    # Plot the stacked bar plot
-    fig, ax = plt.subplots(figsize=(30, 6))
-    percentage_table.plot(kind='bar', stacked=True, ax=ax, color=cluster_colors[:len(clusters)], width=0.8)
-
-    # Customize the plot
-    ax.set_title('Percentage of Cells from Each Cluster per Sample', fontsize=16)
-    ax.set_xlabel('Sample', fontsize=14)
-    ax.set_ylabel('Percentage of Cells', fontsize=14)
-    ax.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
-    ax.set_xticklabels(percentage_table.index, rotation=45, ha='right')
-    plt.tight_layout()
-
-    # Save the pivot table as an Excel file
-    excel_file_path = os.path.join(output_dir, "cell_cnts_per_smpl_per_clust.xlsx")
-    pivot_table.to_excel(excel_file_path)
-
-    # Return the plot and the pivot table
-    return fig
-
 def plot_umap_grid(ann_obj, obs_columns, grid_size=(2, 2), figsize=(10, 8), save_path=None):
     """
     Generate a grid of UMAP plots for specified obs columns in a Scanpy AnnData object.
@@ -900,3 +842,62 @@ def plot_stacked_figure(adata, sample_column, color_column=None, barplot=False, 
 
     plt.tight_layout()
     plt.show()
+
+# Obsolete: Need to add excel generation to above function
+def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leiden'):
+    """
+    Generate a stacked bar plot showing the percentage of cells in each cluster per sample,
+    and save the pivot table as an Excel file.
+
+    Parameters:
+        adata: AnnData
+            The annotated data matrix.
+        output_dir: str
+            Directory where the Excel file will be saved.
+        clustering_param: str
+            The clustering parameter to base the clusters on (e.g., 'leiden', 'leiden_0.5').
+
+    Returns:
+        fig: matplotlib.figure.Figure
+            The generated figure.
+    """
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Extract sample and cluster information
+    df = adata.obs[['sample', clustering_param]]
+
+    # Count the number of cells per sample and cluster
+    counts = df.groupby(['sample', clustering_param]).size().reset_index(name='cell_count')
+
+    # Pivot the table to get clusters as columns
+    pivot_table = counts.pivot(index='sample', columns=clustering_param, values='cell_count').fillna(0)
+
+    # Calculate the total number of cells per sample
+    pivot_table['total_cells'] = pivot_table.sum(axis=1)
+
+    # Convert counts to percentages
+    percentage_table = pivot_table.div(pivot_table['total_cells'], axis=0).drop(columns=['total_cells']) * 100
+
+    # Define the cluster labels and colors
+    clusters = percentage_table.columns
+    cluster_colors = adata.uns[f'{clustering_param}_colors']  # Use Scanpy's cluster colors
+
+    # Plot the stacked bar plot
+    fig, ax = plt.subplots(figsize=(30, 6))
+    percentage_table.plot(kind='bar', stacked=True, ax=ax, color=cluster_colors[:len(clusters)], width=0.8)
+
+    # Customize the plot
+    ax.set_title('Percentage of Cells from Each Cluster per Sample', fontsize=16)
+    ax.set_xlabel('Sample', fontsize=14)
+    ax.set_ylabel('Percentage of Cells', fontsize=14)
+    ax.legend(title='Cluster', bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.set_xticklabels(percentage_table.index, rotation=45, ha='right')
+    plt.tight_layout()
+
+    # Save the pivot table as an Excel file
+    excel_file_path = os.path.join(output_dir, "cell_cnts_per_smpl_per_clust.xlsx")
+    pivot_table.to_excel(excel_file_path)
+
+    # Return the plot and the pivot table
+    return fig
