@@ -200,6 +200,16 @@ mg_genes = [
    "HLA-DRA"  # MHC class II
 ]
 
+ExN_1 = [
+    'UNC5D', 'DPY19L1', 'NRP1', 'EML6', 'DOK6', 'CLMP', 'SORBS2', 
+    'CNTNAP2', 'AC119868.2', 'NRG1', 'KCNQ3'
+]
+
+ExN_3 = [
+    'CUX2', 'SNTG2', 'KIF26B', 'PLXNA4', 'DLGAP2', 'TENM4', 'SLC44A5', 
+    'NKAIN2', 'LIMCH1', 'FRMD4B', 'EPHA3', 'CCSER1'
+]
+
 small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
                      'ACTA2', 'RGS5', 'ALDH1A1',      # Smooth muscle cells
                      'SLC38A2', 'SLC4A10', 'SLC26A2', 'SLC47A1', 'FXYD5',  # Fibroblast
@@ -247,3 +257,5 @@ ExN_blues = ['#76B5C5', '#00BDD2', '#CEE5FD', '#00B6EB', '#ABDBE3',
 reds = ['#FAA0A0', '#FF5959', '#F75151', '#EF0029', '#D2042D']
 
 purples = ['#B200ED',  '#DCBEFF', '#6F2DA8']
+
+
