@@ -904,12 +904,12 @@ def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leide
 
 
 def adjust_colorbar(cb, xlabel):
-"""Safely adjust colorbar placement and labels"""
-if cb:
-    cb.ax.xaxis.set_ticks_position("top")  # Move ticks to top
-    cb.ax.xaxis.set_label_position("top")  # Move label to top
-    cb.ax.set_xlabel(xlabel)  # Set label
-    cb.ax.tick_params(axis="x", rotation=0)  # Ensure horizontal labels
+    """Safely adjust colorbar placement and labels"""
+    if cb:
+        cb.ax.xaxis.set_ticks_position("top")  # Move ticks to top
+        cb.ax.xaxis.set_label_position("top")  # Move label to top
+        cb.ax.set_xlabel(xlabel)  # Set label
+        cb.ax.tick_params(axis="x", rotation=0)  # Ensure horizontal labels
 
 def plot_rank_genes_groups(adata, n_genes=5, key="t-test_ov", groupby="leiden_harmony_0.1"):
     fig, axes = plt.subplots(1, 3, figsize=(15, 10))  # 3-column layout
