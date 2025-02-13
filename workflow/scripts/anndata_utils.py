@@ -901,3 +901,42 @@ def plot_and_save_cluster_percentages(adata, output_dir, clustering_param='leide
 
     # Return the plot and the pivot table
     return fig
+
+
+def adjust_colorbar(cb, xlabel):
+"""Safely adjust colorbar placement and labels"""
+if cb:
+    cb.ax.xaxis.set_ticks_position("top")  # Move ticks to top
+    cb.ax.xaxis.set_label_position("top")  # Move label to top
+    cb.ax.set_xlabel(xlabel)  # Set label
+    cb.ax.tick_params(axis="x", rotation=0)  # Ensure horizontal labels
+
+def plot_rank_genes_groups(adata, n_genes=5, key="t-test_ov", groupby="leiden_harmony_0.1"):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 10))  # 3-column layout
+
+    # Dotplot
+    sc.pl.rank_genes_groups_dotplot(
+        adata, n_genes=n_genes, key=key, groupby=groupby, ax=axes[0], show=False, swap_axes=True
+    )
+    if axes[0].collections:
+        cb = axes[0].collections[-1].colorbar
+        adjust_colorbar(cb, "Mean expression\nin group")
+
+    # Stacked Violin
+    sc.pl.rank_genes_groups_stacked_violin(
+        adata, n_genes=n_genes, key=key, groupby=groupby, ax=axes[1], show=False, swap_axes=True
+    )
+    if axes[1].collections:
+        cb = axes[1].collections[-1].colorbar
+        adjust_colorbar(cb, "Median expression\nin group")
+
+    # Matrixplot
+    sc.pl.rank_genes_groups_matrixplot(
+        adata, n_genes=n_genes, key=key, groupby=groupby, ax=axes[2], show=False, swap_axes=True
+    )
+    if axes[2].collections:
+        cb = axes[2].collections[-1].colorbar
+        adjust_colorbar(cb, "Mean expression\nin group")
+
+    plt.tight_layout()
+    plt.show()
