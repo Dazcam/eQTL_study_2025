@@ -19,7 +19,7 @@ import logging
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
-def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
+def load_and_dwnsmpl_data(downsample_cells=None, is_anndata=False, *adata_dirs):
     """
     Load, process, and merge AnnData objects with optional downsampling.
     
@@ -48,8 +48,43 @@ def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
     for i, adata_dir in enumerate(adata_dirs):
         # Load the AnnData object directly from the full file path
         print(f"Loading plate {plate_numbers[i]} from {adata_dir} ...")
-        adata = sc.read(adata_dir)
-        
+
+        if is_anndata:
+            if adata_dir.endswith('.h5ad'):
+                # Case 1: Full path to .h5ad file
+                adata = sc.read(adata_dir)
+            else:
+                # Case 2: Directory path, assume 'anndata.h5ad' inside it
+                h5ad_path = os.path.join(adata_dir, 'anndata.h5ad')
+                print(f"Loading {h5ad_path} ...")
+                adata = sc.read(h5ad_path)
+        else:
+            # Case 3: Parse format, load .mtx and metadata
+            print(f"Loading Parse mtx, genes and metadata separately ...")
+            adata = sc.read_mtx(os.path.join(adata_dir, 'count_matrix.mtx'))
+            
+            # Read gene and cell metadata
+            gene_data = pd.read_csv(os.path.join(adata_dir, 'all_genes.csv'))
+            cell_meta = pd.read_csv(os.path.join(adata_dir, 'cell_metadata.csv'))
+            
+            # Filter out NaN genes
+            gene_data = gene_data[gene_data.gene_name.notnull()]
+            notNa = gene_data.index
+            notNa = notNa.to_list()
+            
+            # Set gene names
+            adata = adata[:, notNa]
+            adata.var = gene_data
+            adata.var.set_index('gene_name', inplace=True)
+            adata.var.index.name = None
+            adata.var_names_make_unique()
+            
+            # Add cell metadata
+            adata.obs = cell_meta
+            adata.obs.set_index('bc_wells', inplace=True)
+            adata.obs.index.name = None
+            adata.obs_names_make_unique()
+            
         # Check if 'plate' column exists and add it only if not present
         if 'plate' not in adata.obs.columns and len(adata_dirs) > 1:
             adata.obs['plate'] = 'plate' + plate_numbers[i]
@@ -93,6 +128,12 @@ def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
     # Remove 'hg38' from gene names
     adata_mrg.var.index = adata_mrg.var.index.str.replace('_hg38', '')
 
+    # Check if adata.X is sparse and if all values are integers
+    # Slice a small portion of the sparse matrix (e.g., first 1000 rows and 1000 columns)
+    subset = adata_mrg.X[:1000, :1000]
+    is_all_integers = np.all(np.mod(subset.data, 1) == 0)
+    print(f'Are all values of adata.X integers? {is_all_integers}')
+
     # Cleanup to release memory
     del adata_list
     gc.collect()
@@ -100,7 +141,6 @@ def load_and_dwnsmpl_data(downsample_cells=None, *adata_dirs):
     print(adata_mrg)
 
     return adata_mrg
-
 
 ##########  QC FUNCTIONS  ############  
 def create_counts_per_sample_boxplt(ann_obj):
@@ -528,6 +568,7 @@ def plot_doublet_umaps(ann_obj):
     sc.tl.pca(ann_obj, svd_solver='arpack')
     sc.pp.neighbors(ann_obj)
     sc.tl.leiden(ann_obj)
+    sc.tl.umap(ann_obj)
     sc.pl.umap(ann_obj, color=['leiden'])
 
     return sc.pl.umap(ann_obj, color = ["leiden", "predicted_doublet", "doublet_score"], wspace = 0.1)
