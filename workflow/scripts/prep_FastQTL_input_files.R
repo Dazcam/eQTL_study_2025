@@ -9,6 +9,8 @@
 #  Prep input bed and covarite files for FastQTL 
 #  Running locally for now
 
+# Need to add loop for all cell types
+
 ##  Load Packages, functions and variables  -------------------------------------------
 # Install and load required libraries
 library(edgeR)
@@ -21,13 +23,14 @@ data_dir <- "~/Desktop/eQTL_study_2025/results/03SCANPY/pseudobulk/"
 cov_dir <- "~/Desktop/eQTL_study_2025/resources/test_genotypes/"
 lookup_dir <- "~/Desktop/eQTL_study_2025/results/02PARSE/combine_plate1/all-sample/DGE_filtered/"
 
+
 pseudobulk_counts <- read.csv(paste0(data_dir, "cell_type_1_pseudobulk.csv"), row.names = 1)  # rows=genes, columns=samples
 pseudobulk_counts[1:5, 1:5]
 
 cov_orig_tbl <- read_tsv(paste0(cov_dir, 'filtered_covariates.txt'), col_types = 'ccd') 
 cov_tbl <- cov_orig_tbl |> 
   dplyr::select(Sample, Sex, PCW, PC1, PC2, PC3) |>
-  rename_with(~ paste0("exp", .), .cols = matches("^PC\\d+$"))
+  rename_with(~ paste0("gen", .), .cols = matches("^PC\\d+$"))
 
 gene_lookup <- read_csv(paste0(lookup_dir, 'all_genes.csv'), col_types = 'ccc')
 
@@ -39,7 +42,7 @@ window <- 250000
 # TMM normalization
 # Create a DGEList object
 dge <- DGEList(counts = pseudobulk_counts)
-dge <- calcNormFactors(dge, method = "TMM")
+dge <- calcNormFactors(dge, method = "TMM") # Do we need two normalisation factors here?
 normalized_counts <- cpm(dge, normalized.lib.sizes = TRUE)
 normalized_counts[1:5, 1:5]
 
@@ -66,11 +69,23 @@ cov_full_tbl <- cov_tbl |>
   inner_join(pc_scores, by = "Sample") |> 
   #inner_join(peer_factors, by = "Sample") |>
   mutate(Sample = factor(Sample, levels = overlap_lst$Sample)) %>%
-  arrange(Sample)
+  arrange(Sample) |>
+  write_tsv(cov_full_tbl, paste0(data_dir, "fastqtl_covariates.txt"))
 
-# Save final covariate file
-write_tsv(cov_full_tbl, paste0(data_dir, "fastqtl_covariates.txt"))
+transposed_cov <- cov_full_tbl |>
+  as.data.frame() |>
+  t() |> 
+rownames(transposed_cov)
+write.table(transposed_cov, paste0(data_dir, "fastqtl_covariates_t.txt"), quote = F, sep = '\t', col.names = F)
 
+cov_full_tbl %>%
+  column_to_rownames("Sample") %>%  # Move 'Sample' to row names
+  as_tibble() %>%                   # Convert to tibble (preserves row names)
+  t() %>%                           # Transpose the data
+  as_tibble(rownames = "Sample") %>% # Convert back to tibble with row names as 'Sample'
+  mutate(Sample = c("", Sample[-1]))
+
+# Load gene lookup tables
 hg38_lookup <- get_biomart_gene_lookup('hg38')
 hg19_lookup <- get_biomart_gene_lookup('hg19')
 
@@ -86,6 +101,20 @@ counts_tbl <- t(normalized_counts) |>
 counts_tbl_nas <- counts_tbl |>
   filter(if_any(everything(), is.na)) 
 
+counts_tbl_symbol_dups <- counts_tbl |>
+  drop_na() |>
+  left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
+  group_by(genes) %>%
+  filter(n() > 1) %>%
+  ungroup()
+
+counts_tbl_ens_dups <- counts_tbl |>
+  drop_na() |>
+  left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
+  group_by(gene_id) %>%
+  filter(n() > 1) %>%
+  ungroup()
+
 counts_tbl <- counts_tbl |>
   drop_na() |>
   left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
@@ -94,16 +123,24 @@ counts_tbl <- counts_tbl |>
     cis_start = pmax(0, TSS - window),  # Prevent negative coordinates
     cis_end = TSS + window
   ) |>
-  dplyr::select(chr = chromosome_name, start = cis_start, end = cis_end, gene_id, all_of(overlap_lst[[1]])) 
-  
+  distinct(gene_id, .keep_all = TRUE) |> # Keep first occurance dirty for now
+  dplyr::select('#Chr' = chromosome_name, start = cis_start, end = cis_end, TargetID = gene_id, all_of(overlap_lst[[1]])) |>
+  arrange(Chr, as.numeric(start), as.numeric(end)) |>
+  write_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm.bed'))
 
+# counts_tbl |>
+#   filter(Chr == 1) |>
+#   write_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm_22.bed'))
+  
 # Checks - Left in weird Chrs for now.
 counts_tbl |>
   group_by(chr) |>
   count() |>
   print(n = Inf)
 
-
-
+read_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm.bed')) |>
+  anyNA()
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
   
 
