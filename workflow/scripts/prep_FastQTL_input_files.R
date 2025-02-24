@@ -68,13 +68,15 @@ pc_scores <- as.data.frame(pca$x[, 1:10]) |> # Extract first 10 PCs
 cov_full_tbl <- cov_tbl |> 
   inner_join(pc_scores, by = "Sample") |> 
   #inner_join(peer_factors, by = "Sample") |>
-  mutate(Sample = factor(Sample, levels = overlap_lst$Sample)) %>%
+  mutate(Sample = factor(Sample, levels = overlap_lst$Sample)) |>
+  mutate(Sex = ifelse(Sex == 'Male', 1, 2)) |>
   arrange(Sample) |>
-  write_tsv(cov_full_tbl, paste0(data_dir, "fastqtl_covariates.txt"))
+  rename('id' = 'Sample') |>
+  write_tsv(paste0(data_dir, "fastqtl_covariates.txt"))
 
 transposed_cov <- cov_full_tbl |>
   as.data.frame() |>
-  t() |> 
+  t() 
 rownames(transposed_cov)
 write.table(transposed_cov, paste0(data_dir, "fastqtl_covariates_t.txt"), quote = F, sep = '\t', col.names = F)
 
@@ -120,23 +122,26 @@ counts_tbl <- counts_tbl |>
   left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
   mutate(
     TSS = if_else(strand == 1, start_position, end_position),  # Determine TSS based on strand
-    cis_start = pmax(0, TSS - window),  # Prevent negative coordinates
-    cis_end = TSS + window
+    cis_start = TSS,  # Prevent negative coordinates
+    cis_end = TSS + 1 
   ) |>
   distinct(gene_id, .keep_all = TRUE) |> # Keep first occurance dirty for now
-  dplyr::select('#Chr' = chromosome_name, start = cis_start, end = cis_end, TargetID = gene_id, all_of(overlap_lst[[1]])) |>
+  dplyr::select(Chr = chromosome_name, start = cis_start, end = cis_end, TargetID = gene_id, all_of(overlap_lst[[1]])) |>
   arrange(Chr, as.numeric(start), as.numeric(end)) |>
+  filter(Chr %in% seq(1,22,1)) |>
+  rename('#Chr' = Chr) |> # Required or tabix chokes at fastQTL step
   write_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm.bed'))
 
 # counts_tbl |>
 #   filter(Chr == 1) |>
 #   write_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm_22.bed'))
   
-# Checks - Left in weird Chrs for now.
+# FastQTL choked on test data for any chr not chr1-22
 counts_tbl |>
-  group_by(chr) |>
+  group_by(`#Chr`) |>
   count() |>
   print(n = Inf)
+
 
 read_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm.bed')) |>
   anyNA()
