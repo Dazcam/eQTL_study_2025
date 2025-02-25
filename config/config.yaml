@@ -1,2 +1,75 @@
-MERGE_FQ_JSON: "../config/samples_plate1_subset.json" 
-plate: ['plate1', 'plate2'] 
+MERGE_FQ_JSON: ../config/samples_plate1_subset.json
+plate:
+  - plate1
+  - plate2
+
+paths:
+  results: "../results"
+  scripts: "scripts"
+  log_dir: "../results/00LOG"
+
+scanpy:
+  qc:
+    input: "{results}/02PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad"
+    output: "{results}/03SCANPY/scanpy_qc_{plate}.html"
+    nb: "{scripts}/scanpy_qc.ipynb"
+    nb_out: "{results}/03SCANPY/scanpy_qc_{plate}_pm.ipynb"
+    log: "{log_dir}/03SCANPY/scanpy_qc_{plate}.log"
+
+  clustering:
+    input: "{results}/03SCANPY/scanpy_qc_{plate}.html"
+    output: "{results}/03SCANPY/scanpy_clustering.html"
+    nb: "{scripts}/scanpy_clustering.ipynb"
+    nb_out: "{results}/03SCANPY/scanpy_clustering_pm.ipynb"
+    log: "{log_dir}/03SCANPY/scanpy_clustering.log"
+
+  annotation:
+    input: "{results}/03SCANPY/scanpy_clustering.html"
+    output: "{results}/03SCANPY/scanpy_annotation.html"
+    nb: "{scripts}/scanpy_annotation.ipynb"
+    nb_out: "{results}/03SCANPY/scanpy_annotation_pm.ipynb"
+    log: "{log_dir}/03SCANPY/scanpy_annotation.log"
+
+  pseudobulk:
+    input: "{results}/03SCANPY/scanpy_annotation.html"
+    output: "{results}/03SCANPY/scanpy_cell_label_and_pseudobulk.html"
+    nb: "{scripts}/scanpy_cell_label_and_pseudobulk.ipynb"
+    nb_out: "{results}/03SCANPY/scanpy_cell_label_and_pseudobulk_pm.ipynb"
+    log: "{log_dir}/03SCANPY/scanpy_cell_label_and_pseudobulk.log"
+#  resources:
+#    qc: { threads: 16, mem_mb: 380000, time: "3-0:00:00" }
+#    clustering: { threads: 16, mem_mb: 380000, time: "3-0:00:00" }
+#    annotation: { threads: 10, mem_mb: 100000, time: "3-0:00:00" }
+#    pseudobulk: { threads: 10, mem_mb: 100000, time: "3-0:00:00" }
+  env: "../envs/eqtl_study.yml"
+
+eQTL:
+  tool: tensorqtl
+  num_chunks: 100
+  perm_min: 1000
+  perm_max: 10000
+  plink_prefix: ../resources/test_genotypes/filtered_genotypes
+  out_prefix: ../results/04TENSORQTL/filtered_genotypes
+  window: 500000
+input_files:
+  counts: ../results/03SCANPY/pseudobulk/fastqtl_cell_type_1_tmm.bed
+  genotypes: ../resources/test_genotypes/filtered_genotypes.vcf.gz
+  covariates: ../results/03SCANPY/pseudobulk/fastqtl_covariates_t.txt
+output_files:
+  counts_gz: ../results/03SCANPY/pseudobulk/fastqtl_cell_type_1_tmm.bed.gz
+  genotypes_plink: ../results/04TENSORQTL/filtered_genotypes.pgen 
+  fastqtl_output: ../results/04FASTQTL/fastQTL_{chunk}_txt.gz
+  fastqtl_perm_output: ../results/04FASTQTL/permutations_{chunk}_txt.gz
+  tensorqtl_out_prefix: ../results/04TENSORQTL/tensorqtl
+  tensorqtl_output: ../results/04TENSORQTL/tensorqtl.cis_qtl_pairs.4.parquet
+  tensorqtl_perm_out_prefix: ../results/04TENSORQTL/tensorqtl_perm
+  tensorqtl_perm_output: ../results/04TENSORQTL/tensorqtl_perm.cis_qtl.txt.gz
+log_files:
+  fastqtl_zip: ../results/00LOG/04FASTQTL/bgzip.log
+  fastqtl: ../results/00LOG/04FASTQTL/fastQTL_{chunk}.log
+  fastqtl_perm: ../results/00LOG/04FASTQTL/permutations_{chunk}.log
+  tensorqtl: ../results/00LOG/04TENSORQTL/tensorqtl.log
+  tensorqtl_perm: ../results/00LOG/04TENSORQTL/permutations.log
+containers:
+  fastqtl: ../resources/containers/gtex_eqtl.sif
+  tensorqtl: ../resources/containers/tensorqtl.sif
