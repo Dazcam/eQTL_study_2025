@@ -84,6 +84,7 @@ def initialize_env(plate):
     # Define and set paths
     resources_dir = root_dir + 'resources/'
     sheets_dir = resources_dir + 'sheets/'
+    cameron_dir = resources_dir + 'public_datasets/cameron_2023/'
     script_dir = root_dir + 'workflow/scripts/'
     results_dir = root_dir + 'results/'
     parse_dir = results_dir + '02PARSE/'
