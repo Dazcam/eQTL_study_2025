@@ -8,6 +8,8 @@ paths:
   scripts: "scripts"
   log_dir: "../results/00LOG"
 
+cell_types: "cell_type_1"
+
 scanpy:
   qc:
     input: "{results}/02PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad"
@@ -52,24 +54,24 @@ eQTL:
   out_prefix: ../results/04TENSORQTL/filtered_genotypes
   window: 500000
 input_files:
-  counts: ../results/03SCANPY/pseudobulk/fastqtl_cell_type_1_tmm.bed
+  counts: ../results/03SCANPY/pseudobulk/fastqtl_{cell_type}_tmm.bed
   genotypes: ../resources/test_genotypes/filtered_genotypes.vcf.gz
   covariates: ../results/03SCANPY/pseudobulk/fastqtl_covariates_t.txt
 output_files:
-  counts_gz: ../results/03SCANPY/pseudobulk/fastqtl_cell_type_1_tmm.bed.gz
+  counts_gz: ../results/03SCANPY/pseudobulk/fastqtl_{cell_type}_tmm.bed.gz
   genotypes_plink: ../results/04TENSORQTL/filtered_genotypes.pgen 
   fastqtl_output: ../results/04FASTQTL/fastQTL_{chunk}_txt.gz
   fastqtl_perm_output: ../results/04FASTQTL/permutations_{chunk}_txt.gz
-  tensorqtl_out_prefix: ../results/04TENSORQTL/tensorqtl
-  tensorqtl_output: ../results/04TENSORQTL/tensorqtl.cis_qtl_pairs.4.parquet
-  tensorqtl_perm_out_prefix: ../results/04TENSORQTL/tensorqtl_perm
-  tensorqtl_perm_output: ../results/04TENSORQTL/tensorqtl_perm.cis_qtl.txt.gz
+  tensorqtl_out_prefix: ../results/04TENSORQTL/{cell_type}_nom
+  tensorqtl_output: ../results/04TENSORQTL/{cell_type}_nom.cis_qtl_pairs.4.parquet
+  tensorqtl_perm_out_prefix: ../results/04TENSORQTL/{cell_type}_perm
+  tensorqtl_perm_output: ../results/04TENSORQTL/{cell_type}_perm.cis_qtl.txt.gz
 log_files:
   fastqtl_zip: ../results/00LOG/04FASTQTL/bgzip.log
   fastqtl: ../results/00LOG/04FASTQTL/fastQTL_{chunk}.log
   fastqtl_perm: ../results/00LOG/04FASTQTL/permutations_{chunk}.log
-  tensorqtl: ../results/00LOG/04TENSORQTL/tensorqtl.log
-  tensorqtl_perm: ../results/00LOG/04TENSORQTL/permutations.log
+  tensorqtl: ../results/00LOG/04TENSORQTL/{cell_type}_nom.log
+  tensorqtl_perm: ../results/00LOG/04TENSORQTL/{cell_type}_perm.log
 containers:
   fastqtl: ../resources/containers/gtex_eqtl.sif
   tensorqtl: ../resources/containers/tensorqtl.sif
