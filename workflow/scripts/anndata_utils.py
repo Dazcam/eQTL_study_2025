@@ -217,6 +217,39 @@ def create_counts_per_sample_boxplt(ann_obj):
     # Return figure and axes objects
     return fig, axes
 
+def get_raw_counts_all_genes(adata):
+    """
+    Returns the raw count matrix (all genes) from `adata.raw` or `adata.layers["counts"]`, ensuring
+    that it contains integer values. If neither contains integers, raises an error.
+    
+    Args:
+    - adata: AnnData object containing the raw counts or counts in layers.
+    
+    Returns:
+    - A sparse matrix with raw counts in integer format, for all genes.
+    """
+    # Check if adata.raw exists and contains integer values
+    if adata.raw is not None:
+        # Check a small subset to see if data is integer type (avoiding unnecessary copying)
+        raw_is_int = np.issubdtype(adata.raw.X[:10, :10].dtype, np.integer)
+    else:
+        raw_is_int = False
+
+    # Check if adata.layers["counts"] exists and contains integer values
+    counts_is_int = False
+    if "counts" in adata.layers:
+        counts_is_int = np.issubdtype(adata.layers["counts"][:10, :10].dtype, np.integer)
+
+    # Return the raw counts matrix from the appropriate source
+    if raw_is_int:
+        print("adata.raw contains integers")
+        return adata.raw.X  # No copy, return as-is
+    elif counts_is_int:
+        print("adata.layers['counts'] contains integers")
+        return adata.layers["counts"]  # No copy, return as-is
+    else:
+        raise ValueError("Neither adata.raw nor adata.layers['counts'] contain integer values!")
+
 
 ##########  Filtering functions  ##########
 def filter_anndata(
