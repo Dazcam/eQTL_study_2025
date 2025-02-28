@@ -12,9 +12,11 @@ cell_types:
   - "ExN-1"
   - "ExN-2"
   - "InN-1"
+  - "InN-2"
   - "RG"
-  - "Endo-Peri"
-#  - "MG"
+#  - "Endo-Peri"
+  - "MG"
+  - "Mig-N"  
 
 scanpy:
   qc:
