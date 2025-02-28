@@ -1,6 +1,6 @@
-#' Wrapper function to create BP Cell h5ad Seurat Object
+#' Wrapper function to create BP Cell h5ad Seurat Object.
 #' 
-#' Creates a BP cell on disk object for a set of Parse Biociences
+#' Creates a BP cell on disk object for a set of Parse Biosciences
 #' h5ad files and returns a single Seurat object.
 #' 
 #' @param in_dir (vector): of directories where input Parse files are stored.
@@ -53,18 +53,22 @@ create_BPCell_h5ad_seurat_object <- function(
     
     # Load in BP matrices
     mat <- open_matrix_dir(dir = paste0(out_dir, layer_names[i], "_BP"))
-    #mat <- Azimuth:::ConvertEnsembleToSymbol(mat = mat, species = "human")
+    
+    message('Adding ', layer_names[i], ' to colnames ...' )
+    colnames(mat) <- paste0(layer_names[i], '_', colnames(mat))
     
     # Get metadata
     #message('Azimuth') # Weird resulst with plate 1 and 2 using Azimuth
     #metadata_list[[i]] <- Azimuth::LoadH5ADobs(paste0(in_dir[i], 'anndata.h5ad'))
     metadata_list[[i]] <- read_csv(paste0(in_dir[i], 'cell_metadata.csv')) |>
+      mutate(bc_wells = str_replace(bc_wells, "^", 'plate1_'),
+             sample_id = str_replace(sample, 'sample_', ''),
+             cell_name = bc_wells) |>
       column_to_rownames('bc_wells')
     
     metadata_list[[i]] <- metadata_list[[i]] |> 
       dplyr::mutate(plate = layer_names[i]) |>
       dplyr::relocate(plate, .before = everything()) 
-    metadata_list[[i]][1:5,]
     data_list[[layer_names[i]]] <- mat
   }
   
@@ -77,69 +81,64 @@ create_BPCell_h5ad_seurat_object <- function(
   
   message('Creating Seurat Object ...')
   seurat_merged <- CreateSeuratObject(counts = data_list, meta.data = metadata)
+  
+  message("Removing '-hg38' from rownames ...") 
+  rownames(seurat_merged)
+  rownames(seurat_merged) <- stringr::str_replace(rownames(seurat_merged), '-hg38', '')
+  
   return(seurat_merged)
   
 }
 
-
-#' Compare key metadata values across Parse plates 
+#' Load, clean and update Seurat metadata for a sigle plate run.
 #' 
-#' Compare the raw metadata values from Parse plates and
-#' that in the Seurat object. Unsure atm how Seurat deals with
-#' reads from the same cells, across two different plates.
+#' Removes non cortex samples from seurat object and adds additional 
+#' sex and pcw metadata for each sample (if available). 
 #' 
-#' @returns (list): Metadata tibbles and common rows between plates.
+#' @param seurat_obj (S4): A seurat object.
 #' 
-compare_cnts_across_plates <- function() {
-  
-  plate1_meta <- read_csv(paste0(plate1_dir, 'cell_metadata.csv')) |>
-    mutate(sample_id = str_replace(sample, "sample_", ""))
-  plate2_meta <- read_csv(paste0(plate2_dir, 'cell_metadata.csv')) |>
-    mutate(sample_id = str_replace(sample, "sample_", ""))
-  all_meta_uniq <- bind_rows(plate1_meta, plate2_meta) 
-  seurat_meta <- seurat_obj@meta.data |> as_tibble(rownames = 'rownames')
-  
-  subset1_wells_tbl <- plate1_meta |> select(bc_wells) |> distinct()
-  subset2_wells_tbl <- plate2_meta |> select(bc_wells) |> distinct()
-  common_wells_rows <- intersect(subset1_wells_tbl, subset2_wells_tbl) |> pull()
-  
-  plate1_common_tbl <- plate1_meta |>
-    filter(bc_wells %in% (common_wells_rows)) |>
-    group_by(sample_id) |>
-    summarize(count = n()) |>
-    arrange(desc(count))
-  
-  plate2_common_tbl <- plate2_meta |>
-    filter(bc_wells %in% (common_wells_rows)) |>
-    group_by(sample_id) |>
-    summarize(count = n()) |>
-    arrange(desc(count))
-  
-  
-  subset1_samples_tbl <- plate1_meta |> select(sample_id) |> distinct()
-  subset2_samples_tbl <- plate2_meta |> select(sample_id) |> distinct()
-  common_samples_tbl <- intersect(subset1_samples_tbl, subset2_samples_tbl)
-  
-  
-  cell_cnts_tbl <- tibble('df' = c('plate1_meta', 'plate2_meta', 'plate1&2_meta', 'seurat_meta', 
-                                   'common_rows', 'plate1_common', 'plate2_common', 'common_samples'),
-                          'cell cnt' = c(nrow(plate1_meta), nrow(plate2_meta), nrow(all_meta_uniq), 
-                                         nrow(seurat_meta), length(common_wells_rows), nrow(plate1_common_tbl),
-                                         nrow(plate2_common_tbl), nrow(common_samples_tbl))
-  )
+#' @returns (dataframe): A Seurat metadata dataframe.
+#' 
+#' @examples clean_seurat_meta(seurat_obj = seurat_obj)
+#' 
+clean_seurat_meta <- function(
     
+  seurat_obj = NULL
   
-  tbl_list <- list('cell_cnts_tbl' = cell_cnts_tbl, 
-                   'plate1_meta' = plate1_meta,
-                   'plate2_meta' = plate2_meta,
-                   'all_meta_uniq' = all_meta_uniq,
-                   'seurat_meta' = seurat_meta,
-                   'common_rows' = common_rows,
-                   'plate1_common_tbl' = plate1_common_tbl,
-                   'plate2_common_tbl' = plate2_common_tbl,
-                   'common_samples_tbl' = common_samples_tbl)
+) {
+  
+  # Load additional metadata files
+  sample_fcx_meta <- read_csv(paste0(sheets_dir, 'FC_samples_pcw.csv'))
+  sample_meta <- readxl::read_excel(paste0(sheets_dir, 'Fetal single cell eQTL final samples 29-11-24.xlsx'), 
+                                    sheet = 'Final cortex samples') |>
+    dplyr::rename(sample = ...1) |>
+    dplyr::select(sample, PCW, Sex) |>
+    mutate(sample = str_replace_all(sample, " \\((A|a)\\)", "_A")) |>
+    print(n=Inf)
+  
+  # ID Claire's samples and add sex and pcw info to meta data
+  seurat_meta <- seurat_obj@meta.data |>
+    mutate(sample = str_replace_all(sample, "_a", "_A")) |>
+    mutate(region = case_when(
+      str_detect(sample, pattern = "_WGE") ~ "GE",
+      str_detect(sample, pattern = "_Hip") ~ "Hip",
+      str_detect(sample, pattern = "_Thal") ~ "Tha",
+      str_detect(sample, pattern = "18184") ~ "FC_11pcw", # Rm and not 2nd Trim plate1
+      .default = 'CTX'),
+      claire_sample = ifelse(str_detect(region, pattern = "GE|Hip|Tha|FC_11pcw"), T, F)) |> 
+    left_join(sample_fcx_meta, by = join_by('sample_id' == 'sample')) |>
+    left_join(sample_meta, by = join_by('sample_id' == 'sample')) %>%
+    mutate(PCW_combined = coalesce(as.character(pcw), as.character(PCW))) %>%
+    dplyr::select(-pcw, -PCW) |>
+    dplyr::rename(pcw = PCW_combined)
+  
+  
+  return(seurat_meta)
   
 }
+
+
+
 
 get_cell_outliers <- function(
     
@@ -289,74 +288,6 @@ create_seurat_qc_boxplt <- function(
   
 }
 
-
-#######
-#######
-#######
-
-# Single plate functions
-
-#' Load, clean and update Parse metadata 
-#' 
-#' Loads Parse metadata for a single plate and adds pcw and sex 
-#' metadata for each sample. 
-#' 
-#' @param meta_dir (string): Directory where Parse metadata is stored.
-#' 
-#' @returns (list): 3 metadata objects. 
-#' 
-#' @examples prep_parse_meta(meta_dir = 'results/plate_1_dir/')
-#' 
-prep_parse_meta <- function(
-    
-  meta_dir = NULL
-  
-) {
-  
-  # Load additional metadata
-  sample_fcx_meta <- read_csv(paste0(sheets_dir, 'FC_samples_pcw.csv'))
-  sample_meta <- readxl::read_excel(paste0(sheets_dir, 'Fetal single cell eQTL final samples 29-11-24.xlsx'), 
-                                    sheet = 'Final cortex samples') |>
-    dplyr::rename(sample = ...1) |>
-    dplyr::select(sample, PCW, Sex) |>
-    mutate(sample = str_replace_all(sample, " \\((A|a)\\)", "_A")) |>
-    print(n=Inf)
-  
-  # ID Claire's samples and add sex and pcw info to meta data
-  parse_meta <- read.csv(paste0(meta_dir, "cell_metadata.csv"), row.names = 1) |>
-    mutate(sample = str_replace_all(sample, "_a", "_A")) |>
-    mutate(region = case_when(
-      str_detect(sample, pattern = "_WGE") ~ "GE",
-      str_detect(sample, pattern = "_Hip") ~ "Hip",
-      str_detect(sample, pattern = "_Thal") ~ "Tha",
-      str_detect(sample, pattern = "18184") ~ "FC_11pcw", # Rm and not 2nd Trim plate1
-      .default = 'CTX'),
-      sample_id = str_replace(sample, "sample_", ""),
-      claire_sample = ifelse(str_detect(region, pattern = "GE|Hip|Tha|FC_11pcw"), T, F)) |> 
-    left_join(sample_fcx_meta, by = join_by('sample_id' == 'sample')) |>
-    left_join(sample_meta, by = join_by('sample_id' == 'sample')) %>%
-    mutate(PCW_combined = coalesce(as.character(pcw), as.character(PCW))) %>%
-    dplyr::select(-pcw, -PCW) |>
-    dplyr::rename(pcw = PCW_combined)
-  
-  # Report: make a loop for this
-  print(paste0('sample_fcx_meta:'), sep = '\n\n')
-  print(sample_fcx_meta |> select(sample) |> arrange(sample) |> distinct() |> pull())
-  print(paste0('sample_meta:'), sep = '\n\n')
-  print(sample_meta |> select(sample) |> arrange(sample) |> distinct() |> pull())
-  print(paste0('parse_meta:'), sep = '\n\n')
-  print(parse_meta |> select(sample_id) |> arrange(sample_id) |> distinct() |> pull())
-  
-  meta_list <- list(
-    'parse_meta' = parse_meta,
-    'sample_meta' = sample_meta,
-    'sample_fcx_meta' = sample_fcx_meta
-  )
-  
-  return(meta_list)
-  
-}
-
 #' Create a list of violin plots for cluster assignment
 #' 
 #' Create a set of individual viloin plots for a set gene lists. Gene lists
@@ -401,4 +332,134 @@ create_vln_plot_list <- function(
   
   
 }
+
+
+#######
+#######
+#######
+
+# Single plate functions
+
+#' Load, clean and update Parse metadata for a sigle plate run.
+#' 
+#' Loads Parse metadata for a single plate and adds pcw and sex 
+#' metadata for each sample. 
+#' 
+#' @param meta_dir (string): Directory where Parse metadata is stored.
+#' 
+#' @returns (list): 3 metadata objects. 
+#' 
+#' @examples prep_parse_meta(meta_dir = 'results/plate_1_dir/')
+#' 
+prep_parse_meta <- function(
+    
+  meta_dir = NULL
+  
+) {
+  
+  # Load additional metadata
+  sample_fcx_meta <- read_csv(paste0(sheets_dir, 'FC_samples_pcw.csv'))
+  sample_meta <- readxl::read_excel(paste0(sheets_dir, 'Fetal single cell eQTL final samples 29-11-24.xlsx'), 
+                                    sheet = 'Final cortex samples') |>
+    dplyr::rename(sample = ...1) |>
+    dplyr::select(sample, PCW, Sex) |>
+    mutate(sample = str_replace_all(sample, " \\((A|a)\\)", "_A")) |>
+    print(n=Inf)
+  
+  # ID Claire's samples and add sex and pcw info to meta data
+  parse_meta <- read.csv(paste0(meta_dir, "cell_metadata.csv"), row.names = 1) |>
+    mutate(sample = str_replace_all(sample, "_a", "_A"),
+           plate = str_extract(meta_dir, 'plate[1-2]')) |>
+    mutate(region = case_when(
+      str_detect(sample, pattern = "_WGE") ~ "GE",
+      str_detect(sample, pattern = "_Hip") ~ "Hip",
+      str_detect(sample, pattern = "_Thal") ~ "Tha",
+      str_detect(sample, pattern = "18184") ~ "FC_11pcw", # Rm and not 2nd Trim plate1
+      .default = 'CTX'),
+      sample_id = str_replace(sample, "sample_", ""),
+      claire_sample = ifelse(str_detect(region, pattern = "GE|Hip|Tha|FC_11pcw"), T, F)) |> 
+    left_join(sample_fcx_meta, by = join_by('sample_id' == 'sample')) |>
+    left_join(sample_meta, by = join_by('sample_id' == 'sample')) %>%
+    mutate(PCW_combined = coalesce(as.character(pcw), as.character(PCW))) %>%
+    dplyr::select(-pcw, -PCW) |>
+    dplyr::rename(pcw = PCW_combined)
+  
+  # Report: make a loop for this
+  print(paste0('sample_fcx_meta:'), sep = '\n\n')
+  print(sample_fcx_meta |> select(sample) |> arrange(sample) |> distinct() |> pull())
+  print(paste0('sample_meta:'), sep = '\n\n')
+  print(sample_meta |> select(sample) |> arrange(sample) |> distinct() |> pull())
+  print(paste0('parse_meta:'), sep = '\n\n')
+  print(parse_meta |> select(sample_id) |> arrange(sample_id) |> distinct() |> pull())
+  
+  meta_list <- list(
+    'parse_meta' = parse_meta,
+    'sample_meta' = sample_meta,
+    'sample_fcx_meta' = sample_fcx_meta
+  )
+  
+  return(meta_list)
+  
+}
+
+#' Compare key metadata values across Parse plates 
+#' 
+#' Compare the raw metadata values from Parse plates and
+#' that in the Seurat object. Unsure atm how Seurat deals with
+#' reads from the same cells, across two different plates.
+#' 
+#' @returns (list): Metadata tibbles and common rows between plates.
+#' 
+compare_cnts_across_plates <- function() {
+  
+  plate1_meta <- read_csv(paste0(plate1_dir, 'cell_metadata.csv')) |>
+    mutate(sample_id = str_replace(sample, "sample_", ""))
+  plate2_meta <- read_csv(paste0(plate2_dir, 'cell_metadata.csv')) |>
+    mutate(sample_id = str_replace(sample, "sample_", ""))
+  all_meta_uniq <- bind_rows(plate1_meta, plate2_meta) 
+  seurat_meta <- seurat_obj@meta.data |> as_tibble(rownames = 'rownames')
+  
+  subset1_wells_tbl <- plate1_meta |> select(bc_wells) |> distinct()
+  subset2_wells_tbl <- plate2_meta |> select(bc_wells) |> distinct()
+  common_wells_rows <- intersect(subset1_wells_tbl, subset2_wells_tbl) |> pull()
+  
+  plate1_common_tbl <- plate1_meta |>
+    filter(bc_wells %in% (common_wells_rows)) |>
+    group_by(sample_id) |>
+    summarize(count = n()) |>
+    arrange(desc(count))
+  
+  plate2_common_tbl <- plate2_meta |>
+    filter(bc_wells %in% (common_wells_rows)) |>
+    group_by(sample_id) |>
+    summarize(count = n()) |>
+    arrange(desc(count))
+  
+  
+  subset1_samples_tbl <- plate1_meta |> select(sample_id) |> distinct()
+  subset2_samples_tbl <- plate2_meta |> select(sample_id) |> distinct()
+  common_samples_tbl <- intersect(subset1_samples_tbl, subset2_samples_tbl)
+  
+  
+  cell_cnts_tbl <- tibble('df' = c('plate1_meta', 'plate2_meta', 'plate1&2_meta', 'seurat_meta', 
+                                   'common_rows', 'plate1_common', 'plate2_common', 'common_samples'),
+                          'cell cnt' = c(nrow(plate1_meta), nrow(plate2_meta), nrow(all_meta_uniq), 
+                                         nrow(seurat_meta), length(common_wells_rows), nrow(plate1_common_tbl),
+                                         nrow(plate2_common_tbl), nrow(common_samples_tbl))
+  )
+  
+  
+  tbl_list <- list('cell_cnts_tbl' = cell_cnts_tbl, 
+                   'plate1_meta' = plate1_meta,
+                   'plate2_meta' = plate2_meta,
+                   'all_meta_uniq' = all_meta_uniq,
+                   'seurat_meta' = seurat_meta,
+                   'common_rows' = common_rows,
+                   'plate1_common_tbl' = plate1_common_tbl,
+                   'plate2_common_tbl' = plate2_common_tbl,
+                   'common_samples_tbl' = common_samples_tbl)
+  
+}
+
+
 
