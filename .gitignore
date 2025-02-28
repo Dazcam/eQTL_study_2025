@@ -21,4 +21,5 @@ results/03SCANPY/adata_qc_plate1.h5ad
 results/03SCANPY/adata_qc_plate2.h5ad
 results/03SCANPY/*.xlsx
 results/03SCANPY/
-results/04TENSORQTL/
+results/04TENSORQTL/*/*.parquet
+results/04TENSORQTL/filtered_genotypes*
