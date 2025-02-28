@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
 #
-#    Parse_testing - Basic Seuart processing
+#    Parse_testing - Basic Seurat processing
 #
 #--------------------------------------------------------------------------------------
 
@@ -31,13 +31,22 @@ source('~/Desktop/parse_testing/workflow/scripts/parse_testing_functions.R')
 
 ## Load data  -------------------------------------------------------------------------
 # mat <- ReadParseBio(mat_dir) # Crashes locally with 1M cells
-mat <- ReadParseBio(plate1_dir)
-metadata_lst <- prep_parse_meta(meta_dir = plate1_dir)
+mat1 <- ReadParseBio(plate1_dir)
+metadata1_lst <- prep_parse_meta(meta_dir = plate1_dir)
 #metadata_lst[['parse_meta']] |> column_to_rownames(sample)
 
-seurat_obj <- CreateSeuratObject(mat, meta.data = metadata_lst[['parse_meta']])
-metadata_lst[['seurat_meta']] <- seurat_obj@meta.data |> head(12)
-rm(mat, parse_meta, sample_meta, sample_fcx_meta)
+mat2 <- ReadParseBio(plate2_dir)
+metadata2_lst <- prep_parse_meta(meta_dir = plate2_dir)
+
+seurat_obj1 <- CreateSeuratObject(mat1, meta.data = metadata1_lst[['parse_meta']])
+seurat_obj1 <- RenameCells(seurat_obj1, add.cell.id = 'plate1_')
+rm(mat1)
+seurat_obj2 <- CreateSeuratObject(mat2, meta.data = metadata2_lst[['parse_meta']])
+seurat_obj2 <- RenameCells(seurat_obj2, add.cell.id = 'plate2_')
+rm(mat2)
+
+merged_obj <- merge(x = seurat_obj1, y = seurat_obj2)
+merged_obj[["RNA"]] <- JoinLayers(merged_obj)
 
 ## QC ----------------------------------------------------------------------------------
 counts_preFilt_tbl <- tibble('Stage' = 'Pre-filter', 
@@ -388,6 +397,7 @@ rmarkdown::render(markdown_doc, output_file = markdown_html, output_dir = markdo
 ##  ------------------------------------------------------------------------------------
 ##  ------------------------------------------------------------------------------------
 
-
+read_csv(paste0(plate1_dir, 'cell_metadata.csv')) |>
+  mutate(bc_wells = str_replace(bc_wells, "^", 'plate1_'))
 
 

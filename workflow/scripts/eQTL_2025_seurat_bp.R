@@ -6,9 +6,9 @@
 
 ## Info  ------------------------------------------------------------------------------
 
-#  Plate 1: 861,960 cells
-#  Plate 2: 719,652 cells
-#  Plate 1&2: 1,537,666
+#  Plate 1: 861,960 cells, 78,932 features
+#  Plate 2: 719,652 cells, 78,932 features
+#  Plate 1&2: 1,581,612 cells, 66,147 genes
 
 ##  Load Packages, functions and variables  -------------------------------------------
 message('Setting environment variables ...')
@@ -40,10 +40,25 @@ seurat_obj <- create_BPCell_h5ad_seurat_object(in_dir = c(plate1_dir, plate2_dir
                                                out_dir = seurat_dir,
                                                layer_names = c('Plate1', 'Plate2'))
 
-# Compare Metadata values across plates
-initial_cnts_lst <- compare_cnts_across_plates()
+## QC ----------------------------------------------------------------------------------
+seurat_obj@meta.data <- clean_seurat_meta(seurat_obj)
+seurat_obj[['RNA']] <- JoinLayers(seurat_obj, 'RNA')
+counts_preFilt_tbl <- tibble('Stage' = 'Pre-filter', 
+                             'Cells' = c(ncol(seurat_obj)),
+                             'Genes' = c(nrow(seurat_obj)))
 
-options(knitr.duplicate.label = "allow")
+# Remove Claire's samples
+seurat_obj <- subset(seurat_obj, subset = claire_sample == FALSE)
+counts_FiltClaire_tbl <- tibble('Stage' = 'CT-filt', 
+                                'Cells' = c(ncol(seurat_obj)),
+                                'Genes' = c(nrow(seurat_obj)))
+
+
+
+
+
+
+#options(knitr.duplicate.label = "allow")
 rmarkdown::render(markdown_bp_doc, output_file = markdown_bp_html, output_dir = markdown_dir)
 
 

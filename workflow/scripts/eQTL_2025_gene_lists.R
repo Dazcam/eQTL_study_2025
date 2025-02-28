@@ -22,7 +22,7 @@ cer_features <- c("GAD1", "EOMES", "GLI3", "OLIG1", "MKI67",
                   "RELN")
 
 
-eneral_genes <- c('SLC17A7', 'SLC17A6', 'SLC17A8', # VGLUT1-3
+general_genes <- c('SLC17A7', 'SLC17A6', 'SLC17A8', # VGLUT1-3
                   'SLC6A1', 'SLC6A13', 'SLC6A11', 'SLC6A12', # GABA transporters
                   'SST', 'NPY', 'GAD1', 'GAD2', 'PVALB', 'CALB2', 'VIP', # InN markers
                   'C3', 'C1QB',                           # MG markers
