@@ -183,20 +183,6 @@ for (cell_type in cell_types) {
 final_report <- bind_rows(report_list) |>
   print()
 
-
-# counts_tbl |>
-#   filter(Chr == 1) |>
-#   write_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm_22.bed'))
-  
-# FastQTL choked on test data for any chr not chr1-22
-counts_tbl |>
-  group_by(`#Chr`) |>
-  count() |>
-  print(n = Inf)
-
-
-read_tsv(paste0(data_dir, 'fastqtl_cell_type_1_tmm.bed')) |>
-  anyNA()
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
   
