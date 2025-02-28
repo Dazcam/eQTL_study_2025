@@ -49,7 +49,7 @@ rule scanpy_pseudobulk:
              nb = "scripts/scanpy_cell_label_and_pseudobulk.ipynb"
     output:  "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html"
     conda:   "../envs/eqtl_study.yml"
-    resources: threads = 10, mem_mb = 100000, time="3-0:00:00"
+    resources: threads = 10, mem_mb = 200000, time="3-0:00:00"
     params:  nb_out = "../results/03SCANPY/scanpy_cell_label_and_pseudobulk_pm.ipynb",
              html_out = "scanpy_cell_label_and_pseudobulk.html"
     message: "Running Scanpy annotation in Jupyter notebook and producing HTML output"

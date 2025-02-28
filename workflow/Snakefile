@@ -4,7 +4,7 @@ configfile: '../config/config.yaml'
 include: 'rules/02scanpy.smk'
 #include: 'rules/03scanpy_testing.smk'
 #include: 'rules/04pegasus.smk'
-#include: 'rules/04qtl.smk'
+include: 'rules/04qtl.smk'
 
 
 # Set QTL tool
@@ -17,8 +17,10 @@ if QTL_TOOL == "fastqtl":
         qtl_files.append(config["output_files"]["fastqtl_perm_output"].format(chunk=chunk)) 
 
 elif QTL_TOOL == "tensorqtl":
-    qtl_files.append(config["output_files"]["tensorqtl_output"])
-    qtl_files.append(config["output_files"]["tensorqtl_perm_output"])    
+    for cell_type in config["cell_types"]:
+        qtl_files.append(config["output_files"]["tensorqtl_output"].format(cell_type=cell_type))
+        qtl_files.append(config["output_files"]["tensorqtl_perm_output"].format(cell_type=cell_type))    
+        qtl_files.append(config["output_files"]["tensorqtl_cat_log_output"].format(cell_type=cell_type))
 
 rule all:
     input:
@@ -33,8 +35,8 @@ rule all:
 #         expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
 #         "../results/03SCANPY/scanpy_clustering.html"
 #          "../results/03SCANPY/scanpy_annotation.html",
-          "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html"
+        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #          expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
 #           expand("../results/04FASTQTL/fastQTL_{chunk}_txt.gz", chunk = range(1, 101)),
 #           expand("../results/04FASTQTL/permutations_{chunk}_txt.gz", chunk = range(1, 101)),
-#        qtl_files
+        qtl_files

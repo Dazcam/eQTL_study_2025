@@ -8,7 +8,13 @@ paths:
   scripts: "scripts"
   log_dir: "../results/00LOG"
 
-cell_types: "cell_type_1"
+cell_types: 
+  - "ExN-1"
+  - "ExN-2"
+  - "InN-1"
+  - "RG"
+  - "Endo-Peri"
+#  - "MG"
 
 scanpy:
   qc:
@@ -54,22 +60,23 @@ eQTL:
   out_prefix: ../results/04TENSORQTL/filtered_genotypes
   window: 500000
 input_files:
-  counts: ../results/03SCANPY/pseudobulk/fastqtl_{cell_type}_tmm.bed
+  counts: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
   genotypes: ../resources/test_genotypes/filtered_genotypes.vcf.gz
-  covariates: ../results/03SCANPY/pseudobulk/fastqtl_covariates_t.txt
+  covariates: ../results/03SCANPY/pseudobulk/{cell_type}_covariates_t.txt
 output_files:
-  counts_gz: ../results/03SCANPY/pseudobulk/fastqtl_{cell_type}_tmm.bed.gz
+  counts_gz: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed.gz
   genotypes_plink: ../results/04TENSORQTL/filtered_genotypes.pgen 
-  fastqtl_output: ../results/04FASTQTL/fastQTL_{chunk}_txt.gz
-  fastqtl_perm_output: ../results/04FASTQTL/permutations_{chunk}_txt.gz
-  tensorqtl_out_prefix: ../results/04TENSORQTL/{cell_type}_nom
-  tensorqtl_output: ../results/04TENSORQTL/{cell_type}_nom.cis_qtl_pairs.4.parquet
-  tensorqtl_perm_out_prefix: ../results/04TENSORQTL/{cell_type}_perm
-  tensorqtl_perm_output: ../results/04TENSORQTL/{cell_type}_perm.cis_qtl.txt.gz
+  fastqtl_output: ../results/04FASTQTL/{cell_type}_nom_{chunk}_txt.gz
+  fastqtl_perm_output: ../results/04FASTQTL/{cell_type}_perm_{chunk}_txt.gz
+  tensorqtl_out_prefix: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom
+  tensorqtl_output: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom.cis_qtl_pairs.4.parquet
+  tensorqtl_perm_out_prefix: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm
+  tensorqtl_perm_output: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm.cis_qtl.txt.gz
+  tensorqtl_cat_log_output: ../results/04TENSORQTL/all_cells_perm_cis_qtl_log.tsv
 log_files:
-  fastqtl_zip: ../results/00LOG/04FASTQTL/bgzip.log
-  fastqtl: ../results/00LOG/04FASTQTL/fastQTL_{chunk}.log
-  fastqtl_perm: ../results/00LOG/04FASTQTL/permutations_{chunk}.log
+  fastqtl_zip: ../results/00LOG/04FASTQTL/{cell_type}_bgzip.log
+  fastqtl: ../results/00LOG/04FASTQTL/{cell_type}_nom_{chunk}.log
+  fastqtl_perm: ../results/00LOG/04FASTQTL/{cell_type}_perm_{chunk}.log
   tensorqtl: ../results/00LOG/04TENSORQTL/{cell_type}_nom.log
   tensorqtl_perm: ../results/00LOG/04TENSORQTL/{cell_type}_perm.log
 containers:
