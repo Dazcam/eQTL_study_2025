@@ -29,7 +29,7 @@ rule fast_qtl:
                     --cov {input.covariates} \
                     --out {output} \
                     --log {log} \
-                    --normal
+                    --normal >> {log} 2>&1
             """
 
 rule fast_qtl_perms:
@@ -53,7 +53,7 @@ rule fast_qtl_perms:
                     --permute {params.min} {params.max} \
                     --out {output} \
                     --log {log} \
-                    --normal 
+                    --normal >> {log} 2>&1
             """
 
 rule convert_genotypes:
@@ -73,30 +73,36 @@ rule tensorqtl:
     params: plink_prefix = config["eQTL"]["out_prefix"],
             out_prefix = config["output_files"]["tensorqtl_out_prefix"],
             window = config["eQTL"]["window"]
-#    log: config["log_files"]["tensorqtl"]
+    log: config["log_files"]["tensorqtl"]
     shell:
         """
         python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
                 --covariates {input.covariates} \
                 --window {params.window} \
-                --mode cis_nominal 
+                --mode cis_nominal >> {log} 2>&1
         """
 
 rule tensorqtl_perm:
     input:  genotypes = config["output_files"]["genotypes_plink"],
             counts = config["output_files"]["counts_gz"],
             covariates = config["input_files"]["covariates"]
-    output: config["output_files"]["tensorqtl_perm_output"]
+    output: out = config["output_files"]["tensorqtl_perm_output"],
+            log = config["log_files"]["tensorqtl_perm"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
     params: plink_prefix = config["eQTL"]["out_prefix"],
             out_prefix = config["output_files"]["tensorqtl_perm_out_prefix"],
             window = config["eQTL"]["window"]
-#    log: config["log_files"]["tensorqtl"]
+    log: config["log_files"]["tensorqtl_perm"]
     shell:
         """
         python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
                 --covariates {input.covariates} \
                 --window {params.window} \
-                --mode cis
+                --mode cis >> {log} 2>&1 
         """
+
+rule tensorqtl_cat_log:
+    input:  expand(config["log_files"]["tensorqtl_perm"], cell_type = config['cell_types'])
+    output: config["output_files"]["tensorqtl_cat_log_output"],
+    shell:  """python scripts/cat_tensorqtl_logs.py -i "{input}" -o {output}"""
