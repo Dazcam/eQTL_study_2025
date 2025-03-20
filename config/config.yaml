@@ -84,3 +84,52 @@ log_files:
 containers:
   fastqtl: ../resources/containers/gtex_eqtl.sif
   tensorqtl: ../resources/containers/tensorqtl.sif
+plot_qtl:
+  run: True  
+  pairs_file: ../results/04TENSORQTL/plots/snp_gene_pairs.csv
+  out_dir: ../results/04TENSORQTL/plots
+  out_file: ../results/04TENSORQTL/plots/plot_qtl.done
+  expression_dir: ../results/03SCANPY/pseudobulk
+  log: ../results/00LOG/04TENSORQTL/plot_qtl.log 
+
+genotypes:
+  impute_check:
+    input:  ../results/04GENOTYPES/TOPMED/chr_{chr}.zip
+    output: 
+      tsv: ../results/04GENOTYPES/TOPMED/impute_check/chr_{chr}_summary.tsv
+      vcf: ../results/04GENOTYPES/TOPMED/chr{chr}.dose.vcf.gz
+    params: 
+      dir: ../results/04GENOTYPES/TOPMED/
+      pwd: 
+    log: ../results/00LOG/04GENOTYPES/TOPMED/impute_check_{chr}.log
+  impute_check_cat:
+    output: ../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv
+  dwnld_dbsnp_ref:
+    output: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz.tbi 
+    params:
+      web_link: https://ftp.ncbi.nih.gov/snp/redesign/latest_release/VCF/GCF_000001405.40.gz
+      prefix: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz 
+    log: ../results/00LOG/04GENOTYPES/TOPMED/dwnld_dbsnp_ref.log
+  add_rsID:
+    output: ../results/04GENOTYPES/TOPMED/dbSNP_annotated/chr{chr}.dbSNP.vcf.gz
+    log: ../results/00LOG/04GENOTYPES/TOPMED/add_rsID_{chr}.log     
+  vcf_cat:
+    output: ../results/04GENOTYPES/TOPMED/dbSNP_annotated/chrALL.dbSNP.vcf.gz
+    log: ../results/00LOG/04GENOTYPES/TOPMED/vcf_cat.log    
+  filter_tags:
+    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL.filt.vcf.gz
+    params:
+      hwe: 0.0001
+      maf: 0.01
+      rsq: 0.8  
+    log: ../results/00LOG/04GENOTYPES/TOPMED/filter_tags.log    
+  check_VCF:  
+    output: ../results/04GENOTYPES/TOPMED/filtered/exclusion_list.txt
+    params: ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt
+    log: ../results/00LOG/04GENOTYPES/TOPMED/check_VCF.log
+  exclude_SNPs:
+    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
+    log: ../results/00LOG/04GENOTYPES/TOPMED/exclde_SNPs.log
+  idx_vcf:
+    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi
+    log: ../results/00LOG/04GENOTYPES/TOPMED/idx_vcf.log
