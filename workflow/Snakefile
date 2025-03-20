@@ -1,14 +1,17 @@
 configfile: '../config/config.yaml'
 
 #include: 'rules/01parse.smk' 
-include: 'rules/02scanpy.smk'
+#include: 'rules/02scanpy.smk'
 #include: 'rules/03scanpy_testing.smk'
 #include: 'rules/04pegasus.smk'
-include: 'rules/04qtl.smk'
-
+#include: 'rules/04qtl.smk'
+include: 'rules/04genotypes.smk'
 
 # Set QTL tool
 QTL_TOOL = config["eQTL"]["tool"]
+CELL_TYPES = config["cell_types"]
+CHROMOSOMES = list(range(1, 23)) + ["X"]
+
 qtl_files = []
 
 if QTL_TOOL == "fastqtl":
@@ -21,6 +24,9 @@ elif QTL_TOOL == "tensorqtl":
         qtl_files.append(config["output_files"]["tensorqtl_output"].format(cell_type=cell_type))
         qtl_files.append(config["output_files"]["tensorqtl_perm_output"].format(cell_type=cell_type))    
         qtl_files.append(config["output_files"]["tensorqtl_cat_log_output"].format(cell_type=cell_type))
+
+# Rule all with optional plot_qtl inclusion
+qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]["run"] else []
 
 rule all:
     input:
@@ -35,8 +41,12 @@ rule all:
 #         expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
 #         "../results/03SCANPY/scanpy_clustering.html"
 #          "../results/03SCANPY/scanpy_annotation.html",
-        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
+#        "../results/03SCANPY/scanpy_extra.html",
+#        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #          expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
 #           expand("../results/04FASTQTL/fastQTL_{chunk}_txt.gz", chunk = range(1, 101)),
 #           expand("../results/04FASTQTL/permutations_{chunk}_txt.gz", chunk = range(1, 101)),
-        qtl_files
+#        qtl_files,
+#        qtl_plots,
+        "../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv",
+        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi" 
