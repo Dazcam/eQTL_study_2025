@@ -11,14 +11,13 @@ rule impute_check:
     shell:
         """
         # Create directory and unzip
-        if [ ! -f {params.dir}chr{wildcards.chr}.dose.vcf.gz ]; then
-            unzip -P '{params.pwd}' {input} -d {params.dir} > {log} 2>&1
-        else
-            echo "VCF file already exists, skipping unzip" >> {log}
-        fi
+        unzip -P '{params.pwd}' -n {input} -d {params.dir} > {log} 2>&1
 
         # Count total SNPs from dose.vcf.gz
         snp_count=$(bcftools view -H {params.dir}chr{wildcards.chr}.dose.vcf.gz | wc -l)
+        
+        # Create index for vcf file
+        tabix -p vcf {params.dir}chr{wildcards.chr}.dose.vcf.gz >> {log} 2>&1              
 
         # Count MAF < 0.05 and >= 0.05 from info file
         maf_counts=$(gzip -d -c {params.dir}chr{wildcards.chr}.info.gz | grep -v "^#" | awk -F'\t' 'BEGIN {{common=0; rare=0}} {{split($8,a,";"); for(i in a) if(a[i]~/^MAF=/) {{maf=substr(a[i],5); if(maf>=0.05) common++; else rare++}}}} END {{print rare " " common}}')
@@ -53,7 +52,6 @@ rule impute_check_cat:
         awk 'NR>1 {{snp+=$2; mlt+=$3; mgteq+=$4; rlt+=$5; rgteq+=$6; mr+=$7}} END {{print "Overall\t" snp "\t" mlt "\t" mgteq "\t" rlt "\t" rgteq "\t" mr}}' {output} >> {output}
         """
 
-# Rule to download dbSNP Build 156 for hg38
 rule dwnld_dbsnp_ref:
     output: config['genotypes']['dwnld_dbsnp_ref']['output']
     params: web_link = config['genotypes']['dwnld_dbsnp_ref']['params']['web_link'],
@@ -65,10 +63,10 @@ rule dwnld_dbsnp_ref:
         wget {params.web_link}.tbi -O {params.prefix}.tbi >> {log} 2>&1
         """
 
-# Rule to add rsIDs to each chromosome's VCF
+# Add rsIDs to each chromosome's VCF
 rule add_rsID:
     input:  vcf = config['genotypes']['impute_check']['output']['vcf'],
-            dbsnp = config['genotypes']['dwnld_dbsnp_ref']['output']
+            dbsnp = config['genotypes']['dwnld_dbsnp_ref']['params']['prefix']
     output: config['genotypes']['add_rsID']['output']
     envmodules: "bcftools"
     log:    config['genotypes']['add_rsID']['log']
@@ -77,7 +75,7 @@ rule add_rsID:
         bcftools annotate -a {input.dbsnp} -c ID {input.vcf} -O z -o {output} > {log} 2>&1  
         """
 
-# Rule to concatenate all chromosome VCFs into one
+# Concatenate all chromosome VCFs into one
 rule vcf_cat:
     input:  expand(config['genotypes']['add_rsID']['output'], chr=CHROMOSOMES)
     output: config['genotypes']['vcf_cat']['output']
@@ -88,7 +86,7 @@ rule vcf_cat:
         bcftools concat {input} -O z -o {output} > {log} 2>&1
         """
 
-# Rule to compute HWE and filter the concatenated VCF (using existing MAF and R2)
+# Compute HWE and filter the concatenated VCF;Keep SNPs passing MAF, R2 and HWE thresholds
 rule filter_tags:
     input:  config['genotypes']['vcf_cat']['output']
     output: config['genotypes']['filter_tags']['output']
@@ -102,25 +100,30 @@ rule filter_tags:
         """
         bcftools +fill-tags {input} -O z -- -t HWE |\
         bcftools view -e 'HWE<{params.hwe} |\
-                          INFO/{params.maf} |\
+                          INFO/MAF<{params.maf} |\
                           INFO/R2<{params.rsq}' -O z -o {output} > {log} 2>&1
         """
 
-# Rule to check for duplicates and excluded SNPs
 rule check_VCF:
-    input:  config['genotypes']['filter_tags']['output']
-    output: config['genotypes']['check_VCF']['output']    
+    input:  vcf = config['genotypes']['filter_tags']['output'],
+            ref_gz = config['genotypes']['check_VCF']['input']['ref_gz']
+    output: list = config['genotypes']['check_VCF']['output']['list'],
+            ref = temp(config['genotypes']['check_VCF']['output']['ref']),
+            fai = temp(config['genotypes']['check_VCF']['output']['fai'])    
     params: config['genotypes']['check_VCF']['params']
+    envmodules: "samtools"
     log:    config['genotypes']['check_VCF']['log']
     shell:
         """
-        checkVCF.py -r {input} -o {params} --exclude {output} > {log} 2>&1
+        gunzip -c {input.ref_gz} > {output.ref} 2>> {log}
+        samtools faidx {output.ref} >> {log} 2>&1
+        python scripts/checkVCF.py -r {output.ref} -v {input.vcf} -o {params} --exclude {output.list} > {log} 2>&1
         """
 
-# Rule to exclude problematic variants - do I also need to exclude duplicates??
+# Exclude SNPs IDed in CheckVCF
 rule exclude_SNPs:
     input:  vcf = config['genotypes']['filter_tags']['output'],
-            list = config['genotypes']['check_VCF']['output']
+            list = config['genotypes']['check_VCF']['output']['list']
     output: config['genotypes']['exclude_SNPs']['output']
     envmodules: "bcftools"
     log:    config['genotypes']['exclude_SNPs']['log']
@@ -129,7 +132,6 @@ rule exclude_SNPs:
         bcftools view -e 'ID=@{input.list}' {input.vcf} -O z -o {output} > {log} 2>&1
         """
 
-# Rule to index the final VCF.gz
 rule idx_vcf:
     input:  config['genotypes']['exclude_SNPs']['output']
     output: config['genotypes']['idx_vcf']['output']
