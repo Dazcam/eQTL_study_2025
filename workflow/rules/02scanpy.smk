@@ -58,3 +58,17 @@ rule scanpy_pseudobulk:
              "papermill {input.nb} {params.nb_out} -p plate clustering >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
 
+rule scanpy_extra:
+    # Note that plate is on requried to run initialize_env: need to add functionality to omit this here
+    input:   html = "../results/03SCANPY/scanpy_clustering.html",
+             nb = "scripts/scanpy_extra.ipynb"
+    output:  "../results/03SCANPY/scanpy_extra.html"
+    conda:   "../envs/eqtl_study.yml"
+    resources: threads = 10, mem_mb = 100000, time="3-0:00:00"
+    params:  nb_out = "../results/03SCANPY/scanpy_extra_pm.ipynb",
+             html_out = "scanpy_extra.html"
+    message: "Running Scanpy extra in Jupyter notebook and producing HTML output"
+    log:     "../results/00LOG/03SCANPY/scanpy_extra.log"
+    shell:
+             "papermill {input.nb} {params.nb_out} -p extra plate >> {log} 2>&1 && "
+             "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
