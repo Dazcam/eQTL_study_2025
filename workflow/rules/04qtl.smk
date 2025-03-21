@@ -73,14 +73,14 @@ rule tensorqtl:
     params: plink_prefix = config["eQTL"]["out_prefix"],
             out_prefix = config["output_files"]["tensorqtl_out_prefix"],
             window = config["eQTL"]["window"]
-    log: config["log_files"]["tensorqtl"]
+    log:    config["log_files"]["tensorqtl"]
     shell:
-        """
-        python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
-                --covariates {input.covariates} \
-                --window {params.window} \
-                --mode cis_nominal >> {log} 2>&1
-        """
+            """
+            python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
+               --covariates {input.covariates} \
+               --window {params.window} \
+               --mode cis_nominal >> {log} 2>&1
+             """
 
 rule tensorqtl_perm:
     input:  genotypes = config["output_files"]["genotypes_plink"],
@@ -93,16 +93,37 @@ rule tensorqtl_perm:
     params: plink_prefix = config["eQTL"]["out_prefix"],
             out_prefix = config["output_files"]["tensorqtl_perm_out_prefix"],
             window = config["eQTL"]["window"]
-    log: config["log_files"]["tensorqtl_perm"]
+    log:    config["log_files"]["tensorqtl_perm"]
     shell:
-        """
-        python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
-                --covariates {input.covariates} \
-                --window {params.window} \
-                --mode cis >> {log} 2>&1 
-        """
+            """
+            python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
+               --covariates {input.covariates} \
+               --window {params.window} \
+               --mode cis >> {log} 2>&1 
+            """
 
 rule tensorqtl_cat_log:
     input:  expand(config["log_files"]["tensorqtl_perm"], cell_type = config['cell_types'])
     output: config["output_files"]["tensorqtl_cat_log_output"],
     shell:  """python scripts/cat_tensorqtl_logs.py -i "{input}" -o {output}"""
+
+rule plot_qtl:
+    input:  genotypes = config["input_files"]["genotypes"],
+            pairs_file = config["plot_qtl"]["pairs_file"]
+    output: config["plot_qtl"]["out_file"]
+    singularity: config["containers"]["tensorqtl"]
+    params: expression_dir = config["plot_qtl"]["expression_dir"],
+            output_dir = config["plot_qtl"]["out_dir"]
+    log:    config["plot_qtl"]["log"]
+    shell:
+            """
+            python3 scripts/eqtl_plot.py \
+               --pairs_file {input.pairs_file} \
+               --genotype_file {input.genotypes} \
+               --expression_dir {params.expression_dir} \
+               --output_dir {params.output_dir} >> {log}
+             """
+
+
+
+
