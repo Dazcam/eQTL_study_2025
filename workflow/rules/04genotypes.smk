@@ -11,7 +11,8 @@ rule impute_check:
     shell:
         """
         # Create directory and unzip
-        unzip -P '{params.pwd}' -n {input} -d {params.dir} > {log} 2>&1
+        pwd=$(cat {params.pwd})
+        unzip -P "$pwd" -n {input} -d {params.dir} > {log} 2>&1
 
         # Count total SNPs from dose.vcf.gz
         snp_count=$(bcftools view -H {params.dir}chr{wildcards.chr}.dose.vcf.gz | wc -l)

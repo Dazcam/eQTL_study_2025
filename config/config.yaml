@@ -100,7 +100,7 @@ genotypes:
       vcf: ../results/04GENOTYPES/TOPMED/chr{chr}.dose.vcf.gz
     params: 
       dir: ../results/04GENOTYPES/TOPMED/
-      pwd: 
+      pwd: ../config/passwords/topmed.txt 
     log: ../results/00LOG/04GENOTYPES/TOPMED/impute_check_{chr}.log
   impute_check_cat:
     output: ../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv
@@ -120,11 +120,16 @@ genotypes:
     output: ../results/04GENOTYPES/TOPMED/filtered/chrALL.filt.vcf.gz
     params:
       hwe: 0.0001
-      maf: 0.01
+      maf: 0.05
       rsq: 0.8  
     log: ../results/00LOG/04GENOTYPES/TOPMED/filter_tags.log    
   check_VCF:  
-    output: ../results/04GENOTYPES/TOPMED/filtered/exclusion_list.txt
+    input:
+      ref_gz: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    output: 
+      list: ../results/04GENOTYPES/TOPMED/filtered/exclusion_list.txt
+      ref: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+      fai: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
     params: ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt
     log: ../results/00LOG/04GENOTYPES/TOPMED/check_VCF.log
   exclude_SNPs:
