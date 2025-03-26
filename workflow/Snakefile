@@ -49,4 +49,5 @@ rule all:
 #        qtl_files,
 #        qtl_plots,
         "../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv",
-        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi" 
+#        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi" 
+        "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
