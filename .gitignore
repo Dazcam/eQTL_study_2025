@@ -25,3 +25,5 @@ results/04TENSORQTL/*/*.parquet
 results/04TENSORQTL/filtered_genotypes*
 results/00LOG/*
 config/passwords/*
+results/04GENOTYPES/TOPMED/covariates/*
+results/04GENOTYPES/TOPMED/*

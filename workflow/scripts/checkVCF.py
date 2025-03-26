@@ -6,6 +6,7 @@ Original Author: Xiaowei Zhan (zhanxw@umich.edu), Dajiang Liu (dajiang@umich.edu
 Original Source: https://github.com/zhanxw/checkVCF (version 1.4, 20140115)
 License: No Licence specified, but repo was public.
 Adapted by: Dazcam (20250321)
+Further Modified: (20250324) to output rsIDs to --exclude file instead of chrom:pos
 
 This Python 3 version is adapted from the original Python 2 script available at the above GitHub repository.
 The original script validates VCF files by checking for duplicates, non-SNPs, reference mismatches,
@@ -19,16 +20,17 @@ Modifications in this version:
 
 2. **Command-Line Options**:
    - Added `-v` to explicitly specify the VCF file (original used positional argument).
-   - Added `--exclude` to write all failing SNPs (chrom:pos) to a single file.
+   - Added `--exclude` to write all failing SNPs (originally chrom:pos, now rsIDs) to a single file.
 
 3. **Exclusion Reporting**:
    - SNPs failing any check (non-SNPs, duplicates, reference mismatches, invalid genotypes,
-     monomorphic sites, AF > 0.5) are written to the `--exclude` file if provided.
+     monomorphic sites, AF > 0.5) are written to the `--exclude` file as rsIDs if provided.
    - Original separate output files (e.g., `.check.dup`, `.check.ref`) are retained.
 
 4. **Behavior**:
    - The script does NOT modify the input VCF; it only reports issues.
    - Added explicit UTF-8 decoding for consistency in byte/string handling.
+   - Modified to output rsIDs instead of chrom:pos to `--exclude` file (20250324).
 
 Contact for issues with original script: zhanxw@umich.edu or dajiang@umich.edu.
 """
@@ -38,7 +40,7 @@ import os
 import logging
 import getopt
 
-VERSION = "version 2.0 (20250321)"
+VERSION = "version 2.0 (20250324)"  # Updated date to reflect this change
 
 # Convenient functions
 def myopen(fn):
@@ -236,14 +238,14 @@ if __name__ == '__main__':
             if len(ref) != 1 or len(alt) != 1:
                 fNonSnp.write(f"{' '.join(fd[:5])}\n")
                 nNonSnp += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
                 continue
             if ref not in ACGT or alt not in ACGTM:
                 fNonSnp.write(f"{' '.join(fd[:5])}\n")
                 nNonSnp += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
                 continue
 
             # Check 2: Duplicates
@@ -251,8 +253,8 @@ if __name__ == '__main__':
                 print(f"Duplicated site [ {site} ]", file=logger)
                 fDup.write(f"DuplicatedSite\t{site}\n")
                 nDupSite += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
                 continue
             else:
                 snpSite.add(site)
@@ -270,14 +272,14 @@ if __name__ == '__main__':
             if trueRef is None:
                 fRef.write(f"FailedGetBase\t{site}\n")
                 nRef += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
                 continue
             if ref != trueRef.decode('utf-8'):
                 fRef.write(f"MismatchRefBase\t{site}:{trueRef.decode('utf-8')}-{ref}/{alt}\n")
                 nRef += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
                 continue
 
             # Check 5: Genotype format
@@ -292,14 +294,14 @@ if __name__ == '__main__':
             except IndexError:
                 fGeno.write(f"IndividualMissingGTField\tLine:{lineNo + 1}\n")
                 nGeno += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
                 continue
             if not all([checkGTformat(g) for g in genos]):
                 fGeno.write(f"IndividualHasInvalidGT\tLine:{lineNo + 1}\n")
                 nGeno += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
                 continue
 
             # Check 6: Monomorphic and AF > 0.5
@@ -309,8 +311,8 @@ if __name__ == '__main__':
             if ac == 0 or ac == 2 * nSample:
                 fMono.write(f"{site}\t{ac}\t{nSample}\n")
                 nMono += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
 
             if nSample > 0:
                 af = 1.0 * ac / nSample / 2
@@ -319,8 +321,8 @@ if __name__ == '__main__':
             if af > 0.5:
                 fAF.write(f"{site}\t{ref}\t{alt}\t{af}\n")
                 nAF += 1
-                if fExclude:
-                    fExclude.write(f"{site}\n")
+                if fExclude and rsId != '.':
+                    fExclude.write(f"{rsId}\n")
 
     except SystemExit:
         sys.exit(1)
@@ -352,7 +354,7 @@ if __name__ == '__main__':
     print(f"[ {nAF} ] Alternative allele frequency > 0.5 sites outputted to [ {outPrefix}.check.af ]", file=logger)
     print(f"[ {nMono} ] Monomorphic sites outputted to [ {outPrefix}.check.mono ]", file=logger)
     if excludeFile:
-        print(f"All failing SNPs written to [ {excludeFile} ]", file=logger)
+        print(f"All failing SNPs (rsIDs) written to [ {excludeFile} ]", file=logger)
 
     # Close files
     fDup.close()

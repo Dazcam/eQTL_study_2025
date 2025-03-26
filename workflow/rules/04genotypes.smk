@@ -114,12 +114,11 @@ rule check_VCF:
     params: config['genotypes']['check_VCF']['params']
     envmodules: "samtools"
     log:    config['genotypes']['check_VCF']['log']
-    shell:
-        """
-        gunzip -c {input.ref_gz} > {output.ref} 2>> {log}
-        samtools faidx {output.ref} >> {log} 2>&1
-        python scripts/checkVCF.py -r {output.ref} -v {input.vcf} -o {params} --exclude {output.list} > {log} 2>&1
-        """
+    shell:  """
+            gunzip -c {input.ref_gz} > {output.ref} 2>> {log}
+            samtools faidx {output.ref} >> {log} 2>&1
+            python scripts/checkVCF.py -r {output.ref} -v {input.vcf} -o {params} --exclude {output.list} > {log} 2>&1
+            """
 
 # Exclude SNPs IDed in CheckVCF
 rule exclude_SNPs:
@@ -128,17 +127,66 @@ rule exclude_SNPs:
     output: config['genotypes']['exclude_SNPs']['output']
     envmodules: "bcftools"
     log:    config['genotypes']['exclude_SNPs']['log']
-    shell:
-        """
-        bcftools view -e 'ID=@{input.list}' {input.vcf} -O z -o {output} > {log} 2>&1
-        """
+    shell:  """
+            bcftools view -e 'ID=@{input.list}' {input.vcf} -O z -o {output} > {log} 2>&1
+            """
 
 rule idx_vcf:
     input:  config['genotypes']['exclude_SNPs']['output']
     output: config['genotypes']['idx_vcf']['output']
     envmodules: "bcftools"
     log:    config['genotypes']['idx_vcf']['log']
-    shell:
-        """
-        tabix -p vcf {input} > {log} 2>&1
-        """
+    shell:  """
+            tabix -p vcf {input} > {log} 2>&1
+            """
+
+rule vcf_to_plink:
+    input:  vcf = config['genotypes']['exclude_SNPs']['output'],
+            idx = config['genotypes']['idx_vcf']['output']
+    output: config['genotypes']['vcf_to_plink']['output']
+    params: config['genotypes']['vcf_to_plink']['params'] 
+    envmodules: "plink/1.9"
+    log:    config['genotypes']['vcf_to_plink']['log']
+    shell:  "plink --vcf {input.vcf} --double-id --make-bed --out {params} > {log} 2>&1"
+
+rule get_ld_pruned_snps:
+    input:  config['genotypes']['vcf_to_plink']['output']
+    output: config['genotypes']['get_ld_pruned_snps']['output']
+    params: input_prefix = config['genotypes']['vcf_to_plink']['params'],
+            output_prefix = config['genotypes']['get_ld_pruned_snps']['params']
+    envmodules: "plink/1.9"
+    log:    config['genotypes']['get_ld_pruned_snps']['log']
+    shell:  """
+            plink --bfile {params.input_prefix} \
+                  --indep-pairwise 250 5 0.2 \
+                  --out {params.output_prefix} > {log} 2>&1
+            """
+
+rule prune_genotypes:
+    input:  bfile = config['genotypes']['vcf_to_plink']['output'],
+            included = config['genotypes']['get_ld_pruned_snps']['output']
+    output: config['genotypes']['prune_genotypes']['output']
+    params: input_prefix = config['genotypes']['vcf_to_plink']['params'],
+            output_prefix = config['genotypes']['prune_genotypes']['params']
+    envmodules: "plink/1.9"
+    log:    config['genotypes']['prune_genotypes']['log']
+    shell:  """
+            plink --bfile {params.input_prefix} \
+                  --extract {input.included} \
+                  --make-bed \
+                  --out {params.output_prefix} > {log} 2>&1
+            """
+
+rule calc_genotype_pcs:
+    input:  config['genotypes']['prune_genotypes']['output']
+    output: config['genotypes']['calc_genotype_pcs']['output']
+    params: input_prefix = config['genotypes']['prune_genotypes']['params'],
+            output_prefix = config['genotypes']['calc_genotype_pcs']['params'],
+            pcs = config['genotypes']['calc_genotype_pcs']['pcs']
+    envmodules: "plink/1.9"
+    log:    config['genotypes']['calc_genotype_pcs']['log']
+    shell:  """
+            plink --bfile {params.input_prefix} \
+                  --pca {params.pcs} \
+                  --out {params.output_prefix} > {log} 2>&1
+            """
