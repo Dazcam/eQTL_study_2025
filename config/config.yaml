@@ -14,7 +14,7 @@ cell_types:
   - "InN-1"
   - "InN-2"
   - "RG"
-#  - "Endo-Peri"
+  - "Endo-Peri"
   - "MG"
   - "Mig-N"  
 
@@ -58,12 +58,12 @@ eQTL:
   num_chunks: 100
   perm_min: 1000
   perm_max: 10000
-  plink_prefix: ../resources/test_genotypes/filtered_genotypes
-  out_prefix: ../results/04TENSORQTL/filtered_genotypes
+  plink_prefix: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
+  out_prefix: ../results/04TENSORQTL/chrALL_final.filt
   window: 500000
 input_files:
   counts: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
-  genotypes: ../resources/test_genotypes/filtered_genotypes.vcf.gz
+  genotypes: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
   covariates: ../results/03SCANPY/pseudobulk/{cell_type}_covariates_t.txt
 output_files:
   counts_gz: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed.gz
@@ -127,10 +127,11 @@ genotypes:
     input:
       ref_gz: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
     output: 
+      log: ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.log
       list: ../results/04GENOTYPES/TOPMED/filtered/exclusion_list.txt
       ref: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa
       fai: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
-    params: ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt
+    params: ../results/04GENOTYPES/TOPMED/filtered/check_vcf
     log: ../results/00LOG/04GENOTYPES/TOPMED/check_VCF.log
   exclude_SNPs:
     output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
@@ -138,3 +139,25 @@ genotypes:
   idx_vcf:
     output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi
     log: ../results/00LOG/04GENOTYPES/TOPMED/idx_vcf.log
+  create_combined_log:
+    output: ../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log
+    log: ../results/00LOG/04GENOTYPES/TOPMED/create_combined_log.log 
+  get_sample_list:
+    output: ../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt
+  vcf_to_plink:
+    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.bed
+    params: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
+    log: ../results/00LOG/04GENOTYPES/TOPMED/vcf_to_plink.log
+  get_ld_pruned_snps:
+    output: ../results/04GENOTYPES/TOPMED/covariates/ld_prune.prune.in
+    params: ../results/04GENOTYPES/TOPMED/covariates/ld_prune
+    log: ../results/00LOG/04GENOTYPES/TOPMED/get_ld_pruned_snps.log
+  prune_genotypes:
+    output: ../results/04GENOTYPES/TOPMED/covariates/chrALL_final.filt.ld_pruned.bed
+    params: ../results/04GENOTYPES/TOPMED/covariates/chrALL_final.filt.ld_pruned
+    log: ../results/00LOG/04GENOTYPES/TOPMED/prune_genotypes.log
+  calc_genotype_pcs:
+    output: ../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec
+    params: ../results/04GENOTYPES/TOPMED/covariates/pca
+    pcs: 10
+    log: ../results/00LOG/04GENOTYPES/TOPMED/calc_genotype_pcs.log
