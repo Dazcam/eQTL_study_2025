@@ -64,10 +64,10 @@ eQTL:
 input_files:
   counts: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
   genotypes: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
-  covariates: ../results/03SCANPY/pseudobulk/{cell_type}_covariates_t.txt
+  covariates: ../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt
 output_files:
   counts_gz: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed.gz
-  genotypes_plink: ../results/04TENSORQTL/filtered_genotypes.pgen 
+  genotypes_plink: ../results/04TENSORQTL/chrALL_final.filt.pgen 
   fastqtl_output: ../results/04FASTQTL/{cell_type}_nom_{chunk}_txt.gz
   fastqtl_perm_output: ../results/04FASTQTL/{cell_type}_perm_{chunk}_txt.gz
   tensorqtl_out_prefix: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom

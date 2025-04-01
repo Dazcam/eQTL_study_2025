@@ -1,4 +1,4 @@
-Combined Genotype Processing Log - Started on Wed 26 Mar 13:27:14 GMT 2025
+Combined Genotype Processing Log - Started on Tue  1 Apr 12:27:31 BST 2025
 ==================================================
 
 Step 1: impute_check_cat - Combining per-chromosome imputation summaries
@@ -41,19 +41,19 @@ Number of SNPs in ../results/04GENOTYPES/TOPMED/filtered/chrALL.filt.vcf.gz: 609
 Step 4: check_VCF - Validating VCF against reference
 Description: This step checks the filtered VCF against a reference genome to identify problematic SNPs, outputting a list of SNPs to exclude.
 Selected contents from ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.log (REPORT section):
-03-24 15:56 ---------------     REPORT     ---------------
-03-24 15:56 Total [ 6096687 ] lines processed
-03-24 15:56 Examine [ 52 ] VCF header lines, [ 6096635 ] variant sites, [ 146 ] samples
-03-24 15:56 [ 0 ] duplicated sites
-03-24 15:56 [ 301707 ] NonSNP sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt.check.nonSnp ]
-03-24 15:56 [ 0 ] Inconsistent reference sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt.check.ref ]
-03-24 15:56 [ 0 ] Variant sites with invalid genotypes outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt.check.geno ]
-03-24 15:56 [ 1433543 ] Alternative allele frequency > 0.5 sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt.check.af ]
-03-24 15:56 [ 0 ] Monomorphic sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf_report.txt.check.mono ]
-03-24 15:56 All failing SNPs (rsIDs) written to [ ../results/04GENOTYPES/TOPMED/filtered/exclusion_list.txt ]
+04-01 12:08 ---------------     REPORT     ---------------
+04-01 12:08 Total [ 6096687 ] lines processed
+04-01 12:08 Examine [ 52 ] VCF header lines, [ 6096635 ] variant sites, [ 146 ] samples
+04-01 12:08 [ 0 ] duplicated sites
+04-01 12:08 [ 301707 ] NonSNP sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.nonSnp ]
+04-01 12:08 [ 0 ] Inconsistent reference sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.ref ]
+04-01 12:08 [ 0 ] Variant sites with invalid genotypes outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.geno ]
+04-01 12:08 [ 1433543 ] Alternative allele frequency > 0.5 sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.af ]
+04-01 12:08 [ 0 ] Monomorphic sites outputted to [ ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.mono ]
+04-01 12:08 All failing SNPs (rsIDs) written to [ ../results/04GENOTYPES/TOPMED/filtered/exclusion_list.txt ]
 
 Step 5: exclude_SNPs - Excluding problematic SNPs
 Description: This final step removes SNPs identified as problematic in the check_VCF step, producing the final filtered VCF.
-Number of SNPs in ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz: 4361519
+Number of SNPs in ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz: 5794957
 
-Log completed on Wed 26 Mar 13:58:33 GMT 2025
+Log completed on Tue  1 Apr 13:01:34 BST 2025
