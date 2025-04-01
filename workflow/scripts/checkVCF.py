@@ -7,6 +7,7 @@ Original Source: https://github.com/zhanxw/checkVCF (version 1.4, 20140115)
 License: No Licence specified, but repo was public.
 Adapted by: Dazcam (20250321)
 Further Modified: (20250324) to output rsIDs to --exclude file instead of chrom:pos
+                  (20250401) to exclude AF > 0.5 from --exclude file
 
 This Python 3 version is adapted from the original Python 2 script available at the above GitHub repository.
 The original script validates VCF files by checking for duplicates, non-SNPs, reference mismatches,
@@ -23,9 +24,10 @@ Modifications in this version:
    - Added `--exclude` to write all failing SNPs (originally chrom:pos, now rsIDs) to a single file.
 
 3. **Exclusion Reporting**:
-   - SNPs failing any check (non-SNPs, duplicates, reference mismatches, invalid genotypes,
-     monomorphic sites, AF > 0.5) are written to the `--exclude` file as rsIDs if provided.
-   - Original separate output files (e.g., `.check.dup`, `.check.ref`) are retained.
+   - SNPs failing checks for non-SNPs, duplicates, reference mismatches, invalid genotypes,
+     and monomorphic sites are written to the `--exclude` file as rsIDs if provided.
+   - As of 20250401, SNPs with allele frequency (AF) > 0.5 are no longer added to the `--exclude` file,
+     though they are still reported in the `.check.af` output file for reference.
 
 4. **Behavior**:
    - The script does NOT modify the input VCF; it only reports issues.
@@ -321,8 +323,9 @@ if __name__ == '__main__':
             if af > 0.5:
                 fAF.write(f"{site}\t{ref}\t{alt}\t{af}\n")
                 nAF += 1
-                if fExclude and rsId != '.':
-                    fExclude.write(f"{rsId}\n")
+              # Commented out as of 20250401: No longer excluding AF > 0.5 SNPs
+              #  if fExclude and rsId != '.':  
+              #      fExclude.write(f"{rsId}\n")
 
     except SystemExit:
         sys.exit(1)
