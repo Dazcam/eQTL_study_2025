@@ -135,17 +135,34 @@ for (cell_type in cell_types) {
   message('Creating TMM normalised counts and covariate files for: ', cell_type)
   report_tibble <- tibble(cell_type = cell_type)
   
-  # Counts: don't use dplyr as we want to keep rownames
+  # Load counts: don't use dplyr as we want to keep rownames
   message('Loading counts ... \n')
   pseudobulk_counts <- read.csv(paste0(data_dir, cell_type, "_pseudobulk.csv"), row.names = 1) # rows=genes, columns=samples
+  message('Sample names in pseudobulk_counts: ', paste(rownames(pseudobulk_counts)[1:5], collapse = ' '))
+  message('Sample names in sample_lst: ', paste(sample_lst$sample[1:5], collapse = ' '), '\n')
   
-  message('Check for samples not in overlap list: \n', 
-          paste(setdiff(sample_lst[[1]], rownames(pseudobulk_counts)), collapse = ' '))
-  
-  if (sum(colSums(pseudobulk_counts) == 0) != 0) {
-    message('Removed ', sum(colSums(pseudobulk_counts) == 0), ' genes not expressed in cell type')
-    pseudobulk_counts <- pseudobulk_counts <- pseudobulk_counts[, colSums(pseudobulk_counts != 0) > 0]}
+  # Transpose to genes as rows, samples as columns (TensorQTL format)
+  pseudobulk_counts <- t(pseudobulk_counts)
+  message('Transposed pseudobulk_counts (first 5x5, genes x samples):\n')
   print(pseudobulk_counts[1:5, 1:5])
+  
+  # Subset sample_lst to available samples
+  available_samples <- intersect(sample_lst$sample, colnames(pseudobulk_counts))
+  if (length(available_samples) == 0) {
+    stop('No overlapping samples between genotypes and expression for ', cell_type, 
+         '. Check sample name formats.')
+  }
+  message('Samples in genotypes but not in expression for ', cell_type, ': ', 
+          paste(setdiff(sample_lst$sample, colnames(pseudobulk_counts)), collapse = ' '))
+  
+  # Filter zero-sum genes (rows) and reorder samples (columns)
+  if (sum(rowSums(pseudobulk_counts) == 0) != 0) {
+    message('Removed ', sum(rowSums(pseudobulk_counts) == 0), ' genes not expressed in cell type')
+    pseudobulk_counts <- pseudobulk_counts[rowSums(pseudobulk_counts != 0) > 0, , drop = FALSE]
+  }
+  
+  # Reorder samples to match available subset of sample_lst
+  pseudobulk_counts <- pseudobulk_counts[, match(available_samples, colnames(pseudobulk_counts)), drop = FALSE]
 
   # TMM normalization
   # Create a DGEList object
@@ -153,6 +170,7 @@ for (cell_type in cell_types) {
   dge <- DGEList(counts = pseudobulk_counts)
   dge <- calcNormFactors(dge, method = "TMM") # Do we need two normalisation factors here?
   normalized_counts <- cpm(dge, normalized.lib.sizes = TRUE)
+  print("Normalized counts (first 5x5):")
   print(normalized_counts[1:5, 1:5])
   
   # PCA Analysis
@@ -175,10 +193,7 @@ for (cell_type in cell_types) {
   
   # Correlation between genotype and expression PCs
   cor_matrix <- cor(cov_full_tbl[-1], use = "pairwise.complete.obs")
-  
-  # Store results
   report_tibble$cor_matrix <- list(cor_matrix)
-  report_list[[cell_type]] <- report_tibble
 
   # PEER Analysis - Need to do this in a independent script
   # num_factors <- 10
@@ -191,12 +206,12 @@ for (cell_type in cell_types) {
   # colnames(peer_factors) <- paste0("PEER", 1:num_factors)
   # peer_factors$Sample <- rownames(peer_factors)
   
-  # Merge with covariates
+  # Covariates file
   message('Creating covariate files ... ')
   cov_full_tbl <- cov_tbl |> 
     inner_join(exp_pc_scores, by = "sample") |> 
-    #inner_join(peer_factors, by = "Sample") |>
-    mutate(sample = factor(sample, levels = sample_lst$sample)) |>
+    mutate(sample = factor(sample, levels = available_samples)) |> 
+    arrange(match(sample, available_samples)) |>  # Reorder to match
     rename('id' = 'sample') |>
     dplyr::select(id, PCW, Sex, genPC1:genPC3, expPC1:expPC10) |>
     write_tsv(paste0(data_dir, cell_type, "_covariates.txt"))
@@ -217,16 +232,19 @@ for (cell_type in cell_types) {
   
   ## Prepare gene expression data -----
   
+  # Gene expression data
   # Add hg38 Ensembl IDs using Parse gene lookup
   # Potentially blanks and duplicates here as more rows after join!!
-  pseudobulk_counts <- t(normalized_counts) |>
+  pseudobulk_counts <- normalized_counts |>
     as_tibble(rownames = 'genes') |>
     left_join(gene_lookup, by = join_by(genes == gene_name)) |>
     relocate(genes, gene_id, genome) 
+  
   message('Counts tbl dimensions (Genes x [Samples + 3 annotation cols]): ', 
           paste0(dim(pseudobulk_counts)[1], ' x ', dim(pseudobulk_counts)[2]))
   report_tibble$initial_dims <- paste0(dim(pseudobulk_counts)[1], "x", dim(pseudobulk_counts)[2])
     
+  # Handle NAs and duplicates
   # Some genes are not in Parse lookup table why?
   # How were these annotated?? By Scanpy??
   # Rm for now
@@ -253,6 +271,7 @@ for (cell_type in cell_types) {
   message('Counts tbl gene ensembl dups: ', length(pseudobulk_counts_ens_dups$genes |> unique()))
   report_tibble$ensembl_dups <- length(pseudobulk_counts_ens_dups$genes |> unique())
   
+  # Final BED file
   pseudobulk_counts <- pseudobulk_counts |>
     drop_na() |>
     left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
@@ -270,7 +289,6 @@ for (cell_type in cell_types) {
   
   message('Final counts tbl dims: ', paste0(dim(pseudobulk_counts)[1], ' x ', dim(pseudobulk_counts)[2]), '\n')
   report_tibble$final_dims <- paste0(dim(pseudobulk_counts)[1], 'x', dim(pseudobulk_counts)[2])
-  
   report_list[[cell_type]] <- report_tibble
   
 }
