@@ -18,6 +18,8 @@
 #- Some cell types do not fully overlap with overlap list changed final counts tbl 
 #- to any_of instead of all_of to avoid error
 #- Duplicate sample 14993 and 14993_FC, keeping the latter (need to remove this before imputation)
+#- 17630 has NA in PCW annotated as 0
+#- 15611 labelled 1st Tri ? labelled 0
 
 ##  Load Packages, functions and variables  -------------------------------------------
 # Install and load required libraries
@@ -164,7 +166,7 @@ for (cell_type in cell_types) {
   exp_var_explained <- summary(pca)$importance[2, 1:30]  # Proportion of variance
   report_tibble$exp_var_explained <- list(exp_var_explained)
     
-  # Combine with covariates
+  # Combine exp pcs with genotype covariates
   cov_full_tbl <- cov_tbl |> 
     left_join(exp_pc_scores, by = "sample") |>
     mutate(PCW = str_replace(PCW, '1st tri\\s*\\?', '0')) |>
@@ -178,7 +180,7 @@ for (cell_type in cell_types) {
   report_tibble$cor_matrix <- list(cor_matrix)
   report_list[[cell_type]] <- report_tibble
 
-  # PEER Analysis
+  # PEER Analysis - Need to do this in a independent script
   # num_factors <- 10
   # model <- PEER()
   # PEER_setPhenoMean(model, as.matrix(t(normalized_counts)))
@@ -199,11 +201,12 @@ for (cell_type in cell_types) {
     dplyr::select(id, PCW, Sex, genPC1:genPC3, expPC1:expPC10) |>
     write_tsv(paste0(data_dir, cell_type, "_covariates.txt"))
   
-  transposed_cov <- cov_full_tbl |>
-    as.data.frame() |>
-    t() 
-  rownames(transposed_cov)
-  write.table(transposed_cov, paste0(data_dir, cell_type, "_covariates_t.txt"), quote = F, sep = '\t', col.names = F)
+  # Don't think I need this
+  # transposed_cov <- cov_full_tbl |>
+  #   as.data.frame() |>
+  #   t() 
+  # rownames(transposed_cov)
+  # write.table(transposed_cov, paste0(data_dir, cell_type, "_covariates_t.txt"), quote = F, sep = '\t', col.names = F)
   
   # cov_full_tbl %>%
   #   column_to_rownames("Sample") %>%  # Move 'Sample' to row names
@@ -211,6 +214,8 @@ for (cell_type in cell_types) {
   #   t() %>%                           # Transpose the data
   #   as_tibble(rownames = "Sample") %>% # Convert back to tibble with row names as 'Sample'
   #   mutate(Sample = c("", Sample[-1]))
+  
+  ## Prepare gene expression data -----
   
   # Add hg38 Ensembl IDs using Parse gene lookup
   # Potentially blanks and duplicates here as more rows after join!!
@@ -260,7 +265,7 @@ for (cell_type in cell_types) {
     dplyr::select(Chr = chromosome_name, start = cis_start, end = cis_end, TargetID = gene_id, any_of(sample_lst[[1]])) |>
     arrange(Chr, as.numeric(start), as.numeric(end)) |>
     filter(Chr %in% seq(1,22,1)) |>
-    rename('#Chr' = Chr) |># Required or tabix chokes at fastQTL step
+    rename('#Chr' = Chr) |> # Required or tabix chokes at fastQTL step
     write_tsv(paste0(data_dir, cell_type, '_tmm.bed'))
   
   message('Final counts tbl dims: ', paste0(dim(pseudobulk_counts)[1], ' x ', dim(pseudobulk_counts)[2]), '\n')
