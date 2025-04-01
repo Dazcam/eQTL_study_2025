@@ -11,8 +11,10 @@ rule impute_check:
     shell:
         """
         # Create directory and unzip
-        pwd=$(cat {params.pwd})
-        unzip -P "$pwd" -n {input} -d {params.dir} > {log} 2>&1
+        if [ ! -f "{output.vcf}.tbi" ]; then
+            pwd=$(cat {params.pwd})
+            unzip -P "$pwd" -n {input} -d {params.dir} > {log} 2>&1
+        fi
 
         # Count total SNPs from dose.vcf.gz
         snp_count=$(bcftools view -H {params.dir}chr{wildcards.chr}.dose.vcf.gz | wc -l)
@@ -108,7 +110,8 @@ rule filter_tags:
 rule check_VCF:
     input:  vcf = config['genotypes']['filter_tags']['output'],
             ref_gz = config['genotypes']['check_VCF']['input']['ref_gz']
-    output: list = config['genotypes']['check_VCF']['output']['list'],
+    output: log = config['genotypes']['check_VCF']['output']['log'],
+            list = config['genotypes']['check_VCF']['output']['list'],
             ref = temp(config['genotypes']['check_VCF']['output']['ref']),
             fai = temp(config['genotypes']['check_VCF']['output']['fai'])    
     params: config['genotypes']['check_VCF']['params']
@@ -139,6 +142,70 @@ rule idx_vcf:
     shell:  """
             tabix -p vcf {input} > {log} 2>&1
             """
+
+CHROMOSOMES = list(range(1, 23)) + ["X"]
+
+rule create_combined_log:
+    input:  impute_check_cat = config['genotypes']['impute_check_cat']['output'],
+            vcf_cat = config['genotypes']['vcf_cat']['output'],
+            filter_tags = config['genotypes']['filter_tags']['output'],
+            check_vcf_log = config['genotypes']['check_VCF']['output']['log'],
+            exclude_snps = config['genotypes']['exclude_SNPs']['output']
+    output: combined_log = config['genotypes']['create_combined_log']['output']
+    envmodules: "bcftools"
+    shell:
+        """
+        # Initialize the log file
+        echo "Combined Genotype Processing Log - Started on $(date)" > {output.combined_log}
+        echo "==================================================" >> {output.combined_log}
+        echo "" >> {output.combined_log}
+
+        # impute_check_cat: Copy contents of the output file
+        echo "Step 1: impute_check_cat - Combining per-chromosome imputation summaries" >> {output.combined_log}
+        echo "Description: This step concatenates per-chromosome summary statistics from imputation checks, including SNP counts and quality metrics like MAF and R²." >> {output.combined_log}
+        echo "Contents of {input.impute_check_cat}:" >> {output.combined_log}
+        cat {input.impute_check_cat} >> {output.combined_log}
+        echo "" >> {output.combined_log}
+
+        # vcf_cat: Count number of SNPs in the output VCF
+        echo "Step 2: vcf_cat - Concatenating chromosome VCFs" >> {output.combined_log}
+        echo "Description: This step combines all chromosome-specific VCF files into a single VCF file containing all imputed genotypes." >> {output.combined_log}
+        vcf_cat_snp_count=$(bcftools view -H {input.vcf_cat} | wc -l)
+        echo "Number of SNPs in {input.vcf_cat}: $vcf_cat_snp_count" >> {output.combined_log}
+        echo "" >> {output.combined_log}
+
+        # filter_tags: Count number of SNPs in the output VCF
+        echo "Step 3: filter_tags - Filtering SNPs based on quality thresholds" >> {output.combined_log}
+        echo "Description: This step applies filters for Hardy-Weinberg equilibrium (HWE), minor allele frequency (MAF), and imputation quality (R²) to retain high-quality SNPs." >> {output.combined_log}
+        filter_tags_snp_count=$(bcftools view -H {input.filter_tags} | wc -l)
+        echo "Number of SNPs in {input.filter_tags}: $filter_tags_snp_count" >> {output.combined_log}
+        echo "" >> {output.combined_log}
+
+        # check_VCF: Extract lines between REPORT and ACTION ITEM (exclusive)
+        echo "Step 4: check_VCF - Validating VCF against reference" >> {output.combined_log}
+        echo "Description: This step checks the filtered VCF against a reference genome to identify problematic SNPs, outputting a list of SNPs to exclude." >> {output.combined_log}
+        echo "Selected contents from {input.check_vcf_log} (REPORT section):" >> {output.combined_log}
+        sed -n '/---------------     REPORT     ---------------/,/---------------     ACTION ITEM     ---------------/{{/---------------     ACTION ITEM     ---------------/d;p}}' {input.check_vcf_log} >> {output.combined_log}
+        echo "" >> {output.combined_log}
+
+        # exclude_SNPs: Count number of SNPs in the output VCF
+        echo "Step 5: exclude_SNPs - Excluding problematic SNPs" >> {output.combined_log}
+        echo "Description: This final step removes SNPs identified as problematic in the check_VCF step, producing the final filtered VCF." >> {output.combined_log}
+        exclude_snps_count=$(bcftools view -H {input.exclude_snps} | wc -l)
+        echo "Number of SNPs in {input.exclude_snps}: $exclude_snps_count" >> {output.combined_log}
+        echo "" >> {output.combined_log}
+
+        # Final timestamp
+        echo "Log completed on $(date)" >> {output.combined_log}
+        """
+
+rule get_sample_list:
+    input:  config['genotypes']['idx_vcf']['output']
+    output: config['genotypes']['get_sample_list']['output']
+    params: config['genotypes']['exclude_SNPs']['output']  
+    envmodules: "bcftools"
+    shell:  "bcftools query -l {params} > {output}"
+
 
 rule vcf_to_plink:
     input:  vcf = config['genotypes']['exclude_SNPs']['output'],
