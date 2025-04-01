@@ -4,7 +4,7 @@ configfile: '../config/config.yaml'
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03scanpy_testing.smk'
 #include: 'rules/04pegasus.smk'
-#include: 'rules/04qtl.smk'
+include: 'rules/04qtl.smk'
 include: 'rules/04genotypes.smk'
 
 # Set QTL tool
@@ -44,10 +44,10 @@ rule all:
 #        "../results/03SCANPY/scanpy_extra.html",
 #        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #          expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
-#           expand("../results/04FASTQTL/fastQTL_{chunk}_txt.gz", chunk = range(1, 101)),
-#           expand("../results/04FASTQTL/permutations_{chunk}_txt.gz", chunk = range(1, 101)),
-#        qtl_files,
+        qtl_files,
 #        qtl_plots,
         "../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv",
-#        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi" 
+        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi",
+        "../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log", 
+        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
         "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
