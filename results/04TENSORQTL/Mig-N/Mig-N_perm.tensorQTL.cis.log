@@ -1,5 +1,23 @@
-[Apr 01 13:09:57] Running TensorQTL: cis-QTL mapping
+[Apr 02 17:15:09] Running TensorQTL: cis-QTL mapping
   * WARNING: using CPU!
   * reading phenotypes (../results/03SCANPY/pseudobulk/Mig-N_tmm.bed.gz)
   * cis-window detected as position ± 500,000
-  * reading covariates (../results/03SCANPY/pseudobulk/Mig-N_covariates_t.txt)
+  * reading covariates (../results/03SCANPY/pseudobulk/Mig-N_covariates.txt)
+  * loading genotypes
+cis-QTL mapping: empirical p-values for phenotypes
+  * 74 samples
+  * 18919 phenotypes
+  * 15 covariates
+  * 5794957 variants
+  * cis-window: ±500,000
+  * computing permutations
+  Time elapsed: 122.33 min
+done.
+  * writing output
+Computing q-values
+  * Number of phenotypes tested: 18742
+  * Correlation between Beta-approximated and empirical p-values: 0.9990
+  * Proportion of significant phenotypes (1-pi0): 0.07
+  * QTL phenotypes @ FDR 0.05: 5
+  * min p-value threshold @ FDR 0.05: 1.37845e-05
+[Apr 02 19:17:55] Finished mapping
