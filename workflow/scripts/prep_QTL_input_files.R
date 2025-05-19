@@ -80,6 +80,8 @@ cov_tbl |>
 cov_tbl <- cov_tbl |>
   filter(if_any(starts_with("genPC"), ~ !is.na(.)))
 
+### Move this to scanpy_clustering doc. ####
+
 ## Sex assignments from expression data
 sex_assign_exp_tbl <- read_csv(paste0(scanpy_dir, 'sex_assignments.csv')) |>
   dplyr::rename(sample = Sample_ID) |>
@@ -119,31 +121,28 @@ sex_assign_final_tbl <- cov_tbl |>
     )
   ) 
 
+##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
+
 cov_tbl <- cov_tbl |>
   left_join(sex_assign_final_tbl |> dplyr::select(sample, sex_code)) |>
   dplyr::select(-Sex) |>
   relocate(sample, PCW, Sex = sex_code)
 
 ## Generate cell-specific TMM normalised counts and covariates for QTL analyses  ------
-
-#for (cell_type in cell_types) {
-
 report_list <- list()
-
 for (cell_type in cell_types) {
   
   message('Creating TMM normalised counts and covariate files for: ', cell_type)
   report_tibble <- tibble(cell_type = cell_type)
   
   # Load counts: don't use dplyr as we want to keep rownames
-  message('Loading counts ... \n')
-  pseudobulk_counts <- read.csv(paste0(data_dir, cell_type, "_pseudobulk.csv"), row.names = 1) # rows=genes, columns=samples
+  message('\nLoading counts ... \n')
+  pseudobulk_counts <- read.csv(paste0(data_dir, cell_type, "_pseudobulk.csv"), row.names = 1)
   message('Sample names in pseudobulk_counts: ', paste(rownames(pseudobulk_counts)[1:5], collapse = ' '))
   message('Sample names in sample_lst: ', paste(sample_lst$sample[1:5], collapse = ' '), '\n')
   
   # Transpose to genes as rows, samples as columns (TensorQTL format)
   pseudobulk_counts <- t(pseudobulk_counts)
-  message('Transposed pseudobulk_counts (first 5x5, genes x samples):\n')
   print(pseudobulk_counts[1:5, 1:5])
   
   # Subset sample_lst to available samples
@@ -169,13 +168,12 @@ for (cell_type in cell_types) {
   message('\nTMM normalising counts ... \n')
   dge <- DGEList(counts = pseudobulk_counts)
   dge <- calcNormFactors(dge, method = "TMM") # Do we need two normalisation factors here?
-  normalized_counts <- cpm(dge, normalized.lib.sizes = TRUE)
-  print("Normalized counts (first 5x5):")
+  normalized_counts <- edgeR::cpm(dge, normalized.lib.sizes = TRUE)
   print(normalized_counts[1:5, 1:5])
   
   # PCA Analysis
-  message('\nRunning PCA on expression values ... ')
-  pca <- prcomp(normalized_counts, scale. = TRUE)
+  message('\nRunning PCA on expression values ...\n')
+  pca <- prcomp(t(normalized_counts), scale. = TRUE)
   exp_pc_scores <- as.data.frame(pca$x[, 1:30]) |> 
     as_tibble(rownames = 'sample') |>
     rename_with(~ paste0("exp", .), .cols = starts_with("PC"))
@@ -207,21 +205,46 @@ for (cell_type in cell_types) {
   # peer_factors$Sample <- rownames(peer_factors)
   
   # Covariates file
-  message('Creating covariate files ... ')
+  # message('Creating covariate files ... ')
+  # cov_full_tbl <- cov_tbl |> 
+  #   inner_join(exp_pc_scores, by = "sample") |> 
+  #   mutate(sample = factor(sample, levels = available_samples)) |> 
+  #   arrange(match(sample, available_samples)) |>  # Reorder to match
+  #   dplyr::rename(id = sample) |>
+  #   dplyr::select(id, PCW, Sex, genPC1:genPC3, expPC1:expPC10) |>
+  #   write_tsv(paste0(data_dir, cell_type, "_covariates.txt"))
+  # 
+  # # Don't think I need this
+  # transposed_cov <- cov_full_tbl |>
+  #   as.data.frame() |>
+  #   t()
+  # rownames(transposed_cov)
+  # write.table(transposed_cov, paste0(data_dir, cell_type, "_covariates_t.txt"), quote = F, sep = '\t', col.names = F)
+  
   cov_full_tbl <- cov_tbl |> 
     inner_join(exp_pc_scores, by = "sample") |> 
     mutate(sample = factor(sample, levels = available_samples)) |> 
-    arrange(match(sample, available_samples)) |>  # Reorder to match
-    rename('id' = 'sample') |>
-    dplyr::select(id, PCW, Sex, genPC1:genPC3, expPC1:expPC10) |>
-    write_tsv(paste0(data_dir, cell_type, "_covariates.txt"))
+    arrange(match(sample, available_samples)) |> 
+    dplyr::rename(id = sample) |> 
+    mutate(PCW = str_replace(PCW, '1st tri\\s*\\?', '0')) |>
+    mutate(PCW = replace(PCW, is.na(PCW), '0')) |>
+    mutate(PCW = as.numeric(PCW)) |>
+    dplyr::select(id, PCW, Sex, genPC1:genPC3, expPC1:expPC10) 
   
-  # Don't think I need this
-  # transposed_cov <- cov_full_tbl |>
-  #   as.data.frame() |>
-  #   t() 
-  # rownames(transposed_cov)
-  # write.table(transposed_cov, paste0(data_dir, cell_type, "_covariates_t.txt"), quote = F, sep = '\t', col.names = F)
+  # Transpose and set row names
+  cov_matrix <- t(as.matrix(cov_full_tbl[, -1]))  # Exclude 'id' column, transpose
+  colnames(cov_matrix) <- cov_full_tbl$id         # Set sample IDs as column names
+  rownames(cov_matrix) <- colnames(cov_full_tbl)[-1]  # Set covariate names as row names
+  cov_matrix[1:5, 1:5]
+
+  # Write to file without column name for the index
+  write.table(cov_matrix, 
+              file = paste0(data_dir, cell_type, "_covariates.txt"), 
+              sep = "\t", 
+              quote = FALSE, 
+              col.names = NA,    # Write sample IDs as column names
+              row.names = TRUE,    # Write covariate names as row names
+              append = FALSE)
   
   # cov_full_tbl %>%
   #   column_to_rownames("Sample") %>%  # Move 'Sample' to row names
@@ -284,7 +307,7 @@ for (cell_type in cell_types) {
     dplyr::select(Chr = chromosome_name, start = cis_start, end = cis_end, TargetID = gene_id, any_of(sample_lst[[1]])) |>
     arrange(Chr, as.numeric(start), as.numeric(end)) |>
     filter(Chr %in% seq(1,22,1)) |>
-    rename('#Chr' = Chr) |> # Required or tabix chokes at fastQTL step
+    dplyr::rename('#Chr' = Chr) |> # Required or tabix chokes at fastQTL step
     write_tsv(paste0(data_dir, cell_type, '_tmm.bed'))
   
   message('Final counts tbl dims: ', paste0(dim(pseudobulk_counts)[1], ' x ', dim(pseudobulk_counts)[2]), '\n')
@@ -292,6 +315,8 @@ for (cell_type in cell_types) {
   report_list[[cell_type]] <- report_tibble
   
 }
+
+setdiff(as.character(cov_full_tbl$id), colnames(pseudobulk_counts)[5:ncol(pseudobulk_counts)])
 
 # Combine all reports into a single tibble
 final_report <- bind_rows(report_list) |>
@@ -340,6 +365,7 @@ for (cell_type in names(report_list)) {
 
 cowplot::plot_grid(plotlist = var_explained_plt_lst)
 cowplot::plot_grid(plotlist = cor_plt_lst)
+
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
   
