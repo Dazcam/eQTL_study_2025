@@ -218,6 +218,16 @@ small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
                      'TM4SF1', 'SLC38A5', 'CYTL1', 'BMX', 'MGP',    # Endothelial
                      'FBLN5', 'ELN', 'IGFBP4', 'CLU']
 
+extra_from_mouse = [
+    'ALDH1L1', 'SLC1A3', 'AQP4',                         # astrocyte
+    'MOG', 'MAG',                                        # oligodendrocyte
+    'PDGFRA', 'SUSD5', 'CSPG4',                          # OPC
+    'PECAM1', 'CLDN5', 'SLCO1C1', 'OCLN',                # endothelial cell
+    'GDF10', 'VIM', 'NBL1', 'A2M',                       # Bergmann glia
+    'SLC17A7', 'NEUROD6', 'MAB21L1',                     # excitatory neuron
+    'GAD1', 'RELN', 'CALB1',                             # inhibitory neuron
+    'DES', 'MCAM', 'PDGFRB'                              # brain pericyte
+]
 
 # general
 fibroblast = ['SLC38A2', 'SLC4A10', 'SLC26A2', 'SLC47A1', 'FXYD5', 
