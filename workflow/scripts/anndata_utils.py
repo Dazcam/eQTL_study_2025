@@ -7,6 +7,7 @@ import gc
 import re
 import ipywidgets as widgets
 from IPython import get_ipython
+from IPython.display import display, Markdown
 from ipywidgets import Tab, Output
 from memory_profiler import profile
 import warnings
@@ -739,6 +740,7 @@ def plot_filtered_violin(
                     swap_axes=swap_axes, 
                     ax=ax, 
                     show=False,  # Suppress inline plotting
+                #    use_raw=False,  # Use raw data if available
                     **kwargs
                 )
                 
