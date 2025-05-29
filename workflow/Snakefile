@@ -1,11 +1,11 @@
 configfile: '../config/config.yaml'
 
 #include: 'rules/01parse.smk' 
-#include: 'rules/02scanpy.smk'
-#include: 'rules/03scanpy_testing.smk'
+include: 'rules/02scanpy.smk'
+#include: 'rules/03genotypes_pre_impute'
 #include: 'rules/04pegasus.smk'
-include: 'rules/04qtl.smk'
-include: 'rules/04genotypes.smk'
+#include: 'rules/04qtl.smk'
+#include: 'rules/04genotypes.smk'
 
 # Set QTL tool
 QTL_TOOL = config["eQTL"]["tool"]
@@ -39,15 +39,17 @@ rule all:
 #         "../results/02PARSE/combine_plate1/run.done"
 #         expand("../results/03SCANPY/testing_runs/scanpy_qc_testing_{plate}.html", plate = config['plate'])
 #         expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
+#         "../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
+#         "../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html"
 #         "../results/03SCANPY/scanpy_clustering.html"
-#          "../results/03SCANPY/scanpy_annotation.html",
-#        "../results/03SCANPY/scanpy_extra.html",
-#        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
+        "../results/03SCANPY/scanpy_annotation.html",
+        "../results/03SCANPY/scanpy_extra.html",
+        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #          expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
-        qtl_files,
+#        qtl_files,
 #        qtl_plots,
-        "../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv",
-        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi",
-        "../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log", 
-        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
-        "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
+#        "../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv",
+#        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi",
+#        "../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log", 
+#        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
+#        "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
