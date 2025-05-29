@@ -3,11 +3,6 @@ plate:
   - plate1
   - plate2
 
-paths:
-  results: "../results"
-  scripts: "scripts"
-  log_dir: "../results/00LOG"
-
 cell_types: 
   - "ExN-1"
   - "ExN-2"
@@ -20,37 +15,42 @@ cell_types:
 
 scanpy:
   qc:
-    input: "{results}/02PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad"
-    output: "{results}/03SCANPY/scanpy_qc_{plate}.html"
-    nb: "{scripts}/scanpy_qc.ipynb"
-    nb_out: "{results}/03SCANPY/scanpy_qc_{plate}_pm.ipynb"
-    log: "{log_dir}/03SCANPY/scanpy_qc_{plate}.log"
+    input: 
+      plate: ../results/02PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad
+      nb: scripts/scanpy_qc.ipynb  
+    output: ../results/03SCANPY/scanpy_qc_{plate}.html
+    nb_out: ../results/03SCANPY/scanpy_qc_{plate}_pm.ipynb
+    html_out: scanpy_qc_{plate}.html
+    log: ../results/00LOG/03SCANPY/scanpy_qc_{plate}.log
 
   clustering:
-    input: "{results}/03SCANPY/scanpy_qc_{plate}.html"
-    output: "{results}/03SCANPY/scanpy_clustering.html"
-    nb: "{scripts}/scanpy_clustering.ipynb"
-    nb_out: "{results}/03SCANPY/scanpy_clustering_pm.ipynb"
-    log: "{log_dir}/03SCANPY/scanpy_clustering.log"
+    input: scripts/scanpy_clustering.ipynb
+    output: ../results/03SCANPY/scanpy_clustering.html 
+    nb_out: ../results/03SCANPY/scanpy_clustering_pm.ipynb
+    html_out: scanpy_clustering.html
+    log: ../results/00LOG/03SCANPY/scanpy_clustering.log
 
   annotation:
-    input: "{results}/03SCANPY/scanpy_clustering.html"
-    output: "{results}/03SCANPY/scanpy_annotation.html"
-    nb: "{scripts}/scanpy_annotation.ipynb"
-    nb_out: "{results}/03SCANPY/scanpy_annotation_pm.ipynb"
-    log: "{log_dir}/03SCANPY/scanpy_annotation.log"
+    input: scripts/scanpy_annotation.ipynb
+    output: ../results/03SCANPY/scanpy_annotation.html
+    nb_out: ../results/03SCANPY/scanpy_annotation_pm.ipynb
+    html_out: scanpy_annotation.html
+    log: ../results/00LOG/03SCANPY/scanpy_annotation.log
 
   pseudobulk:
-    input: "{results}/03SCANPY/scanpy_annotation.html"
-    output: "{results}/03SCANPY/scanpy_cell_label_and_pseudobulk.html"
-    nb: "{scripts}/scanpy_cell_label_and_pseudobulk.ipynb"
-    nb_out: "{results}/03SCANPY/scanpy_cell_label_and_pseudobulk_pm.ipynb"
-    log: "{log_dir}/03SCANPY/scanpy_cell_label_and_pseudobulk.log"
-#  resources:
-#    qc: { threads: 16, mem_mb: 380000, time: "3-0:00:00" }
-#    clustering: { threads: 16, mem_mb: 380000, time: "3-0:00:00" }
-#    annotation: { threads: 10, mem_mb: 100000, time: "3-0:00:00" }
-#    pseudobulk: { threads: 10, mem_mb: 100000, time: "3-0:00:00" }
+    input: scripts/scanpy_cell_label_and_pseudobulk.ipynb
+    output: ../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html
+    nb_out: ../results/03SCANPY/scanpy_cell_label_and_pseudobulk_pm.ipynb
+    html_out: scanpy_cell_label_and_pseudobulk.html
+    log: ../results/00LOG/03SCANPY/scanpy_cell_label_and_pseudobulk.log
+
+  extra:
+    input: scripts/scanpy_extra.ipynb
+    output: ../results/03SCANPY/scanpy_extra.html
+    nb_out: ../results/03SCANPY/scanpy_extra_pm.ipynb
+    html_out: scanpy_extra.html
+    log: ../results/00LOG/03SCANPY/scanpy_extra.log
+
   env: "../envs/eqtl_study.yml"
 
 eQTL:
@@ -74,6 +74,7 @@ output_files:
   tensorqtl_output: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom.cis_qtl_pairs.4.parquet
   tensorqtl_perm_out_prefix: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm
   tensorqtl_perm_output: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm.cis_qtl.txt.gz
+  tensorqtl_perm_log: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm.tensorQTL.cis.log
   tensorqtl_cat_log_output: ../results/04TENSORQTL/all_cells_perm_cis_qtl_log.tsv
 log_files:
   fastqtl_zip: ../results/00LOG/04FASTQTL/{cell_type}_bgzip.log
@@ -81,9 +82,12 @@ log_files:
   fastqtl_perm: ../results/00LOG/04FASTQTL/{cell_type}_perm_{chunk}.log
   tensorqtl: ../results/00LOG/04TENSORQTL/{cell_type}_nom.log
   tensorqtl_perm: ../results/00LOG/04TENSORQTL/{cell_type}_perm.log
+
 containers:
   fastqtl: ../resources/containers/gtex_eqtl.sif
   tensorqtl: ../resources/containers/tensorqtl.sif
+  genotype-qc2hrc: ../resources/containers/genotype-qc2hrc_latest.sif 
+
 plot_qtl:
   run: True  
   pairs_file: ../results/04TENSORQTL/plots/snp_gene_pairs.csv
@@ -92,6 +96,30 @@ plot_qtl:
   expression_dir: ../results/03SCANPY/pseudobulk
   log: ../results/00LOG/04TENSORQTL/plot_qtl.log 
 
+geno_pre_impute:
+  convert_raw:
+    input:
+      ped: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.ped 
+      map: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.map
+    output: ../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed
+    in_prefix: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
+    out_prefix: ../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19
+    log: ../results/00LOG/04GENOTYPES/GenotypeQCtoHRC/convert_raw.log
+  
+  make_kgp3_pgen:
+    input: ../results/04GENOTYPES/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
+    output: ../results/04GENOTYPES/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen  
+    log: ../results/00LOG/04GENOTYPES/GenotypeQCtoHRC/make_kgp3_pgen.log
+    workdir: ../results/04GENOTYPES/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/    
+
+  genotype-qc2hrc:
+    output: ../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
+    in_prefix: eqtl_genotypes_hg19
+    out_prefix: eqtl_genotypes_hg38_preTM
+    shortname: eqtlhg38tm
+    log: ../results/00LOG/04GENOTYPES/GenotypeQCtoHRC/genotype-qc2hrc.log
+    
+    
 genotypes:
   impute_check:
     input:  ../results/04GENOTYPES/TOPMED/chr_{chr}.zip
