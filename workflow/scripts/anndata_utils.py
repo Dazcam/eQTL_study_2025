@@ -655,6 +655,7 @@ def plot_filtered_violin(
     row_palette=None, 
     swap_axes=True, 
     clustering_algorithm="Leiden",  # Optional: Add clustering algorithm to title
+    sharey=True,
     **kwargs
 ):
     """
@@ -740,6 +741,7 @@ def plot_filtered_violin(
                     swap_axes=swap_axes, 
                     ax=ax, 
                     show=False,  # Suppress inline plotting
+                    sharey=sharey,
                 #    use_raw=False,  # Use raw data if available
                     **kwargs
                 )
