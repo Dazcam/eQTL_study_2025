@@ -8,6 +8,7 @@ from collections import defaultdict
 # Modify parser to accept multiple directories
 parser = argparse.ArgumentParser()
 parser.add_argument("--fastq_dirs", nargs='+', help="Required. FULL paths to the fastq folders, space-separated for multiple directories.")
+parser.add_argument("--plate", required=True, help="Plate identifier to append to sample names (e.g., plate1, plate2).")
 args = parser.parse_args()
 
 assert args.fastq_dirs is not None, "please provide at least one path to the fastq folder"
@@ -42,18 +43,28 @@ for sample in FILES.keys():
     for read in FILES[sample]:
         FILES_sorted[sample][read] = sorted(FILES[sample][read])
 
+# Add plate identifier to the sample names
+FILES_with_plate = defaultdict(lambda: defaultdict(list))
+
+plate = args.plate
+
+for sample in FILES_sorted.keys():
+    sample_with_plate = f"{sample}_{plate}"
+    for read in FILES_sorted[sample]:
+        FILES_with_plate[sample_with_plate][read] = FILES_sorted[sample][read]
+
 # Output summary information
 print()
-print("total {} unique samples will be processed".format(len(FILES.keys())))
+print("total {} unique samples will be processed".format(len(FILES_with_plate.keys())))
 print("------------------------------------------")
-for sample in FILES_sorted.keys():
-    for read in sorted(FILES_sorted[sample]):
-        print("{sample} {read} has {n} fastq".format(sample=sample, read=read, n=len(FILES_sorted[sample][read])))
+for sample in FILES_with_plate.keys():
+    for read in sorted(FILES_with_plate[sample]):
+        print("{sample} {read} has {n} fastq".format(sample=sample, read=read, n=len(FILES_with_plate[sample][read])))
 print("------------------------------------------")
-print("check the samples.json file for fastqs belong to each sample")
+print(f"check the samples_{plate}.json file for fastqs belonging to each sample")
 print()
 
-# Write the JSON output file
-js = json.dumps(FILES_sorted, indent=4, sort_keys=True)
-with open('samples.json', 'w') as json_file:
+# Write the JSON output file with sample names including plate identifier
+js = json.dumps(FILES_with_plate, indent=4, sort_keys=True)
+with open(f'samples_{plate}.json', 'w') as json_file:
     json_file.write(js)
