@@ -87,7 +87,7 @@ rule tensorqtl_perm:
             counts = config["output_files"]["counts_gz"],
             covariates = config["input_files"]["covariates"]
     output: out = config["output_files"]["tensorqtl_perm_output"],
-            log = config["log_files"]["tensorqtl_perm"]
+            log = config["output_files"]["tensorqtl_perm_log"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
     params: plink_prefix = config["eQTL"]["out_prefix"],
@@ -103,7 +103,7 @@ rule tensorqtl_perm:
             """
 
 rule tensorqtl_cat_log:
-    input:  expand(config["log_files"]["tensorqtl_perm"], cell_type = config['cell_types'])
+    input:  expand(config["output_files"]["tensorqtl_perm_log"], cell_type = config['cell_types'])
     output: config["output_files"]["tensorqtl_cat_log_output"],
     shell:  """python scripts/cat_tensorqtl_logs.py -i "{input}" -o {output}"""
 
