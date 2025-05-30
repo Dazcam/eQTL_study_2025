@@ -6,12 +6,11 @@ plate:
 cell_types: 
   - "ExN-1"
   - "ExN-2"
-  - "InN-1"
-  - "InN-2"
+  - "InN"
+  - "OPC"
   - "RG"
   - "Endo-Peri"
   - "MG"
-  - "Mig-N"  
 
 scanpy:
   qc:
