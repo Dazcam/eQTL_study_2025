@@ -34,7 +34,7 @@ sig_genes <- eqtl_data %>%
   pull(phenotype_id)
 
 # Connect to Ensembl (hg38) using biomaRt
-message("Use biomaRt to get gene window cordinates for ", length(sig_genes), "sig. eGenes on hg38 ...")
+message("Use biomaRt to get gene window cordinates for ", length(sig_genes), " sig. eGenes on hg38 ...")
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 
 # Fetch TSS information for significant genes
@@ -45,7 +45,7 @@ tss_info <- getBM(
   mart = mart
 ) %>%
   as_tibble() %>%
-  mutate(
+  dplyr::mutate(
     tss = if_else(strand == 1, start_position, end_position),
     cis_start = pmax(0, tss - 1e6),
     cis_end = tss + 1e6
@@ -54,7 +54,7 @@ tss_info <- getBM(
 # Save the annotated cis-windows
 message("Writing tsv file ...")
 tss_info %>%
-  select(ensembl_gene_id, chromosome_name, cis_start, cis_end) %>%
+  dplyr::select(ensembl_gene_id, chromosome_name, cis_start, cis_end) %>%
   write_tsv(out_file)
 
 message("All done.")
