@@ -16,10 +16,11 @@ if (exists("snakemake")) {
       sink(log, append = TRUE, type = "message")
     }
   }
+}
 log_smk()
 message('Extracting table of sig. eGenes with cis-window ...')
-eqtl_file <- snakemake@input
-out_file <- snakemake@output
+eqtl_file <- snakemake@input[[1]]
+out_file <- snakemake@output[[1]]
 
 # Load eQTL results from tensorQTL output
 message("Loading eQTL file ...")
@@ -33,7 +34,7 @@ sig_genes <- eqtl_data %>%
   pull(phenotype_id)
 
 # Connect to Ensembl (hg38) using biomaRt
-message("Use biomaRt to get gene window cordinates on hg38 ...")
+message("Use biomaRt to get gene window cordinates for ", length(sig_genes), "sig. eGenes on hg38 ...")
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 
 # Fetch TSS information for significant genes
