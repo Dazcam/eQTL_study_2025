@@ -58,19 +58,19 @@ def extract_data_for_gene(row):
         os.system(plink_bed_cmd)
         
         # Step 2: Export genotype matrix as .raw file
-        plink_raw_cmd = f"plink2 --pfile {geno_prefix} --chr {chrom} --from-bp {cis_start} --to-bp {cis_end} --export A --out {output_prefix}"
+        plink_raw_cmd = f"plink2 --pfile {geno_prefix} --chr {chrom} --from-bp {cis_start} --to-bp {cis_end} --export A-transpose --out {output_prefix}"
         os.system(plink_raw_cmd)
         
         # Read genotype data from .raw file
         try:
-            raw_data = pd.read_csv(f"{output_prefix}.raw", sep=r"\s+")
+            raw_data = pd.read_csv(f"{output_prefix}.traw", sep="\t")
         except Exception as e:
             logging.error(f"Error reading {output_prefix}.raw: {e}")
             return None
         
         # Extract sample IDs and genotype matrix
-        geno_samples = raw_data['IID'].tolist()
-        geno_mat = raw_data.drop(columns=['FID', 'IID', 'PAT', 'MAT', 'SEX', 'PHENOTYPE']).to_numpy()
+        geno_samples = raw_data.columns[6:].tolist()  # Skip CHR, SNP, POS, COUNTED, ALT, etc.
+        geno_mat = raw_data.iloc[:, 6:].to_numpy()  # Variants x samples
         
         # Read SNP information from .bim file
         try:
@@ -106,7 +106,7 @@ def extract_data_for_gene(row):
         np.savez(f"{output_prefix}_data.npz", X=geno_mat, y=expr_vector, Z=covar_subset, variants=bim.to_numpy())
         
         # Clean up temporary files
-        for ext in [".raw", ".bed", ".bim", ".fam", ".log"]:
+        for ext in [".traw", ".bed", ".bim", ".fam", ".log"]:
             try:
                 os.remove(f"{output_prefix}{ext}")
             except FileNotFoundError:
