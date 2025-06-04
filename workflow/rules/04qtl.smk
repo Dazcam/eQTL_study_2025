@@ -102,10 +102,15 @@ rule tensorqtl_perm:
                --mode cis >> {log} 2>&1 
             """
 
-rule tensorqtl_cat_log:
+rule tensorqtl_tss_and_sumstats:
     input:  expand(config["output_files"]["tensorqtl_perm_log"], cell_type = config['cell_types'])
-    output: config["output_files"]["tensorqtl_cat_log_output"],
-    shell:  """python scripts/cat_tensorqtl_logs.py -i "{input}" -o {output}"""
+    output: config["output_files"]["tensorqtl_tss_plt"],
+            config["output_files"]["tensorqtl_tss_tbl"]
+    singularity: config["containers"]["R"]
+    params: root_dir = config["root_dir"],
+            cell_types = config["cell_types"]
+    log:    config["log_files"]["tensorqtl_tss"]    
+    script: "scripts/tensorqtl_tss_and_sumstats.R"
 
 rule plot_qtl:
     input:  genotypes = config["input_files"]["genotypes"],
