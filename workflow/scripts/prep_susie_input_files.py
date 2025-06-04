@@ -11,14 +11,19 @@ import os
 from multiprocessing import Pool  
 
 # File paths
-cis_windows_file = snakemake.input[['sig_eGenes']]  
-expr_file = snakemake.input[['pseudobulk']]  
-geno_file = snakemake.input[['geno_file']] 
+cis_windows_file = snakemake.input['sig_eGenes']
+expr_file = snakemake.input['pseudobulk']
+geno_file = snakemake.input['geno_file']
 geno_prefix = os.path.splitext(geno_file)[0]  
-covar_file = snakemake.input[['covar_file']] 
+covar_file = snakemake.input['covar_file']
 output_file = snakemake.output[0]  
 output_dir = os.path.dirname(output_file)
+threads = snakemake.threads
 os.makedirs(output_dir, exist_ok=True)
+# Print inputs for debugging
+print(f"Inputs:\n\nsig_eGenes={cis_windows_file}\npseudobulk={expr_file}\ngenotypes={geno_file}\ncovariates={covar_file}")
+print(f"\n\nOutput:\n\n{output_file}")
+
 
 # Load cis-windows
 print(f"Loading gene list from {cis_windows_file}")
@@ -135,7 +140,7 @@ def extract_data_for_gene(row):
 # print("First few rows:\n", variants.head())
   
 # Parallel processing
-with Pool() as pool:
+with Pool(processes = threads) as pool:
     results = pool.map(extract_data_for_gene, cis_windows.values)
 
 # Filter successful extractions
