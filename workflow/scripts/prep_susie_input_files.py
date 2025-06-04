@@ -13,9 +13,9 @@ from multiprocessing import Pool
 # File paths
 cis_windows_file = snakemake.input['sig_eGenes']
 expr_file = snakemake.input['pseudobulk']
-geno_file = snakemake.input['geno_file']
+geno_file = snakemake.input['genotypes']
 geno_prefix = os.path.splitext(geno_file)[0]  
-covar_file = snakemake.input['covar_file']
+covar_file = snakemake.input['covariates']
 output_file = snakemake.output[0]  
 output_dir = os.path.dirname(output_file)
 threads = snakemake.threads
