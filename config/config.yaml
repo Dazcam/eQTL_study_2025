@@ -3,14 +3,16 @@ plate:
   - plate1
   - plate2
 
+root_dir: /scratch/c.c1477909/eQTL_study_2025/
+
 cell_types: 
   - "ExN-1"
-  - "ExN-2"
-  - "InN"
-  - "OPC"
-  - "RG"
-  - "Endo-Peri"
-  - "MG"
+#  - "ExN-2"
+#  - "InN"
+#  - "OPC"
+#  - "RG"
+#  - "Endo-Peri"
+#  - "MG"
 
 scanpy:
   qc:
@@ -74,18 +76,31 @@ output_files:
   tensorqtl_perm_out_prefix: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm
   tensorqtl_perm_output: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm.cis_qtl.txt.gz
   tensorqtl_perm_log: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm.tensorQTL.cis.log
-  tensorqtl_cat_log_output: ../results/04TENSORQTL/all_cells_perm_cis_qtl_log.tsv
+  tensorqtl_tss_plt: ../results/figs/tss_density_plot_combined.png
+  tensorqtl_tss_tbl: ../results/tables/tensorqtl_summary_table.tsv
+
 log_files:
   fastqtl_zip: ../results/00LOG/04FASTQTL/{cell_type}_bgzip.log
   fastqtl: ../results/00LOG/04FASTQTL/{cell_type}_nom_{chunk}.log
   fastqtl_perm: ../results/00LOG/04FASTQTL/{cell_type}_perm_{chunk}.log
   tensorqtl: ../results/00LOG/04TENSORQTL/{cell_type}_nom.log
   tensorqtl_perm: ../results/00LOG/04TENSORQTL/{cell_type}_perm.log
+  tensorqtl_tss: ../results/00LOG/04TENSORQTL/tss.log   
 
 containers:
   fastqtl: ../resources/containers/gtex_eqtl.sif
   tensorqtl: ../resources/containers/tensorqtl.sif
   genotype-qc2hrc: ../resources/containers/genotype-qc2hrc_latest.sif 
+  R: ../resources/containers/seurat5f.sif  
+
+
+slsdr:
+  get_sig_eGenes:
+    output: ../results/05SLDSR/eGenes_fdr_0.05/{cell_type}/{cell_type}_eGenes_fdr_0.05.tsv
+    log: ../results/00LOG/05SLDSR/get_sig_eGenes_{cell_type}.log
+  prep_susie_input:
+    output: ../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done
+    log: ../results/00LOG/05SLDSR/prep_susie_input_{cell_type}.log
 
 plot_qtl:
   run: True  
