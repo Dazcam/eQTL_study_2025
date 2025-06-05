@@ -118,20 +118,23 @@ def extract_data_for_gene(row):
         pd.DataFrame(covar_subset).to_csv(temp_covar, sep="\t", index=False, header=False)
         bim.to_csv(temp_variants, sep="\t", index=False, header=True)
 
-        # Generate RDS with R script
+        # Generate RDS with base R
         r_script = f"""
-        library(tibble)
         data <- list(
-        X = as.matrix(read.table('{temp_geno}')),
-        y = as.numeric(read.table('{temp_expr}')$V1),
-        Z = as.matrix(read.table('{temp_covar}')),
-        variants = read.table('{temp_variants}', header=TRUE)
+        X = as.matrix(read.table('{temp_geno}', sep='\t')),
+        y = as.numeric(read.table('{temp_expr}', sep='\t')[,1]),
+        Z = as.matrix(read.table('{temp_covar}', sep='\t')),
+        variants = read.table('{temp_variants}', sep='\t', header=TRUE)
         )
         saveRDS(data, '{rds_file}')
         """
         with open(temp_r_script, "w") as f:
             f.write(r_script)
-        subprocess.run(["Rscript", temp_r_script], check=True)  
+        try:
+            subprocess.run(["Rscript", temp_r_script], check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Rscript failed for gene {gene}: {e.stderr}")
+            raise
 
         # Clean up temporary files
         for temp_file in [temp_geno, temp_expr, temp_covar, temp_variants, temp_r_script]:
@@ -144,9 +147,6 @@ def extract_data_for_gene(row):
                 os.remove(f"{output_prefix}{ext}")
             except FileNotFoundError:
                 pass
-        
-        logging.info(f"Successfully processed gene {gene}")
-        return gene
     
     except Exception as e:
         logging.error(f"Error processing gene {gene}: {e}")
