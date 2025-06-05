@@ -24,11 +24,21 @@ logging.basicConfig(
 cis_windows_file = snakemake.input['sig_eGenes']
 expr_file = snakemake.input['pseudobulk']
 geno_file = snakemake.input['genotypes']
-geno_prefix = os.path.splitext(geno_file)[0]
 covar_file = snakemake.input['covariates']
+
+# For testing
+cis_windows_file = "../results/05SLDSR/eGenes_fdr_0.05/ExN-1/ExN-1_eGenes_fdr_0.05.tsv"
+expr_file = "../results/03SCANPY/pseudobulk/ExN-1_tmm.bed"
+geno_file = "../results/04TENSORQTL/chrALL_final.filt.pgen"
+covar_file = "../results/03SCANPY/pseudobulk/ExN-1_covariates.txt"
+output_file = "../results/05SLDSR/eGenes_for_SuSiE/ExN-1/ExN-1_prep_susie_input.done"
+
 output_file = snakemake.output[0]
+geno_prefix = os.path.splitext(geno_file)[0]
 output_dir = os.path.dirname(output_file)
 os.makedirs(output_dir, exist_ok=True)
+
+
 
 # Log inputs for debugging
 logging.info(f"Inputs: sig_eGenes={cis_windows_file}, pseudobulk={expr_file}, genotypes={geno_file}, covariates={covar_file}")
@@ -55,6 +65,8 @@ def extract_data_for_gene(row):
     force=True)
 
     try:
+        # Extract gene information (line below for testing)
+        # gene, chrom, cis_start, cis_end = cis_windows.iloc[0][['ensembl_gene_id', 'chromosome_name', 'cis_start', 'cis_end']].values
         gene, chrom, cis_start, cis_end = row
         output_prefix = f"{output_dir}/{gene}"
         logging.info(f"Processing gene: {gene}, chromosome: {chrom}, start: {cis_start}, end: {cis_end}")
@@ -75,8 +87,9 @@ def extract_data_for_gene(row):
             logging.error(f"Error reading {output_prefix}.raw: {e}")
             return None
         
-        # Extract sample IDs and genotype matrix
-        geno_samples = raw_data.columns[6:].tolist()  # Skip CHR, SNP, POS, COUNTED, ALT, etc.
+        # Extract sample IDs and genotype matrix (notes: .traw has samples in columns and adds '0_' prefix to sample IDs)
+        logging.info(f"Extracting genotype data for gene {gene}...")
+        geno_samples = [s.replace('0_', '') for s in raw_data.columns[6:].tolist()]  # Skip CHR, SNP, POS, COUNTED, ALT, etc.
         geno_mat = raw_data.iloc[:, 6:].to_numpy()  # Variants x samples
         
         # Read SNP information from .bim file
