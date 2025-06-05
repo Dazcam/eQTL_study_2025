@@ -18,7 +18,7 @@ if (exists("snakemake")) {
   }
 }
 log_smk()
-message('Extracting table of sig. eGenes with cis-window ...')
+message('\n\nExtracting table of sig. eGenes with cis-window ...')
 eqtl_file <- snakemake@input[[1]]
 out_file <- snakemake@output[[1]]
 
@@ -46,9 +46,12 @@ tss_info <- getBM(
 ) %>%
   as_tibble() %>%
   dplyr::mutate(
-    tss = if_else(strand == 1, start_position, end_position),
-    cis_start = pmax(0, tss - 1e6),
-    cis_end = tss + 1e6
+    phenotype_id = ensembl_gene_id,
+    group_id = ensembl_gene_id,
+    gene_id = ensembl_gene_id,
+    chromosome = chromosome_name,
+    phenotype_pos = if_else(strand == 1, start_position, end_position),
+    strand = strand
   )
 
 # Save the annotated cis-windows
