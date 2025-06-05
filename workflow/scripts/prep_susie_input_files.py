@@ -161,8 +161,9 @@ def extract_data_for_gene(row):
         # Log common_samples
         logging.info(f"Common samples count: {len(common_samples)}, samples: {common_samples}")
 
-        # Sanitize sample names
-        sanitized_samples = [s.replace("'", "").replace('"', '').replace(',', '_') for s in common_samples]
+        # Save common_samples to a TSV
+        temp_samples = f"{output_dir}/temp_samples_{gene}.tsv"
+        pd.Series(common_samples).to_csv(temp_samples, sep="\t", header=False, index=False)
 
         # Generate RDS with base R
         r_script = f"""
@@ -170,8 +171,9 @@ def extract_data_for_gene(row):
         geno <- as.matrix(read.table('{temp_geno}', sep='\\t', row.names=1, header=TRUE, check.names=FALSE))
         cat('Genotype matrix dimensions:', dim(geno), '\\n')
         if (ncol(geno) != {len(common_samples)}) stop('Genotype matrix has ', ncol(geno), ' columns, expected {len(common_samples)}')
-        colnames(geno) <- c('{','.join(sanitized_samples)}')
-        cat('Number of colnames assigned:', length(colnames(geno)), '\\n')
+        sample_names <- as.character(read.table('{temp_samples}', sep='\\t', header=FALSE)[,1])
+        cat('Number of sample names:', length(sample_names), '\\n')
+        colnames(geno) <- sample_names
         data <- list(
             X = geno,
             y = as.numeric(read.table('{temp_expr}', sep='\\t', row.names=1)[,1]),
