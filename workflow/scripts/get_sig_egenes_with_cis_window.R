@@ -57,7 +57,7 @@ tss_info <- getBM(
 # Save the annotated cis-windows
 message("Writing tsv file ...")
 tss_info %>%
-  dplyr::select(ensembl_gene_id, chromosome_name, cis_start, cis_end) %>%
+  dplyr::select(phenotype_id, group_id, gene_id, chromosome, phenotype_pos, strand) %>%
   write_tsv(out_file)
 
 message("All done.")
