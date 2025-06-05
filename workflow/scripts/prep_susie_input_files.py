@@ -159,10 +159,10 @@ def extract_data_for_gene(row):
         bim.to_csv(temp_variants, sep="\t", index=False, header=True)
 
         # Debug TSV content
-        with open(temp_geno, 'w') as f:
-            df = pd.DataFrame(geno_mat, index=bim['snp'], columns=[f"V{i+1}" for i in range(geno_mat.shape[1])])
-            f.write(df.head().to_csv(sep="\t"))
-        logging.info(f"Head of {temp_geno}:\n{df.head().to_string()}")
+        # with open(temp_geno, 'w') as f:
+        #     df = pd.DataFrame(geno_mat, index=bim['snp'], columns=[f"V{i+1}" for i in range(geno_mat.shape[1])])
+        #     f.write(df.head().to_csv(sep="\t"))
+        # logging.info(f"Head of {temp_geno}:\n{df.head().to_string()}")
 
         # Generate RDS with base R
         r_script = f"""
