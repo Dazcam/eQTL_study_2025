@@ -161,6 +161,8 @@ def extract_data_for_gene(row):
         # Generate RDS with base R
         r_script = f"""
         geno <- as.matrix(read.table('{temp_geno}', sep='\\t', row.names=1, check.names=FALSE))
+        cat('Genotype matrix dimensions:', dim(geno), '\n')
+        if (ncol(geno) != {len(common_samples)}) stop('Genotype matrix has ', ncol(geno), ' columns, expected {len(common_samples)}')
         colnames(geno) <- c('{','.join(common_samples)}')
         data <- list(
             X = geno,
