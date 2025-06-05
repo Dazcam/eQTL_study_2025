@@ -131,11 +131,26 @@ def extract_data_for_gene(row):
         
         # Save data as RDS for SuSiE
         rds_file = f"{output_prefix}_data.rds"
-        temp_geno = f"{output_dir}temp_geno_{gene}.tsv"
-        temp_expr = f"{output_dir}temp_expr_{gene}.tsv"
-        temp_covar = f"{output_dir}temp_covar_{gene}.tsv"
-        temp_variants = f"{output_dir}temp_variants_{gene}.tsv"
-        temp_r_script = f"{output_dir}temp_r_{gene}.R"
+        temp_geno = f"{output_dir}/temp_geno_{gene}.tsv"
+        temp_expr = f"{output_dir}/temp_expr_{gene}.tsv"
+        temp_covar = f"{output_dir}/temp_covar_{gene}.tsv"
+        temp_variants = f"{output_dir}/temp_variants_{gene}.tsv"
+        temp_r_script = f"{output_dir}/temp_r_{gene}.R"
+
+        # Validate dimensions
+        logging.info(f"Validating dimensions for gene {gene}...")
+        if len(bim['snp']) != geno_mat.shape[0]:
+            logging.error(f"Mismatch: bim['snp'] length ({len(bim['snp'])}) does not match geno_mat rows ({geno_mat.shape[0]})")
+            return None
+        if geno_mat.shape[1] != len(common_samples):
+            logging.error(f"Mismatch: geno_mat columns ({geno_mat.shape[1]}) do not match common_samples ({len(common_samples)})")
+            return None
+        if len(expr_vector) != len(common_samples):
+            logging.error(f"Mismatch: expr_vector length ({len(expr_vector)}) does not match common_samples ({len(common_samples)})")
+            return None
+        if covar_subset.shape[0] != len(common_samples):
+            logging.error(f"Mismatch: covar_subset rows ({covar_subset.shape[0]}) do not match common_samples ({len(common_samples)})")
+            return None
 
         # Save temporary TSVs
         pd.DataFrame(geno_mat, index=bim['snp']).to_csv(temp_geno, sep="\t")
