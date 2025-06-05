@@ -39,7 +39,7 @@ logging.info(f"Output: {output_file}")
 # Load cis-windows
 logging.info(f"Loading gene list from {cis_windows_file}")
 cis_windows = pd.read_csv(cis_windows_file, sep="\t")
-cis_windows = cis_windows.head(2)
+cis_windows = cis_windows.head(1)
 
 # Load covariate data
 logging.info(f"Loading covariate data from {covar_file}")
@@ -141,7 +141,7 @@ def extract_data_for_gene(row):
                 pass
         for ext in [".traw", ".bed", ".bim", ".fam", ".log"]:
             try:
-                os.remove(f"{output_dir}{ext}")
+                os.remove(f"{output_prefix}{ext}")
             except FileNotFoundError:
                 pass
         
