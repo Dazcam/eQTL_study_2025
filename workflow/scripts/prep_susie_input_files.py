@@ -153,14 +153,14 @@ def extract_data_for_gene(row):
             return None
 
         # Save temporary TSVs
-        pd.DataFrame(geno_mat, index=bim['snp']).to_csv(temp_geno, sep="\t")
+        pd.DataFrame(geno_mat, index=bim['snp'], columns=[f"V{i+1}" for i in range(geno_mat.shape[1])]).to_csv(temp_geno, sep="\t")
         pd.Series(expr_vector, index=common_samples).to_csv(temp_expr, sep="\t", header=False)
         pd.DataFrame(covar_subset, index=common_samples).to_csv(temp_covar, sep="\t", header=False)
         bim.to_csv(temp_variants, sep="\t", index=False, header=True)
 
         # Generate RDS with base R
         r_script = f"""
-        geno <- as.matrix(read.table('{temp_geno}', sep='\\t', row.names=1, check.names=FALSE))
+        geno <- as.matrix(read.table('{temp_geno}', sep='\\t', row.names=1, header=TRUE, check.names=FALSE))
         cat('Genotype matrix dimensions:', dim(geno), '\n')
         if (ncol(geno) != {len(common_samples)}) stop('Genotype matrix has ', ncol(geno), ' columns, expected {len(common_samples)}')
         colnames(geno) <- c('{','.join(common_samples)}')
