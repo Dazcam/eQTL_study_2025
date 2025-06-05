@@ -39,6 +39,7 @@ logging.info(f"Output: {output_file}")
 # Load cis-windows
 logging.info(f"Loading gene list from {cis_windows_file}")
 cis_windows = pd.read_csv(cis_windows_file, sep="\t")
+cis_windows.head(2)
 
 # Load covariate data
 logging.info(f"Loading covariate data from {covar_file}")
