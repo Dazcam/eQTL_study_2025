@@ -4,8 +4,9 @@ configfile: '../config/config.yaml'
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute'
 #include: 'rules/04pegasus.smk'
-include: 'rules/04qtl.smk'
+#include: 'rules/04qtl.smk'
 #include: 'rules/04genotypes.smk'
+include: 'rules/05sldsr.smk'
 
 # Set QTL tool
 QTL_TOOL = config["eQTL"]["tool"]
@@ -23,7 +24,7 @@ elif QTL_TOOL == "tensorqtl":
     for cell_type in config["cell_types"]:
         qtl_files.append(config["output_files"]["tensorqtl_output"].format(cell_type=cell_type))
         qtl_files.append(config["output_files"]["tensorqtl_perm_output"].format(cell_type=cell_type))    
-        qtl_files.append(config["output_files"]["tensorqtl_cat_log_output"].format(cell_type=cell_type))
+        qtl_files.append(config["output_files"]["tensorqtl_perm_log"].format(cell_type=cell_type))
 
 # Rule all with optional plot_qtl inclusion
 qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]["run"] else []
@@ -46,10 +47,12 @@ rule all:
 #        "../results/03SCANPY/scanpy_extra.html",
 #        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #          expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
-        qtl_files,
+#        qtl_files,
 #        qtl_plots,
 #        "../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv",
 #        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi",
 #        "../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log", 
 #        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
 #        "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
+        expand("../results/05SLDSR/eGenes_fdr_0.05/{cell_type}/{cell_type}_eGenes_fdr_0.05.tsv", cell_type = config["cell_types"]),
+        expand("../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done", cell_type = config["cell_types"])
