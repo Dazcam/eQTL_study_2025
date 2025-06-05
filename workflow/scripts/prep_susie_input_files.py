@@ -158,10 +158,17 @@ def extract_data_for_gene(row):
         pd.DataFrame(covar_subset, index=common_samples).to_csv(temp_covar, sep="\t", header=False)
         bim.to_csv(temp_variants, sep="\t", index=False, header=True)
 
+        # Debug TSV content
+        with open(temp_geno, 'w') as f:
+            df = pd.DataFrame(geno_mat, index=bim['snp'], columns=[f"V{i+1}" for i in range(geno_mat.shape[1])])
+            f.write(df.head().to_csv(sep="\t"))
+        logging.info(f"Head of {temp_geno}:\n{df.head().to_string()}")
+
         # Generate RDS with base R
         r_script = f"""
+        sink('{output_dir}/r_debug_{gene}.log')
         geno <- as.matrix(read.table('{temp_geno}', sep='\\t', row.names=1, header=TRUE, check.names=FALSE))
-        cat('Genotype matrix dimensions:', dim(geno), '\n')
+        cat('Genotype matrix dimensions:', dim(geno), '\\n')
         if (ncol(geno) != {len(common_samples)}) stop('Genotype matrix has ', ncol(geno), ' columns, expected {len(common_samples)}')
         colnames(geno) <- c('{','.join(common_samples)}')
         data <- list(
@@ -171,12 +178,16 @@ def extract_data_for_gene(row):
             variants = read.table('{temp_variants}', sep='\\t', header=TRUE)
         )
         saveRDS(data, '{rds_file}')
+        sink()
         """
         with open(temp_r_script, "w") as f:
             f.write(r_script)
         try:
-            result = subprocess.run(["Rscript", temp_r_script], check=True, capture_output=True, text=True)
-            logging.info(f"Rscript output for gene {gene}: {result.stdout}")
+            result = subprocess.run(["Rscript", temp_r_script], capture_output=True, text=True)
+            logging.info(f"Rscript stdout for gene {gene}: {result.stdout}")
+            logging.info(f"Rscript stderr for gene {gene}: {result.stderr}")
+            if result.returncode != 0:
+                raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
         except subprocess.CalledProcessError as e:
             logging.error(f"Rscript failed for gene {gene}: {e.stderr}")
             raise
