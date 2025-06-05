@@ -16,11 +16,9 @@ import subprocess
 logging.basicConfig(
     filename=snakemake.log[0],
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    force=True
 )
-
-# Add NullHandler to suppress console output
-logging.getLogger('').handlers = [logging.NullHandler()]
 
 # File paths
 cis_windows_file = snakemake.input['sig_eGenes']
@@ -49,6 +47,13 @@ covar_matrix = covar_data.iloc[:, 1:].to_numpy().T  # Transpose so samples are r
 
 # Function to extract data for one gene
 def extract_data_for_gene(row):
+
+    logging.basicConfig(
+    filename=snakemake.log[0],
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    force=True)
+
     try:
         gene, chrom, cis_start, cis_end = row
         output_prefix = f"{output_dir}/{gene}"
