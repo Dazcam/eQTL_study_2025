@@ -27,18 +27,16 @@ geno_file = snakemake.input['genotypes']
 covar_file = snakemake.input['covariates']
 
 # For testing
-cis_windows_file = "../results/05SLDSR/eGenes_fdr_0.05/ExN-1/ExN-1_eGenes_fdr_0.05.tsv"
-expr_file = "../results/03SCANPY/pseudobulk/ExN-1_tmm.bed"
-geno_file = "../results/04TENSORQTL/chrALL_final.filt.pgen"
-covar_file = "../results/03SCANPY/pseudobulk/ExN-1_covariates.txt"
-output_file = "../results/05SLDSR/eGenes_for_SuSiE/ExN-1/ExN-1_prep_susie_input.done"
+# cis_windows_file = "../results/05SLDSR/eGenes_fdr_0.05/ExN-1/ExN-1_eGenes_fdr_0.05.tsv"
+# expr_file = "../results/03SCANPY/pseudobulk/ExN-1_tmm.bed"
+# geno_file = "../results/04TENSORQTL/chrALL_final.filt.pgen"
+# covar_file = "../results/03SCANPY/pseudobulk/ExN-1_covariates.txt"
+# output_file = "../results/05SLDSR/eGenes_for_SuSiE/ExN-1/ExN-1_prep_susie_input.done"
 
 output_file = snakemake.output[0]
 geno_prefix = os.path.splitext(geno_file)[0]
 output_dir = os.path.dirname(output_file)
 os.makedirs(output_dir, exist_ok=True)
-
-
 
 # Log inputs for debugging
 logging.info(f"Inputs: sig_eGenes={cis_windows_file}, pseudobulk={expr_file}, genotypes={geno_file}, covariates={covar_file}")
@@ -80,7 +78,7 @@ def extract_data_for_gene(row):
         plink_raw_cmd = f"plink2 --pfile {geno_prefix} --chr {chrom} --from-bp {cis_start} --to-bp {cis_end} --export A-transpose --out {output_prefix}"
         os.system(plink_raw_cmd)
         
-        # Read genotype data from .raw file
+        # Read genotype data from .traw file
         try:
             raw_data = pd.read_csv(f"{output_prefix}.traw", sep="\t")
         except Exception as e:
@@ -110,39 +108,50 @@ def extract_data_for_gene(row):
         # Align samples
         logging.info(f"Checking if samples align for gene {gene}...")
         common_samples = list(set(geno_samples) & set(expr_samples) & set(covar_samples))
+        logging.info(f"Common samples count: {len(common_samples)}, first 5: {common_samples[:5]}")
+        logging.info(f"Geno samples (first 5): {geno_samples[:5]}")
+        logging.info(f"Expr samples (first 5): {expr_samples[:5]}")
+        logging.info(f"Covar samples (first 5): {covar_samples[:5]}")
         if not common_samples:
             logging.warning(f"No common samples for gene {gene}")
-            return None
-        
+            return None        
+        logging.info(f"Found {len(common_samples)} common samples for gene {gene}")
+
+        # Reorder genotype, expression, and covariate data to match common samples
+        logging.info(f"Reordering genotype, expression, and covariate data for gene {gene}...")
         geno_idx = [geno_samples.index(s) for s in common_samples]
         expr_idx = [expr_samples.index(s) for s in common_samples]
         covar_idx = [covar_samples.index(s) for s in common_samples]
-        
-        geno_mat = geno_mat[geno_idx, :]
+
+        logging.info(f"Before subset: geno_mat shape: {geno_mat.shape}, expr_vector length: {len(expr_vector)}, covar_subset shape: {covar_matrix.shape}")
+        geno_mat = geno_mat[:, geno_idx]  
         expr_vector = expr_vector[expr_idx]
         covar_subset = covar_matrix[covar_idx, :]
+        logging.info(f"After subset: geno_mat shape: {geno_mat.shape}, expr_vector length: {len(expr_vector)}, covar_subset shape: {covar_subset.shape}")
         
         # Save data as RDS for SuSiE
         rds_file = f"{output_prefix}_data.rds"
-        temp_geno = f"temp_geno_{gene}.tsv"
-        temp_expr = f"temp_expr_{gene}.tsv"
-        temp_covar = f"temp_covar_{gene}.tsv"
-        temp_variants = f"temp_variants_{gene}.tsv"
-        temp_r_script = f"temp_r_{gene}.R"
+        temp_geno = f"{output_dir}temp_geno_{gene}.tsv"
+        temp_expr = f"{output_dir}temp_expr_{gene}.tsv"
+        temp_covar = f"{output_dir}temp_covar_{gene}.tsv"
+        temp_variants = f"{output_dir}temp_variants_{gene}.tsv"
+        temp_r_script = f"{output_dir}temp_r_{gene}.R"
 
         # Save temporary TSVs
-        pd.DataFrame(geno_mat).to_csv(temp_geno, sep="\t", index=False, header=False)
-        pd.Series(expr_vector).to_csv(temp_expr, sep="\t", index=False, header=False)
-        pd.DataFrame(covar_subset).to_csv(temp_covar, sep="\t", index=False, header=False)
+        pd.DataFrame(geno_mat, index=bim['snp']).to_csv(temp_geno, sep="\t")
+        pd.Series(expr_vector, index=common_samples).to_csv(temp_expr, sep="\t", header=False)
+        pd.DataFrame(covar_subset, index=common_samples).to_csv(temp_covar, sep="\t", header=False)
         bim.to_csv(temp_variants, sep="\t", index=False, header=True)
 
         # Generate RDS with base R
         r_script = f"""
+        geno <- as.matrix(read.table('{temp_geno}', sep='\\t', row.names=1, check.names=FALSE))
+        colnames(geno) <- c('{','.join(common_samples)}')
         data <- list(
-        X = as.matrix(read.table('{temp_geno}', sep='\t')),
-        y = as.numeric(read.table('{temp_expr}', sep='\t')[,1]),
-        Z = as.matrix(read.table('{temp_covar}', sep='\t')),
-        variants = read.table('{temp_variants}', sep='\t', header=TRUE)
+            X = geno,
+            y = as.numeric(read.table('{temp_expr}', sep='\\t', row.names=1)[,1]),
+            Z = as.matrix(read.table('{temp_covar}', sep='\\t', row.names=1)),
+            variants = read.table('{temp_variants}', sep='\\t', header=TRUE)
         )
         saveRDS(data, '{rds_file}')
         """
@@ -165,7 +174,7 @@ def extract_data_for_gene(row):
                 os.remove(f"{output_prefix}{ext}")
             except FileNotFoundError:
                 pass
-    
+            
     except Exception as e:
         logging.error(f"Error processing gene {gene}: {e}")
         return None
