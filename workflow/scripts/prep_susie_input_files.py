@@ -173,7 +173,8 @@ def extract_data_for_gene(row):
         with open(temp_r_script, "w") as f:
             f.write(r_script)
         try:
-            subprocess.run(["Rscript", temp_r_script], check=True, capture_output=True, text=True)
+            result = subprocess.run(["Rscript", temp_r_script], check=True, capture_output=True, text=True)
+            logging.info(f"Rscript output for gene {gene}: {result.stdout}")
         except subprocess.CalledProcessError as e:
             logging.error(f"Rscript failed for gene {gene}: {e.stderr}")
             raise
