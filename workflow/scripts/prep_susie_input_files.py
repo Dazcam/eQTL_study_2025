@@ -10,6 +10,7 @@ import numpy as np
 import os
 import logging
 from multiprocessing import Pool
+import subprocess
 
 # Configure logging to write only to Snakemake's log file
 logging.basicConfig(
@@ -102,13 +103,44 @@ def extract_data_for_gene(row):
         expr_vector = expr_vector[expr_idx]
         covar_subset = covar_matrix[covar_idx, :]
         
-        # Save data for SuSiE
-        np.savez(f"{output_prefix}_data.npz", X=geno_mat, y=expr_vector, Z=covar_subset, variants=bim.to_numpy())
-        
+        # Save data as RDS for SuSiE
+        rds_file = f"{output_prefix}_data.rds"
+        temp_geno = f"temp_geno_{gene}.tsv"
+        temp_expr = f"temp_expr_{gene}.tsv"
+        temp_covar = f"temp_covar_{gene}.tsv"
+        temp_variants = f"temp_variants_{gene}.tsv"
+        temp_r_script = f"temp_r_{gene}.R"
+
+        # Save temporary TSVs
+        pd.DataFrame(geno_mat).to_csv(temp_geno, sep="\t", index=False, header=False)
+        pd.Series(expr_vector).to_csv(temp_expr, sep="\t", index=False, header=False)
+        pd.DataFrame(covar_subset).to_csv(temp_covar, sep="\t", index=False, header=False)
+        bim.to_csv(temp_variants, sep="\t", index=False, header=True)
+
+        # Generate RDS with R script
+        r_script = f"""
+        library(tibble)
+        data <- list(
+        X = as.matrix(read.table('{temp_geno}')),
+        y = as.numeric(read.table('{temp_expr}')$V1),
+        Z = as.matrix(read.table('{temp_covar}')),
+        variants = read.table('{temp_variants}', header=TRUE)
+        )
+        saveRDS(data, '{rds_file}')
+        """
+        with open(temp_r_script, "w") as f:
+            f.write(r_script)
+        subprocess.run(["Rscript", temp_r_script], check=True)  
+
         # Clean up temporary files
+        for temp_file in [temp_geno, temp_expr, temp_covar, temp_variants, temp_r_script]:
+            try:
+                os.remove(temp_file)
+            except FileNotFoundError:
+                pass
         for ext in [".traw", ".bed", ".bim", ".fam", ".log"]:
             try:
-                os.remove(f"{output_prefix}{ext}")
+                os.remove(f"{output_dir}{ext}")
             except FileNotFoundError:
                 pass
         
