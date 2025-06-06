@@ -4,10 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 
-## Load libraries and variables -------------------------------------------------------
-library(tidyverse)
-library(biomaRt)
-
+## Set up logging for smk  ------------------------------------------------------------
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") & length(snakemake@log) != 0) {
@@ -21,6 +18,10 @@ log_smk()
 message('\n\nCreating the gene metadata file for all genes in GeX bed file  ...')
 gex_file <- snakemake@input[[1]]
 out_file <- snakemake@output[[1]]
+
+## Load libraries and variables -------------------------------------------------------
+library(tidyverse)
+library(biomaRt)
 
 # Load gex results from cell-specific pseudobulk file
 message("Loading gene expression file ...\n")
@@ -55,7 +56,7 @@ message(nrow(tss_tbl), " distinct genes remain after running BiomaRt ...")
 
 # Save the annotated cis-windows
 message("Writing tsv file ...")
-tss_info %>%
+tss_tbl %>%
   dplyr::select(phenotype_id, group_id, gene_id, chromosome, phenotype_pos, strand) %>%
   write_tsv(out_file)
 
