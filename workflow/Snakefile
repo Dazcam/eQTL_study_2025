@@ -54,5 +54,9 @@ rule all:
 #        "../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log", 
 #        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
 #        "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
-        expand("../results/05SLDSR/eGenes_fdr_0.05/{cell_type}/{cell_type}_eGenes_fdr_0.05.tsv", cell_type = config["cell_types"]),
-        expand("../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done", cell_type = config["cell_types"])
+        expand("../results/05SLDSR/susie_input/{cell_type}_gene_meta.tsv", cell_type = config["cell_types"]),
+#        expand("../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done", cell_type = config["cell_types"])
+        "../results/05SLDSR/susie_input/chrALL_final.filt.dose.tsv.gz",
+        expand("../results/05SLDSR/susie_input/{cell_type}_tmm_susie_ready.bed", cell_type = config["cell_types"]),
+        expand("../results/05SLDSR/susie_input/{cell_type}_covariates_susie_ready.txt", cell_type = config["cell_types"]),
+        expand("../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt", cell_type = config["cell_types"])
