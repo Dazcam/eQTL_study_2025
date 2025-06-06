@@ -1,10 +1,8 @@
 #--------------------------------------------------------------------------------------
 #
-#    Extract sig. eGenes with cis window
+#    Create gene metadata file for run_susie.R
 #
 #--------------------------------------------------------------------------------------
-
-# Note that this is not required to run_susie R, but will be needed elsewhere
 
 ## Load libraries and variables -------------------------------------------------------
 library(tidyverse)
@@ -20,20 +18,18 @@ if (exists("snakemake")) {
   }
 }
 log_smk()
-message('\n\nExtracting table of sig. eGenes with cis-window ...')
-eqtl_file <- snakemake@input[[1]]
+message('\n\nCreateing the gene metadata file for all genes in GeX bed file  ...')
+gex_file <- snakemake@input[[1]]
 out_file <- snakemake@output[[1]]
 
-# Load eQTL results from tensorQTL output
-message("Loading eQTL file ...")
-eqtl_data <- read_tsv(eqtl_file)
+# Load gex results from tensorQTL output
+message("Loading gene expression file ...")
+gex_data <- read_tsv(gex_file)
 
 # Extract unique genes with q-value < 0.05
 message("Extract genes @ FDR < 0.05 ...")
-sig_genes <- eqtl_data %>%
-  filter(qval < 0.05) %>%
-  distinct(phenotype_id) %>%
-  pull(phenotype_id)
+sig_genes <- gex_data %>%
+  pull(TargetID)
 
 # Connect to Ensembl (hg38) using biomaRt
 message("Use biomaRt to get gene window cordinates for ", length(sig_genes), " sig. eGenes on hg38 ...")
