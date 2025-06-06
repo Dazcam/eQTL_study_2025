@@ -51,7 +51,7 @@ tss_tbl <- getBM(
     phenotype_pos = if_else(strand == 1, start_position, end_position),
     strand = strand
   ) %>%
-  distinct(phenotype_id)
+  distinct()
 message(nrow(tss_tbl), " distinct genes remain after running BiomaRt ...")
 
 # Save the annotated cis-windows
