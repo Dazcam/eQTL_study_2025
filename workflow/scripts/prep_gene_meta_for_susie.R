@@ -18,21 +18,20 @@ if (exists("snakemake")) {
   }
 }
 log_smk()
-message('\n\nCreateing the gene metadata file for all genes in GeX bed file  ...')
+message('\n\nCreating the gene metadata file for all genes in GeX bed file  ...')
 gex_file <- snakemake@input[[1]]
 out_file <- snakemake@output[[1]]
 
-# Load gex results from tensorQTL output
-message("Loading gene expression file ...")
+# Load gex results from cell-specific pseudobulk file
+message("Loading gene expression file ...\n")
 gex_data <- read_tsv(gex_file)
 
-# Extract unique genes with q-value < 0.05
-message("Extract genes @ FDR < 0.05 ...")
+message("\nPulling out Ensembl IDs ...")
 sig_genes <- gex_data %>%
   pull(TargetID)
 
 # Connect to Ensembl (hg38) using biomaRt
-message("Use biomaRt to get gene window cordinates for ", length(sig_genes), " sig. eGenes on hg38 ...")
+message("Use biomaRt to get TSS and for ", length(sig_genes), " genes ...")
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 
 # Fetch TSS information for significant genes
@@ -50,7 +49,9 @@ tss_info <- getBM(
     chromosome = chromosome_name,
     phenotype_pos = if_else(strand == 1, start_position, end_position),
     strand = strand
-  )
+  ) %>%
+  distinct(phenotype_id)
+message(nrow(tss_tbl), " distinct genes remain after running BiomaRt ...")
 
 # Save the annotated cis-windows
 message("Writing tsv file ...")
