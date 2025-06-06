@@ -92,15 +92,31 @@ containers:
   tensorqtl: ../resources/containers/tensorqtl.sif
   genotype-qc2hrc: ../resources/containers/genotype-qc2hrc_latest.sif 
   R: ../resources/containers/seurat5f.sif  
-
+  susie: ../resources/containers/susier_v24.01.1.sif
 
 slsdr:
-  get_sig_eGenes:
-    output: ../results/05SLDSR/eGenes_fdr_0.05/{cell_type}/{cell_type}_eGenes_fdr_0.05.tsv
-    log: ../results/00LOG/05SLDSR/get_sig_eGenes_{cell_type}.log
+#  get_sig_eGenes:
+#    output: ../results/05SLDSR/eGenes_fdr_0.05/{cell_type}/{cell_type}_eGenes_fdr_0.05.tsv
+#    log: ../results/00LOG/05SLDSR/get_sig_eGenes_{cell_type}.log
+
+  prep_susie_gene_meta:
+    output: ../results/05SLDSR/susie_input/{cell_type}_gene_meta.tsv
+    log: ../results/00LOG/05SLDSR/prep_susie_gene_meta_{cell_type}.log
+
+  vcf_to_dosage:
+    out_dosage: ../results/05SLDSR/susie_input/chrALL_final.filt.dose.tsv.gz
+    out_idx: ../results/05SLDSR/susie_input/chrALL_final.filt.dose.tsv.gz.tbi
+    log: ../results/00LOG/05SLDSR/vcf_to_dosage.log   
+
   prep_susie_input:
-    output: ../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done
+    out_exp: ../results/05SLDSR/susie_input/{cell_type}_tmm_susie_ready.bed
+    out_covar: ../results/05SLDSR/susie_input/{cell_type}_covariates_susie_ready.txt
+    out_samp_lst: ../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt
     log: ../results/00LOG/05SLDSR/prep_susie_input_{cell_type}.log
+ 
+#  prep_susie_input:
+#    output: ../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done
+#    log: ../results/00LOG/05SLDSR/prep_susie_input_{cell_type}.log
 
 plot_qtl:
   run: True  
