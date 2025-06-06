@@ -35,7 +35,7 @@ message("Use biomaRt to get TSS and for ", length(sig_genes), " genes ...")
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 
 # Fetch TSS information for significant genes
-tss_info <- getBM(
+tss_tbl <- getBM(
   attributes = c("ensembl_gene_id", "chromosome_name", "start_position", "end_position", "strand"),
   filters = "ensembl_gene_id",
   values = sig_genes,
