@@ -30,8 +30,8 @@ option_list <- list(
                         help="Cis distance in bases from center of gene. [default \"%default\"]", metavar = "number"),
   optparse::make_option(c("--chunk"), type="character", default="1 1", 
                         help="Perform analysis in chunks. Eg value 5 10 would indicate that phenotypes are split into 10 chunks and the 5th one of those will be processed. [default \"%default\"]", metavar = "type"),
-  optparse::make_option(c("--eqtlutils"), type="character", default=NULL,
-              help="Optional path to the eQTLUtils R package location. If not specified then eQTLUtils is assumed to be installed in the container. [default \"%default\"]", metavar = "type"),
+#  optparse::make_option(c("--eqtlutils"), type="character", default=NULL,
+#              help="Optional path to the eQTLUtils R package location. If not specified then eQTLUtils is assumed to be installed in the container. [default \"%default\"]", metavar = "type"),
   optparse::make_option(c("--write_full_susie"), type="character", default="true",
                         help="If 'true' then full SuSiE output will not be written to disk. Setting this to 'false' will apply credible set connected components based filtering to SuSiE results. [default \"%default\"]", metavar = "type")
 )
@@ -56,12 +56,12 @@ if(FALSE){
 }
 
 #Load eQTLUtils
-if(opt$eqtlutils == "null"){
-  opt$eqtlutils = NULL
-}
-if (!is.null(opt$eqtlutils)){
-  devtools::load_all(opt$eqtlutils)
-}
+#if(opt$eqtlutils == "null"){
+#  opt$eqtlutils = NULL
+#}
+#if (!is.null(opt$eqtlutils)){
+#  devtools::load_all(opt$eqtlutils)
+#}
 
 #Set character parameters to boolean
 opt$write_full_susie = as.logical(opt$write_full_susie)
@@ -319,18 +319,46 @@ exclude_cov = apply(covariates_matrix, 2, sd) != 0
 covariates_matrix = covariates_matrix[,exclude_cov]
 
 #Import list of phenotypes for finemapping
-phenotype_table = importQtlmapPermutedPvalues(opt$phenotype_list)
-filtered_list = dplyr::filter(phenotype_table, p_fdr < 0.01)
-phenotype_list = dplyr::semi_join(phenotype_meta, filtered_list, by = "group_id")
+#phenotype_table = importQtlmapPermutedPvalues(opt$phenotype_list)
+phenotype_table = read_tsv(opt$phenotype_list) # TensorQTL automatically calcs qvals
+#filtered_list = dplyr::filter(phenotype_table, p_fdr < 0.05) # Changed from 0.01 to 0.05 (should probs add to shell script as param)
+filtered_list = dplyr::filter(phenotype_table, qval < 0.05)
+
+#phenotype_list = dplyr::semi_join(phenotype_meta, filtered_list, by = "group_id")
+#phenotype_list = dplyr::semi_join(phenotype_meta, filtered_list, by = join_by("group_id" == "phenotype_id")) # TensorQTL output different
+phenotype_list = dplyr::semi_join(phenotype_meta, filtered_list, by = c("group_id" = "phenotype_id")) # No join_by() in dplyr 1.0.8 
+
 message("Number of phenotypes included for analysis: ", nrow(phenotype_list))
 
 #Keep only those phenotypes that are present in the expression matrix
 phenotype_list = dplyr::filter(phenotype_list, phenotype_id %in% expression_matrix$phenotype_id)
 
+
+#### I added this #### 
+# Track cell type rather than qtl_group or study_id
+cell_type <- str_extract(basename(opt$expression_matrix), "^[^_]+")
+message("cell_type is set to: ", cell_type)
+
+#eQTLUtils::makeSummarizedExperimentFromCountMatrix doesn't work unless the additional cols are added
+# NAs for now may add metadata later
+# What is genotype_id? Set it to sample ID as genotype is used later
+# Error in covariates[gene_vector$genotype_id, ] : subscript out of bounds
+# Calls: <Anonymous> ... finemapPhenotype -> cbind -> standardGeneric -> eval -> eval -> eval
+if (!is.data.frame(sample_metadata)) {
+  sample_metadata <- data.frame(sample_id = sample_metadata, stringsAsFactors = FALSE)
+}
+sample_metadata$genotype_id <- sample_metadata$sample_id  
+sample_metadata$qtl_group <- cell_type  # Match test data
+sample_metadata$sex <- NA_character_
+str(sample_metadata)
+####
+
+
 #Set parameters
 cis_distance = opt$cisdistance
 genotype_file = opt$genotype_matrix
-study_id = sample_metadata$study[1]
+#study_id = sample_metadata$study[1] # Track cell type as study_id
+study_id = cell_type
 
 #Make a SummarizedExperiment of the expression data
 se = eQTLUtils::makeSummarizedExperimentFromCountMatrix(assay = expression_matrix, 
