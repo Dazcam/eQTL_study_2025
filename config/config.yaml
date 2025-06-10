@@ -14,6 +14,10 @@ cell_types:
 #  - "Endo-Peri"
 #  - "MG"
 
+susie_window: 1000000
+susie_batches: 25
+write_full_susie: TRUE
+
 scanpy:
   qc:
     input: 
@@ -95,9 +99,9 @@ containers:
   susie: ../resources/containers/susier_v24.01.1.sif
 
 slsdr:
-#  get_sig_eGenes:
-#    output: ../results/05SLDSR/eGenes_fdr_0.05/{cell_type}/{cell_type}_eGenes_fdr_0.05.tsv
-#    log: ../results/00LOG/05SLDSR/get_sig_eGenes_{cell_type}.log
+  get_sig_eGenes:
+    output: ../results/05SLDSR/susie_input/{cell_type}_eGenes_fdr_0.05.tsv
+    log: ../results/00LOG/05SLDSR/get_sig_eGenes_{cell_type}.log
 
   prep_susie_gene_meta:
     output: ../results/05SLDSR/susie_input/{cell_type}_gene_meta.tsv
@@ -113,6 +117,12 @@ slsdr:
     out_covar: ../results/05SLDSR/susie_input/{cell_type}_covariates_susie_ready.txt
     out_samp_lst: ../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt
     log: ../results/00LOG/05SLDSR/prep_susie_input_{cell_type}.log
+
+  run_susie:
+    cs_hp_out: ../results/05SLDSR/susie/{cell_type}.{batch_index}_{susie_batches}.susie.cred.hp.txt
+    cs_out: ../results/05SLDSR/susie/{cell_type}.{batch_index}_{susie_batches}.susie.cred.txt
+    snp_out: ../results/05SLDSR/susie/{cell_type}.{batch_index}_{susie_batches}.susie.snp.txt
+    log: ../results/00LOG/05SLDSR/run_susie_{cell_type}_{batch_index}_{susie_batches}.log
  
 #  prep_susie_input:
 #    output: ../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done

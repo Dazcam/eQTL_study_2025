@@ -55,8 +55,19 @@ rule all:
 #        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
 #        "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
         expand("../results/05SLDSR/susie_input/{cell_type}_gene_meta.tsv", cell_type = config["cell_types"]),
-#        expand("../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done", cell_type = config["cell_types"])
+        expand("../results/05SLDSR/susie_input/{cell_type}_eGenes_fdr_0.05.tsv", cell_type = config["cell_types"]), 
+#        expand("../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done", cell_type = config["cell_types"]),
         "../results/05SLDSR/susie_input/chrALL_final.filt.dose.tsv.gz",
         expand("../results/05SLDSR/susie_input/{cell_type}_tmm_susie_ready.bed", cell_type = config["cell_types"]),
         expand("../results/05SLDSR/susie_input/{cell_type}_covariates_susie_ready.txt", cell_type = config["cell_types"]),
-        expand("../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt", cell_type = config["cell_types"])
+        expand("../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt", cell_type = config["cell_types"]),
+        expand(
+            [
+                config["slsdr"]["run_susie"]["cs_output"],
+                config["slsdr"]["run_susie"]["lbf_output"],
+                config["slsdr"]["run_susie"]["full_output"]
+            ],
+            cell_type=config["cell_types"],
+            batch_index=range(1, config["susie_batches"] + 1),
+            susie_batches=config["susie_batches"]
+        )

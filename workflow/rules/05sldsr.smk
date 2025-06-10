@@ -1,12 +1,12 @@
 localrules: prep_susie_gene_meta
 
 # This rul is not required for susie but will be useful elsewhere (maybe qtl smk)
-#rule get_sig_eGenes:
-#    input:  config["output_files"]["tensorqtl_perm_output"]
-#    output: config["slsdr"]["get_sig_eGenes"]["output"]
-#    singularity: config["containers"]["R"]
-#    log:    config["slsdr"]["get_sig_eGenes"]["log"]
-#    script: "../scripts/get_sig_egenes_with_cis_window.R"
+rule get_sig_eGenes:
+    input:  config["output_files"]["tensorqtl_perm_output"]
+    output: config["slsdr"]["get_sig_eGenes"]["output"]
+    singularity: config["containers"]["R"]
+    log:    config["slsdr"]["get_sig_eGenes"]["log"]
+    script: "../scripts/get_sig_egenes.R"
 
 rule prep_susie_gene_meta:
     input:  config["input_files"]["counts"]
@@ -22,22 +22,21 @@ rule vcf_to_dosage:
     envmodules: "bcftools","htslib"
     log:    config["slsdr"]["vcf_to_dosage"]["log"]
     shell: """
-           # Extract the static header columns
-           printf "CHROM\\tPOS\\tREF\\tALT\\t" > header_static.tsv
+           # Extract sample IDs into a single tab-separated line
+           bcftools query -l {input} | paste -sd '\t' - > header_samples.tsv
 
-           # Extract sample IDs and paste onto the header line
-           bcftools query -l {input} | paste -sd '\\t' - >> header_static.tsv
+           # Create header with CHROM POS REF ALT followed by sample IDs
+           echo -e "CHROM\tPOS\tREF\tALT\t$(cat header_samples.tsv)" > header.tsv
 
-           # Transpose into a single header line
-           tr '\\n' '\\t' < header_static.tsv | sed 's/\\t$//' | gzip > header_row.tsv.gz
+           # Extract dosage matrix, remove 'chr' prefix
+           bcftools query -f '%CHROM\t%POS\t%REF\t%ALT[\t%DS]\n' {input} | sed 's/^chr//' > dose_matrix.tsv
 
-           # Extract dosage matrix
-           bcftools query -f "%CHROM\\t%POS\\t%REF\\t%ALT[\\t%DS]\\n" {input} | gzip > dose_matrix.tsv.gz
-
-           # Combine header and dosage, compress, and index
-           zcat header_row.tsv.gz dose_matrix.tsv.gz | bgzip > {output.dosage}
+           # Combine header and dosage matrix, compress, and index
+           cat header.tsv dose_matrix.tsv | bgzip > {output.dosage}
            tabix -s1 -b2 -e2 -S1 {output.dosage}
-           rm header_static.tsv header_row.tsv.gz dose_matrix.tsv.gz
+
+           # Clean up
+           rm header_samples.tsv header.tsv dose_matrix.tsv
            """
 
 rule prep_susie_input: 
@@ -53,25 +52,35 @@ rule prep_susie_input:
            (echo "sample_id"; cat {input.exp_bed} | head -1 | cut -f5- | tr '\\t' '\\n') > {output.samp_lst}
            """
 
+#    input:  exp_mat = "testdata/GEUVADIS_cqn.tsv",
+#            gene_meta = "testdata/GEUVADIS_phenotype_metadata.tsv",
+#            smpl_lst = "testdata/GEUVADIS_sample_metadata.tsv",
+#            eqt_to_test = "testdata/susie_debug/GEUVADIS_test_ge.permuted.tsv.gz",
+#            covar = "testdata/susie_debug/GEUVADIS_test_ge.covariates.txt",
+#            geno_mat  = "testdata/susie_debug/LCL.dose.tsv.gz",
+
+
 rule run_susie:
     input:  exp_mat = rules.prep_susie_input.output.exp_bed,
             gene_meta = rules.prep_susie_gene_meta.output,
-            samp_lst = rules.prep_susie_input.output.samp_lst,
-            eqt_to_test = rules.prep_susie_input.output.exp_bed,
+            smpl_lst = rules.prep_susie_input.output.samp_lst,
+            eqt_to_test = config["output_files"]["tensorqtl_perm_output"],
             covar = rules.prep_susie_input.output.covar,
             geno_mat  = rules.vcf_to_dosage.output.dosage,
             geno_idx   = rules.vcf_to_dosage.output.idx
     output: cs_variant = config["slsdr"]["run_susie"]["cs_output"],
             lbf_variable = config["slsdr"]["run_susie"]["lbf_output"],
             full_susie = config["slsdr"]["run_susie"]["full_output"]
-    params: chunk           = lambda wildcards: f"{wildcards.batch_index} {config['n_batches']}",
-            out_prefix      = lambda wildcards: f"{wildcards.qtl_subset}.{wildcards.batch_index}_{config['n_batches']}",
-            cis_window      = config["cis_window"],
-            write_full      = config["write_full_susie"]
+    params: chunk = lambda wildcards: f"{wildcards.batch_index} {config['susie_batches']}",
+            out_prefix = lambda wildcards: f"../results/05SLDSR/susie/{wildcards.cell_type}.{wildcards.batch_index}_{config['susie_batches']}",
+            cis_window = config["susie_window"],
+            write_full = config["write_full_susie"]
     singularity: config["containers"]["susie"]
     log:    config["slsdr"]["run_susie"]["log"]
     shell:  """
-            Rscript bin/run_susie.R \
+            set -euo pipefail
+            echo "Running run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" > {log}
+            Rscript scripts/run_susie.R \
               --expression_matrix {input.exp_mat} \
               --phenotype_meta {input.gene_meta} \
               --sample_meta {input.smpl_lst} \
@@ -81,8 +90,9 @@ rule run_susie:
               --chunk '{params.chunk}' \
               --cisdistance {params.cis_window} \
               --out_prefix '{params.out_prefix}' \
-              --eqtlutils null \
-              --write_full_susie {params.write_full}
+              --write_full_susie {params.write_full} \
+              >> {log} 2>&1
+            echo "Completed run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" >> {log} 
             """
 
 #rule prep_susie_input:
