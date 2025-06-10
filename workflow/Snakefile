@@ -63,11 +63,13 @@ rule all:
         expand("../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt", cell_type = config["cell_types"]),
         expand(
             [
-                config["slsdr"]["run_susie"]["cs_output"],
-                config["slsdr"]["run_susie"]["lbf_output"],
-                config["slsdr"]["run_susie"]["full_output"]
+                config["slsdr"]["run_susie"]["cs_hp_out"],
+                config["slsdr"]["run_susie"]["cs_out"],
+                config["slsdr"]["run_susie"]["snp_out"]
             ],
             cell_type=config["cell_types"],
             batch_index=range(1, config["susie_batches"] + 1),
             susie_batches=config["susie_batches"]
-        )
+        ), 
+        expand(config["slsdr"]["merge_susie"]["output"], cell_type=config["cell_types"], susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"]),
+        expand(config["slsdr"]["sort_susie"]["output"], cell_type=config["cell_types"])

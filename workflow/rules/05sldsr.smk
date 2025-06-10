@@ -68,11 +68,11 @@ rule run_susie:
             covar = rules.prep_susie_input.output.covar,
             geno_mat  = rules.vcf_to_dosage.output.dosage,
             geno_idx   = rules.vcf_to_dosage.output.idx
-    output: cs_variant = config["slsdr"]["run_susie"]["cs_output"],
-            lbf_variable = config["slsdr"]["run_susie"]["lbf_output"],
-            full_susie = config["slsdr"]["run_susie"]["full_output"]
+    output: cs_hp_out = config["slsdr"]["run_susie"]["cs_hp_out"],
+            cs_out = config["slsdr"]["run_susie"]["cs_out"],
+            snp_out = config["slsdr"]["run_susie"]["snp_out"]
     params: chunk = lambda wildcards: f"{wildcards.batch_index} {config['susie_batches']}",
-            out_prefix = lambda wildcards: f"../results/05SLDSR/susie/{wildcards.cell_type}.{wildcards.batch_index}_{config['susie_batches']}",
+            out_prefix = lambda wildcards: f"../results/05SLDSR/susie/{wildcards.cell_type}/{wildcards.cell_type}.{wildcards.batch_index}_{config['susie_batches']}.susie",
             cis_window = config["susie_window"],
             write_full = config["write_full_susie"]
     singularity: config["containers"]["susie"]
@@ -95,14 +95,57 @@ rule run_susie:
             echo "Completed run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" >> {log} 
             """
 
-#rule prep_susie_input:
-#    input:  sig_eGenes = config["slsdr"]["get_sig_eGenes"]["output"],
-#            pseudobulk = config["input_files"]["counts"],
-#            genotypes = config["output_files"]["genotypes_plink"],
-#            covariates = config["input_files"]["covariates"] 
-#    output: config["slsdr"]["prep_susie_input"]["output"]
-#    envmodules: "plink/2.0", "R/3.5.1"
-#    resources: threads = 8, mem_mb = 64000, time="1:00:00"
-#    message: "Generating input files for SuSIE for all sig eGenes"
-#    log:    config["slsdr"]["prep_susie_input"]["log"]
-#    script: "../scripts/prep_susie_input_files.py"
+rule merge_susie:
+    input:
+        lambda wildcards: expand(
+            "../results/05SLDSR/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.{susie_suffix}",
+            cell_type=wildcards.cell_type,
+            batch_index=range(1, config["susie_batches"] + 1),
+            susie_batches=config["susie_batches"],
+            susie_suffix=wildcards.susie_suffix
+        )    
+    output: config["slsdr"]["merge_susie"]["output"]
+    log:    config["slsdr"]["merge_susie"]["log"]
+    shell:  """
+            set -euo pipefail
+            echo "Merging SuSiE {wildcards.susie_suffix} for {wildcards.cell_type}" > {log}
+            awk 'NR==1 || FNR>1{{print}}' {input} | bgzip -c > {output}
+            echo "Completed merge of SuSiE {wildcards.susie_suffix} for {wildcards.cell_type}" >> {log}
+            """
+ 
+rule sort_susie:
+    input: 
+        expand(config["slsdr"]["merge_susie"]["output"], 
+            cell_type=config["cell_types"], 
+            susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"])
+    output: config["slsdr"]["sort_susie"]["output"],
+    envmodules: "htslib/1.9"
+    log:    config["slsdr"]["sort_susie"]["log"]
+    shell:
+            """
+            set -euo pipefail
+            echo "Sorting SuSiE files for {wildcards.cell_type}" > {log}
+            gunzip -c {input[0]} > {wildcards.cell_type}_temp.txt
+            (head -n 1 {wildcards.cell_type}_temp.txt && tail -n +2 {wildcards.cell_type}_temp.txt | sort -k3 -k4n) | bgzip > {output}
+            rm {wildcards.cell_type}_temp.txt
+            echo "Completed sorting SuSiE files for {wildcards.cell_type}" >> {log}
+            """
+
+rule make_annot_maxCPP:
+    input:
+        susie="/u/project/gandalm/cindywen/isoform_twas/eqtl_new/results/susie_finemap/mixed/mixed_ciseqtl_90hcp_perm_purity_filtered.txt.gz",
+        bim="/u/project/gandalm/shared/apps/ldsc/LDSCORE/1000G_EUR_Phase3_plink/1000G.EUR.QC.{chr_num}.bim",
+    output:
+        "/u/project/gandalm/cindywen/isoform_twas/sLDSC/annot/mixed_eqtl_maxCPP.{chr_num}.annot.gz",
+    params:
+        out="/u/project/gandalm/cindywen/isoform_twas/sLDSC/annot/mixed_eqtl_maxCPP.{chr_num}.annot",
+    shell:
+        """
+        . /u/local/Modules/default/init/modules.sh
+        module load R/4.1.0-BIO
+        Rscript scripts/make_annot_maxcpp.R \
+            --susie {input.susie} \
+            --bim {input.bim} \
+            --annot {params.out}
+        gzip {params.out}
+        """

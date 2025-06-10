@@ -119,11 +119,19 @@ slsdr:
     log: ../results/00LOG/05SLDSR/prep_susie_input_{cell_type}.log
 
   run_susie:
-    cs_hp_out: ../results/05SLDSR/susie/{cell_type}.{batch_index}_{susie_batches}.susie.cred.hp.txt
-    cs_out: ../results/05SLDSR/susie/{cell_type}.{batch_index}_{susie_batches}.susie.cred.txt
-    snp_out: ../results/05SLDSR/susie/{cell_type}.{batch_index}_{susie_batches}.susie.snp.txt
+    cs_hp_out: ../results/05SLDSR/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.cred.hp.txt
+    cs_out: ../results/05SLDSR/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.cred.txt
+    snp_out: ../results/05SLDSR/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.snp.txt
     log: ../results/00LOG/05SLDSR/run_susie_{cell_type}_{batch_index}_{susie_batches}.log
- 
+
+  merge_susie:
+    output: ../results/05SLDSR/susie/{cell_type}/{cell_type}.mrgd.susie.{susie_suffix}.gz
+    log: ../results/00LOG/05SLDSR/merge_susie_{cell_type}_{susie_suffix}.log
+
+  sort_susie:
+    output: ../results/05SLDSR/susie/{cell_type}/{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz
+    log: ../results/00LOG/05SLDSR/sort_susie_{cell_type}.log
+
 #  prep_susie_input:
 #    output: ../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done
 #    log: ../results/00LOG/05SLDSR/prep_susie_input_{cell_type}.log
