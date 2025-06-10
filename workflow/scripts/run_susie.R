@@ -38,42 +38,41 @@ option_list <- list(
 
 opt <- optparse::parse_args(optparse::OptionParser(option_list=option_list))
 
-#Debugging
-if(FALSE){
-  opt = list(phenotype_list = "testdata/susie_debug/GEUVADIS_test_ge.permuted.tsv.gz",
-             cisdistance = 500000,
-             genotype_matrix = "testdata/susie_debug/LCL.dose.tsv.gz",
-             covariates = "testdata/susie_debug/GEUVADIS_test_ge.covariates.txt",
-             expression_matrix = "testdata/GEUVADIS_cqn.tsv",
-             sample_meta = "testdata/GEUVADIS_sample_metadata.tsv",
-             phenotype_meta = "testdata/GEUVADIS_phenotype_metadata.tsv",
-             chunk = "3 25",
-             out_prefix = "./finemapping_output",
-             eqtlutils = "../eQTLUtils/",
-             qtl_group = "LCL",
-             write_full_susie = "true"
-  )
-}
-
-#Load eQTLUtils
-#if(opt$eqtlutils == "null"){
-#  opt$eqtlutils = NULL
-#}
-#if (!is.null(opt$eqtlutils)){
-#  devtools::load_all(opt$eqtlutils)
-#}
-
-#Set character parameters to boolean
-opt$write_full_susie = as.logical(opt$write_full_susie)
-
 #Print all options
 print(opt)
 
-#Define helper functions
+#### Local testing  -----
+# test_data <- FALSE  # Set to FALSE for real data
+# 
+# if (test_data) {
+#   root <- "~/Desktop/test/susie_test"
+#   exp_mat     <- file.path(root, "GEUVADIS_cqn.tsv")
+#   gene_meta   <- file.path(root, "GEUVADIS_phenotype_metadata.tsv")
+#   smpl_lst    <- file.path(root, "GEUVADIS_sample_metadata.tsv")
+#   eqtl_to_test <- file.path(root, "GEUVADIS_test_ge.permuted.tsv.gz")
+#   covar       <- file.path(root, "GEUVADIS_test_ge.covariates.txt")
+#   geno_mat    <- file.path(root, "LCL.dose.tsv.gz")
+# } else {
+#   root <- "~/Desktop/test/susie_test"
+#   exp_mat     <- file.path(root, "ExN-1_tmm_susie_ready.bed")
+#   gene_meta   <- file.path(root, "ExN-1_gene_meta.tsv")
+#   smpl_lst    <- file.path(root, "ExN-1_samp_lst_susie_ready.txt")
+#   eqtl_to_test <- file.path(root, "ExN-1_perm.cis_qtl.txt.gz")
+#   covar       <- file.path(root, "ExN-1_covariates_susie_ready.txt")
+#   geno_mat    <- file.path(root, "chrALL_final.filt.dose.tsv.gz")
+# }
+
+#### Helper Functions  ----------
 importQtlmapCovariates <- function(covariates_path){
   pc_matrix = read.table(covariates_path, check.names = F, header = T, stringsAsFactors = F)
+  
+  # Added this. Testdata does not have chracter qualitative covariates
+  pc_matrix[pc_matrix == "M"] <- 0
+  pc_matrix[pc_matrix == "F"] <- 1
+  # Error of colinear cov matrix for male/female eQTL. All sex is 0/1
+  pc_matrix <- pc_matrix[apply(pc_matrix[-1], 1, var) != 0, ]
   pc_transpose = t(pc_matrix[,-1])
-  colnames(pc_transpose) = pc_matrix$SampleID
+  colnames(pc_transpose) = pc_matrix$id
   pc_df = dplyr::mutate(as.data.frame(pc_transpose), genotype_id = rownames(pc_transpose)) %>%
     dplyr::as_tibble() %>% 
     dplyr::select(genotype_id, dplyr::everything())
@@ -84,13 +83,15 @@ importQtlmapCovariates <- function(covariates_path){
   return(pc_matrix)
 }
 
-importQtlmapPermutedPvalues <- function(perm_path){
-  tbl = read.table(perm_path, check.names = F, header = T, stringsAsFactors = F) %>%
-    dplyr::as_tibble() %>%
-    dplyr::mutate(p_fdr = p.adjust(p_beta, method = "fdr")) %>%
-    dplyr::mutate(group_id = molecular_trait_object_id)
-  return(tbl)
-}
+
+# importQtlmapPermutedPvalues <- function(perm_path){
+#   tbl = read.table(perm_path, check.names = F, header = T, stringsAsFactors = F) %>%
+#     dplyr::as_tibble() %>%
+#     dplyr::mutate(p_fdr = p.adjust(p_beta, method = "fdr")) %>%
+#     dplyr::mutate(group_id = molecular_trait_object_id)
+#   return(tbl)
+# }
+
 
 splitIntoBatches <- function(n, batch_size){
   n_batches = ceiling(n/batch_size)
@@ -98,10 +99,11 @@ splitIntoBatches <- function(n, batch_size){
   return(batch_ids)
 }
 
+
 splitIntoChunks <- function(chunk_number, n_chunks, n_total){
-  chunk_size = max(1,floor(n_total/(n_chunks)))
+  chunk_size = floor(n_total/(n_chunks))
   batches = splitIntoBatches(n_total,chunk_size)
-  batches[batches > n_chunks] = seq(from = 1, to = length(batches[batches > n_chunks]))
+  batches[batches > n_chunks] = n_chunks
   selected_batch = batches == chunk_number
   return(selected_batch)
 }
@@ -114,7 +116,7 @@ finemapPhenotype <- function(phenotype_id, se, genotype_file, covariates, cis_di
     dplyr::mutate(phenotype_value_std = qnorm((rank(phenotype_value, na.last = "keep") - 0.5) / sum(!is.na(phenotype_value))))
   selected_phenotype = phenotype_id
   gene_meta = dplyr::filter(SummarizedExperiment::rowData(se) %>% as.data.frame(), phenotype_id == selected_phenotype)
-
+  
   #Rearrange samples in the covariates matrix
   covariates_matrix = cbind(covariates[gene_vector$genotype_id,], 1)
   
@@ -124,7 +126,7 @@ finemapPhenotype <- function(phenotype_id, se, genotype_file, covariates, cis_di
     start = gene_meta$phenotype_pos - cis_distance, 
     end = gene_meta$phenotype_pos + cis_distance, 
     dosage_file = genotype_file)
-
+  
   #Residualise gene expression and genotype matrix
   hat = diag(nrow(covariates_matrix)) - covariates_matrix %*% solve(crossprod(covariates_matrix)) %*% t(covariates_matrix)
   expression_vector = hat %*% gene_vector$phenotype_value_std
@@ -133,11 +135,8 @@ finemapPhenotype <- function(phenotype_id, se, genotype_file, covariates, cis_di
   gt_matrix = genotype_matrix[,names(expression_vector)]
   
   #Exclude variants with no alternative alleles
-  gt_matrix = gt_matrix[rowSums(round(gt_matrix,0), na.rm = TRUE) != 0,]
+  gt_matrix = gt_matrix[rowSums(round(gt_matrix,0)) != 0,]
   
-  #Replace missing values with row means
-  gt_matrix = t(gt_matrix) %>% zoo::na.aggregate() %>% t()
-
   #Standardise genotypes
   gt_std = t(gt_matrix - apply(gt_matrix, 1, mean))
   gt_hat = hat %*% gt_std
@@ -150,9 +149,42 @@ finemapPhenotype <- function(phenotype_id, se, genotype_file, covariates, cis_di
                           scaled_prior_variance = 0.1,
                           verbose = TRUE,
                           compute_univariate_zscore = TRUE,
-                          min_abs_corr = 0.5)
+                          min_abs_corr = 0)
   fitted$variant_id = rownames(gt_matrix)
   return(fitted)
+}
+
+# Reported issue for susieR:susie_get_posterior_mean/sd  when include_idx is a single number, i.e. only one causal variant detected
+susie_get_posterior_mean_custom = function (res, prior_tol = 1e-9) {
+  
+  # Drop the single-effects with estimated prior of zero.
+  if (is.numeric(res$V))
+    include_idx = which(res$V > prior_tol)
+  else
+    include_idx = 1:nrow(res$alpha)
+  
+  # Now extract relevant rows from alpha matrix.
+  if (length(include_idx) > 0)
+    return(colSums((res$alpha*res$mu)[include_idx,,drop=FALSE])/
+             res$X_column_scale_factors)
+  else
+    return(numeric(ncol(res$mu)))
+}
+susie_get_posterior_sd_custom = function (res, prior_tol = 1e-9) {
+  
+  # Drop the single-effects with estimated prior of zero.
+  if (is.numeric(res$V))
+    include_idx = which(res$V > prior_tol)
+  else
+    include_idx = 1:nrow(res$alpha)
+  
+  # Now extract relevant rows from alpha matrix.
+  if (length(include_idx) > 0)
+    return(sqrt(colSums((res$alpha * res$mu2 -
+                           (res$alpha*res$mu)^2)[include_idx,,drop=FALSE]))/
+             (res$X_column_scale_factors))
+  else
+    return(numeric(ncol(res$mu)))
 }
 
 extractResults <- function(susie_object){
@@ -166,10 +198,11 @@ extractResults <- function(susie_object){
       overlapped = NA
     )
   added_variants = c()
+  # overlap checks if CS variants already exist in previous CS
   for (index in seq_along(credible_sets)){
     cs_variants = credible_sets[[index]]
     cs_id = susie_object$sets$cs_index[[index]]
-
+    
     is_overlapped = any(cs_variants %in% added_variants)
     susie_object$sets$purity$overlapped[index] = is_overlapped
     susie_object$sets$purity$cs_size[index] = length(cs_variants)
@@ -181,10 +214,10 @@ extractResults <- function(susie_object){
     }
   }
   df = purrr::map_df(cs_list, identity)
-
+  
   #Extract purity values for all sets
   purity_res = susie_object$sets$purity
-
+  
   #Sometimes all the PIP values are 0 and there are no purity values, then skip this step
   if(nrow(purity_res) > 0){
     purity_df = dplyr::as_tibble(purity_res) %>%
@@ -199,113 +232,35 @@ extractResults <- function(susie_object){
     purity_df = dplyr::tibble()
   }
   
-  #Extract betas and standard errors and lbf_variables
-  mean_vec = susieR::susie_get_posterior_mean(susie_object)
-  sd_vec = susieR::susie_get_posterior_sd(susie_object)
-  
-  #Extract matrices
+  #Extract betas and standard errors
+  # mean_vec = susieR::susie_get_posterior_mean(susie_object)
+  mean_vec = susie_get_posterior_mean_custom(susie_object)
+  # sd_vec = susieR::susie_get_posterior_sd(susie_object)
+  sd_vec = susie_get_posterior_sd_custom(susie_object)
   alpha_mat = t(susie_object$alpha)
   colnames(alpha_mat) = paste0("alpha", seq(ncol(alpha_mat)))
-  
-  mu_mat = t(susie_object$mu)
-  colnames(mu_mat) = paste0("mu_", seq(ncol(mu_mat)))
-  
-  mu2_mat = t(susie_object$mu2)
-  colnames(mu2_mat) = paste0("mu2_", seq(ncol(mu2_mat)))
-  
-  lbf_variable_mat = t(susie_object$lbf_variable)
-  colnames(lbf_variable_mat) = paste0("lbf_variable", seq(ncol(lbf_variable_mat)))
-  
-  posterior_df = dplyr::tibble(variant_id = rownames(alpha_mat), 
-                               #pip = susie_object$pip,
-                               z = susie_object$z[,1],
+  mean_mat = t(susie_object$alpha * susie_object$mu) / susie_object$X_column_scale_factors
+  colnames(mean_mat) = paste0("mean", seq(ncol(mean_mat)))
+  sd_mat = sqrt(t(susie_object$alpha * susie_object$mu2 - (susie_object$alpha * susie_object$mu)^2)) / (susie_object$X_column_scale_factors)
+  colnames(sd_mat) = paste0("sd", seq(ncol(sd_mat)))
+  posterior_df = dplyr::tibble(variant_id = names(mean_vec), 
+                               pip = susie_object$pip,
+                               z = susie_object$z,
                                posterior_mean = mean_vec, 
-                               posterior_sd = sd_vec,
-                               X_column_scale_factors = susie_object$X_column_scale_factors) %>%
-                 dplyr::bind_cols(purrr::map(list(alpha_mat, mu_mat, mu2_mat), dplyr::as_tibble))
-  lbf_df = dplyr::tibble(variant_id = rownames(lbf_variable_mat)) %>%
-    dplyr::bind_cols(dplyr::as_tibble(lbf_variable_mat))
-
-  if(nrow(df) > 0 & nrow(purity_df) > 0 & ncol(lbf_df) > 10){ #ncol(lbf_df) <= 10 only if the number of variants in the region is < 10
+                               posterior_sd = sd_vec) %>%
+    dplyr::bind_cols(purrr::map(list(alpha_mat, mean_mat, sd_mat), dplyr::as_tibble))
+  
+  if(nrow(df) > 0 & nrow(purity_df) > 0){
     cs_df = purity_df
     variant_df = dplyr::left_join(posterior_df, df, by = "variant_id") %>%
       dplyr::left_join(cs_df, by = "cs_id")
   } else{
     cs_df = NULL
     variant_df = NULL
-    lbf_df = NULL
-  }
-
-  return(list(cs_df = cs_df, variant_df = variant_df, lbf_df = lbf_df))
-}
-
-extractPipsFromVariantDf <- function(variant_df){
-  alpha_df = dplyr::select(variant_df, phenotype_id, variant_id, cs_id, cs_index, alpha1:alpha10)
-  #Rename alpha1:alpha10 to L1:L10
-  colnames(alpha_df) = c("phenotype_id", "variant_id", "cs_id","cs_index", "L1","L2","L3","L4", "L5", "L6", "L7", "L8", "L9", "L10")
-  
-  pip_df = dplyr::filter(alpha_df, !is.na(cs_index)) %>% 
-    tidyr::pivot_longer(L1:L10, values_to = "pip") %>% 
-    dplyr::filter(cs_index == name) %>% 
-    dplyr::select(-name)
-  
-  return(pip_df)
-}
-
-make_connected_components_from_cs <- function(susie_all_df, z_threshold = 3, cs_size_threshold = 10) {
-  # Filter the credible sets by Z-score and size
-  susie_filt_all <- susie_all_df %>%
-    dplyr::group_by(group_id) %>%
-    dplyr::mutate(max_abs_z = max(abs(z))) %>%
-    dplyr::filter(max_abs_z > z_threshold, cs_size < cs_size_threshold) %>%
-    dplyr::ungroup()
-  
-  susie_highest_pip_per_cc <- data.frame()
-  
-  uniq_groups = susie_filt_all$group_id %>% base::unique()
-  # make the ranges object in order to find overlaps
-  for (uniq_group in uniq_groups) {
-    susie_filt <- susie_filt_all %>% dplyr::filter(group_id == uniq_group)
-    message("Processing CC of group_id: ", uniq_group)
-
-    cs_ranges = GenomicRanges::GRanges(
-      seqnames = susie_filt$chromosome,
-      ranges = IRanges::IRanges(start = susie_filt$position, end = susie_filt$position),
-      strand = "*",
-      mcols = data.frame(molecular_trait_id = susie_filt$molecular_trait_id, variant_id = susie_filt$variant, group_id = susie_filt$group_id)
-    )
-    
-    # find overlaps and remove the duplicated
-    olaps <- GenomicRanges::findOverlaps(cs_ranges, cs_ranges, ignore.strand = TRUE) %>%
-      GenomicRanges::as.data.frame() %>%
-      dplyr::filter(queryHits <= subjectHits)
-    
-    # change variant sharing into credible set sharing 
-    # not to have multiple connected components of variants but credible sets
-    olaps <- olaps %>% dplyr::mutate(cs_mol_1 = cs_ranges$mcols.molecular_trait_id[queryHits], cs_mol_2 = cs_ranges$mcols.molecular_trait_id[subjectHits])
-    edge_list <- olaps %>% dplyr::select(cs_mol_1, cs_mol_2) %>% BiocGenerics::unique() %>% base::as.matrix()
-    
-    # make the graph of connected components
-    g <- igraph::graph_from_edgelist(edge_list, directed = F)
-    g_cc <- igraph::components(g)
-    
-    # turn connected components graph into data frame
-    cc_df <- data.frame(cc_membership_no = g_cc$membership, 
-                        molecular_trait_id = g_cc$membership %>% names()) 
-    
-    susie_highest_pip_per_cc_temp <- susie_filt %>% 
-      dplyr::left_join(cc_df, by = "molecular_trait_id") %>% 
-      dplyr::group_by(cc_membership_no) %>% 
-      dplyr::arrange(-pip) %>% 
-      dplyr::slice(1) %>% 
-      dplyr::ungroup()
-    
-    susie_highest_pip_per_cc <- susie_highest_pip_per_cc %>% base::rbind(susie_highest_pip_per_cc_temp)
   }
   
-  return(susie_highest_pip_per_cc)
+  return(list(cs_df = cs_df, variant_df = variant_df))
 }
-
 
 
 #Import all files
@@ -315,8 +270,8 @@ phenotype_meta = utils::read.csv(opt$phenotype_meta, sep = "\t", stringsAsFactor
 covariates_matrix = importQtlmapCovariates(opt$covariates)
 
 #Exclude covariates with zero variance
-exclude_cov = apply(covariates_matrix, 2, sd) != 0
-covariates_matrix = covariates_matrix[,exclude_cov]
+#exclude_cov = apply(covariates_matrix, 2, sd) != 0
+#covariates_matrix = covariates_matrix[,exclude_cov]
 
 #Import list of phenotypes for finemapping
 #phenotype_table = importQtlmapPermutedPvalues(opt$phenotype_list)
@@ -367,106 +322,6 @@ se = eQTLUtils::makeSummarizedExperimentFromCountMatrix(assay = expression_matri
                                                          quant_method = "gene_counts",
                                                          reformat = FALSE)
 
-
-#Define empty data frames
-empty_variant_df = dplyr::tibble(
-  molecular_trait_id = character(),
-  variant = character(),
-  chromosome = character(),
-  position = integer(),
-  ref = character(),
-  alt = character(),
-  cs_id = character(),
-  cs_index = character(),
-  low_purity = character(),
-  region = character(),
-  pip = numeric(),
-  z = numeric(),
-  posterior_mean = numeric(),
-  posterior_sd = numeric(),
-  X_column_scale_factors = numeric(),
-  alpha1 = numeric(),
-  alpha2 = numeric(),
-  alpha3 = numeric(),
-  alpha4 = numeric(),
-  alpha5 = numeric(),
-  alpha6 = numeric(),
-  alpha7 = numeric(),
-  alpha8 = numeric(),
-  alpha9 = numeric(),
-  alpha10 = numeric(),
-  mu_1 = numeric(),
-  mu_2 = numeric(),
-  mu_3 = numeric(),
-  mu_4 = numeric(),
-  mu_5 = numeric(),
-  mu_6 = numeric(),
-  mu_7 = numeric(),
-  mu_8 = numeric(),
-  mu_9 = numeric(),
-  mu_10 = numeric(),
-  mu2_1 = numeric(),
-  mu2_2 = numeric(),
-  mu2_3 = numeric(),
-  mu2_4 = numeric(),
-  mu2_5 = numeric(),
-  mu2_6 = numeric(),
-  mu2_7 = numeric(),
-  mu2_8 = numeric(),
-  mu2_9 = numeric(),
-  mu2_10 = numeric()
-)
-
-empty_lbf_df = dplyr::tibble(
-  molecular_trait_id = character(),
-  region = character(),
-  variant = character(),
-  chromosome = character(),
-  position = integer(),
-  lbf_variable1 = numeric(),
-  lbf_variable2 = numeric(),
-  lbf_variable3 = numeric(),
-  lbf_variable4 = numeric(),
-  lbf_variable5 = numeric(),
-  lbf_variable6 = numeric(),
-  lbf_variable7 = numeric(),
-  lbf_variable8 = numeric(),
-  lbf_variable9 = numeric(),
-  lbf_variable10 = numeric()
-)
-
-empty_cs_df = dplyr::tibble(
-  molecular_trait_id = numeric(),
-  cs_id = numeric(),
-  cs_index = numeric(),
-  region = character(),
-  cs_log10bf = numeric(),
-  cs_avg_r2 = numeric(),
-  cs_min_r2 = numeric(),
-  cs_size = numeric(),
-  low_purity = numeric()
-)
-
-empty_in_cs_variant_df = dplyr::tibble(
-  molecular_trait_id = character(),
-  variant = character(),
-  chromosome = character(),
-  position = integer(),
-  ref = character(),
-  alt = character(),
-  cs_id = character(),
-  cs_index = character(),
-  region = character(),
-  pip = numeric(),
-  z = numeric(),
-  cs_min_r2 = numeric(),
-  cs_avg_r2 = numeric(),
-  cs_size = integer(),
-  posterior_mean = numeric(),
-  posterior_sd = numeric(),
-  cs_log10bf = numeric()
-)
-
 #If qtl_group is not specified, then use the first value in the qtl_group column of the sample metadata
 if(is.null(opt$qtl_group)){
   opt$qtl_group = se$qtl_group[1]
@@ -476,134 +331,101 @@ if(is.null(opt$qtl_group)){
 chunk_vector = strsplit(opt$chunk, split = " ") %>% unlist() %>% as.numeric()
 chunk_id = chunk_vector[1]
 n_chunks = chunk_vector[2]
-
-selected_chunk_group = splitIntoChunks(chunk_id, n_chunks, length(unique(phenotype_list$group_id)))
-selected_group_ids = unique(phenotype_list$group_id)[selected_chunk_group]
-
-selected_phenotypes = phenotype_list %>%
-  dplyr::filter(group_id %in% selected_group_ids) %>%
-  dplyr::pull(phenotype_id) %>%
-  setNames(as.list(.), .)
+selected_chunk = splitIntoChunks(chunk_id, n_chunks, length(phenotype_list$phenotype_id))
+selected_phenotypes = phenotype_list$phenotype_id[selected_chunk] %>% setNames(as.list(.), .)
 
 #Only proceed if the there are more than 0 phenotypes
 message("Number of overall unique group_ids: ", length(unique(phenotype_list$group_id)))
-message("Number of groups in the batch: ", length(selected_group_ids))
 message("Number of phenotypes in the batch: ", length(selected_phenotypes))
-if(all(!is.na(selected_phenotypes)) && length(selected_phenotypes) > 0){
-  #Check that the qtl_group is valid and subset
-  assertthat::assert_that(opt$qtl_group %in% unique(se$qtl_group))
-  selected_qtl_group = eQTLUtils::subsetSEByColumnValue(se, "qtl_group", opt$qtl_group)
-  
-  #Apply finemapping to all genes
-  results = purrr::map(selected_phenotypes, ~finemapPhenotype(., selected_qtl_group, 
-                                                              genotype_file, covariates_matrix, cis_distance))
-  
-  #Define fine-mapped regions
-  region_df = dplyr::transmute(phenotype_list, phenotype_id, region = paste0("chr", chromosome, ":", 
-                                                                                        phenotype_pos - cis_distance, "-",
-                                                                                        phenotype_pos + cis_distance))
-  #Extract credible sets from finemapping results
-  message(" # Extract credible sets from finemapping results")
-  res = purrr::map(results, extractResults) %>%
-    purrr::transpose()
-  
-  #Extract information about all variants
-  variant_df <- purrr::map_df(res$variant_df, identity, .id = "phenotype_id")
-  if(nrow(variant_df) > 0){
-    variant_df <- variant_df %>%
-      dplyr::left_join(region_df, by = "phenotype_id") %>%
-      tidyr::separate(variant_id, c("chr", "pos", "ref", "alt"),sep = "_", remove = FALSE) %>%
-      dplyr::mutate(chr = stringr::str_remove_all(chr, "chr")) %>%
-      dplyr::mutate(cs_index = cs_id) %>%
-      dplyr::mutate(cs_id = paste(phenotype_id, cs_index, sep = "_"))
-    pip_df = extractPipsFromVariantDf(variant_df)
-    variant_df = dplyr::left_join(variant_df, pip_df, by = c("phenotype_id", "variant_id", "cs_id", "cs_index"))
-  }
-  
-  #Extract lbf variable df and format correctly for export
-  lbf_df_res <- purrr::map_df(res$lbf_df, identity, .id = "phenotype_id")
-  if(nrow(lbf_df_res) > 0){
-    lbf_df <- lbf_df_res %>%
-      dplyr::left_join(region_df, by = "phenotype_id") %>%
-      tidyr::separate(variant_id, c("chromosome", "position", "ref", "alt"),sep = "_", remove = FALSE) %>%
-      dplyr::mutate(chromosome = stringr::str_remove_all(chromosome, "chr")) %>%
-      dplyr::select(-ref, -alt) %>%
-      dplyr::rename(molecular_trait_id = phenotype_id, variant = variant_id) %>%
-      dplyr::select(molecular_trait_id, region, variant, chromosome, position, lbf_variable1:lbf_variable10)
-    lbf_df <- lbf_df %>% dplyr::mutate(position = as.integer(position))
-  } else {
-    lbf_df = empty_lbf_df
-  }
-  
-  #Extract information about credible sets
-  cs_df <- purrr::map_df(res$cs_df, identity, .id = "phenotype_id")
-} else { #Write empty data frames
-  arrow::write_parquet(empty_in_cs_variant_df, paste0(opt$out_prefix, ".parquet"))
-  arrow::write_parquet(empty_lbf_df, paste0(opt$out_prefix, ".lbf_variable.parquet"))
-  arrow::write_parquet(empty_variant_df, paste0(opt$out_prefix, ".full_susie.parquet"))
-  message("No selected_phenotypes found. Write empty matrices and stop")
-  quit(save = "no", status = 0)
+
+#Check that the qtl_group is valid and subset
+assertthat::assert_that(opt$qtl_group %in% unique(se$qtl_group))
+selected_qtl_group = eQTLUtils::subsetSEByColumnValue(se, "qtl_group", 'ExN-1')
+
+#Apply finemapping to all genes
+results = purrr::map(selected_phenotypes, ~finemapPhenotype(., selected_qtl_group, 
+                                                            genotype_file, covariates_matrix, cis_distance))
+
+#Define fine-mapped regions
+region_df = dplyr::transmute(phenotype_list, phenotype_id, finemapped_region = paste0("chr", chromosome, ":", phenotype_pos - cis_distance, "-", phenotype_pos + cis_distance))
+# message("region df OK!")
+
+#Extract credible sets from finemapping results
+res = purrr::map(results, extractResults) %>%
+  purrr::transpose()
+# message("res OK!")
+
+#Extract information about all variants
+variant_df <- purrr::map_df(res$variant_df, identity, .id = "phenotype_id")
+if(nrow(variant_df) > 0){
+  variant_df <- variant_df %>%
+    dplyr::left_join(region_df, by = "phenotype_id") %>%
+    tidyr::separate(variant_id, c("chr", "pos", "ref", "alt"),sep = "_", remove = FALSE) %>%
+    dplyr::mutate(chr = stringr::str_remove_all(chr, "chr")) %>%
+    dplyr::mutate(cs_index = cs_id) %>%
+    dplyr::mutate(cs_id = paste(phenotype_id, cs_index, sep = "_"))
 }
+# message("variant df OK!")
+
+#Extraxt information about credible sets
+cs_df <- purrr::map_df(res$cs_df, identity, .id = "phenotype_id")
+# message("cs df OK!")
 
 if(nrow(cs_df) > 0){
   cs_df = dplyr::left_join(cs_df, region_df, by = "phenotype_id") %>%
     dplyr::mutate(cs_index = cs_id) %>%
     dplyr::mutate(cs_id = paste(phenotype_id, cs_index, sep = "_")) %>%
-    dplyr::transmute(molecular_trait_id = phenotype_id, cs_id, cs_index, region, cs_log10bf, cs_avg_r2, cs_min_r2, cs_size, low_purity)
+    dplyr::select(phenotype_id, cs_id, cs_index, finemapped_region, cs_log10bf, cs_avg_r2, cs_min_r2, cs_size, low_purity)
   
   #Extract information about variants that belong to a credible set
   in_cs_variant_df <- dplyr::filter(variant_df, !is.na(cs_index) & !low_purity) %>%
-    dplyr::transmute(molecular_trait_id = phenotype_id, variant = variant_id, chromosome = chr, position = pos, 
-                     ref, alt, cs_id, cs_index, region, pip, z, cs_min_r2, cs_avg_r2, cs_size, posterior_mean, posterior_sd, cs_log10bf)
+    dplyr::select(phenotype_id, variant_id, chr, pos, ref, alt, cs_id, cs_index, finemapped_region, pip, z, cs_min_r2, cs_avg_r2, cs_size, posterior_mean, posterior_sd, cs_log10bf)
 } else{
   #Initialize empty tibbles with correct column names
-  in_cs_variant_df = empty_in_cs_variant_df
-  cs_df = empty_cs_df
+  in_cs_variant_df = dplyr::tibble(
+    phenotype_id = character(),
+    variant_id = character(),
+    chr = numeric(),
+    pos = numeric(),
+    ref = numeric(),
+    alt = numeric(),
+    cs_id = numeric(),
+    cs_index = numeric(),
+    finemapped_region = numeric(),
+    pip = numeric(),
+    z = numeric(),
+    cs_min_r2 = numeric(),
+    cs_avg_r2 = numeric(),
+    cs_size = numeric(),
+    posterior_mean = numeric(),
+    posterior_sd = numeric(),
+    cs_log10bf = numeric()
+  )
+  
+  cs_df = dplyr::tibble(
+    phenotype_id = numeric(),
+    cs_id = numeric(),
+    cs_index = numeric(),
+    finemapped_region = numeric(),
+    cs_log10bf = numeric(),
+    cs_avg_r2 = numeric(),
+    cs_min_r2 = numeric(),
+    cs_size = numeric(),
+    low_purity = numeric()
+  )
 }
 
 #Extract information about all variants
 if(nrow(variant_df) > 0){
-  variant_df_transmute <- dplyr::transmute(variant_df, molecular_trait_id = phenotype_id, variant = variant_id, 
-          chromosome = chr, position = pos, ref, alt, cs_id, cs_index, low_purity, region, pip, z, posterior_mean, posterior_sd, X_column_scale_factors)  
-  variant_df <- dplyr::bind_cols(variant_df_transmute, dplyr::select(variant_df,alpha1:mu2_10))
-} else{
-  variant_df = empty_variant_df
+  variant_df <- dplyr::select(variant_df, phenotype_id, variant_id, chr, pos, ref, alt, cs_id, cs_index, low_purity, finemapped_region, pip, z, posterior_mean, posterior_sd, alpha1:sd10)
 }
 
-if (nrow(variant_df) == 0 && nrow(cs_df) == 0 && nrow(in_cs_variant_df) == 0) {
-  arrow::write_parquet(in_cs_variant_df, paste0(opt$out_prefix, ".parquet"))
-  arrow::write_parquet(empty_lbf_df, paste0(opt$out_prefix, ".lbf_variable.parquet"))
-  arrow::write_parquet(empty_variant_df, paste0(opt$out_prefix, ".full_susie.parquet"))
-  message("There are no credible sets. Write empty matrices and stop execution.")
-  quit(save = "no", status = 0)
-} 
+#Export high purity credible set results only
+write.table(in_cs_variant_df, paste0(opt$out_prefix, ".cred.hp.txt"), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
 
-in_cs_variant_df <- in_cs_variant_df %>% dplyr::mutate(position = as.integer(position))
+#Export all other results
+write.table(cs_df, paste0(opt$out_prefix, ".cred.txt"), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
+write.table(variant_df, paste0(opt$out_prefix, ".snp.txt"), sep = "\t", quote = FALSE, row.names = FALSE, col.names = TRUE)
 
-# find how many unique phenotypes there are per gene
-in_cs_variant_gene_df <- in_cs_variant_df %>% 
-  dplyr::left_join(phenotype_meta %>% dplyr::select(phenotype_id, gene_id, group_id), by = c("molecular_trait_id" = "phenotype_id")) %>% 
-  dplyr::group_by(gene_id) %>% 
-  dplyr::mutate(uniq_phenotypes_count = length(base::unique(molecular_trait_id))) %>% 
-  dplyr::ungroup()
 
-# if it is gene expression write full sumstats
-if (all(in_cs_variant_gene_df$molecular_trait_id == in_cs_variant_gene_df$gene_id) | opt$write_full_susie) {
-  arrow::write_parquet(in_cs_variant_df, paste0(opt$out_prefix, ".parquet"))
-  arrow::write_parquet(lbf_df, paste0(opt$out_prefix, ".lbf_variable.parquet"))
-  arrow::write_parquet(variant_df, paste0(opt$out_prefix, ".full_susie.parquet"))
-} else { 
-  # generate connected components per gene
-  message("Building connected components!")
-  susie_cc <- make_connected_components_from_cs(susie_all_df = in_cs_variant_gene_df, cs_size_threshold = 200)
-  needed_phenotype_ids <- susie_cc$molecular_trait_id %>% base::unique()
-
-  in_cs_variant_df_filt <- in_cs_variant_df %>% dplyr::filter(molecular_trait_id %in% needed_phenotype_ids)
-  cs_df_filt <- cs_df %>% dplyr::filter(molecular_trait_id %in% needed_phenotype_ids)
-  variant_df_filt <- variant_df %>% dplyr::filter(molecular_trait_id %in% needed_phenotype_ids)
-  lbf_df_filt <- lbf_df %>% dplyr::filter(molecular_trait_id %in% needed_phenotype_ids)
-  arrow::write_parquet(in_cs_variant_df_filt, paste0(opt$out_prefix, ".parquet"))
-  arrow::write_parquet(lbf_df_filt, paste0(opt$out_prefix, ".lbf_variable.parquet"))
-  arrow::write_parquet(variant_df_filt, paste0(opt$out_prefix, ".full_susie.parquet"))
-}
 
