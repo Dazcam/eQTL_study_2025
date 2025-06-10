@@ -55,11 +55,12 @@ message(nrow(susie_tbl2), " variants in credible sets after MaxCPP calculation .
 bim <- bim_file %>% left_join(susie1, by=c("X1" = "chr", "X4" = "pos"))
 bim$maxCPP[ is.na( bim$maxCPP ) ] <- 0
 bim <- bim %>% 
-  select(CHR = X1, BP = X4, SNP = X2, CM = X3, maxCPP) %>%
-write.table(bim, out_file, col.names = T, row.names = F, quote = F, sep = "\t")
+  select(CHR = X1, BP = X4, SNP = X2, CM = X3, maxCPP) 
 
 message(nrow(bim |> filter(maxCPP > 0)), " variants with MaxCPP > 0 on chr ", 
         bim_info$chr, ' ...')
+
+write.table(bim, gzfile(out_file), col.names = T, row.names = F, quote = F, sep = "\t")
 message('All done.')
 
 #--------------------------------------------------------------------------------------
