@@ -51,11 +51,23 @@ susie_tbl2 <- susie_tbl %>%
 susie_tbl2 <- susie_tbl2[!duplicated(susie_tbl2$variant_id),]
 message(nrow(susie_tbl2), " variants in credible sets after MaxCPP calculation ...")
 
-# Reference variants not in susie CS have maxCPP as 0
-bim <- bim_file %>% left_join(susie_tbl2, by=c("X1" = "chr", "X4" = "pos"))
-bim$maxCPP[ is.na( bim$maxCPP ) ] <- 0
-bim <- bim %>% 
-  select(CHR = X1, BP = X4, SNP = X2, CM = X3, maxCPP) 
+# Ensure the annotation file matches the .bim file's SNPs and order
+# Create a reference table from bim_file with necessary columns
+bim_ref <- bim_file %>% 
+  select(CHR = X1, BP = X4, SNP = X2, CM = X3) %>%
+  mutate(row_index = row_number())  # Preserve original order
+
+# Perform a left join to keep all bim SNPs, assigning maxCPP = 0 for non-CS SNPs
+bim <- bim_ref %>%
+  left_join(susie_tbl2, by = c("CHR" = "chr", "BP" = "pos", "SNP" = "variant_id")) %>%
+  mutate(maxCPP = replace(maxCPP, is.na(maxCPP), 0)) %>%
+  arrange(row_index)  
+
+# Check that the SNPs in the annotation match the .bim file
+stopifnot(
+  "Annotation file does not contain the same SNPs as the .bim file" = 
+    all.equal(bim$SNP, bim_ref$SNP, check.attributes = FALSE)
+)
 
 message(nrow(bim |> filter(maxCPP > 0)), " variants with MaxCPP > 0 on chr ", 
         bim_info$chr, ' ...')
