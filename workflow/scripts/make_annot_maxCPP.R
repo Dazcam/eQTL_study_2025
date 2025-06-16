@@ -23,6 +23,8 @@ input_cs <- snakemake@input[['cred_set']]
 input_bim <- snakemake@input[['bim']]
 out_file <- snakemake@output[[1]]
 
+
+
 # Extract cell type from input_cs
 cell_type <- input_cs %>%
   basename() %>%
@@ -47,9 +49,10 @@ message(nrow(susie_tbl), " variants in credible sets before MaxCPP calculation .
 susie_tbl2 <- susie_tbl %>% 
   group_by(variant_id) %>% 
   mutate(maxCPP = max(pip)) %>% 
-  select(chr, pos, variant_id, maxCPP)
+  select(chr, pos, variant_id, maxCPP) %>%
+  filter(chr == bim_info$chr)
 susie_tbl2 <- susie_tbl2[!duplicated(susie_tbl2$variant_id),]
-message(nrow(susie_tbl2), " variants in credible sets after MaxCPP calculation ...")
+message(nrow(susie_tbl2), " variants in credible sets after MaxCPP calculation for chr ", bim_info$chr,"...")
 
 # Ensure the annotation file matches the .bim file's SNPs and order
 # Create a reference table from bim_file with necessary columns
@@ -58,8 +61,8 @@ bim_ref <- bim_file %>%
   mutate(row_index = row_number())  # Preserve original order
 
 # Perform a left join to keep all bim SNPs, assigning maxCPP = 0 for non-CS SNPs
-bim <- bim_ref %>%
-  left_join(susie_tbl2, by = c("CHR" = "chr", "BP" = "pos", "SNP" = "variant_id")) %>%
+bim_final <- bim_ref %>%
+  left_join(susie_tbl2, by = c("CHR" = "chr", "BP" = "pos")) %>%
   mutate(maxCPP = replace(maxCPP, is.na(maxCPP), 0)) %>%
   arrange(row_index)  
 
@@ -69,7 +72,7 @@ stopifnot(
     all.equal(bim$SNP, bim_ref$SNP, check.attributes = FALSE)
 )
 
-message(nrow(bim |> filter(maxCPP > 0)), " variants with MaxCPP > 0 on chr ", 
+message(nrow(bim_final |> filter(maxCPP > 0)), " variants with MaxCPP > 0 on chr ", 
         bim_info$chr, ' ...')
 
 write.table(bim, gzfile(out_file), col.names = T, row.names = F, quote = F, sep = "\t")
