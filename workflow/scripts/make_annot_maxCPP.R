@@ -69,7 +69,7 @@ bim_final <- bim_ref %>%
 # Check that the SNPs in the annotation match the .bim file
 stopifnot(
   "Annotation file does not contain the same SNPs as the .bim file" = 
-    all.equal(bim$SNP, bim_ref$SNP, check.attributes = FALSE)
+    all.equal(bim_final$SNP, bim_ref$SNP, check.attributes = FALSE)
 )
 
 message(nrow(bim_final |> filter(maxCPP > 0)), " variants with MaxCPP > 0 on chr ", 
