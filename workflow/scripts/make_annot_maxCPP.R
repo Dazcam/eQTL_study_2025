@@ -64,7 +64,8 @@ bim_ref <- bim_file %>%
 bim_final <- bim_ref %>%
   left_join(susie_tbl2, by = c("CHR" = "chr", "BP" = "pos")) %>%
   mutate(maxCPP = replace(maxCPP, is.na(maxCPP), 0)) %>%
-  arrange(row_index)  
+  arrange(row_index) |>
+  select(CHR, BP, SNP, CM, maxCPP)
 
 # Check that the SNPs in the annotation match the .bim file
 stopifnot(
