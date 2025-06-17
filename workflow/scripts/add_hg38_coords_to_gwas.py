@@ -9,9 +9,9 @@ sys.stderr = sys.stdout
 print("=== Starting script: add_hg38_coords_to_sumstats.py ===")
 
 # Get file paths from Snakemake
-lifted_file = snakemake.input.lifted
-sumstats_file = snakemake.input.sumstats
-output_file = snakemake.output[0]
+lifted_file = str(snakemake.input["lifted"])
+sumstats_file = str(snakemake.input["sumstats"])
+output_file = str(snakemake.output[0])
 
 print(f"Input liftover BED file: {lifted_file}")
 print(f"Input summary stats file: {sumstats_file}")
