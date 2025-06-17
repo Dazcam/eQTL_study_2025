@@ -26,8 +26,6 @@ print("Processing BED coordinates and SNP IDs...")
 lifted.columns = ['CHR', 'START', 'END', 'SNP']
 lifted['CHR'] = lifted['CHR'].str.replace('chr', '', regex=False)
 lifted['BP'] = lifted['START'] + 1  # Convert from 0-based to 1-based
-
-# Retain only relevant columns
 lifted = lifted[['SNP', 'CHR', 'BP']]
 print(f"Lifted file processed: {lifted.shape[0]} SNPs")
 
@@ -47,7 +45,7 @@ merged['CHR'] = merged['CHR_x']
 merged['BP'] = merged['BP_x']
 merged = merged.drop(columns=['CHR_x', 'CHR_y', 'BP_x', 'BP_y'])
 
-# Step 5: Reorder columns (will raise KeyError if missing)
+# Step 5: Reorder columns
 print("Reordering columns...")
 expected_columns = ['SNP', 'CHR', 'BP', 'PVAL', 'A1', 'A2', 'BETA', 'SE', 'Z', 'N']
 missing_cols = [col for col in expected_columns if col not in merged.columns]
