@@ -32,31 +32,29 @@ qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]
 rule all:
     input:
 #        "../resources/refs/ref.done",
-#        #expand("../resources/fqs/{sample}", sample=samples) 
+#        expand("../resources/fqs/{sample}", sample=samples) 
 #        expand("../resources/fqs/concat/{sample_id}_R{read}.fastq.gz", sample_id = config['samples'], read = [1,2]),
 #        expand("../results/{sample_id}/run.done", sample_id = config['samples']) 
 #        expand("../results/01MRGD_fqs/{sample}_R{read}.fastq.gz", sample = ALL_SAMPLES, read = [1,2])
 #        expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
-#         "../results/02PARSE/combine_plate1/run.done"
-#         expand("../results/03SCANPY/testing_runs/scanpy_qc_testing_{plate}.html", plate = config['plate'])
-#         expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
-#         "../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
-#         "../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html"
-#       "../results/03SCANPY/scanpy_clustering.html",
-#       "../results/03SCANPY/scanpy_annotation.html",
+#        "../results/02PARSE/combine_plate1/run.done"
+#        expand("../results/03SCANPY/testing_runs/scanpy_qc_testing_{plate}.html", plate = config['plate'])
+#        expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
+#        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
+#        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html"
+#        "../results/03SCANPY/scanpy_clustering.html",
+#        "../results/03SCANPY/scanpy_annotation.html",
 #        "../results/03SCANPY/scanpy_extra.html",
 #        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
-#          expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
+#        expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
 #        qtl_files,
 #        qtl_plots,
 #        "../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv",
 #        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi",
 #        "../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log", 
 #        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
-#        "../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
         expand("../results/05SLDSR/susie_input/{cell_type}_gene_meta.tsv", cell_type = config["cell_types"]),
         expand("../results/05SLDSR/susie_input/{cell_type}_eGenes_fdr_0.05.tsv", cell_type = config["cell_types"]), 
-#        expand("../results/05SLDSR/eGenes_for_SuSiE/{cell_type}/{cell_type}_prep_susie_input.done", cell_type = config["cell_types"]),
         "../results/05SLDSR/susie_input/chrALL_final.filt.dose.tsv.gz",
         expand("../results/05SLDSR/susie_input/{cell_type}_tmm_susie_ready.bed", cell_type = config["cell_types"]),
         expand("../results/05SLDSR/susie_input/{cell_type}_covariates_susie_ready.txt", cell_type = config["cell_types"]),
@@ -69,7 +67,20 @@ rule all:
             ],
             cell_type=config["cell_types"],
             batch_index=range(1, config["susie_batches"] + 1),
-            susie_batches=config["susie_batches"]
+            susie_batches=[config["susie_batches"]]
         ), 
         expand(config["slsdr"]["merge_susie"]["output"], cell_type=config["cell_types"], susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"]),
-        expand(config["slsdr"]["sort_susie"]["output"], cell_type=config["cell_types"])
+        expand(config["slsdr"]["sort_susie"]["output"], cell_type=config["cell_types"]),
+        expand(config["slsdr"]["get_hg38_refs"]["baseline"], chr=range(1, 23)),
+        expand(config["slsdr"]["get_hg38_refs"]["weights"], chr=range(1, 23)),
+        expand(config["slsdr"]["get_hg38_refs"]["frq"], chr=range(1, 23)),
+        expand(config["slsdr"]["get_hg38_refs"]["bim"], chr=range(1, 23)),
+#        config["slsdr"]["get_hg38_refs"]["snps"],
+        expand(config["slsdr"]["get_hg19_refs"]["baseline"], chr=range(1, 23)),
+        expand(config["slsdr"]["get_hg19_refs"]["weights"], chr=range(1, 23)),
+        expand(config["slsdr"]["get_hg19_refs"]["frq"], chr=range(1, 23)),
+        expand(config["slsdr"]["get_hg19_refs"]["bim"], chr=range(1, 23)),
+#        config["slsdr"]["get_hg19_refs"]["snps"],
+        expand(config["slsdr"]["make_annot_maxCPP"]["output"], cell_type=config['cell_types'], chr=range(1, 23)),
+        "../results/05SLDSR/sldsr/liftover/hm3_hg38_no_MHC.list.txt",
+        expand(config["slsdr"]["ldsr_ld_scores_hg38"]["output"], cell_type=config['cell_types'], chr=range(1, 23))
