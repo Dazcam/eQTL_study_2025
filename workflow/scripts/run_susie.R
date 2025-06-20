@@ -262,7 +262,7 @@ extractResults <- function(susie_object){
   return(list(cs_df = cs_df, variant_df = variant_df))
 }
 
-
+##### SCRIPT STARTS ######
 #Import all files
 expression_matrix = readr::read_tsv(opt$expression_matrix)
 sample_metadata = utils::read.csv(opt$sample_meta, sep = '\t', stringsAsFactors = F)
@@ -340,7 +340,7 @@ message("Number of phenotypes in the batch: ", length(selected_phenotypes))
 
 #Check that the qtl_group is valid and subset
 assertthat::assert_that(opt$qtl_group %in% unique(se$qtl_group))
-selected_qtl_group = eQTLUtils::subsetSEByColumnValue(se, "qtl_group", 'ExN-1')
+selected_qtl_group = eQTLUtils::subsetSEByColumnValue(se, "qtl_group", cell_type)
 
 #Apply finemapping to all genes
 results = purrr::map(selected_phenotypes, ~finemapPhenotype(., selected_qtl_group, 
