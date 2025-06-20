@@ -264,6 +264,10 @@ extractResults <- function(susie_object){
 
 ##### SCRIPT STARTS ######
 #Import all files
+cell_type <- str_extract(basename(opt$expression_matrix), "^[^_]+")
+message("\ncell_type is set to: ", cell_type)
+
+message("Loading exp mat, samp and phenotype metadata and covariate mat ... \n")
 expression_matrix = readr::read_tsv(opt$expression_matrix)
 sample_metadata = utils::read.csv(opt$sample_meta, sep = '\t', stringsAsFactors = F)
 phenotype_meta = utils::read.csv(opt$phenotype_meta, sep = "\t", stringsAsFactors = F)
@@ -274,26 +278,19 @@ covariates_matrix = importQtlmapCovariates(opt$covariates)
 #covariates_matrix = covariates_matrix[,exclude_cov]
 
 #Import list of phenotypes for finemapping
-#phenotype_table = importQtlmapPermutedPvalues(opt$phenotype_list)
+fdr_thresh <- 0.05
+message("Loading eQTL at FDR < ", fdr_thresh, " ...")
 phenotype_table = read_tsv(opt$phenotype_list) # TensorQTL automatically calcs qvals
-#filtered_list = dplyr::filter(phenotype_table, p_fdr < 0.05) # Changed from 0.01 to 0.05 (should probs add to shell script as param)
-filtered_list = dplyr::filter(phenotype_table, qval < 0.05)
-
-#phenotype_list = dplyr::semi_join(phenotype_meta, filtered_list, by = "group_id")
-#phenotype_list = dplyr::semi_join(phenotype_meta, filtered_list, by = join_by("group_id" == "phenotype_id")) # TensorQTL output different
+filtered_list = dplyr::filter(phenotype_table, qval < fdr_thresh)
 phenotype_list = dplyr::semi_join(phenotype_meta, filtered_list, by = c("group_id" = "phenotype_id")) # No join_by() in dplyr 1.0.8 
 
 message("Number of phenotypes included for analysis: ", nrow(phenotype_list))
 
-#Keep only those phenotypes that are present in the expression matrix
+# Keep only those genes that are present in the expression matrix
 phenotype_list = dplyr::filter(phenotype_list, phenotype_id %in% expression_matrix$phenotype_id)
 
 
 #### I added this #### 
-# Track cell type rather than qtl_group or study_id
-cell_type <- str_extract(basename(opt$expression_matrix), "^[^_]+")
-message("cell_type is set to: ", cell_type)
-
 #eQTLUtils::makeSummarizedExperimentFromCountMatrix doesn't work unless the additional cols are added
 # NAs for now may add metadata later
 # What is genotype_id? Set it to sample ID as genotype is used later
@@ -322,11 +319,6 @@ se = eQTLUtils::makeSummarizedExperimentFromCountMatrix(assay = expression_matri
                                                          quant_method = "gene_counts",
                                                          reformat = FALSE)
 
-#If qtl_group is not specified, then use the first value in the qtl_group column of the sample metadata
-if(is.null(opt$qtl_group)){
-  opt$qtl_group = se$qtl_group[1]
-}
-
 #Split phenotype list into chunks
 chunk_vector = strsplit(opt$chunk, split = " ") %>% unlist() %>% as.numeric()
 chunk_id = chunk_vector[1]
@@ -339,7 +331,7 @@ message("Number of overall unique group_ids: ", length(unique(phenotype_list$gro
 message("Number of phenotypes in the batch: ", length(selected_phenotypes))
 
 #Check that the qtl_group is valid and subset
-assertthat::assert_that(opt$qtl_group %in% unique(se$qtl_group))
+assertthat::assert_that(cell_type %in% unique(se$qtl_group))
 selected_qtl_group = eQTLUtils::subsetSEByColumnValue(se, "qtl_group", cell_type)
 
 #Apply finemapping to all genes
