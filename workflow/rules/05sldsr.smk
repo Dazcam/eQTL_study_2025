@@ -1,4 +1,4 @@
-localrules: prep_susie_gene_meta, get_gwas_sumstats
+localrules: prep_susie_gene_meta, get_gwas_sumstats, ldsr_strat_summary
 
 # This rule is not required for susie but will be useful elsewhere (maybe qtl smk)
 rule get_sig_eGenes:
@@ -46,11 +46,13 @@ rule prep_susie_input:
             covar = config["slsdr"]["prep_susie_input"]["out_covar"],
             samp_lst = config["slsdr"]["prep_susie_input"]["out_samp_lst"]
     log:    config["slsdr"]["prep_susie_input"]["log"]
-    shell: """
-           cat {input.exp_bed} | cut -f4- | sed 's/TargetID/phenotype_id/g' > {output.exp_bed}
-           cat  {input.covar} | sed '1s/^\t/SampleID\t/' > {output.covar}
-           (echo "sample_id"; cat {input.exp_bed} | head -1 | cut -f5- | tr '\\t' '\\n') > {output.samp_lst}
-           """
+    script: "../scripts/prep_susie_input.py"
+
+#    shell: """
+#           cat {input.exp_bed} | cut -f4- | sed 's/TargetID/phenotype_id/g' > {output.exp_bed}
+#           cat  {input.covar} | sed '1s/^\t/SampleID\t/' > {output.covar}
+#           (echo "sample_id"; cat {input.exp_bed} | head -1 | cut -f5- | tr '\\t' '\\n') > {output.samp_lst}
+#           """
 
 #    input:  exp_mat = "testdata/GEUVADIS_cqn.tsv",
 #            gene_meta = "testdata/GEUVADIS_phenotype_metadata.tsv",
@@ -96,7 +98,7 @@ rule run_susie:
             """
 
 rule merge_susie:
-    input:
+    input: 
         lambda wildcards: expand(
             "../results/05SLDSR/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.{susie_suffix}",
             cell_type=wildcards.cell_type,
@@ -104,6 +106,7 @@ rule merge_susie:
             susie_batches=config["susie_batches"],
             susie_suffix=wildcards.susie_suffix
         )    
+    envmodules: "htslib/1.9"    
     output: config["slsdr"]["merge_susie"]["output"]
     log:    config["slsdr"]["merge_susie"]["log"]
     shell:  """
@@ -114,31 +117,37 @@ rule merge_susie:
             """
  
 rule sort_susie:
-    input: 
-        expand(config["slsdr"]["merge_susie"]["output"], 
-            cell_type=config["cell_types"], 
-            susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"])
-    output: config["slsdr"]["sort_susie"]["output"],
-    envmodules: "htslib/1.9"
+    input:  config["slsdr"]["merge_susie"]["output"].replace("{susie_suffix}", "cred.hp.txt")
+    output: config["slsdr"]["sort_susie"]["output"]
     log:    config["slsdr"]["sort_susie"]["log"]
+    envmodules: "htslib/1.9"
     shell:
-            """
-            set -euo pipefail
-            echo "Sorting SuSiE files for {wildcards.cell_type}" > {log}
-            gunzip -c {input[0]} > {wildcards.cell_type}_temp.txt
-            (head -n 1 {wildcards.cell_type}_temp.txt && tail -n +2 {wildcards.cell_type}_temp.txt | sort -k3 -k4n) | bgzip > {output}
-            rm {wildcards.cell_type}_temp.txt
-            echo "Completed sorting SuSiE files for {wildcards.cell_type}" >> {log}
-            """
+        """
+        set -euo pipefail
+        echo "Sorting SuSiE cred.hp.txt for {wildcards.cell_type}" > {log}
+        gunzip -c {input} > {wildcards.cell_type}_temp.txt
+        (head -n 1 {wildcards.cell_type}_temp.txt && tail -n +2 {wildcards.cell_type}_temp.txt | sort -k3 -k4n) | bgzip > {output}
+        rm {wildcards.cell_type}_temp.txt
+        echo "Completed sorting SuSiE cred.hp.txt for {wildcards.cell_type}" >> {log}
+        """
 
-##### TODO: 
-##### There is an issue with the get refs rules as they are tracking
-##### {chr} so running 22 instances instead of 1
-##### Two options use a touch file and a pause before running 
-##### make_annot_maxCPP which tracks 22 chrs or extract these rules
-##### to a set up snakefile to download all prerequisite packages
-##### containers and files
-##### Solution: use expand in output and logs forces one instance of rule to be run with all chrs
+#rule sort_susie:
+#    input: 
+#        expand(config["slsdr"]["merge_susie"]["output"], 
+#            cell_type=config["cell_types"], 
+#            susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"])
+#    output: config["slsdr"]["sort_susie"]["output"],
+#    envmodules: "htslib/1.9"
+#    log:    config["slsdr"]["sort_susie"]["log"]
+#    shell:
+#            """
+#            set -euo pipefail
+#            echo "Sorting SuSiE files for {wildcards.cell_type}" > {log}
+#            gunzip -c {input[0]} > {wildcards.cell_type}_temp.txt
+#            (head -n 1 {wildcards.cell_type}_temp.txt && tail -n +2 {wildcards.cell_type}_temp.txt | sort -k3 -k4n) | bgzip > {output}
+#            rm {wildcards.cell_type}_temp.txt
+#            echo "Completed sorting SuSiE files for {wildcards.cell_type}" >> {log}
+#            """
 
 rule get_hg38_refs:
     output: baseline = expand(config["slsdr"]["get_hg38_refs"]["baseline"], chr=range(1, 23)),
@@ -198,16 +207,15 @@ rule ldsr_ld_scores_hg38:
                --print-snps {input.snps} 2> {log} 2>&1
              """
 
-localrules: get_gwas_sumstats
-
 rule get_gwas_sumstats:
-    output:  "../results/GWAS/{GWAS}_hg19_raw.tsv"
-    params:  lambda wildcards: config['GWAS'][wildcards.GWAS]
-    message: "Download sumstats file"
-    log:     "../results/00LOG/get_and_munge_GWAS/{GWAS}_download_sumstats.log"
+    # Download GWAS sumsatts files
+    output:  config["slsdr"]["get_gwas_sumstats"]["output"]
+    params:  lambda wildcards: config['gwas'][wildcards.gwas]
+    message: "Download {wildcards.gwas} sumstats file"
+    log:     config["slsdr"]["get_gwas_sumstats"]["log"]
     run:
 
-             if wildcards.GWAS in ("MDD", "NEUROTICISM"):
+             if wildcards.gwas in ("mdd", "neuroticism"):
 
                  shell("""
 
@@ -215,7 +223,7 @@ rule get_gwas_sumstats:
 
                  """)
              
-             elif wildcards.GWAS in ("SCZ_EUR_ONLY", "BPD"):
+             elif wildcards.gwas in ("scz", "bd"):
 
                  shell("""
 
@@ -231,25 +239,235 @@ rule get_gwas_sumstats:
 
                  """)
 
-#rule ldsr_strat_hg38_bl_12:
-#    input:   gwas = "../results/03SUMSTATS/{GWAS}_hg19_LDSR_ready.sumstats.gz",
-#             ldsr = expand(ldsr_ld_scores_hg38.output, chr = range(1,23))
-#    output:  config["slsdr"]["strat_hg38_bl_v12"]["output"]
-#    conda:   "../envs/ldsr.yml"
-#    params:  weights = config["slsdr"]["strat_hg38_bl_v12"]["weights"]
-#             baseline = config["slsdr"]["strat_hg38_bl_v12"]["baseline"]
-#             frq = config["slsdr"]["strat_hg38_bl_v12"]["frq"]
-#             ldscores = config["slsdr"]["strat_hg38_bl_v12"]["ldscores"]
-#             out_prefix = config["slsdr"]["strat_hg38_bl_v12"]["out_prefix"]
-#    message: "Running stratified LDSR with {wildcards.cell_type} using hg38 refs, baseline 1.2 and {wildcards.GWAS} GWAS"
-#    log:     config["slsdr"]["strat_hg38_bl_v12"]["log"]
-#    shell:
-#             """
-#             python ../resources/ldsr/ldsc.py --h2 {input.gwas} \
-#               --w-ld-chr {params.weights} \
-#               --ref-ld-chr {params.baseline},{params.ldscores} \ 
-#               --overlap-annot \
-#               --frqfile-chr {params.frq} \
-#               --out {params.out_prefix} \
-#               --print-coefficients 2> {log} 2>&1"
 
+rule standardise_sumstats:
+    # Standardises sumstats: SNP, CHR. BP, PVAL, A1, A2 + additional GWAS dependant cols
+    # python convert available here: https://github.com/precimed/python_convert/tree/master
+    input:   rules.get_gwas_sumstats.output
+    output:  config["slsdr"]["standardise_sumstats"]["output"]
+    message: "Standardising {input}"
+    params: config["slsdr"]["standardise_sumstats"]["temp"]
+    log:    config["slsdr"]["standardise_sumstats"]["log"] 
+    run:
+
+             if wildcards.gwas in ("bd", "scz"):
+
+                 shell("""
+
+                 cat {input} | sed 's/ID/SNP/g' | sed 's/#CHROM/CHR/g' > {params};
+                 python ../resources/python_convert/sumstats.py csv \
+                   --sumstats {params} \
+                   --out {output} --force --auto --head 5 \
+                   --log {log};
+
+                 rm {params}
+
+                  """)
+
+             elif "height" in wildcards.gwas:
+
+                 shell("""
+                 cat {input} | sed 's/Tested_Allele/A1/g' | sed 's/Other_Allele/A2/g' > {params};
+    
+                 python ../resources/python_convert/sumstats.py csv \
+                   --sumstats {params} \
+       	           --out {output} --force --auto --head 5 \
+                   --log {log};
+
+                 rm {params}
+             
+                  """)
+
+             elif "neuroticism" in wildcards.gwas:
+
+                 shell("""
+ 
+                 cat {input} | sed 's/POS/BP/g' | sed 's/RSID_UKB/SNP/g' | sed 's/REF/A1/g' | sed 's/ALT/A2/g' > {params};
+
+                 python ../resources/python_convert/sumstats.py csv \
+                   --sumstats {params} \
+                   --out {output} --force --auto --head 5 \
+                   --log {log};
+
+                 rm {params}
+
+                 """)
+
+             else:
+
+                 shell("""
+
+                 python ../resources/python_convert/sumstats.py csv \
+                   --sumstats {input} \
+                   --out {output} --force --auto --head 5 \
+                   --log {log}
+
+                  """)
+
+rule add_z_score:
+    # Adds z-scores to GWAS sumstats lacking
+    input:   rules.standardise_sumstats.output
+    output:  config["slsdr"]["add_z_score"]["output"]
+    message: "Adding Z score to {input} if required"
+    log:     config["slsdr"]["add_z_score"]["log"]
+    shell:
+             """
+             python ../resources/python_convert/sumstats.py zscore \
+             --sumstats {input} \
+             --out {output} --force \
+             --log {log} \
+             --a1-inc
+             """
+
+rule add_N:
+    # N to GWAS sumstats lacking 
+    input:   rules.add_z_score.output
+    output:  config["slsdr"]["add_N"]["output"]
+    message: "Adding N to {input} if required"
+    log:     config["slsdr"]["add_N"]["log"]
+    run:
+
+             if "scz" in wildcards.gwas:
+
+                 shell("""
+
+                 awk -v OFS='\t' '{{{{s=(NR==1)?"N":"130644"; $0=$0 OFS s}}}}1' {input} > {output} 2> {log}
+
+                 """)
+
+             elif "adhd" in wildcards.gwas:
+
+                 shell("""
+
+                 awk -v OFS='\t' '{{s=(NR==1)?"N":"225534";$0=$0 OFS s}}1' {input} > {output} 2> {log}
+ 
+                 """)
+
+             elif "asd" in wildcards.gwas:
+
+                 shell("""
+
+                 awk -v OFS='\t' '{{s=(NR==1)?"N":"46350";$0=$0 OFS s}}1' {input} > {output} 2> {log}
+ 
+                 """)
+             
+             elif "bd" in wildcards.gwas:
+
+                 shell("""
+
+                 awk -v OFS='\t' '{{s=(NR==1)?"N":"413466";$0=$0 OFS s}}1' {input} > {output} 2> {log}
+
+                 """)
+
+             elif "neuroticism" in wildcards.gwas:
+
+                 shell("""
+
+                 awk -v OFS='\t' '{{s=(NR==1)?"N":"313467";$0=$0 OFS s}}1' {input} > {output} 2> {log}
+
+                 """)
+
+             else:
+
+                 shell("cp {input} {output}")
+
+rule make_gwas_bed_hg19:
+    # Generate gwas hg19 bed file for lift over
+    input:   rules.add_N.output
+    output:  config["slsdr"]["make_gwas_bed_hg19"]["output"]
+    message: "Create bed input file for {input} hg19 to hg38 LiftOver"
+    log: config["slsdr"]["make_gwas_bed_hg19"]["log"]
+    run:
+
+        shell("""
+        
+        awk 'BEGIN {{OFS="\t"}} NR > 1 {{print "chr"$2, $3-1, $3, $1}}' {input} > {output} 2> {log}
+
+        """)
+
+rule liftover_gwas_to_hg38:
+    # Liftover sumstats from hg19 to hg38
+    input: bed = rules.make_gwas_bed_hg19.output,
+           chain = config["slsdr"]["liftover_gwas_to_hg38"]["chain"]
+    output:  config["slsdr"]["liftover_gwas_to_hg38"]["output"]
+    singularity: config["containers"]["ubuntu"]
+    params: config["slsdr"]["liftover_gwas_to_hg38"]["unlifted"]
+    message: "Lifting over {input} from hg19 to hg38"
+    log: config["slsdr"]["liftover_gwas_to_hg38"]["log"]
+    shell:
+        """
+
+        ../resources/liftover/liftOver {input.bed} {input.chain} {output} {params} 2> {log}
+    
+        """
+
+rule add_hg38_coords_to_gwas:
+    #Restore summary statistics file with hg38 coords
+    input: lifted = rules.liftover_gwas_to_hg38.output,
+           sumstats = rules.add_N.output
+    output: config["slsdr"]["add_hg38_coords_to_gwas"]["output"]
+    message: "Adding hg38 coords to {input.sumstats} sumstats"
+    log: config["slsdr"]["add_hg38_coords_to_gwas"]["log"]
+    script: "../scripts/add_hg38_coords_to_gwas.py"
+
+
+rule munge_sumstats:
+    # Format sumstats for LDSR input
+    input:   snps = "../results/05SLDSR/sldsr/1000G.EUR.hg38.w_hm3_test.snplist",
+             gwas = rules.add_hg38_coords_to_gwas.output
+    output:  config["slsdr"]["munge_sumstats"]["output"]
+#    conda:   "../envs/ldsr.yml" # Struggling to get this to work, can create env, but snakemake can't
+    message: "Munging sumstats for LDSR compatibility: {input.gwas}"
+    params:  config["slsdr"]["munge_sumstats"]["prefix"]
+    log:     config["slsdr"]["munge_sumstats"]["log"]
+    shell:
+        """
+        eval "$(/apps/languages/miniforge3/24.3.0-0/bin/conda shell.bash hook)"
+        conda activate ldsr
+        echo "Starting Snakemake script..." > {log}
+        which python >> {log}
+        python ../resources/ldsr/ldsc/munge_sumstats.py  --sumstats {input.gwas} \
+          --merge-alleles {input.snps} \
+          --out {params} \
+          --a1-inc \
+          --p PVAL >> {log} 2>&1
+        echo "Finished at $(date)" >> {log}
+
+        """
+
+rule ldsr_strat_hg38_bl_v12:
+    input:   gwas = rules.munge_sumstats.output,
+             ldsr = expand(rules.ldsr_ld_scores_hg38.output, cell_type = config["cell_types"], chr = range(1,23))
+    output:  config["slsdr"]["ldsr_strat_hg38_bl_v12"]["output"]
+#    conda:   "../envs/ldsr.yml" # Struggling to get this to work, can create env, but snakemake can't
+    params:  weights = config["slsdr"]["ldsr_strat_hg38_bl_v12"]["weights"],
+             baseline = config["slsdr"]["ldsr_strat_hg38_bl_v12"]["baseline"],
+             frq = config["slsdr"]["ldsr_strat_hg38_bl_v12"]["frq"],
+             ldscores = config["slsdr"]["ldsr_strat_hg38_bl_v12"]["ldscores"],
+             out_prefix = config["slsdr"]["ldsr_strat_hg38_bl_v12"]["out_prefix"]
+    message: "Running stratified LDSR with {wildcards.cell_type} using hg38 refs, baseline 1.2 and {wildcards.gwas} GWAS"
+    log:     config["slsdr"]["ldsr_strat_hg38_bl_v12"]["log"]
+    shell:
+             """
+             eval "$(/apps/languages/miniforge3/24.3.0-0/bin/conda shell.bash hook)"
+             conda activate ldsr
+             echo "Starting Snakemake script..." > {log}
+             which python >> {log}
+
+             python ../resources/ldsr/ldsc/ldsc.py --h2 {input.gwas} \
+               --w-ld-chr {params.weights} \
+               --ref-ld-chr {params.baseline},{params.ldscores} \
+               --overlap-annot \
+               --frqfile-chr {params.frq} \
+               --out {params.out_prefix} \
+               --print-coefficients >> {log} 2>&1
+              """
+
+rule ldsr_strat_summary:
+    input:  expand(rules.ldsr_strat_hg38_bl_v12.output, cell_type = config["cell_types"], gwas = config["gwas"])
+    output: config["slsdr"]["ldsr_strat_summary"]["output"]
+    log:    config["slsdr"]["ldsr_strat_summary"]["log"]
+    shell:  """
+            head -1 {input[0]} > {output}
+            grep L2_1 {input}  | cut -f 7- -d/ >> {output}
+            """

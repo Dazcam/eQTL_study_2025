@@ -83,4 +83,7 @@ rule all:
 #        config["slsdr"]["get_hg19_refs"]["snps"],
         expand(config["slsdr"]["make_annot_maxCPP"]["output"], cell_type=config['cell_types'], chr=range(1, 23)),
         "../results/05SLDSR/sldsr/liftover/hm3_hg38_no_MHC.list.txt",
-        expand(config["slsdr"]["ldsr_ld_scores_hg38"]["output"], cell_type=config['cell_types'], chr=range(1, 23))
+        expand(config["slsdr"]["ldsr_ld_scores_hg38"]["output"], cell_type=config['cell_types'], chr=range(1, 23)),
+        expand(config["slsdr"]["munge_sumstats"]["output"], gwas = config['gwas']),
+        expand(config["slsdr"]["ldsr_strat_hg38_bl_v12"]["output"], cell_type=config['cell_types'], gwas = config['gwas']),
+        config["slsdr"]["ldsr_strat_summary"]["output"]
