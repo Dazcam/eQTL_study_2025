@@ -9,12 +9,12 @@ root_dir: /scratch/c.c1477909/eQTL_study_2025/
 
 cell_types: 
   - "ExN-1"
-  - "ExN-2"
-  - "InN"
-  - "OPC"
-  - "RG"
-  - "Endo-Peri"
-  - "MG"
+#  - "ExN-2"
+#  - "InN"
+#  - "OPC"
+#  - "RG"
+#  - "Endo-Peri"
+#  - "MG"
 
 susie_window: 1000000
 susie_batches: 25
@@ -329,3 +329,33 @@ genotypes:
     params: ../results/04GENOTYPES/TOPMED/covariates/pca
     pcs: 10
     log: ../results/00LOG/04GENOTYPES/TOPMED/calc_genotype_pcs.log
+
+# ---------  TWAS  ----------
+
+twas:
+  get_gemma:
+    output: ../resources/gemma/gemma
+  prep_exp_data:
+    input: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
+    exp: ../results/06TWAS/fusion_input/{cell_type}_tmm_plink.txt
+    coord: ../results/06TWAS/fusion_input/{cell_type}_gene_coord.txt
+    log: ../results/00LOG/06TWAS/prep_exp_data_{cell_type}.log
+  convert_vcf:
+    input: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
+    bed: ../results/06TWAS/fusion_input/genotypes_hg38.bed
+    bim: ../results/06TWAS/fusion_input/genotypes_hg38.bim
+    fam: ../results/06TWAS/fusion_input/genotypes_hg38.fam 
+    prefix: ../results/06TWAS/fusion_input/genotypes_hg38
+    log: ../results/00LOG/06TWAS/convert_vcf.log
+  restrict_geno_to_ldref:
+    bed: ../results/06TWAS/fusion_input/genotypes_hg38_filt.bed 
+    bim: ../results/06TWAS/fusion_input/genotypes_hg38_filt.bim
+    fam: ../results/06TWAS/fusion_input/genotypes_hg38_filt.fam
+    snp_lst: ../results/06TWAS/fusion_input/ldref_snps.txt
+    prefix_in: ../results/06TWAS/fusion_input/genotypes_hg38
+    prefix_out: ../results/06TWAS/fusion_input/genotypes_hg38_filt
+    log: ../results/00LOG/06TWAS/restrict_geno_to_ldref.log
+  compute_weights:
+    output: ../results/06TWAS/weights/{cell_type}/{gene_id}.wgt.RDat
+    outdir: ../results/06TWAS/weights/{cell_type}
+    log: ../results/00LOG/06TWAS/weights_{cell_type}_{gene_id}.log
