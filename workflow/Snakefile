@@ -6,7 +6,10 @@ configfile: '../config/config.yaml'
 #include: 'rules/04pegasus.smk'
 #include: 'rules/04qtl.smk'
 #include: 'rules/04genotypes.smk'
-include: 'rules/05sldsr.smk'
+#include: 'rules/05susie.smk'
+#include: 'rules/06prep_gwas.smk'
+#include: 'rules/07sldsr.smk'
+include: 'rules/08twas.smk'
 
 # Set QTL tool
 QTL_TOOL = config["eQTL"]["tool"]
@@ -53,37 +56,48 @@ rule all:
 #        "../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi",
 #        "../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log", 
 #        "../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt",
-        expand("../results/05SLDSR/susie_input/{cell_type}_gene_meta.tsv", cell_type = config["cell_types"]),
-        expand("../results/05SLDSR/susie_input/{cell_type}_eGenes_fdr_0.05.tsv", cell_type = config["cell_types"]), 
-        "../results/05SLDSR/susie_input/chrALL_final.filt.dose.tsv.gz",
-        expand("../results/05SLDSR/susie_input/{cell_type}_tmm_susie_ready.bed", cell_type = config["cell_types"]),
-        expand("../results/05SLDSR/susie_input/{cell_type}_covariates_susie_ready.txt", cell_type = config["cell_types"]),
-        expand("../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt", cell_type = config["cell_types"]),
+#        expand("../results/05SLDSR/susie_input/{cell_type}_gene_meta.tsv", cell_type = config["cell_types"]),
+#        expand("../results/05SLDSR/susie_input/{cell_type}_eGenes_fdr_0.05.tsv", cell_type = config["cell_types"]), 
+#        "../results/05SLDSR/susie_input/chrALL_final.filt.dose.tsv.gz",
+#        expand("../results/05SLDSR/susie_input/{cell_type}_tmm_susie_ready.bed", cell_type = config["cell_types"]),
+#        expand("../results/05SLDSR/susie_input/{cell_type}_covariates_susie_ready.txt", cell_type = config["cell_types"]),
+#        expand("../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt", cell_type = config["cell_types"]),
+#        expand(
+#            [
+#                config["slsdr"]["run_susie"]["cs_hp_out"],
+#                config["slsdr"]["run_susie"]["cs_out"],
+#                config["slsdr"]["run_susie"]["snp_out"]
+#            ],
+#            cell_type=config["cell_types"],
+#            batch_index=range(1, config["susie_batches"] + 1),
+#            susie_batches=[config["susie_batches"]]
+#        ), 
+#        expand(config["slsdr"]["merge_susie"]["output"], cell_type=config["cell_types"], susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"]),
+#        expand(config["slsdr"]["sort_susie"]["output"], cell_type=config["cell_types"]),
+#        expand(config["slsdr"]["get_hg38_refs"]["baseline"], chr=range(1, 23)),
+#        expand(config["slsdr"]["get_hg38_refs"]["weights"], chr=range(1, 23)),
+#        expand(config["slsdr"]["get_hg38_refs"]["frq"], chr=range(1, 23)),
+#        expand(config["slsdr"]["get_hg38_refs"]["bim"], chr=range(1, 23)),
+#        config["slsdr"]["get_hg38_refs"]["snps"],
+#        expand(config["slsdr"]["get_hg19_refs"]["baseline"], chr=range(1, 23)),
+#        expand(config["slsdr"]["get_hg19_refs"]["weights"], chr=range(1, 23)),
+#        expand(config["slsdr"]["get_hg19_refs"]["frq"], chr=range(1, 23)),
+#        expand(config["slsdr"]["get_hg19_refs"]["bim"], chr=range(1, 23)),
+#        config["slsdr"]["get_hg19_refs"]["snps"],
+#        expand(config["slsdr"]["make_annot_maxCPP"]["output"], cell_type=config['cell_types'], chr=range(1, 23)),
+#        "../results/05SLDSR/sldsr/liftover/hm3_hg38_no_MHC.list.txt",
+#        expand(config["slsdr"]["ldsr_ld_scores_hg38"]["output"], cell_type=config['cell_types'], chr=range(1, 23)),
+#        expand(config["slsdr"]["munge_sumstats"]["output"], gwas = config['gwas']),
+#        expand(config["slsdr"]["ldsr_strat_hg38_bl_v12"]["output"], cell_type=config['cell_types'], gwas = config['gwas']),
+#        config["slsdr"]["ldsr_strat_summary"]["output"]
         expand(
             [
-                config["slsdr"]["run_susie"]["cs_hp_out"],
-                config["slsdr"]["run_susie"]["cs_out"],
-                config["slsdr"]["run_susie"]["snp_out"]
+                config["twas"]["prep_exp_data"]["exp"],
+                config["twas"]["prep_exp_data"]["coord"],
+                config["twas"]["restrict_geno_to_ldref"]["bed"],
+       	        config["twas"]["restrict_geno_to_ldref"]["bim"],
+       	        config["twas"]["restrict_geno_to_ldref"]["fam"],
+                "../results/06TWAS/weights/{cell_type}/summary.txt"  
             ],
-            cell_type=config["cell_types"],
-            batch_index=range(1, config["susie_batches"] + 1),
-            susie_batches=[config["susie_batches"]]
-        ), 
-        expand(config["slsdr"]["merge_susie"]["output"], cell_type=config["cell_types"], susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"]),
-        expand(config["slsdr"]["sort_susie"]["output"], cell_type=config["cell_types"]),
-        expand(config["slsdr"]["get_hg38_refs"]["baseline"], chr=range(1, 23)),
-        expand(config["slsdr"]["get_hg38_refs"]["weights"], chr=range(1, 23)),
-        expand(config["slsdr"]["get_hg38_refs"]["frq"], chr=range(1, 23)),
-        expand(config["slsdr"]["get_hg38_refs"]["bim"], chr=range(1, 23)),
-#        config["slsdr"]["get_hg38_refs"]["snps"],
-        expand(config["slsdr"]["get_hg19_refs"]["baseline"], chr=range(1, 23)),
-        expand(config["slsdr"]["get_hg19_refs"]["weights"], chr=range(1, 23)),
-        expand(config["slsdr"]["get_hg19_refs"]["frq"], chr=range(1, 23)),
-        expand(config["slsdr"]["get_hg19_refs"]["bim"], chr=range(1, 23)),
-#        config["slsdr"]["get_hg19_refs"]["snps"],
-        expand(config["slsdr"]["make_annot_maxCPP"]["output"], cell_type=config['cell_types'], chr=range(1, 23)),
-        "../results/05SLDSR/sldsr/liftover/hm3_hg38_no_MHC.list.txt",
-        expand(config["slsdr"]["ldsr_ld_scores_hg38"]["output"], cell_type=config['cell_types'], chr=range(1, 23)),
-        expand(config["slsdr"]["munge_sumstats"]["output"], gwas = config['gwas']),
-        expand(config["slsdr"]["ldsr_strat_hg38_bl_v12"]["output"], cell_type=config['cell_types'], gwas = config['gwas']),
-        config["slsdr"]["ldsr_strat_summary"]["output"]
+            cell_type=config["cell_types"]
+        )
