@@ -23,7 +23,7 @@ library(biomaRt)
 
 # Input and output paths
 expr_in <- snakemake@input[[1]]
-expr_out <- snakemake@output[['expr']]
+expr_out <- snakemake@output[['exp']]
 coord_out <- snakemake@output[['coord']]
 
 # Read expression file
