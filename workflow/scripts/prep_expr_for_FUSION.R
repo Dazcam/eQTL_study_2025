@@ -4,6 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 
+# Option to run with subset of genes here for testing (L35-37)
+
 ## Set up logging for smk  ------------------------------------------------------------
 if (exists("snakemake")) {
   log_smk <- function() {
@@ -25,15 +27,25 @@ library(biomaRt)
 expr_in <- snakemake@input[[1]]
 expr_out <- snakemake@output[['exp']]
 coord_out <- snakemake@output[['coord']]
+run_test <- TRUE # Add this to snakerule later to set dynamically
 
 # Read expression file
+message('Reading expression file ...')
 expr_tbl <- read_tsv(expr_in, col_types=cols())
+
+if (run_test) {
+  message('Running with only a subset of genes for testing ...')
+  message('Genes before: ', nrow(expr_tb) - 1)
+  expr_tbl <- head(expr_tbl, )
+  message('Genes after: ', nrow(expr_tb) - 1)
+}
 
 # Extract sample IDs and expression data
 coord_cols <- c("#Chr", "start", "end", "TargetID")
 sample_cols <- setdiff(colnames(expr_tbl), coord_cols)
 
 # Convert expression data to PLINK format
+message('Converting expression data to PLINK format ...')
 expr_plink_tbl <- expr_tbl %>%
   dplyr::select(TargetID, all_of(sample_cols)) %>%
   pivot_longer(cols = all_of(sample_cols), names_to = "IID", values_to = "value") %>%
@@ -42,12 +54,15 @@ expr_plink_tbl <- expr_tbl %>%
   dplyr::select(FID, IID, everything())
 
 # Save PLINK phenotype file
+message('Saving PLINK phenotype file ...')
 write_tsv(expr_plink_tbl, expr_out)
 
 # Connect to Ensembl BioMart
+message('Setting BiomaRT mart ...')
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "www.ensembl.org")
 
 # Query gene coordinates
+message('Get coords for genes ...')
 gene_ids <- expr_tbl$TargetID
 gene_coord <- getBM(
   attributes = c("chromosome_name", "start_position", "end_position", "ensembl_gene_id"),
@@ -72,6 +87,7 @@ if (length(missing_genes) > 0) {
 }
 
 # Save gene coordinate file
+message('Saving gene coordinate file ...')
 write_tsv(gene_coord, coord_out)
 
 message(str_glue("Generated {expr_out} with {nrow(expression)} samples and {length(sample_cols)} genes\n"))
