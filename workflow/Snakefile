@@ -29,6 +29,29 @@ elif QTL_TOOL == "tensorqtl":
         qtl_files.append(config["output_files"]["tensorqtl_perm_output"].format(cell_type=cell_type))    
         qtl_files.append(config["output_files"]["tensorqtl_perm_log"].format(cell_type=cell_type))
 
+def get_all_genes_from_checkpoint(wildcards):
+    all_genes = []
+    for cell_type in config["cell_types"]:
+        # Access the checkpoint output for each cell_type
+        # This will only be called after the checkpoint is complete
+        coord_file = checkpoints.prep_exp_data.get(cell_type=cell_type).output.coord
+        with open(coord_file, 'r') as f:
+            # Skip header
+            next(f)
+            for line in f:
+                parts = line.strip().split('\t')
+                gene_id = parts[3] 
+                all_genes.append(gene_id)
+    return list(set(all_genes))
+
+def aggregate_input(wildcards):
+    checkpoint_output = checkpoints.get_gene_info.get(**wildcards).output[0]
+    return expand(
+        "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat",
+        sample = wildcards.cell_type,
+        gene_id = glob_wildcards(os.path.join(checkpoint_output, "{gene_id}.txt")).gene_id,
+    )
+
 # Rule all with optional plot_qtl inclusion
 qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]["run"] else []
 
@@ -90,14 +113,33 @@ rule all:
 #        expand(config["slsdr"]["munge_sumstats"]["output"], gwas = config['gwas']),
 #        expand(config["slsdr"]["ldsr_strat_hg38_bl_v12"]["output"], cell_type=config['cell_types'], gwas = config['gwas']),
 #        config["slsdr"]["ldsr_strat_summary"]["output"]
-        expand(
-            [
-                config["twas"]["prep_exp_data"]["exp"],
-                config["twas"]["prep_exp_data"]["coord"],
-                config["twas"]["restrict_geno_to_ldref"]["bed"],
-       	        config["twas"]["restrict_geno_to_ldref"]["bim"],
-       	        config["twas"]["restrict_geno_to_ldref"]["fam"],
-                "../results/06TWAS/weights/{cell_type}/summary.txt"  
-            ],
-            cell_type=config["cell_types"]
-        )
+        "../results/06TWAS/all_genes_in_all_cell_types_done.txt"
+#        "../results/06TWAS/all_gene_targets_ready.txt"
+#        lambda wildcards: expand(
+#            "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat",
+#            cell_type=config["cell_types"],
+#            gene_id=get_all_genes_from_checkpoint(wildcards)
+#        )
+#        expand(
+#            "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat",
+#            cell_type=config["cell_types"],
+#            gene_id=get_all_genes(config["cell_types"])
+#        )
+#        expand(
+#            [
+#                config["twas"]["prep_exp_data"]["exp"],
+#                config["twas"]["prep_exp_data"]["coord"]
+#            ],
+#            cell_type=config["cell_types"]
+#        ),
+#        expand(
+#            [
+#                "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
+#                "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
+#                "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam"
+#            ],
+#            cell_type=config["cell_types"],
+#            gene_id=get_all_genes(config["cell_types"])
+#        )
+
+
