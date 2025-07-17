@@ -35,9 +35,9 @@ expr_tbl <- read_tsv(expr_in, col_types=cols())
 
 if (run_test) {
   message('Running with only a subset of genes for testing ...')
-  message('Genes before: ', nrow(expr_tb) - 1)
-  expr_tbl <- head(expr_tbl, )
-  message('Genes after: ', nrow(expr_tb) - 1)
+  message('Genes before: ', nrow(expr_tbl) - 1)
+  expr_tbl <- head(expr_tbl)
+  message('Genes after: ', nrow(expr_tbl) - 1)
 }
 
 # Extract sample IDs and expression data
