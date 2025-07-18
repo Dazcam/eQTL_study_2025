@@ -1,21 +1,8 @@
 localrules: prep_exp_data
 
-def get_all_genes(cell_types):
-    genes = []
-    for cell_type in cell_types:
-        coord_file = f"../results/06TWAS/fusion_input/{cell_type}_gene_coord.txt"
-        with open(coord_file, 'r') as f:
-            # Skip header
-            next(f)
-            for line in f:
-                parts = line.strip().split('\t')
-                gene_id = parts[0]
-                genes.append(gene_id)
-    return list(set(genes))
-
 # Rule to download gemma binary for FUSION
-get_gemma:
-   ouput:  config["twas"]["get_gemma"]["output"] 
+rule get_gemma:
+   output:  config["twas"]["get_gemma"]["output"] 
    shell:  
            """
            wget https://github.com/genetics-statistics/GEMMA/releases/download/v0.98.5/gemma-0.98.5-linux-static-AMD64.gz
@@ -68,13 +55,16 @@ rule restrict_geno_to_ldref:
               --make-bed --out {params.output} > {log} 2>&1
         """
 
-rule get_gene_info:
+checkpoint get_gene_info:
     input:  config["twas"]["prep_exp_data"]["coord"]
-    output: "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_gene_info.txt"
-    params: "{gene_id}"
+    output: directory("../results/06TWAS/fusion_input/{cell_type}")
     shell:
         """
-        grep -w {params} {input} > {output}
+        mkdir {output}
+        tail -n +2 {input} | while IFS=$'\t' read -r line; do
+        gene=$(echo "$line" | cut -f4)
+        echo "$line" > "{output}/${{gene}}_gene_info.txt"
+        done
         """
 
 rule extract_cis_snps:
@@ -93,65 +83,79 @@ rule extract_cis_snps:
     envmodules: "plink/2.0"
     shell:
         """
-        GENE_CHR=$(awk '{{print $2}}' {input.gene_info})
-        GENE_START=$(awk '{{print $3}}' {input.gene_info})
-        GENE_END=$(awk '{{print $4}}' {input.gene_info})
+        GENE_CHR=$(awk '{{print $1}}' {input.gene_info})
+        GENE_START=$(awk '{{print $2}}' {input.gene_info})
+        GENE_END=$(awk '{{print $3}}' {input.gene_info})
         CIS_START=$((GENE_START - 500000))
         CIS_END=$((GENE_END + 500000))
         
+        # Set CIS_START to 0 if negative
+        if (( CIS_START < 0 )); then
+          CIS_START=0
+        fi
+        
         plink2 --bfile {params.prefix_in} \
-               --chr ${GENE_CHR} \
-               --from-bp ${CIS_START} \
-               --to-bp ${CIS_END} \
+               --chr ${{GENE_CHR}} \
+               --from-bp ${{CIS_START}} \
+               --to-bp ${{CIS_END}} \
                --make-bed \
                --out {params.prefix_out}
         """
 
+rule prepare_gene_pheno:
+    input:  config["twas"]["prep_exp_data"]["exp"],
+    output: "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt"
+    params: "{gene_id}"
+    shell:
+        """
+        # Get the column index of the gene_id
+        COL_IDX=$(head -n 1 {input} | tr '\t' '\n' | grep -n -w {params} | cut -f1 -d:)
+        # Extract FID, IID, and the gene_id column
+        cut -f 1,2,${{COL_IDX}} {input} > {output}
+        """
 
-# Rule to compute FUSION weights for each gene
-#rule compute_weights:
-#    input:  geno_bed = config["twas"]["restrict_geno_to_ldref"]["bed"],
-#            geno_bim = config["twas"]["restrict_geno_to_ldref"]["bim"],
-#            geno_fam = config["twas"]["restrict_geno_to_ldref"]["fam"],
-#            exp = config["twas"]["prep_exp_data"]["exp"],
-#            covar = "../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt",
-#            ldref = lambda wildcards: f"../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{wildcards.chr}.bed",
-#            coord = config["twas"]["prep_exp_data"]["coord"],
-#            gemma = config["twas"]["get_gemma"]["output"]
-#    output: config["twas"]["compute_weights"]["output"]
-#    params: chr = "{chr}",
-#            gene = "{gene_id}",
-#            outdir = config["twas"]["compute_weights"]["outdir"]
-#    singularity: config["containers"]["R"]
-#    log:    config["twas"]["compute_weights"]["log"]
-#    shell:
-#            """
-#            Rscript ../resources/fusion/FUSION.compute_weights.R \
-#              --bfile {input.geno_bed} \
-#              --pheno {input.exp} \
-#              --covar {input.covar} \
-#              --hsq_p 0.01 \
-#              --crossval 5 \
-#              --chr {params.chr} \
-#              --gene {params.gene} \
-#              --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
-#              --PATH_gcta resources/fusion/gcta_nr_robust \
-#              --PATH_gemma ../resources/gemma/gemma \
-#              --out {output} > {log} 2>&1
-#            """
+rule compute_weights:
+    input:
+        geno_bed = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
+        geno_bim = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
+        geno_fam = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam",
+        gene_pheno = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt",
+        covar = "../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt",
+        gemma = config["twas"]["get_gemma"]["output"]
+    output:
+        "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat"
+    params:
+        outdir = "../results/06TWAS/weights/{cell_type}"
+    singularity: config["containers"]["R"]
+    log: "../results/00LOG/06TWAS/compute_weights_{cell_type}_{gene_id}.log"
+    shell:
+        """
+        Rscript ../resources/fusion/FUSION.compute_weights.R \
+          --bfile {input.geno_bed} \
+          --pheno {input.gene_pheno} \
+          --covar {input.covar} \
+          --hsq_p 0.01 \
+          --crossval 5 \
+          --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
+          --PATH_gcta resources/fusion/gcta_nr_robust \
+          --PATH_gemma {input.gemma} \
+          --out {output} > {log} 2>&1
+        """
 
-#rule aggregate_weights:
-#    input:  lambda wildcards: expand(config["twas"]["compute_weights"]["output"],
-#                                     cell_type = wildcards.cell_type,
-#                                     gene_id = [g["gene_id"] for g in get_genes(wildcards)],
-#                                     chr = [g["chr"] for g in get_genes(wildcards)])
-#    output: config["twas"]["aggregate_weights"]["output"]
-#    log:    config["twas"]["aggregate_weights"]["log"]
-#    shell:
-#            """
-#            echo "Summary of FUSION weights for {wildcards.cell_type}" > {output}
-#            ls {input} | wc -l >> {output}
-#            echo "Done" >> {output}
-#            """
+def aggregate_input(wildcards):
+    checkpoint_output = checkpoints.get_gene_info.get(**wildcards).output[0]
+    return expand(
+        "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat",
+        cell_type = wildcards.cell_type,
+        gene_id = glob_wildcards(os.path.join(checkpoint_output, "{gene_id}_gene_info.txt")).gene_id,
+    )
 
+rule aggregate_per_cell_type:
+    input: aggregate_input,
+    output: "../results/06TWAS/{cell_type}/all_genes_done.txt"
+    run: "cat {input} > {output}"
 
+rule aggregate_all:
+    input:  expand("../results/06TWAS/{cell_type}/all_genes_done.txt", cell_type = config['cell_types']),
+    output: "../results/06TWAS/all_genes_in_all_cell_types_done.txt",
+    shell:  "cat {input} > {output}"

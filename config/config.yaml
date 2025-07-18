@@ -356,6 +356,10 @@ twas:
     prefix_out: ../results/06TWAS/fusion_input/genotypes_hg38_filt
     log: ../results/00LOG/06TWAS/restrict_geno_to_ldref.log
   compute_weights:
+    covar: ../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt
     output: ../results/06TWAS/weights/{cell_type}/{gene_id}.wgt.RDat
     outdir: ../results/06TWAS/weights/{cell_type}
     log: ../results/00LOG/06TWAS/weights_{cell_type}_{gene_id}.log
+  aggregate_weights:
+    output: ../results/06TWAS/weights/{cell_type}/summary.txt
+    log: ../results/00LOG/06TWAS/aggregate_{cell_type}.log
