@@ -36,7 +36,11 @@ expr_tbl <- read_tsv(expr_in, col_types=cols())
 if (run_test) {
   message('Running with only a subset of genes for testing ...')
   message('Genes before: ', nrow(expr_tbl) - 1)
-  expr_tbl <- head(expr_tbl)
+  
+  meta_row <- expr_tbl[1, ]
+  data_rows <- expr_tbl[-1, ]
+  expr_tbl <- rbind(meta_row, data_rows[sample(nrow(data_rows), 50), ])
+  
   message('Genes after: ', nrow(expr_tbl) - 1)
 }
 
@@ -92,3 +96,7 @@ write_tsv(gene_coord, coord_out)
 
 message(str_glue("Generated {expr_out} with {nrow(expression)} samples and {length(sample_cols)} genes\n"))
 message(str_glue("Generated {coord_out} with {nrow(gene_coord)} genes\n"))
+message("Done.")
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
