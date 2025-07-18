@@ -22,7 +22,17 @@ write_full_susie: TRUE
 
 gwas:
   scz: https://figshare.com/ndownloader/files/34517828  # EUR only
-  
+
+containers:
+  fastqtl: ../resources/containers/gtex_eqtl.sif
+  tensorqtl: ../resources/containers/tensorqtl.sif
+  genotype-qc2hrc: ../resources/containers/genotype-qc2hrc_latest.sif
+  R: ../resources/containers/seurat5f.sif
+  susie: ../resources/containers/susier_v24.01.1.sif
+  ubuntu: ../resources/containers/ubuntu_22.04.sif
+  twas: ../resources/containers/twas.sif
+
+
 # ------------  SCANPY  ----------------
 
 scanpy:
@@ -99,14 +109,6 @@ log_files:
   tensorqtl: ../results/00LOG/04TENSORQTL/{cell_type}_nom.log
   tensorqtl_perm: ../results/00LOG/04TENSORQTL/{cell_type}_perm.log
   tensorqtl_tss: ../results/00LOG/04TENSORQTL/tss.log   
-
-containers:
-  fastqtl: ../resources/containers/gtex_eqtl.sif
-  tensorqtl: ../resources/containers/tensorqtl.sif
-  genotype-qc2hrc: ../resources/containers/genotype-qc2hrc_latest.sif 
-  R: ../resources/containers/seurat5f.sif  
-  susie: ../resources/containers/susier_v24.01.1.sif
-  ubuntu: ../resources/containers/ubuntu_22.04.sif
 
 # ------------  SLDSR  ----------------
 
