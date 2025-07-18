@@ -113,7 +113,7 @@ rule all:
 #        expand(config["slsdr"]["munge_sumstats"]["output"], gwas = config['gwas']),
 #        expand(config["slsdr"]["ldsr_strat_hg38_bl_v12"]["output"], cell_type=config['cell_types'], gwas = config['gwas']),
 #        config["slsdr"]["ldsr_strat_summary"]["output"]
-        "../results/06TWAS/all_genes_in_all_cell_types_done.txt"
+        "../results/06TWAS/all_genes_in_all_cell_types_done.txt",
 #        "../results/06TWAS/all_gene_targets_ready.txt"
 #        lambda wildcards: expand(
 #            "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat",

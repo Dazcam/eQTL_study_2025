@@ -57,7 +57,7 @@ rule restrict_geno_to_ldref:
 
 checkpoint get_gene_info:
     input:  config["twas"]["prep_exp_data"]["coord"]
-    output: directory("../results/06TWAS/fusion_input/{cell_type}")
+    output: directory("../results/06TWAS/fusion_input/{cell_type}/gene_info")
     shell:
         """
         mkdir {output}
@@ -72,7 +72,7 @@ rule extract_cis_snps:
         geno_bed = config["twas"]["restrict_geno_to_ldref"]["bed"],
         geno_bim = config["twas"]["restrict_geno_to_ldref"]["bim"],
         geno_fam = config["twas"]["restrict_geno_to_ldref"]["fam"],
-        gene_info = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_gene_info.txt"
+        gene_info = "../results/06TWAS/fusion_input/{cell_type}/gene_info/{gene_id}_gene_info.txt"
     output:
         cis_bed = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
         cis_bim = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
@@ -88,18 +88,25 @@ rule extract_cis_snps:
         GENE_END=$(awk '{{print $3}}' {input.gene_info})
         CIS_START=$((GENE_START - 500000))
         CIS_END=$((GENE_END + 500000))
-        
-        # Set CIS_START to 0 if negative
+
         if (( CIS_START < 0 )); then
           CIS_START=0
         fi
-        
+
         plink2 --bfile {params.prefix_in} \
-               --chr ${{GENE_CHR}} \
-               --from-bp ${{CIS_START}} \
-               --to-bp ${{CIS_END}} \
+               --chr $GENE_CHR \
+               --from-bp $CIS_START \
+               --to-bp $CIS_END \
                --make-bed \
-               --out {params.prefix_out}
+               --out {params.prefix_out} || true
+
+        # Create empty stub files if PLINK didn't output anything
+        for ext in bed bim fam; do
+            f="{params.prefix_out}.$ext"
+            if [ ! -s "$f" ]; then
+                echo -n "" > "$f"
+            fi
+        done
         """
 
 rule prepare_gene_pheno:
@@ -114,33 +121,82 @@ rule prepare_gene_pheno:
         cut -f 1,2,${{COL_IDX}} {input} > {output}
         """
 
+
 rule compute_weights:
     input:
         geno_bed = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
         geno_bim = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
         geno_fam = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam",
         gene_pheno = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt",
-        covar = "../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt",
+#        covar = "../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt", # Need to get this into correct format and consider whether to include them or not
         gemma = config["twas"]["get_gemma"]["output"]
     output:
         "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat"
     params:
+        indir = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis",
         outdir = "../results/06TWAS/weights/{cell_type}"
-    singularity: config["containers"]["R"]
+    singularity: config["containers"]["twas"]
     log: "../results/00LOG/06TWAS/compute_weights_{cell_type}_{gene_id}.log"
     shell:
+        r"""
+        if [ -s {input.geno_bed} ]; then
+          echo "Running compute_weights for {wildcards.gene_id}" >> {log}
+          Rscript ../resources/fusion/FUSION.compute_weights.R \
+            --bfile {params.indir} \
+            --pheno {input.gene_pheno} \
+            --hsq_p 0.01 \
+            --crossval 5 \
+            --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
+            --PATH_gcta ../resources/fusion/gcta_nr_robust \
+            --PATH_gemma {input.gemma} \
+            --out {output} >> {log} 2>&1 || true
+          if [ ! -f {output} ]; then
+            echo "{wildcards.gene_id} was skipped (likely due to low heritability)." >> {log}
+            echo "{wildcards.gene_id} was skipped due to low heritability or other issues." > ../results/06TWAS/weights/{wildcards.cell_type}/{wildcards.gene_id}_skipped.txt
+            touch {output}
+          fi
+        else
+          echo "No SNPs for {wildcards.gene_id}, skipping..." >> {log}
+          echo "{wildcards.gene_id} has no SNPs in the cis region." > ../results/06TWAS/weights/{wildcards.cell_type}/{wildcards.gene_id}_no_snps.txt
+          touch {output}
+        fi
         """
-        Rscript ../resources/fusion/FUSION.compute_weights.R \
-          --bfile {input.geno_bed} \
-          --pheno {input.gene_pheno} \
-          --covar {input.covar} \
-          --hsq_p 0.01 \
-          --crossval 5 \
-          --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
-          --PATH_gcta resources/fusion/gcta_nr_robust \
-          --PATH_gemma {input.gemma} \
-          --out {output} > {log} 2>&1
-        """
+
+#rule compute_weights:
+#    input:
+#        geno_bed = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
+#        geno_bim = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
+#        geno_fam = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam",
+#        gene_pheno = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt",
+#        covar = "../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt",
+#        gemma = config["twas"]["get_gemma"]["output"]
+#    output:
+#        "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat"
+#    params:
+#        outdir = "../results/06TWAS/weights/{cell_type}"
+#    singularity: config["containers"]["twas"]
+#    log: "../results/00LOG/06TWAS/compute_weights_{cell_type}_{gene_id}.log"
+#    shell:
+#        r"""
+#        if [ -s {input.geno_bed} ]; then
+#          echo "Running compute_weights for {wildcards.gene_id}" >> {log}
+#          Rscript ../resources/fusion/FUSION.compute_weights.R \
+#            --bfile {input.geno_bed} \
+#            --pheno {input.gene_pheno} \
+#            --covar {input.covar} \
+#            --hsq_p 0.01 \
+#            --crossval 5 \
+#            --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
+#            --PATH_gcta resources/fusion/gcta_nr_robust \
+#            --PATH_gemma {input.gemma} \
+#            --out {output} >> {log} 2>&1
+#        else
+#          echo "No SNPs for {wildcards.gene_id}, skipping..." >> {log}
+#          echo "{wildcards.gene_id} has no SNPs in the cis region." > ../results/06TWAS/weights/{wildcards.cell_type}/{wildcards.gene_id}_no_snps.txt
+#          touch {output}
+#        fi
+#        """        
+
 
 def aggregate_input(wildcards):
     checkpoint_output = checkpoints.get_gene_info.get(**wildcards).output[0]
@@ -150,12 +206,25 @@ def aggregate_input(wildcards):
         gene_id = glob_wildcards(os.path.join(checkpoint_output, "{gene_id}_gene_info.txt")).gene_id,
     )
 
+#rule aggregate_per_cell_type:
+#    input: aggregate_input,
+#    output: "../results/06TWAS/{cell_type}/all_genes_done.txt"
+#    run: "cat {input} > {output}"
+
 rule aggregate_per_cell_type:
-    input: aggregate_input,
+    input: aggregate_input
     output: "../results/06TWAS/{cell_type}/all_genes_done.txt"
-    run: "cat {input} > {output}"
+    shell:
+        """
+        echo "Processed genes for {wildcards.cell_type}:" > {output}
+        for file in {input}; do
+            basename $file .RDat >> {output}
+        done
+        """
 
 rule aggregate_all:
     input:  expand("../results/06TWAS/{cell_type}/all_genes_done.txt", cell_type = config['cell_types']),
     output: "../results/06TWAS/all_genes_in_all_cell_types_done.txt",
     shell:  "cat {input} > {output}"
+
+
