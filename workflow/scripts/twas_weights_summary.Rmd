@@ -5,11 +5,22 @@ output: html_document
 params:
   cell_types: !r c("ExN-1")  # Default cell type, will be replaced by Snakemake
   log_dir: "../results/00LOG/06TWAS"
-  output_dir: "../reports/06TWAS/"
+  output_dir: "reports/06TWAS/"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+if (exists("snakemake")) {
+  log_smk <- function() {
+    if (exists("snakemake") & length(snakemake@log) != 0) {
+      log <- file(snakemake@log[1][[1]], open = "wt")
+      sink(log, append = TRUE)
+      sink(log, append = TRUE, type = "message")
+    }
+  }
+}
+log_smk()
+
 library(dplyr)
 library(knitr)
 library(kableExtra)
