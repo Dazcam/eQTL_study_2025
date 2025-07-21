@@ -1,0 +1,81 @@
+---
+title: "TWAS Weight Computation Summary"
+date: "`r Sys.Date()`"
+output: html_document
+params:
+  cell_types: !r c("ExN-1")  # Default cell type, will be replaced by Snakemake
+  log_dir: "../results/00LOG/06TWAS"
+  output_dir: "../reports/06TWAS/"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# Function to parse log files and categorize failures
+parse_twas_logs <- function(cell_type, log_dir) {
+  # List all compute_weights log files for the cell type
+  log_files <- list.files(
+    path = log_dir,
+    pattern = paste0("compute_weights_", cell_type, "_.*\\.log"),
+    full.names = TRUE
+  )
+  
+  # Initialize counters and lists
+  no_snps <- c()
+  gcta_failure <- c()
+  low_heritability <- c()
+  
+  # Parse each log file
+  for (log_file in log_files) {
+    gene_id <- sub(".*compute_weights_.*_(ENSG[0-9]+)\\.log", "\\1", basename(log_file))
+    log_content <- readLines(log_file)
+    
+    if (any(grepl("No SNPs", log_content))) {
+      no_snps <- c(no_snps, gene_id)
+    } else if (any(grepl("NA does not exist, likely GCTA could not converge", log_content))) {
+      gcta_failure <- c(gcta_failure, gene_id)
+    } else if (any(grepl("skipping gene", log_content) & grepl("Heritability", log_content))) {
+      low_heritability <- c(low_heritability, gene_id)
+    }
+  }
+  
+  # Summarize counts
+  summary_df <- data.frame(
+    Failure_Type = c("No SNPs", "GCTA Failure", "Low Heritability"),
+    Count = c(length(no_snps), length(gcta_failure), length(low_heritability)),
+    Genes = I(list(no_snps, gcta_failure, low_heritability))
+  )
+  
+  return(summary_df)
+}
+```
+
+```{r make_summary_tbl}
+# Loop through each cell type and generate a summary table
+for (cell_type in params$cell_types) {
+  summary_df <- parse_twas_logs(cell_type, params$log_dir)
+  
+  cat("\n### Cell Type: ", cell_type, "\n")
+  
+  # Print summary table
+  kable(summary_df[, c("Failure_Type", "Count")], 
+        caption = paste("Failure Counts for", cell_type),
+        align = "lc") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+  
+  # Print detailed gene lists for each failure type with non-zero counts
+  for (i in 1:nrow(summary_df)) {
+    if (summary_df$Count[i] > 0) {
+      cat("\n#### ", summary_df$Failure_Type[i], " Genes\n")
+      gene_df <- data.frame(Gene_ID = summary_df$Genes[[i]])
+      kable(gene_df, 
+            caption = paste("Genes with", summary_df$Failure_Type[i]),
+            align = "l") %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+    }
+  }
+}
+```
