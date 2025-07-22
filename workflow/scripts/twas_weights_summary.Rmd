@@ -2,10 +2,6 @@
 title: "TWAS Weight Computation Summary"
 date: "`r Sys.Date()`"
 output: html_document
-params:
-  cell_types: !r c("ExN-1")  # Default cell type, will be replaced by Snakemake
-  log_dir: "../results/00LOG/06TWAS"
-  output_dir: "reports/06TWAS/"
 ---
 
 ```{r setup, include=FALSE}
@@ -24,6 +20,12 @@ log_smk()
 library(dplyr)
 library(knitr)
 library(kableExtra)
+
+
+# Set variables
+cell_types <- snakemake@params["cell_types"]
+log_dir <- snakemake@params["log_dir"]
+#output_dir <- snakemake@params["output_dir"]
 
 # Function to parse log files and categorize failures
 parse_twas_logs <- function(cell_type, log_dir) {
@@ -66,8 +68,8 @@ parse_twas_logs <- function(cell_type, log_dir) {
 
 ```{r make_summary_tbl}
 # Loop through each cell type and generate a summary table
-for (cell_type in params$cell_types) {
-  summary_df <- parse_twas_logs(cell_type, params$log_dir)
+for (cell_type in cell_types) {
+  summary_df <- parse_twas_logs(cell_type, log_dir)
   
   cat("\n### Cell Type: ", cell_type, "\n")
   
