@@ -24,8 +24,8 @@ library(tidyverse)
 eqtl_in <- snakemake@input[['eqtl']]
 snps_in <- snakemake@input[['snps']]
 genes_in <- snakemake@input[['genes']]
-query_out <- snakemake@output['query']
-genes_out <- snakemake@output['gene_lst']
+query_out <- snakemake@output[['query']]
+genes_out <- snakemake@output[['gene_lst']]
 fdr_thresh <- snakemake@params[['qval_thresh']]
 
 # test code
