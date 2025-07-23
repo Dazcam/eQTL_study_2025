@@ -86,7 +86,7 @@ message('Do SNP and Gene Chr annotations match? ',
 
 # Write smr query file and gene list
 message('Writing files ...')
-write_tsv(snp_mrg_tbl, query_out)
+write_tsv(smr_tbl, query_out)
 genes_tbl <- smr_tbl |>
   select(Gene) |>
   distinct()
