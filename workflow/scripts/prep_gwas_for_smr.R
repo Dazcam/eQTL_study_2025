@@ -37,6 +37,29 @@ gwas_tbl <- read_tsv("../results/05SLDSR/gwas/scz_hg38.tsv",
 frq_tbl <- read_table('../results/07SMR/smr_input/allele_frq_hg38_ref.txt', 
                       col_types = cols(.default = "c", MAF = "d", NCHROBS = "i")) 
 
+# Check GWAS Chrs 
+message("Checking GWAS chromosomes ...\n")
+gwas_tbl |> 
+  group_by(CHR) |> 
+  count() |> 
+  print(n = Inf)
+
+alt_chroms <- gwas_tbl %>%
+  filter(str_ends(CHR, "alt")) %>%
+  distinct(CHR) %>%
+  pull(CHR)
+
+if (length(alt_chroms) > 0) {
+  message("\nChromosomes ending with 'alt' found: ", paste(alt_chroms, collapse = ", "))
+  message("Count of SNPs with 'alt' chromosomes: ", 
+          nrow(gwas_tbl %>% filter(str_ends(CHR, "alt"))))
+  message("Removing SNPs with 'alt' chromosomes ... ")
+  gwas_tbl <- gwas_tbl %>% filter(!str_ends(CHR, "alt"))
+} else {
+  message("No chromosomes ending with 'alt' found.")
+}
+
+
 # Join GWAS with reference frequencies by CHR and SNP
 message("Appending freq info to GWAS ...\n")
 mrg_tbl <- gwas_tbl %>%
@@ -87,7 +110,7 @@ walk2(allele_counts$allele_status, allele_counts$percentage,
       ~ message(str_glue("{.x}: {.y}% (n = {allele_counts$n[allele_counts$allele_status == .x]})")))
 
 # Check for true allele mismatches (excluding missing reference)
-message("Checking for true allele mismatches ...\n")
+message("\nChecking for true allele mismatches ...\n")
 mismatch_tbl <- mrg_tbl %>%
   filter(is.na(freq) & !is.na(A1.ref))
 if (nrow(mismatch_tbl) > 0) {
