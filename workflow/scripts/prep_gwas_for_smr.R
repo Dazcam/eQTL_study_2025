@@ -26,12 +26,12 @@ frq_in <- snakemake@input[['frq']]
 gwas_out <- snakemake@output
 
 # Read in data
-message('Loading data ...')
+message('\nLoading data ...\n')
 gwas_tbl <- read_tsv(gwas_in) |>
   rename(b = BETA, se = SE, p = PVAL) |>
   select(SNP, CHR, BP, A1, A2, b, se, p, N)
 
-frq_tbl <- read_tsv(frq_in)
+frq_tbl <- read_table(frq_in)
 
 # Join GWAS with reference frequencies by CHR and SNP
 message('Appending freq infor to GWAS ...')
