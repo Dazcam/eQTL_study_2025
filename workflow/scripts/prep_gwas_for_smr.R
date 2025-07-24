@@ -15,7 +15,7 @@ if (exists("snakemake")) {
   }
 }
 log_smk()
-message('\n\nMunge eQTL, snp and gene level data for SMR input ...')
+message('\n\nMunge GWAS for SMR input ...')
 
 # Load packages
 library(tidyverse)
@@ -23,9 +23,10 @@ library(tidyverse)
 # Input and output paths
 gwas_in <- snakemake@input[['gwas']]
 frq_in <- snakemake@input[['frq']]
-gwas_out <- snakemake@output[['query']]
+gwas_out <- snakemake@output
 
 # Read in data
+message('Loading data ...')
 gwas_tbl <- read_tsv(gwas_in) |>
   rename(b = BETA, se = SE, p = PVAL) |>
   select(SNP, CHR, BP, A1, A2, b, se, p, N)
@@ -33,10 +34,12 @@ gwas_tbl <- read_tsv(gwas_in) |>
 frq_tbl <- read_tsv(frq_in)
 
 # Join GWAS with reference frequencies by CHR and SNP
+message('Appending freq infor to GWAS ...')
 mrg_tbl <- gwas_tbl %>%
   left_join(frq_tbl, by = c("CHR", "SNP"), suffix = c("", ".ref"))
 
 # Assign freq based on allele alignment
+message('Checking for allele mismatches between freq ref to GWAS ...\n')
 mrg_tbl <- mrg_tbl %>%
   mutate(
     freq = case_when(
@@ -45,23 +48,30 @@ mrg_tbl <- mrg_tbl %>%
       TRUE ~ NA_real_
     )
   )
+glimpse(mrg_tbl)
 
 # Check for mismatches or missing frequencies
-mismatches <- mrg_tbl %>%
+message('Mismatch tbl: \n')
+mismatch_tbl <- mrg_tbl %>%
   filter(is.na(freq) & !is.na(A1.ref))
-if (nrow(mismatches) > 0) {
-  warning(str_glue("{nrow(mismatches)} SNPs have mismatched alleles or missing frequencies and will be excluded"))
+glimpse(mismatch_tblmrg_tbl)
+
+if (nrow(mismatch_tbl) > 0) {
+  warning(str_glue("\n{nrow(mismatches)} SNPs have mismatched alleles or missing frequencies and will be excluded"))
 }
 
 # Filter out SNPs with missing freq
+message('Filtering mismatches ...\n')
 result <- mrg_tbl %>%
   filter(!is.na(freq)) %>%
   select(SNP, A1, A2, freq, b, se, p, N)
 
 # Write output
+message('Writing GWAS in .ma format ...')
 write_tsv(result, output_file, na = "NA")
 
 message(str_glue("Formatted GWAS data written to {output_file}"))
+message('Done.')
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
