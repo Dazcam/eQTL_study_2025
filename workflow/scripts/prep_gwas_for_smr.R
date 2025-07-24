@@ -20,7 +20,6 @@ message("\n\nMunge GWAS for SMR input ...")
 
 # Load packages
 library(tidyverse)
-library(knitr)
 
 # Input and output paths
 gwas_in <- snakemake@input[["gwas"]]
@@ -29,13 +28,14 @@ gwas_out <- snakemake@output[[1]]
 
 # Read in data
 message("\nLoading data ...\n")
-gwas_tbl <- read_tsv(gwas_in, 
+gwas_tbl <- read_tsv("../results/05SLDSR/gwas/scz_hg38.tsv", 
                      col_types = cols(.default = "c", BP = "i", PVAL = "d", 
-                                      BETA = "d", SE = "d", Z = "d", N = "i")) %>%
-  rename(b = BETA, se = SE, p = PVAL) %>%
+                                      BETA = "d", SE = "d", Z = "d", N = "i")) |>
+  rename(b = BETA, se = SE, p = PVAL) |>
   select(SNP, CHR, BP, A1, A2, b, se, p, N)
 
-frq_tbl <- read_tsv(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i"))
+frq_tbl <- read_table('../results/07SMR/smr_input/allele_frq_hg38_ref.txt', 
+                      col_types = cols(.default = "c", MAF = "d", NCHROBS = "i")) 
 
 # Join GWAS with reference frequencies by CHR and SNP
 message("Appending freq info to GWAS ...\n")
