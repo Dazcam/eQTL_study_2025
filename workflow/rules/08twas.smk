@@ -162,42 +162,6 @@ rule compute_weights:
         fi
         """
 
-#rule compute_weights:
-#    input:
-#        geno_bed = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
-#        geno_bim = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
-#        geno_fam = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam",
-#        gene_pheno = "../results/06TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt",
-#        covar = "../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt",
-#        gemma = config["twas"]["get_gemma"]["output"]
-#    output:
-#        "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat"
-#    params:
-#        outdir = "../results/06TWAS/weights/{cell_type}"
-#    singularity: config["containers"]["twas"]
-#    log: "../results/00LOG/06TWAS/compute_weights_{cell_type}_{gene_id}.log"
-#    shell:
-#        r"""
-#        if [ -s {input.geno_bed} ]; then
-#          echo "Running compute_weights for {wildcards.gene_id}" >> {log}
-#          Rscript ../resources/fusion/FUSION.compute_weights.R \
-#            --bfile {input.geno_bed} \
-#            --pheno {input.gene_pheno} \
-#            --covar {input.covar} \
-#            --hsq_p 0.01 \
-#            --crossval 5 \
-#            --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
-#            --PATH_gcta resources/fusion/gcta_nr_robust \
-#            --PATH_gemma {input.gemma} \
-#            --out {output} >> {log} 2>&1
-#        else
-#          echo "No SNPs for {wildcards.gene_id}, skipping..." >> {log}
-#          echo "{wildcards.gene_id} has no SNPs in the cis region." > ../results/06TWAS/weights/{wildcards.cell_type}/{wildcards.gene_id}_no_snps.txt
-#          touch {output}
-#        fi
-#        """        
-
-
 def aggregate_input(wildcards):
     checkpoint_output = checkpoints.get_gene_info.get(**wildcards).output[0]
     return expand(
@@ -205,11 +169,6 @@ def aggregate_input(wildcards):
         cell_type = wildcards.cell_type,
         gene_id = glob_wildcards(os.path.join(checkpoint_output, "{gene_id}_gene_info.txt")).gene_id,
     )
-
-#rule aggregate_per_cell_type:
-#    input: aggregate_input,
-#    output: "../results/06TWAS/{cell_type}/all_genes_done.txt"
-#    run: "cat {input} > {output}"
 
 rule aggregate_per_cell_type:
     input: aggregate_input
@@ -228,3 +187,19 @@ rule aggregate_all:
     shell:  "cat {input} > {output}"
 
 
+rule twas_weights_summary:
+    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
+    input:  agg_file = "../results/06TWAS/all_genes_in_all_cell_types_done.txt",
+            rmd_file = "scripts/twas_weights_summary.Rmd"
+    output: "reports/06TWAS/twas_weights_summary.html"
+    params: cell_types = config["cell_types"], 
+            log_dir = "../results/00LOG/06TWAS", 
+            output_file = ../reports/06TWAS/twas_weights_summary.html",
+            hsq_p = 0.01  # Example additional parameter
+    singularity: config["containers"]["R"]
+    log: "../results/00LOG/06TWAS/twas_weights_summary.log" 
+    shell:
+        """
+        Rscript -e "rmarkdown::render('{input.rmd_file}', \
+        output_file = '{params.output_file}')" > {log} 2>&1
+        """

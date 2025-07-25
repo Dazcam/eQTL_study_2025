@@ -9,7 +9,8 @@ configfile: '../config/config.yaml'
 #include: 'rules/05susie.smk'
 #include: 'rules/06prep_gwas.smk'
 #include: 'rules/07sldsr.smk'
-include: 'rules/08twas.smk'
+#include: 'rules/08twas.smk'
+include: 'rules/10smr.smk'
 
 # Set QTL tool
 QTL_TOOL = config["eQTL"]["tool"]
@@ -113,7 +114,31 @@ rule all:
 #        expand(config["slsdr"]["munge_sumstats"]["output"], gwas = config['gwas']),
 #        expand(config["slsdr"]["ldsr_strat_hg38_bl_v12"]["output"], cell_type=config['cell_types'], gwas = config['gwas']),
 #        config["slsdr"]["ldsr_strat_summary"]["output"]
-        "../results/06TWAS/all_genes_in_all_cell_types_done.txt",
+#        "../results/06TWAS/all_genes_in_all_cell_types_done.txt",
+#        "reports/06TWAS/twas_weights_summary.html"
+#         expand("../results/00LOG/07SMR/smr_input/{cell_type}/{cell_type}.besd", cell_type=config['cell_types']),
+#         expand("../results/05SLDSR/gwas/{gwas}_hg38.ma", gwas = config['gwas'])
+         expand(
+            "../results/07SMR/smr/{cell_type}/{cell_type}_{gwas}.smr",
+            cell_type=config['cell_types'],
+            gwas = config['gwas']
+         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #        "../results/06TWAS/all_gene_targets_ready.txt"
 #        lambda wildcards: expand(
 #            "../results/06TWAS/weights/{cell_type}/{gene_id}.RDat",
