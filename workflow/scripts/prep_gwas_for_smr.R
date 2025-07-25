@@ -28,6 +28,9 @@ gwas_out <- snakemake@output[[1]]
 
 # Read in data
 message("\nLoading data ...\n")
+message("GWAS loaded from: ", gwas_in)
+message("Allele freq file loaded from: ", frq_in)
+
 gwas_tbl <- read_tsv("../results/05SLDSR/gwas/scz_hg38.tsv", 
                      col_types = cols(.default = "c", BP = "i", PVAL = "d", 
                                       BETA = "d", SE = "d", Z = "d", N = "i")) |>
