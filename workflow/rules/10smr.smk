@@ -1,5 +1,3 @@
-# Get SNP position from genotype files
-
 rule get_smr_binary:
    output: config["smr"]["get_smr_binary"]["smr"]
    params: config["smr"]["get_smr_binary"]["prefix"]
@@ -25,7 +23,7 @@ rule create_query:
             r_script = config["smr"]["create_query"]["r_script"]
     output: query = config["smr"]["create_query"]["query"],
             gene_lst = config["smr"]["create_query"]["gene_lst"]
-    params: qval_thresh = config["eqtl_fdr"],
+    params: qval_thresh = config["eqtl_fdr"]
     singularity: config["containers"]["R"]
     log: config["smr"]["create_query"]["log"]
     script: "../scripts/prep_eQTL_for_smr.R"
@@ -42,32 +40,61 @@ rule create_besd:
         {input.smr} --qfile {input.query} --make-besd --out {params} > {log} 2>&1
         """
 
-CHR = list(range(1, 23))
-
 # Rule to concatenate frequency files
-rule cat_freq:
-    input:  expand(["smr"]["cat_freq"]["frq"], chr = CHR)
-    output: ["smr"]["cat_freq"]["cat_frq"]
+#rule cat_freq:
+#    # This rule uses the LDSR hg38 1000G frq files, but smr throws an error
+#    input:  expand(config["smr"]["cat_freq"]["frq"], chr = range(1, 23))
+#    output: config["smr"]["cat_freq"]["cat_frq"]
+#    shell:
+#        """
+#        head -n 1 {input[0]} > {output}
+#        for file in {input}; do
+#            tail -n +2 $file >> {output}
+#        done
+#        """
+
+rule generate_topmed_freq:
+    input:  bed = config["smr"]["generate_topmed_freq"]["bed"],
+            bim = config["smr"]["generate_topmed_freq"]["bim"],
+            fam = config["smr"]["generate_topmed_freq"]["fam"]
+    output: config["smr"]["generate_topmed_freq"]["out"]
+    params: prefix_in = config["smr"]["generate_topmed_freq"]["prefix_in"],
+            prefix_out = config["smr"]["generate_topmed_freq"]["prefix_out"]
+    envmodules: "plink/1.9"  
     shell:
         """
-        head -n 1 {input.frq_files[0]} > {output}
-        for file in {input.frq_files}; do
-            tail -n +2 $file >> {output}
-        done
+        plink --bfile {params.prefix_in} \
+              --freq \
+              --out {params.prefix_out}
         """
 
 # Rule to format GWAS data
 rule format_gwas:
     input:  gwas = config["smr"]["format_gwas"]["gwas"],
-            frq  = results.cat_freq.output,
-            script = "scripts/format_gwas_for_smr.R"
+            frq  = rules.generate_topmed_freq.output,
+            script = "scripts/prep_gwas_for_smr.R"
     output: config["smr"]["format_gwas"]["ma"]
     params: config["smr"]["format_gwas"]["prefix"]
     singularity: config["containers"]["R"]
     log: config["smr"]["format_gwas"]["log"]
-    shell:
-        """
-        Rscript {input.script} {input.gwas} {input.ref_af} {output.ma} > {log} 2>&1
-        """
+    script: "../scripts/prep_gwas_for_smr.R"    
+
+rule smr:
+    input:  bin = rules.get_smr_binary.output,
+            gwas = rules.format_gwas.output,
+            besd = rules.create_besd.output
+    output: config["smr"]["smr"]["smr"]
+    params: geno_prefix = config["smr"]["smr"]["geno_prefix"],
+            besd_prefix = config["smr"]["create_besd"]["prefix"],
+            out_prefix = config["smr"]["smr"]["smr_prefix"]
+    envmodules: "compiler/gnu/5/5.0"
+    log:    config["smr"]["smr"]["log"]
+    shell:  """
+            {input.bin} --bfile {params.geno_prefix} \
+                --gwas-summary {input.gwas} \
+                --beqtl-summary {params.besd_prefix} \
+                --out {params.out_prefix} \
+                --peqtl-smr 0.01 >> {log} 2>&1 
+            """
 
 

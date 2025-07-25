@@ -381,7 +381,26 @@ smr:
     gene_lst: ../results/07SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
     log: ../results/00LOG/07SMR/create_query_{cell_type}.log
   create_besd:
-    besd: ../results/00LOG/07SMR/smr_input/{cell_type}/{cell_type}.besd
-    prefix: ../results/00LOG/07SMR/smr_input/{cell_type}/{cell_type}
+    besd: ../results/07SMR/smr_input/{cell_type}/{cell_type}.besd
+    prefix: ../results/07SMR/smr_input/{cell_type}/{cell_type}
     log: ../results/00LOG/07SMR/create_besd_{cell_type}.log
-
+  cat_freq:
+    frq: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
+    cat_frq: ../results/07SMR/smr_input/allele_frq_hg38_ref.txt
+  generate_topmed_freq:
+    bed: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.bed
+    bim: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.bim
+    fam: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.fam
+    out: ../results/07SMR/smr_input/chrALL_final.filt.frq
+    prefix_in: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
+    prefix_out: ../results/07SMR/smr_input/chrALL_final.filt   
+  format_gwas:
+    gwas: ../results/05SLDSR/gwas/{gwas}_hg38.tsv
+    ma: ../results/07SMR/smr_input/gwas/{gwas}_hg38.ma
+    prefix: ../results/07SMR/smr_input/gwas/{gwas}_hg38
+    log: ../results/00LOG/07SMR/format_gwas_{gwas}.log
+  smr:
+    geno_prefix: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
+    smr: ../results/07SMR/smr/{cell_type}/{cell_type}_{gwas}.smr
+    smr_prefix: ../results/07SMR/smr/{cell_type}/{cell_type}_{gwas}
+    log: ../results/00LOG/07SMR/smr_{cell_type}_{gwas}.log 
