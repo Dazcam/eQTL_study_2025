@@ -37,7 +37,34 @@ gwas_tbl <- read_tsv("../results/05SLDSR/gwas/scz_hg38.tsv",
 frq_tbl <- read_table('../results/07SMR/smr_input/allele_frq_hg38_ref.txt', 
                       col_types = cols(.default = "c", MAF = "d", NCHROBS = "i")) 
 
-# Check GWAS Chrs 
+
+## GWAS checks  -----------------------------------------------------------------------
+# non-rsIDs
+non_rsids <- gwas_tbl %>%
+  filter(!str_starts(SNP, "rs")) %>%
+  distinct(SNP) %>%
+  nrow()
+if (non_rsids > 0) {
+  message(str_glue("Found {non_rsids} non-rsID SNPs. Removing them ..."))
+  gwas_tbl <- gwas_tbl %>% filter(str_starts(SNP, "rs"))
+} else {
+  message("No non-rsID SNPs found.")
+}
+
+# duplicate rsIDs
+duplicate_rsids <- gwas_tbl %>%
+  group_by(SNP) %>%
+  filter(n() > 1) %>%
+  distinct(SNP) %>%
+  nrow()
+if (duplicate_rsids > 0) {
+  message(str_glue("Found {duplicate_rsids} duplicate rsIDs. Keeping first occurrence ..."))
+  gwas_tbl <- gwas_tbl %>% distinct(SNP, .keep_all = TRUE)
+} else {
+  message("No duplicate rsIDs found.")
+}
+
+# Alt Chrs 
 message("Checking GWAS chromosomes ...\n")
 gwas_tbl |> 
   group_by(CHR) |> 
@@ -51,7 +78,7 @@ alt_chroms <- gwas_tbl %>%
 
 if (length(alt_chroms) > 0) {
   message("\nChromosomes ending with 'alt' found: ", paste(alt_chroms, collapse = ", "))
-  message("Count of SNPs with 'alt' chromosomes: ", 
+  message("\nCount of SNPs with 'alt' chromosomes: ", 
           nrow(gwas_tbl %>% filter(str_ends(CHR, "alt"))))
   message("Removing SNPs with 'alt' chromosomes ... ")
   gwas_tbl <- gwas_tbl %>% filter(!str_ends(CHR, "alt"))
@@ -59,53 +86,50 @@ if (length(alt_chroms) > 0) {
   message("No chromosomes ending with 'alt' found.")
 }
 
-
 # Join GWAS with reference frequencies by CHR and SNP
-message("Appending freq info to GWAS ...\n")
+message("\nAppending freq info to GWAS ...\n")
 mrg_tbl <- gwas_tbl %>%
   left_join(frq_tbl, by = c("CHR", "SNP"), suffix = c("", ".ref"))
 
-# Check initial mismatches to determine strand flip handling
-initial_mismatch_tbl <- mrg_tbl %>%
-  filter(!(A1 == A1.ref & A2 == A2.ref | A1 == A2.ref & A2 == A1.ref) & !is.na(A1.ref))
-use_strand_flip <- nrow(initial_mismatch_tbl) > 100
-message(str_glue("Initial mismatches: {nrow(initial_mismatch_tbl)}. Strand flip handling: {ifelse(use_strand_flip, 'enabled', 'disabled')}.\n"))
-
 # Assign freq and status based on allele alignment
-message("Assigning frequencies and checking for allele mismatches ...\n")
+message("Assigning frequencies and adjusting alleles ...\n")
 mrg_tbl <- mrg_tbl %>%
   mutate(
+    A1_temp = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ A1,           # Alleles align directly
+      A1 == A2.ref & A2 == A1.ref ~ A1.ref,       # Flipped, use reference alleles
+      TRUE ~ NA_character_                        # Mismatch or missing
+    ),
+    A2_temp = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ A2,           # Alleles align directly
+      A1 == A2.ref & A2 == A1.ref ~ A2.ref,       # Flipped, use reference alleles
+      TRUE ~ NA_character_                        # Mismatch or missing
+    ),
     freq = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ MAF,           # Alleles align directly
-      A1 == A2.ref & A2 == A1.ref ~ 1 - MAF,       # Alleles are flipped
-      # Strand flips for A/T or C/G SNPs (only if mismatches > 100)
-      use_strand_flip & (
-        (A1 == "A" & A2 == "T" & A1.ref == "T" & A2.ref == "A") |
-          (A1 == "T" & A2 == "A" & A1.ref == "A" & A2.ref == "T") |
-          (A1 == "C" & A2 == "G" & A1.ref == "G" & A2.ref == "C") |
-          (A1 == "G" & A2 == "C" & A1.ref == "C" & A2.ref == "G")
-      ) ~ 1 - MAF,                                # Treat as flipped
-      TRUE ~ NA_real_                              # Mismatch or missing
+      !is.na(A1.ref) & (A1 == A1.ref & A2 == A2.ref | A1 == A2.ref & A2 == A1.ref) ~ MAF,  # Use MAF for aligned or flipped
+      TRUE ~ NA_real_                             # Mismatch or missing
+    ),
+    b = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ b,            # Same alleles
+      A1 == A2.ref & A2 == A1.ref ~ -b,           # Flipped, reverse effect
+      TRUE ~ NA_real_                             # Mismatch or missing
     ),
     allele_status = case_when(
       A1 == A1.ref & A2 == A2.ref ~ "aligned",
       A1 == A2.ref & A2 == A1.ref ~ "flipped",
-      use_strand_flip & (
-        (A1 == "A" & A2 == "T" & A1.ref == "T" & A2.ref == "A") |
-          (A1 == "T" & A2 == "A" & A1.ref == "A" & A2.ref == "T") |
-          (A1 == "C" & A2 == "G" & A1.ref == "G" & A2.ref == "C") |
-          (A1 == "G" & A2 == "C" & A1.ref == "C" & A2.ref == "G")
-      ) ~ "strand_flipped",
       is.na(A1.ref) ~ "missing_reference",
       TRUE ~ "mismatched"
-    )
-  )
+    ),
+    A1 = A1_temp,                                 # Rename to maintain naming convention
+    A2 = A2_temp
+  ) %>%
+  select(-A1_temp, -A2_temp)   
 
 # Log allele alignment statistics
+message("Allele alignment summary:\n")
 allele_counts <- mrg_tbl %>%
   count(allele_status) %>%
-  mutate(percentage = n / sum(n) * 100)
-message("Allele alignment summary:\n")
+  mutate(percentage = n / nrow(gwas_tbl) * 100)
 walk2(allele_counts$allele_status, allele_counts$percentage, 
       ~ message(str_glue("{.x}: {.y}% (n = {allele_counts$n[allele_counts$allele_status == .x]})")))
 
