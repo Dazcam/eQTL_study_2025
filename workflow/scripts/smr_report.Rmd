@@ -5,16 +5,24 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-library(dplyr)
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
 library(knitr)
 library(kableExtra)
 
 
 # Set variables
 # Note: not using smk vars here; they're not avail in R container
-cell_types <- params$cell_types
-in_dir <- params$in_dir
+# Get command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+# Set defaults for testing
+default_cell_types <- c("ExN-1", "ExN-2")
+default_in_dir <- "../results/07SMR/smr"
+
+# Extract cell_types and in_dir from arguments
+cell_types <- if (length(args) >= 1) unlist(strsplit(args[1], ",")) else default_cell_types
+in_dir <- if (length(args) >= 2) args[2] else default_in_dir
 
 # Function to read and format SMR table
 read_smr_table <- function(cell_type, in_dir) {
