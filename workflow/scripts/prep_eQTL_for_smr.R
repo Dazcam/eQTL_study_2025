@@ -79,8 +79,12 @@ smr_tbl <- snp_mrg_tbl |>
           Probe_bp, Gene, Orientation, b, se, p)
 
 message('Running checks ...')
-message(nrow(smr_tbl), ' eQTL after filtering and joining ...')
-message('NAs in final dataframe? ', anyNA(smr_tbl))
+if (anyNA(smr_tbl)) {
+  message(sum(!complete.cases(smr_tbl)), " NAs in final df — rm rows with NA ...")
+  smr_tbl <- smr_tbl %>% drop_na()
+} else {
+  message("No NAs in final df — no action taken.")
+}
 message('Do SNP and Gene Chr annotations match? ', 
         sum(smr_tbl$Chr == smr_tbl$Probe_Chr) == nrow(smr_tbl))
 
