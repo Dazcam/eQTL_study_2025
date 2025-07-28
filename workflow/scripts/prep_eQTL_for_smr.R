@@ -47,7 +47,7 @@ genes_tbl <- read_tsv(genes_in) |>
          Probe_bp = phenotype_pos, 
          Gene = gene_id) |>
   select(Probe_Chr, Probe_bp, Gene, Orientation)
-frq_tbl <- read_tsv(frq_in, col_types = cols(.default = "c", MAF = "d")) %>%
+frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d")) %>%
   select(CHR, SNP, A1, A2, MAF) %>%
   rename(A1.ref = A1, A2.ref = A2)
 
