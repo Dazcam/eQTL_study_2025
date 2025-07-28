@@ -6,18 +6,6 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-if (exists("snakemake")) {
-  log_smk <- function() {
-    if (exists("snakemake") & length(snakemake@log) != 0) {
-      log <- file(snakemake@log[1][[1]], open = "wt")
-      sink(log, append = TRUE)
-      sink(log, append = TRUE, type = "message")
-    }
-  }
-}
-log_smk()
-
 library(dplyr)
 library(knitr)
 library(kableExtra)
@@ -26,7 +14,6 @@ library(kableExtra)
 # Set variables
 cell_types <- snakemake@params["cell_types"]
 in_dir <- snakemake@params["in_dir"]
-out_file <- snakemake@output
 
 # Function to read and format SMR table
 read_smr_table <- function(cell_type, in_dir) {
