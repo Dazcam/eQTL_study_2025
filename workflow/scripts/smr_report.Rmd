@@ -12,8 +12,9 @@ library(kableExtra)
 
 
 # Set variables
-cell_types <- snakemake@params["cell_types"]
-in_dir <- snakemake@params["in_dir"]
+# Note: not using smk vars here; they're not avail in R container
+cell_types <- params$cell_types
+in_dir <- params$in_dir
 
 # Function to read and format SMR table
 read_smr_table <- function(cell_type, in_dir) {
