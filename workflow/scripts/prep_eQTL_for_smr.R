@@ -37,17 +37,6 @@ message("Gene metadata loaded from: ", genes_in)
 message("Allele frq info loaded from: ", frq_in)
 message("Allele freq file loaded from: ", frq_in)
 
-# test code
-# eqtl_tbl <- read_tsv('~/Desktop/test/smr_test/ExN-1_perm.cis_qtl.txt.gz')
-# genes_tbl <- read_tsv('~/Desktop/test/smr_test/ExN-1_gene_meta.tsv') |>
-#   rename(Probe_Chr = chromosome,
-#          Orientation = strand,
-#          Probe_bp = phenotype_pos, 
-#          Gene = gene_id) |>
-#   select(Probe_Chr, Probe_bp, Gene, Orientation)
-# snps_tbl <- read_tsv('~/Desktop/test/smr_test/snp_positions.txt', 
-#                       col_names = c('Chr', 'BP', 'SNP', 'A1', 'A2'))
-
 # Read data
 message('Loading data ...')
 eqtl_tbl <- read_tsv(eqtl_in)
