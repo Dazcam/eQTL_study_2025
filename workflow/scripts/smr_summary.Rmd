@@ -1,0 +1,80 @@
+---
+title: "SMR summary"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+if (exists("snakemake")) {
+  log_smk <- function() {
+    if (exists("snakemake") & length(snakemake@log) != 0) {
+      log <- file(snakemake@log[1][[1]], open = "wt")
+      sink(log, append = TRUE)
+      sink(log, append = TRUE, type = "message")
+    }
+  }
+}
+log_smk()
+
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+
+# Set variables
+cell_types <- snakemake@params["cell_types"]
+in_dir <- snakemake@params["in_dir"]
+out_file <- snakemake@output
+
+# Function to read and format SMR table
+read_smr_table <- function(cell_type, in_dir) {
+  file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_scz.smr"))
+  if (file.exists(file_path)) {
+    readr::read_tsv(file_path, col_types = cols(.default = "c", 
+                                               Probe_bp = "i", 
+                                               topSNP_bp = "i", 
+                                               Freq = "d", 
+                                               b_GWAS = "d", 
+                                               se_GWAS = "d", 
+                                               p_GWAS = "d", 
+                                               b_eQTL = "d", 
+                                               se_eQTL = "d", 
+                                               p_eQTL = "d", 
+                                               b_SMR = "d", 
+                                               se_SMR = "d", 
+                                               p_SMR = "d", 
+                                               p_HEIDI = "d", 
+                                               nsnp_HEIDI = "i")) %>%
+      arrange(p_SMR) %>%
+      mutate(across(c(Freq, b_GWAS, se_GWAS, p_GWAS, b_eQTL, se_eQTL, p_eQTL, b_SMR, se_SMR, p_SMR, p_HEIDI), 
+                    ~ format(.x, digits = 3, scientific = TRUE)))
+  } else {
+    message("File not found for cell type: ", cell_type)
+    return(NULL)
+  }
+}
+```
+
+```{r plot_tables}
+for (cell_type in cell_types) {
+  cat("\n### ", cell_type, "\n")
+  smr_data <- read_smr_table(cell_type, in_dir)
+  if (!is.null(smr_data)) {
+    smr_data %>%
+      kable("html", caption = paste("SMR Results for", cell_type), 
+            col.names = c("Probe ID", "Probe Chr", "Gene", "Probe BP", "Top SNP", 
+                          "Top SNP Chr", "Top SNP BP", "A1", "A2", "Freq", 
+                          "b GWAS", "se GWAS", "p GWAS", "b eQTL", "se eQTL", 
+                          "p eQTL", "b SMR", "se SMR", "p SMR", "p HEIDI", "nSNP HEIDI")) %>%
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
+                    full_width = FALSE) %>%
+      scroll_box(width = "100%", height = "500px") %>%
+      print()
+  } else {
+    cat("No data available for ", cell_type, ".\n")
+  }
+}
+
+```
