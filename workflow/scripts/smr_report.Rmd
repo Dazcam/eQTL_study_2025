@@ -17,8 +17,9 @@ library(kableExtra)
 # Set variables from params
 cell_types <- params$cell_types
 in_dir <- params$in_dir
+message('wd: ', getwd())
 message('cell_types: ', cell_types)
-message('in_dir: ', cell_types)
+message('in_dir: ', in_dir)
 
 # Function to read and format SMR table
 read_smr_table <- function(cell_type, in_dir) {
