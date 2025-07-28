@@ -13,6 +13,10 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 
+# Set variables from params
+cell_types <- params$cell_types
+in_dir <- params$in_dir
+
 # Function to read and format SMR table
 read_smr_table <- function(cell_type, in_dir) {
   file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_scz.smr"))
@@ -43,9 +47,9 @@ read_smr_table <- function(cell_type, in_dir) {
 ```
 
 ```{r plot_tables}
-for (cell_type in params$cell_types) {
+for (cell_type in cell_types) {
   cat("\n### ", cell_type, "\n")
-  smr_data <- read_smr_table(cell_type, params$in_dir)
+  smr_data <- read_smr_table(cell_type, in_dir)
   if (!is.null(smr_data)) {
     smr_data %>%
       kable("html", caption = paste("SMR Results for", cell_type), 
