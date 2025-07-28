@@ -54,7 +54,7 @@ read_smr_table <- function(cell_type, in_dir) {
 for (cell_type in cell_types) {
   cat("\n#### ", cell_type, "\n")
   smr_data <- read_smr_table(cell_type, in_dir)
-  print(knitr::kable(smr_data))
+  knitr::kable(smr_data)
   cat(' \n')
 }
 
