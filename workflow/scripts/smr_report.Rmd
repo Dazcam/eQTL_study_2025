@@ -52,7 +52,7 @@ read_smr_table <- function(cell_type, in_dir) {
 
 ```{r plot_tables}
 for (cell_type in cell_types) {
-  cat("\n#### ", cell_type, "\n")
+  cat(" \n#### ", cell_type, "\n", sep = "")
   smr_data <- read_smr_table(cell_type, in_dir)
   knitr::kable(smr_data)
   cat(' \n')
