@@ -2,7 +2,9 @@
 title: "SMR summary"
 author: "Darren Cameron"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  html_document:
+    df_print: paged
 params:
   cell_types: null
   in_dir: null
@@ -51,16 +53,7 @@ for (cell_type in cell_types) {
   cat("\n### ", cell_type, "{.tabset .tabset-fade}\n")
   smr_data <- read_smr_table(cell_type, in_dir)
   if (!is.null(smr_data)) {
-    smr_data %>%
-      kable("html", caption = paste("SMR Results for", cell_type), 
-            col.names = c("Probe ID", "Probe Chr", "Gene", "Probe BP", "Top SNP", 
-                          "Top SNP Chr", "Top SNP BP", "A1", "A2", "Freq", 
-                          "b GWAS", "se GWAS", "p GWAS", "b eQTL", "se eQTL", 
-                          "p eQTL", "b SMR", "se SMR", "p SMR", "p HEIDI", "nSNP HEIDI")) %>%
-      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), 
-                    full_width = FALSE) %>%
-      scroll_box(width = "100%", height = "500px") %>%
-      print()
+    knitr::kable(smr_data)
   } else {
     cat("No data available for ", cell_type, ".\n")
   }
