@@ -24,9 +24,18 @@ library(tidyverse)
 eqtl_in <- snakemake@input[['eqtl']]
 snps_in <- snakemake@input[['snps']]
 genes_in <- snakemake@input[['genes']]
+frq_in <- snakemake@input[['frq']]
 query_out <- snakemake@output[['query']]
 genes_out <- snakemake@output[['gene_lst']]
 fdr_thresh <- snakemake@params[['qval_thresh']]
+
+# Read in data
+message("\nLoading data ...\n")
+message("eQTL loaded from: ", eqtl_in)
+message("SNP ref info loaded from: ", snps_in)
+message("Gene metadata loaded from: ", genes_in)
+message("Allele frq info loaded from: ", frq_in)
+message("Allele freq file loaded from: ", frq_in)
 
 # test code
 # eqtl_tbl <- read_tsv('~/Desktop/test/smr_test/ExN-1_perm.cis_qtl.txt.gz')
@@ -49,6 +58,9 @@ genes_tbl <- read_tsv(genes_in) |>
          Probe_bp = phenotype_pos, 
          Gene = gene_id) |>
   select(Probe_Chr, Probe_bp, Gene, Orientation)
+frq_tbl <- read_tsv(frq_in, col_types = cols(.default = "c", MAF = "d")) %>%
+  select(CHR, SNP, A1, A2, MAF) %>%
+  rename(A1.ref = A1, A2.ref = A2)
 
 # Filter for significant eQTLs (qval < threshold)
 message('Filtering eQTL. FDR thresh set to: ', fdr_thresh)
@@ -70,13 +82,42 @@ snp_mrg_tbl <- eqtl_filt_tbl |>
   select(SNP, Chr, BP, A1, A2, Freq, Gene, b, se, p) |>
   mutate(Chr = str_replace(Chr, '^chr', ''))
 
+# Align eQTL alleles and frequencies to 1000G reference
+message('Aligning alleles and frequencies to 1000G ...')
+snp_mrg_tbl <- snp_mrg_tbl %>%
+  left_join(frq_tbl, by = c("Chr" = "CHR", "SNP"), suffix = c("", ".ref")) %>%
+  mutate(
+    A1_temp = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ A1,           # Alleles align directly
+      A1 == A2.ref & A2 == A1.ref ~ A1.ref,       # Flipped, use reference alleles
+      TRUE ~ NA_character_                        # Mismatch or missing
+    ),
+    A2_temp = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ A2,           # Alleles align directly
+      A1 == A2.ref & A2 == A1.ref ~ A2.ref,       # Flipped, use reference alleles
+      TRUE ~ NA_character_                        # Mismatch or missing
+    ),
+    Freq = case_when(
+      !is.na(A1.ref) & (A1 == A1.ref & A2 == A2.ref | A1 == A2.ref & A2 == A1.ref) ~ MAF,  # Use 1000G MAF
+      TRUE ~ NA_real_                             # Mismatch or missing
+    ),
+    b = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ b,            # Same alleles
+      A1 == A2.ref & A2 == A1.ref ~ -b,           # Flipped, reverse effect
+      TRUE ~ NA_real_                             # Mismatch or missing
+    ),
+    A1 = A1_temp,
+    A2 = A2_temp
+  ) %>%
+  select(-A1_temp, -A2_temp, -A1.ref, -A2.ref, -MAF)
+
 # Merge with gene meta data
 message('Merging Gene data ...')
 smr_tbl <- snp_mrg_tbl |>
   left_join(genes_tbl, by = "Gene") |>
   mutate(Probe = Gene) |>
   relocate(SNP, Chr, BP, A1, A2, Freq, Probe, Probe_Chr,
-          Probe_bp, Gene, Orientation, b, se, p)
+           Probe_bp, Gene, Orientation, b, se, p)
 
 message('Running checks ...')
 if (anyNA(smr_tbl)) {
