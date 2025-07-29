@@ -147,7 +147,7 @@ kable(summary_data,
 
 ```{r logs}
 # Example execution (comment out if used in Snakemake)
-log_dir <- "../results/00LOG/07SMR"
+log_dir <- "../../results/00LOG/07SMR"
 cell_types <- c("ExN-1", "ExN-2", "InN", "OPC", "RG", "Endo-Peri", "MG")
 extract_smr_log_params(log_dir, cell_types)
 ```
