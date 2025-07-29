@@ -4,6 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 
+# The HEIDI test fails
+
 ## Set up logging for smk  ------------------------------------------------------------
 if (exists("snakemake")) {
   log_smk <- function() {
@@ -27,7 +29,7 @@ genes_in <- snakemake@input[['genes']]
 frq_in <- snakemake@input[['frq']]
 query_out <- snakemake@output[['query']]
 genes_out <- snakemake@output[['gene_lst']]
-fdr_thresh <- snakemake@params[['qval_thresh']]
+# fdr_thresh <- snakemake@params[['qval_thresh']] # Too stringent for SMR / HEIDI
 
 # Read in data
 message("\nLoading data ...\n")
@@ -47,14 +49,15 @@ genes_tbl <- read_tsv(genes_in) |>
          Probe_bp = phenotype_pos, 
          Gene = gene_id) |>
   select(Probe_Chr, Probe_bp, Gene, Orientation)
-frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d")) %>%
-  select(CHR, SNP, A1, A2, MAF) %>%
+frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d")) |>
+  select(CHR, SNP, A1, A2, MAF) |>
   rename(A1.ref = A1, A2.ref = A2)
 
 # Filter for significant eQTLs (qval < threshold)
 message('Filtering eQTL. FDR thresh set to: ', fdr_thresh)
-eqtl_filt_tbl <- eqtl_tbl  %>%
-  filter(qval < fdr_thresh) %>%
+eqtl_filt_tbl <- eqtl_tbl  |>
+#  filter(qval < fdr_thresh) %>% # Too stringent; HEIDI fails for all SNPs
+#  filter(pval_nominal < 0.05) %>%  # Could use nominal p-value to include more SNPs
   select(
     SNP = variant_id,
     Gene = phenotype_id,
@@ -74,7 +77,7 @@ snp_mrg_tbl <- eqtl_filt_tbl |>
 # Align eQTL alleles and frequencies to 1000G reference
 message('Aligning alleles and frequencies to 1000G ...')
 snp_mrg_tbl <- snp_mrg_tbl %>%
-  left_join(frq_tbl, by = c("Chr" = "CHR", "SNP"), suffix = c("", ".ref")) %>%
+  left_join(frq_tbl, by = c("Chr" = "CHR", "SNP"), suffix = c("", ".ref")) |>
   mutate(
     A1_temp = case_when(
       A1 == A1.ref & A2 == A2.ref ~ A1,           # Alleles align directly
@@ -111,7 +114,8 @@ smr_tbl <- snp_mrg_tbl |>
 message('Running checks ...')
 if (anyNA(smr_tbl)) {
   message(sum(!complete.cases(smr_tbl)), " NAs in final df — rm rows with NA ...")
-  smr_tbl <- smr_tbl %>% drop_na()
+  smr_tbl <- smr_tbl |>
+    drop_na()
 } else {
   message("No NAs in final df — no action taken.")
 }
