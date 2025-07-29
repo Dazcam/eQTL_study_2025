@@ -144,7 +144,7 @@ kable(summary_data,
 
 ### SMR logs
 
-```{r logs, include=FALSE, echo=FALSE}
+```{r logs, echo=FALSE}
 log_dir <- "../../results/00LOG/07SMR"
 extract_smr_log_params(log_dir, cell_types)
 ```
@@ -153,7 +153,7 @@ extract_smr_log_params(log_dir, cell_types)
 
 ### HEIDI SNP check
 
-```{r heidi_check, include=FALSE, echo=FALSE}
+```{r heidi_check, echo=FALSE}
 snp_summary <- bind_rows(lapply(cell_types, function(cell_type) {
   epi_tbl <- read_tsv(
     paste0('../../results/07SMR/smr_input/', cell_type, '/', cell_type, '.epi'),
