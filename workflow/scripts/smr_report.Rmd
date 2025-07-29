@@ -19,31 +19,29 @@ library(kableExtra)
 cell_types <- params$cell_types
 in_dir <- params$in_dir
 
-# Function to read and format SMR table
-read_smr_table <- function(cell_type, in_dir) {
+# Function to read and summarize SMR results
+summarize_smr <- function(cell_type, in_dir) {
   file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_scz.smr"))
+  message('file_path: ', file_path)
   if (file.exists(file_path)) {
-    readr::read_tsv(file_path, col_types = cols(.default = "c", 
-                                               Probe_bp = "i", 
-                                               topSNP_bp = "i", 
-                                               Freq = "d", 
-                                               b_GWAS = "d", 
-                                               se_GWAS = "d", 
-                                               p_GWAS = "d", 
-                                               b_eQTL = "d", 
-                                               se_eQTL = "d", 
-                                               p_eQTL = "d", 
-                                               b_SMR = "d", 
-                                               se_SMR = "d", 
-                                               p_SMR = "d", 
-                                               p_HEIDI = "d", 
-                                               nsnp_HEIDI = "i")) %>%
-      arrange(p_SMR) %>%
-      mutate(across(c(Freq, b_GWAS, se_GWAS, p_GWAS, b_eQTL, se_eQTL, p_eQTL, b_SMR, se_SMR, p_SMR, p_HEIDI), 
-                    ~ format(.x, digits = 3, scientific = TRUE)))
+    smr <- read_tsv(file_path)
+    n_probes <- nrow(smr)
+    smr_sig <- smr %>% filter(p_SMR < (0.05 / n_probes))
+    smr_sig_heidi <- smr_sig %>% filter(p_HEIDI > 0.05 | is.na(p_HEIDI))
+    return(data.frame(
+      Cell_Type = cell_type,
+      Total_Probes = n_probes,
+      Significant_SMR = nrow(smr_sig),
+      Significant_SMR_HEIDI = nrow(smr_sig_heidi)
+    ))
   } else {
     message("File not found for cell type: ", cell_type)
-    return(NULL)
+    return(data.frame(
+      Cell_Type = cell_type,
+      Total_Probes = 0,
+      Significant_SMR = 0,
+      Significant_SMR_HEIDI = 0
+    ))
   }
 }
 ```
@@ -53,8 +51,16 @@ read_smr_table <- function(cell_type, in_dir) {
 ```{r plot_tables, results='asis', echo=FALSE}
 for (cell_type in cell_types) {
   cat(" \n#### ", cell_type, "\n", sep = "")
-  smr_data <- read_smr_table(cell_type, in_dir)
-  print(knitr::kable(smr_data))
+  # Summarize results for all cell types
+  summary_data <- bind_rows(lapply(cell_types, summarize_smr, in_dir))
+
+  # Format and display summary table
+  kable(summary_data,
+        caption = "Summary of SMR and HEIDI Results by Cell Type",
+        col.names = c("Cell Type", "Total Probes", "Significant SMR", "Significant SMR + HEIDI"),
+        align = "lrrr",
+        format = "html") %>%
+    kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
   cat(' \n')
 }
 
