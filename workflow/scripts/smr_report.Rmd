@@ -156,7 +156,7 @@ extract_smr_log_params(log_dir, cell_types)
 ```{r heidi_check, include=FALSE, echo=FALSE}
 snp_summary <- bind_rows(lapply(cell_types, function(cell_type) {
   epi_tbl <- read_tsv(
-    paste0('../results/07SMR/smr_input/', cell_type, '/', cell_type, '.epi'),
+    paste0('../../results/07SMR/smr_input/', cell_type, '/', cell_type, '.epi'),
     col_names = c('Chr', 'Probe', 'c3', 'bp', 'gene', 'strand'),
     show_col_types = FALSE
   )
