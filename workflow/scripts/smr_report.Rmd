@@ -24,10 +24,10 @@ in_dir <- params$in_dir
 summarize_smr <- function(cell_type, in_dir) {
   file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_scz.smr"))
   if (file.exists(file_path)) {
-    smr <- read_tsv(file_path, )
+    smr <- read_tsv(file_path)
     n_probes <- nrow(smr)
     smr_sig <- smr |> filter(p_SMR < (0.05 / n_probes))
-    smr_sig_heidi <- smr_sig |> filter(p_HEIDI > 0.05 | !is.na(p_HEIDI))
+    smr_sig_heidi <- smr_sig |> filter(p_HEIDI > 0.05)
     return(data.frame(
       Cell_Type = cell_type,
       Total_Probes = n_probes,
@@ -63,7 +63,6 @@ extract_smr_log_params <- function(log_dir, cell_types) {
   # Process each cell type
   for (cell_type in cell_types) {
     log_file <- file.path(log_dir, paste0("smr_", cell_type, "_scz.log"))
-    message("Processing log file: ", log_file)
     
     # Initialize default values
     values <- rep("Unknown", length(params))
@@ -124,11 +123,27 @@ extract_smr_log_params <- function(log_dir, cell_types) {
   
   return(result)
 }
+
+get_heidi <- function(cell_type, in_dir) {
+  file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_scz.smr"))
+  
+  if (file.exists(file_path)) {
+    smr <- readr::read_tsv(file_path, show_col_types = FALSE)
+    n_probes <- nrow(smr)
+    
+    smr %>%
+      filter(p_SMR < (0.05 / n_probes), p_HEIDI > 0.05 & !is.na(p_HEIDI)) %>%
+      mutate(Cell_Type = cell_type)
+  } else {
+    message("File not found for cell type: ", cell_type)
+    return(NULL)
+  }
+}
 ```
 
-### SMR results
+### SMR summary
 
-```{r plot_tables, results='asis', echo=FALSE}
+```{r smr_summary, results='asis', echo=FALSE}
 summary_data <- bind_rows(lapply(cell_types, summarize_smr, in_dir))
 
 # Format and display summary table
@@ -141,6 +156,18 @@ kable(summary_data,
 ```
 
 ***
+
+### SMR and HEIDI sig.
+
+```{r smr_heidi_sig, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(lapply(cell_types, summarize_smr, in_dir = in_dir))
+
+# Format and display summary table
+kable(all_sig_results,
+      caption = "Significant SMR and HEIDI results by Cell Type") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
 
 ### SMR logs
 
