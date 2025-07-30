@@ -212,16 +212,3 @@ datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ```
 
 ***
-
-### Tables tabbed {.tabset}
-
-```{r plot_tabbed, results='asis', echo=FALSE}
-for (cell_type in cell_types) {
-  cat(" \n#### ", cell_type, "\n", sep = "")
-  summary_data <- summarize_smr(cell_type, in_dir)
-  datatable(as.data.frame(summary_data), caption = paste0('Significant SMR and HEIDI results for: ', cell_type)) 
-  cat(' \n')
-}
-```
-
-***
