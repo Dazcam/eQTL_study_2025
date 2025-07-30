@@ -15,6 +15,7 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 library(stringr)
+library(DT)
 
 # Set variables from params
 cell_types <- params$cell_types
@@ -171,12 +172,12 @@ kable(all_sig_results,
 
 ### SMR and HEIDI 
 
-```{r smr_heidi_symbol}
+```{r smr_heidi_symbol, echo=FALSE, include=FALSE}
 gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv'
 
 if (file.exists(gene_lookup_file)) {
   
-  gene_lookup_hg38_tbl <- read_tsv(gene_lookup_file)
+  gene_lookup_hg38_tbl <- suppressMessages(read_tsv(gene_lookup_file))
   
 } else {
   
@@ -196,9 +197,11 @@ if (file.exists(gene_lookup_file)) {
   
 }
 
-all_sig_results |>
+sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+
+datatable(as.data.frame(sig_tbl)) 
 ```
 
 ### SMR logs
