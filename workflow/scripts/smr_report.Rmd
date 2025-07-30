@@ -160,7 +160,7 @@ kable(summary_data,
 ### SMR and HEIDI sig.
 
 ```{r smr_heidi_sig, results='asis', echo=FALSE}
-all_sig_results <- bind_rows(lapply(cell_types, summarize_smr, in_dir = in_dir))
+all_sig_results <- bind_rows(lapply(cell_types, get_heidi, in_dir = in_dir))
 
 # Format and display summary table
 kable(all_sig_results,
