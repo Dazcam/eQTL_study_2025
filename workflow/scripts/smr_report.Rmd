@@ -142,7 +142,13 @@ get_heidi <- function(cell_type, in_dir) {
 }
 ```
 
+## SMR Tables {.tabset}
+
+***
+
 ### SMR summary
+
+***
 
 ```{r smr_summary, results='asis', echo=FALSE}
 summary_data <- bind_rows(lapply(cell_types, summarize_smr, in_dir))
@@ -150,14 +156,6 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 ```
 
 ***
-
-### SMR and HEIDI sig.
-
-```{r smr_heidi_sig, results='asis', echo=FALSE}
-all_sig_results <- bind_rows(lapply(cell_types, get_heidi, in_dir = in_dir))
-datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type') 
-```
-
 
 ### SMR and HEIDI sig.
 
@@ -190,8 +188,21 @@ sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
 
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (with gene symbols)') 
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
+
+***
+
+### SMR and HEIDI sig.
+
+```{r smr_heidi_sig, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(lapply(cell_types, get_heidi, in_dir = in_dir))
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)') 
+```
+
+
+
+***
 
 ### SMR logs
 
@@ -213,3 +224,5 @@ for (cell_type in cell_types) {
   cat(' \n')
 }
 ```
+
+***
