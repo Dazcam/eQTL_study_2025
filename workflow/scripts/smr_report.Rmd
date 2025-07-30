@@ -172,7 +172,7 @@ kable(all_sig_results,
 
 ### SMR and HEIDI 
 
-```{r smr_heidi_symbol, echo=FALSE, include=FALSE}
+```{r smr_heidi_symbol, echo=FALSE}
 gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv'
 
 if (file.exists(gene_lookup_file)) {
