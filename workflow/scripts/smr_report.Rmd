@@ -146,14 +146,7 @@ get_heidi <- function(cell_type, in_dir) {
 
 ```{r smr_summary, results='asis', echo=FALSE}
 summary_data <- bind_rows(lapply(cell_types, summarize_smr, in_dir))
-
-# Format and display summary table
-kable(summary_data,
-      caption = "Summary of SMR and HEIDI Results by Cell Type",
-      col.names = c("Cell Type", "Total Probes", "Significant SMR", "Significant SMR + HEIDI"),
-      align = "lrrr",
-      format = "html") %>%
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type') 
 ```
 
 ***
@@ -162,15 +155,11 @@ kable(summary_data,
 
 ```{r smr_heidi_sig, results='asis', echo=FALSE}
 all_sig_results <- bind_rows(lapply(cell_types, get_heidi, in_dir = in_dir))
-
-# Format and display summary table
-kable(all_sig_results,
-      caption = "Significant SMR and HEIDI results by Cell Type") %>%
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover"))
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type') 
 ```
 
 
-### SMR and HEIDI 
+### SMR and HEIDI sig.
 
 ```{r smr_heidi_symbol, echo=FALSE}
 gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv'
@@ -201,49 +190,18 @@ sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
 
-datatable(as.data.frame(sig_tbl)) 
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (with gene symbols)') 
 ```
 
 ### SMR logs
 
 ```{r logs, echo=FALSE}
 log_dir <- "../../results/00LOG/07SMR"
-extract_smr_log_params(log_dir, cell_types)
+log_tbl <- extract_smr_log_params(log_dir, cell_types)
+datatable(as.data.frame(sig_tbl), caption = 'SMR log file summary') 
 ```
 
 ***
-
-### HEIDI SNP check
-
-```{r heidi_check, echo=FALSE}
-snp_summary <- bind_rows(lapply(cell_types, function(cell_type) {
-  epi_tbl <- read_tsv(
-    paste0('../../results/07SMR/smr_input/', cell_type, '/', cell_type, '.epi'),
-    col_names = c('Chr', 'Probe', 'c3', 'bp', 'gene', 'strand'),
-    show_col_types = FALSE
-  )
-  
-  epi_tbl %>%
-    group_by(gene) %>%
-    summarise(SNPs_per_gene = n(), .groups = "drop") %>%
-    mutate(Cell_Type = cell_type)
-}))
-
-summary_stats <- snp_summary %>%
-  group_by(Cell_Type) %>%
-  summarise(
-    Genes = n(),
-    Min = min(SNPs_per_gene),
-    Q1 = quantile(SNPs_per_gene, 0.25),
-    Median = median(SNPs_per_gene),
-    Mean = mean(SNPs_per_gene),
-    Q3 = quantile(SNPs_per_gene, 0.75),
-    Max = max(SNPs_per_gene),
-    .groups = "drop"
-  )
-
-kable(summary_stats, caption = "SNPs per Gene by Cell Type (for HEIDI)")
-```
 
 ### Tables tabbed {.tabset}
 
