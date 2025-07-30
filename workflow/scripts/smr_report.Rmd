@@ -208,7 +208,7 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 ```{r logs, echo=FALSE}
 log_dir <- "../../results/00LOG/07SMR"
 log_tbl <- extract_smr_log_params(log_dir, cell_types)
-datatable(as.data.frame(sig_tbl), caption = 'SMR log file summary') 
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
 ```
 
 ***
@@ -219,7 +219,7 @@ datatable(as.data.frame(sig_tbl), caption = 'SMR log file summary')
 for (cell_type in cell_types) {
   cat(" \n#### ", cell_type, "\n", sep = "")
   summary_data <- summarize_smr(cell_type, in_dir)
-  kable(summary_data)
+  datatable(as.data.frame(summary_data), caption = paste0('Significant SMR and HEIDI results for: ', cell_type)) 
   cat(' \n')
 }
 ```
