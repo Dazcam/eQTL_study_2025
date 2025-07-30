@@ -157,7 +157,16 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ***
 
-### SMR and HEIDI sig.
+### SMR and HEIDI sig (full)
+
+```{r smr_heidi_sig, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(lapply(cell_types, get_heidi, in_dir = in_dir))
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)') 
+```
+
+***
+
+### SMR and HEIDI sig (abbr. w. symbols)
 
 ```{r smr_heidi_symbol, echo=FALSE}
 gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv'
@@ -190,16 +199,6 @@ sig_tbl <- all_sig_results |>
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
-
-***
-
-### SMR and HEIDI sig.
-
-```{r smr_heidi_sig, results='asis', echo=FALSE}
-all_sig_results <- bind_rows(lapply(cell_types, get_heidi, in_dir = in_dir))
-datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)') 
-```
-
 
 
 ***
