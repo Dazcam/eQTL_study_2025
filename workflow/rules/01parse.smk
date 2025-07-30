@@ -11,33 +11,35 @@ MERGE_FQ = json.load(open(config['MERGE_FQ_JSON']))
 ALL_SAMPLES = sorted(MERGE_FQ.keys())
 
 rule get_refs:
-    output:  fa = "../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
-             gtf = "../resources/refs/Homo_sapiens.GRCh38.113.gtf.gz"
-    params:  outdir = "../resources/refs/"
+    output:  fa = config["parse"]["get_refs"]["fa_out"],
+             gtf = config["parse"]["get_refs"]["gtf_out"]
+    params:  outdir = config["parse"]["get_refs"]["outdir"],
+             fa_link = config["parse"]["get_refs"]["fa_link"],
+       	     gtf_link = config["parse"]["get_refs"]["gtf_link"]
     message: "Downloading genome reference files"
-    log:     "../results/00LOG/02PARSE/get_refs.log"
+    log:     config["parse"]["get_refs"]["log"]
     shell:
              r"""
-             wget https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz -P {params.outdir}
-             wget https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz -P {params.outdir}
+             wget {params.fa_link} -P {params.outdir}
+             wget {params.gtf_link} -P {params.outdir}
              """
 
 rule mk_ref:
-    input:   fa = "../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
-             gtf = "../resources/refs/Homo_sapiens.GRCh38.113.gtf.gz"
-    output:  "../resources/refs/ref.done" 
-#    conda:   "../../../.conda/envs/spipe/" 
+    input:   fa = rules.get_refs.output.fa,
+             gtf = rules.get_refs.output.gtf
+    output:  config["parse"]["mk_ref"]["outfile"]
     priority: 50
-    params:  outdir = "../resources/refs/hg38", name = "hg38"
+    params:  outdir = config["parse"]["mk_ref"]["outdir"],
+             build = config["parse"]["mk_ref"]["build"]
     resources: threads = 6, mem_mb = 64000, time="1-0:00:00"
     message: "Creating processed reference sequence index files"
-    log:     "../results/00LOG/02PARSE/mk_ref.log"
+    log:     config["parse"]["mk_ref"]["log"]
     shell:
        	     r"""
              source activate spipe-1.3.1
              split-pipe \
              --mode mkref \
-             --genome_name {params.name} \
+             --genome_name {params.build} \
              --nthreads {threads} \
              --fasta {input.fa} \
              --genes {input.gtf} \
@@ -49,12 +51,12 @@ rule mk_ref:
 rule cat_fqs:
     input:  r1 = lambda wildcards: MERGE_FQ[wildcards.sample]['R1'],
             r2 = lambda wildcards: MERGE_FQ[wildcards.sample]['R2']
-    output: r1 = temp("../results/01MRGD_fqs/{sample}_R1.fastq.gz"),
-            r2 = temp("../results/01MRGD_fqs/{sample}_R2.fastq.gz")
-    log:    r1 = "../results/00LOG/01MRGD_fqs/{sample}_R1.log",
-            r2 = "../results/00LOG/01MRGD_fqs/{sample}_R2.log"
+    output: r1 = temp(config["parse"]["cat_fqs"]["out_r1"]),
+            r2 = temp(config["parse"]["cat_fqs"]["out_r2"])
+    log:    r1 = config["parse"]["cat_fqs"]["log_r1"],
+            r2 = config["parse"]["cat_fqs"]["log_r2"]
     benchmark: "reports/benchmarks/{sample}.cat_fq.benchmark.txt"
-    params: outdir = "../results/01MRGD_fqs/",
+    params: outdir = config["parse"]["cat_fqs"]["outdir"],
             fq_size = "reports/benchmarks/input_fq_sizes.tsv"
     shell:
         """
@@ -63,16 +65,15 @@ rule cat_fqs:
         """
 
 rule run_parse:
-    input:  r1 = "../results/01MRGD_fqs/{sample}_R1.fastq.gz",
-            r2 = "../results/01MRGD_fqs/{sample}_R2.fastq.gz"
-    output:  "../results/02PARSE/{sample}/run.done"
-#    conda:   "../envs/parse.yml"
-    params:  refdir = "../resources/refs/hg38",
+    input:  r1 = rules.cat_fqs.output.r1,
+            r2 = rules.cat_fqs.output.r2
+    output: config["parse"]["run_parse"]["outfile"]
+    params:  refdir = config["parse"]["mk_ref"]["outdir"],
     priority: 50
     benchmark: "reports/benchmarks/{sample}.run_parse.benchmark.txt"
     resources: threads = 32, mem_mb = 360000, time="10-0:00:00"
-    message: "Running Parse"
-    log:     "../results/00LOG/02PARSE/run_parse_{sample}.log"
+    message: "Running Parse alignment"
+    log:     config["parse"]["run_parse"]["log"]
     shell:
              """
              source activate spipe-1.3.1
@@ -88,37 +89,36 @@ rule run_parse:
              touch {output}
              """
 
-rule run_parse_combine:
-    input:  expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
-    output: "../results/02PARSE/combine_plate1/run.done" 
-#    conda: "../envs/parse.yml"
-    resources: threads = 32, mem_mb = 360000, time="3-0:00:00"
-    benchmark: "reports/benchmarks/run_parse_combine.benchmark.txt"
-    message: "Combining Parse for fastq files"
-    log:     "../results/00LOG/02parse/run_parse_combine.log"
-    shell:
-        """
-        source activate spipe-1.3.1
-        split-pipe \
-        --mode comb \
-        --sublibraries ../results/02PARSE/2_plate1 \
-        ../results/02PARSE/3_plate1 \
-        ../results/02PARSE/4_plate1 \
-        ../results/02PARSE/5_plate1 \
-        ../results/02PARSE/6_plate1 \
-        ../results/02PARSE/7_plate1 \
-        ../results/02PARSE/8_plate1 \
-        ../results/02PARSE/9_plate1 \
-        ../results/02PARSE/10_plate1 \
-        ../results/02PARSE/11_plate1 \
-        ../results/02PARSE/12_plate1 \
-        ../results/02PARSE/13_plate1 \
-        ../results/02PARSE/14_plate1 \
-        ../results/02PARSE/15_plate1 \
-        ../results/02PARSE/16_plate1 \
-        --output_dir ../results/02PARSE/combine_plate1 2> {log}
-        touch {output}
-	"""
+#rule run_parse_combine:
+#    input:  expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
+#    output: "../results/01PARSE/combine_plate3/run.done" 
+#    resources: threads = 32, mem_mb = 360000, time="3-0:00:00"
+#    benchmark: "reports/benchmarks/run_parse_combine.benchmark.txt"
+#    message: "Combining Parse for fastq files"
+#    log:     "../results/00LOG/01PARSE/run_parse_combine.log"
+#    shell:
+#        """
+#        source activate spipe-1.3.1
+#        split-pipe \
+#        --mode comb \
+#        --sublibraries ../results/02PARSE/2_plate1 \
+#        ../results/02PARSE/3_plate1 \
+#        ../results/02PARSE/4_plate1 \
+#        ../results/02PARSE/5_plate1 \
+#        ../results/02PARSE/6_plate1 \
+#        ../results/02PARSE/7_plate1 \
+#        ../results/02PARSE/8_plate1 \
+#        ../results/02PARSE/9_plate1 \
+#        ../results/02PARSE/10_plate1 \
+#        ../results/02PARSE/11_plate1 \
+#        ../results/02PARSE/12_plate1 \
+#        ../results/02PARSE/13_plate1 \
+#        ../results/02PARSE/14_plate1 \
+#        ../results/02PARSE/15_plate1 \
+#        ../results/02PARSE/16_plate1 \
+#        --output_dir ../results/02PARSE/combine_plate1 2> {log}
+#        touch {output}
+#	"""
 
 
 
