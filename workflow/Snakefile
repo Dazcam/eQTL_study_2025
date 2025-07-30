@@ -1,6 +1,6 @@
 configfile: '../config/config.yaml'
 
-#include: 'rules/01parse.smk' 
+include: 'rules/01parse.smk' 
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute'
 #include: 'rules/04pegasus.smk'
@@ -10,7 +10,7 @@ configfile: '../config/config.yaml'
 #include: 'rules/06prep_gwas.smk'
 #include: 'rules/07sldsr.smk'
 #include: 'rules/08twas.smk'
-include: 'rules/10smr.smk'
+#include: 'rules/10smr.smk'
 
 # Set QTL tool
 QTL_TOOL = config["eQTL"]["tool"]
@@ -58,7 +58,8 @@ qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]
 
 rule all:
     input:
-#        "../resources/refs/ref.done",
+        "../resources/refs/ref.done",
+        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
 #        expand("../resources/fqs/{sample}", sample=samples) 
 #        expand("../resources/fqs/concat/{sample_id}_R{read}.fastq.gz", sample_id = config['samples'], read = [1,2]),
 #        expand("../results/{sample_id}/run.done", sample_id = config['samples']) 
@@ -118,12 +119,13 @@ rule all:
 #        "reports/06TWAS/twas_weights_summary.html"
 #         expand("../results/00LOG/07SMR/smr_input/{cell_type}/{cell_type}.besd", cell_type=config['cell_types']),
 #         expand("../results/05SLDSR/gwas/{gwas}_hg38.ma", gwas = config['gwas'])
-         expand(
-            "../results/07SMR/smr/{cell_type}/{cell_type}_{gwas}.smr",
-            cell_type=config['cell_types'],
-            gwas = config['gwas']
-         )
-
+#         expand(
+#            "../results/07SMR/smr/{cell_type}/{cell_type}_{gwas}.smr",
+#            cell_type=config['cell_types'],
+#            gwas = config['gwas']
+#         )
+#        expand("../results/04TENSORQTL/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv", cell_type = config['cell_types']),
+#        "reports/07smr_report.html"
 
 
 

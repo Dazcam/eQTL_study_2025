@@ -1,20 +1,21 @@
 # ------------  GLOBAL  ----------------
 
-MERGE_FQ_JSON: ../config/samples_plate1_subset.json
+MERGE_FQ_JSON: ../config/samples_plate3.json
 plate:
   - plate1
   - plate2
+  - plate3
 
 root_dir: /scratch/c.c1477909/eQTL_study_2025/
 
 cell_types: 
   - "ExN-1"
-#  - "ExN-2"
-#  - "InN"
-#  - "OPC"
-#  - "RG"
-#  - "Endo-Peri"
-#  - "MG"
+  - "ExN-2"
+  - "InN"
+  - "OPC"
+  - "RG"
+  - "Endo-Peri"
+  - "MG"
 
 eqtl_fdr: 0.05
 
@@ -33,6 +34,32 @@ containers:
   susie: ../resources/containers/susier_v24.01.1.sif
   ubuntu: ../resources/containers/ubuntu_22.04.sif
   twas: ../resources/containers/twas.sif
+
+
+# -------------  PARSE  ----------------
+
+parse:
+  get_refs:
+    fa_link: "https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+    gtf_link: "https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz"
+    fa_out: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    gtf_out: ../resources/refs/Homo_sapiens.GRCh38.113.gtf.gz
+    outdir: ../resources/refs/
+    log: ../results/00LOG/01PARSE/get_refs.log
+  mk_ref:
+    outfile: ../resources/refs/ref.done
+    outdir: ../resources/refs/hg38
+    build: hg38
+    log: ../results/00LOG/01PARSE/mk_ref.log
+  cat_fqs:
+    out_r1: ../results/01PARSE/MRGD_fqs/{sample}_R1.fastq.gz 
+    out_r2: ../results/01PARSE/MRGD_fqs/{sample}_R2.fastq.gz
+    log_r1: ../results/00LOG/01PARSE/cat_fqs_{sample}_R1.log
+    log_r2: ../results/00LOG/01PARSE/cat_fqs_{sample}_R1.log
+    outdir: ../results/01PARSE/MRGD_fqs/
+  run_parse:
+    outfile: ../results/01PARSE/{sample}/run.done
+    log: ../results/00LOG/01PARSE/run_parse_{sample}.log
 
 
 # ------------  SCANPY  ----------------
@@ -375,6 +402,11 @@ smr:
   get_snp_positions:
     snp_pos: ../results/07SMR/smr_input/snp_positions.txt
     log: ../results/00LOG/07SMR/get_snp_positions.log
+  cat_tensorqtl_nom_snps:
+    cat_snps: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
+    summary: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
+    dir: ../results/04TENSORQTL/{cell_type}
+    log: ../results/00LOG/07SMR/cat_tensorqtl_nom_snps_{cell_type}.log
   create_query:
     r_script: scripts/prep_eQTL_for_smr.R
     query: ../results/07SMR/smr_input/{cell_type}/{cell_type}_query.tsv
@@ -384,9 +416,16 @@ smr:
     besd: ../results/07SMR/smr_input/{cell_type}/{cell_type}.besd
     prefix: ../results/07SMR/smr_input/{cell_type}/{cell_type}
     log: ../results/00LOG/07SMR/create_besd_{cell_type}.log
-  cat_freq:
-    frq: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
-    cat_frq: ../results/07SMR/smr_input/allele_frq_hg38_ref.txt
+  cat_refs:
+    frq_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
+    bed_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bed
+    bim_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    fam_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.1.fam
+    cat_frq: ../results/07SMR/smr_input/1000G.EUR.hg38.frq
+    cat_bed: ../results/07SMR/smr_input/1000G.EUR.hg38.bed
+    cat_bim: ../results/07SMR/smr_input/1000G.EUR.hg38.bim
+    cat_fam: ../results/07SMR/smr_input/1000G.EUR.hg38.fam
+    log: ../results/00LOG/07SMR/cat_refs.log
   generate_topmed_freq:
     bed: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.bed
     bim: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.bim
@@ -400,7 +439,11 @@ smr:
     prefix: ../results/07SMR/smr_input/gwas/{gwas}_hg38
     log: ../results/00LOG/07SMR/format_gwas_{gwas}.log
   smr:
-    geno_prefix: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
+    geno_prefix: ../results/07SMR/smr_input/1000G.EUR.hg38
     smr: ../results/07SMR/smr/{cell_type}/{cell_type}_{gwas}.smr
     smr_prefix: ../results/07SMR/smr/{cell_type}/{cell_type}_{gwas}
     log: ../results/00LOG/07SMR/smr_{cell_type}_{gwas}.log 
+  smr_report:
+    html: reports/07smr_report.html
+    in_dir: ../../results/07SMR/smr # Rel to Rmd script
+    log: ../results/00LOG/07SMR/smr_report.log
