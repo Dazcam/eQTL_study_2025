@@ -2,29 +2,19 @@
 title: "TWAS Weight Computation Summary"
 date: "`r Sys.Date()`"
 output: html_document
+params:
+  cell_types: null
+  log_dir: null
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-if (exists("snakemake")) {
-  log_smk <- function() {
-    if (exists("snakemake") & length(snakemake@log) != 0) {
-      log <- file(snakemake@log[1][[1]], open = "wt")
-      sink(log, append = TRUE)
-      sink(log, append = TRUE, type = "message")
-    }
-  }
-}
-log_smk()
-
 library(dplyr)
 library(knitr)
 library(kableExtra)
 
-
 # Set variables
-cell_types <- snakemake@params["cell_types"]
-log_dir <- snakemake@params["log_dir"]
+cell_types <- params$cell_types
+log_dir <- params$log_dir
 #output_dir <- snakemake@params["output_dir"]
 
 # Function to parse log files and categorize failures
