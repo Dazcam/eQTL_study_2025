@@ -27,7 +27,7 @@ library(biomaRt)
 expr_in <- snakemake@input[[1]]
 expr_out <- snakemake@output[['exp']]
 coord_out <- snakemake@output[['coord']]
-run_test <- FALSE # Add this to snakerule later to set dynamically
+run_test <- TRUE # Add this to snakerule later to set dynamically
 
 # Read expression file
 message('Reading expression file ...')
