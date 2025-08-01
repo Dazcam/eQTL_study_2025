@@ -52,20 +52,22 @@ parse_twas_logs <- function(cell_type, log_dir) {
     Count = c(length(no_snps), length(gcta_failure), length(low_heritability)),
     Genes = I(list(no_snps, gcta_failure, low_heritability))
   )
-  
+  print(summary_df)
   return(summary_df)
 }
 ```
+
+## Summary Tables {.tabset}
 
 ```{r make_summary_tbl, results='asis', echo=FALSE}
 # Loop through each cell type and generate a summary table
 for (cell_type in cell_types) {
   summary_df <- parse_twas_logs(cell_type, log_dir)
   
-  cat("\n### Cell Type: ", cell_type, "\n")
-  
+  cat("\n### Cell Type: ", cell_type, "{.tabset} \n")
   # Print summary table
   datatable(as.data.frame(summary_df), caption = 'TWAS weights log file summary') 
+  cat("\n")
   
   # Print detailed gene lists for each failure type with non-zero counts
   for (i in 1:nrow(summary_df)) {
@@ -73,7 +75,7 @@ for (cell_type in cell_types) {
       cat("\n#### ", summary_df$Failure_Type[i], " Genes\n")
       gene_df <- data.frame(Gene_ID = summary_df$Genes[[i]])
       datatable(as.data.frame(summary_df), caption = paste("Genes with", summary_df$Failure_Type[i])) 
-      
+      cat("\n")
     }
   }
 }
