@@ -57,7 +57,7 @@ parse_twas_logs <- function(cell_type, log_dir) {
 }
 ```
 
-```{r make_summary_tbl}
+```{r make_summary_tbl, results='asis', echo=FALSE}
 # Loop through each cell type and generate a summary table
 for (cell_type in cell_types) {
   summary_df <- parse_twas_logs(cell_type, log_dir)
