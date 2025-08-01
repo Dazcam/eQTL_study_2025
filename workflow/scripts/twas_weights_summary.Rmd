@@ -36,12 +36,13 @@ parse_twas_logs <- function(cell_type, log_dir) {
   for (log_file in log_files) {
     gene_id <- sub(".*compute_weights_.*_(ENSG[0-9]+)\\.log", "\\1", basename(log_file))
     log_content <- readLines(log_file)
+    head(log_content)
     
     if (any(grepl("No SNPs", log_content))) {
       no_snps <- c(no_snps, gene_id)
-    } else if (any(grepl("NA does not exist, likely GCTA could not converge", log_content))) {
+    } else if (any(grepl("likely GCTA could not converge", log_content))) {
       gcta_failure <- c(gcta_failure, gene_id)
-    } else if (any(grepl("skipping gene", log_content) & grepl("Heritability", log_content))) {
+    } else if (any(grepl("Heritability", log_content))) {
       low_heritability <- c(low_heritability, gene_id)
     }
   }
@@ -64,19 +65,19 @@ parse_twas_logs <- function(cell_type, log_dir) {
 for (cell_type in cell_types) {
   summary_df <- parse_twas_logs(cell_type, log_dir)
   
-  cat("\n### Cell Type: ", cell_type, "{.tabset} \n")
+  cat("\nCell Type: ", cell_type, "{.tabset} \n")
   # Print summary table
   datatable(as.data.frame(summary_df), caption = 'TWAS weights log file summary') 
-  cat("\n")
+  cat("\n\n\n")
   
-  # Print detailed gene lists for each failure type with non-zero counts
-  for (i in 1:nrow(summary_df)) {
-    if (summary_df$Count[i] > 0) {
-      cat("\n#### ", summary_df$Failure_Type[i], " Genes\n")
-      gene_df <- data.frame(Gene_ID = summary_df$Genes[[i]])
-      datatable(as.data.frame(summary_df), caption = paste("Genes with", summary_df$Failure_Type[i])) 
-      cat("\n")
-    }
-  }
+  # # Print detailed gene lists for each failure type with non-zero counts
+  # for (i in 1:nrow(summary_df)) {
+  #   if (summary_df$Count[i] > 0) {
+  #     cat("\n#### ", summary_df$Failure_Type[i], " Genes\n")
+  #     gene_df <- data.frame(Gene_ID = summary_df$Genes[[i]])
+  #     datatable(as.data.frame(summary_df), caption = paste("Genes with", summary_df$Failure_Type[i])) 
+  #     cat("\n")
+  #   }
+  # }
 }
 ```
