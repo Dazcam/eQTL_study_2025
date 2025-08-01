@@ -11,6 +11,7 @@ params:
 library(dplyr)
 library(knitr)
 library(kableExtra)
+library(DT)
 
 # Set variables
 cell_types <- params$cell_types
@@ -64,20 +65,15 @@ for (cell_type in cell_types) {
   cat("\n### Cell Type: ", cell_type, "\n")
   
   # Print summary table
-  kable(summary_df[, c("Failure_Type", "Count")], 
-        caption = paste("Failure Counts for", cell_type),
-        align = "lc") %>%
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+  datatable(as.data.frame(summary_df), caption = 'TWAS weights log file summary') 
   
   # Print detailed gene lists for each failure type with non-zero counts
   for (i in 1:nrow(summary_df)) {
     if (summary_df$Count[i] > 0) {
       cat("\n#### ", summary_df$Failure_Type[i], " Genes\n")
       gene_df <- data.frame(Gene_ID = summary_df$Genes[[i]])
-      kable(gene_df, 
-            caption = paste("Genes with", summary_df$Failure_Type[i]),
-            align = "l") %>%
-        kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+      datatable(as.data.frame(summary_df), caption = paste("Genes with", summary_df$Failure_Type[i])) 
+      
     }
   }
 }
