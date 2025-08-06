@@ -17,7 +17,7 @@ rule prep_exp_data:
             coord = config["twas"]["prep_exp_data"]["coord"]
     singularity: config["containers"]["R"]
     log:    config["twas"]["prep_exp_data"]["log"]
-    script: "../scripts/prep_expr_for_FUSION.R"
+    script: "../scripts/prep_expr_for_twas.R"
 
 # Rule to convert VCF to PLINK
 rule convert_vcf:
@@ -146,9 +146,11 @@ rule compute_weights:
             --pheno {input.gene_pheno} \
             --hsq_p 0.01 \
             --crossval 5 \
+            --tmp {params.outdir}/{wildcards.cell_type}.tmp \
             --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
             --PATH_gcta ../resources/fusion/gcta_nr_robust \
             --PATH_gemma {input.gemma} \
+            --verbose 2 \
             --out {output} >> {log} 2>&1 || true
           if [ ! -f {output} ]; then
             echo "{wildcards.gene_id} was skipped (likely due to low heritability)." >> {log}
@@ -190,16 +192,18 @@ rule aggregate_all:
 rule twas_weights_summary:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  agg_file = "../results/06TWAS/all_genes_in_all_cell_types_done.txt",
-            rmd_file = "scripts/twas_weights_summary.Rmd"
-    output: "reports/06TWAS/twas_weights_summary.html"
-    params: cell_types = config["cell_types"], 
+            rmd_script = "scripts/twas_weights_summary.Rmd"
+    output: "reports/06twas_weights_report.html"
+    params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
             log_dir = "../results/00LOG/06TWAS", 
-            output_file = ../reports/06TWAS/twas_weights_summary.html",
+            output_file = "../reports/06twas_weights_report.html",
             hsq_p = 0.01  # Example additional parameter
     singularity: config["containers"]["R"]
     log: "../results/00LOG/06TWAS/twas_weights_summary.log" 
     shell:
         """
-        Rscript -e "rmarkdown::render('{input.rmd_file}', \
-        output_file = '{params.output_file}')" > {log} 2>&1
+        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+            output_file = '{params.output_file}', \
+            params = list(cell_types = c({params.cell_types}), log_dir = '{params.log_dir}'))" > {log} 2>&1
         """
+

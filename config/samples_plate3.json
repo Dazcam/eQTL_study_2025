@@ -1,0 +1,362 @@
+{
+    "10_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/10_S8_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/10_S8_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/10_S8_L004_R2_001.fastq.gz"
+        ]
+    },
+    "11_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/11_S9_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/11_S9_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/11_S9_L004_R2_001.fastq.gz"
+        ]
+    },
+    "12_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/12_S10_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/12_S10_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/12_S10_L004_R2_001.fastq.gz"
+        ]
+    },
+    "14_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/14_S11_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/14_S11_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/14_S11_L004_R2_001.fastq.gz"
+        ]
+    },
+    "15_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/15_S12_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/15_S12_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/15_S12_L004_R2_001.fastq.gz"
+        ]
+    },
+    "1_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/1_S1_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/1_S1_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/1_S1_L004_R2_001.fastq.gz"
+        ]
+    },
+    "2_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/2_S2_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/2_S2_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/2_S2_L004_R2_001.fastq.gz"
+        ]
+    },
+    "3_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/3_S3_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/3_S3_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/3_S3_L004_R2_001.fastq.gz"
+        ]
+    },
+    "4_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/4_S4_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/4_S4_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/4_S4_L004_R2_001.fastq.gz"
+        ]
+    },
+    "5_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/5_S5_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/5_S5_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/5_S5_L004_R2_001.fastq.gz"
+        ]
+    },
+    "6_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/6_S6_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/6_S6_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/6_S6_L004_R2_001.fastq.gz"
+        ]
+    },
+    "8_plate3": {
+        "R1": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L004_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L001_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L002_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L003_R1_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L004_R1_001.fastq.gz"
+        ],
+        "R2": [
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/8_S7_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/8_S7_L004_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L001_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L002_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L003_R2_001.fastq.gz",
+            "/nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/8_S7_L004_R2_001.fastq.gz"
+        ]
+    }
+}

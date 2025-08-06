@@ -125,8 +125,8 @@ rule all:
 #            gwas = config['gwas']
 #         )
 #        expand("../results/04TENSORQTL/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv", cell_type = config['cell_types']),
+#         "reports/06twas_weights_report.html"
 #        "reports/07smr_report.html"
-
 
 
 
