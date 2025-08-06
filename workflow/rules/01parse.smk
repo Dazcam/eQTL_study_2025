@@ -84,8 +84,8 @@ rule run_parse:
                --genome_dir {params.refdir} \
                --fq1 {input.r1} \
                --fq2 {input.r2} \
-               --samp_list ../config/sample-list_plate1.txt \
-               --output_dir ../results/02PARSE/{wildcards.sample} 2> {log}
+               --samp_list ../config/sample-list_plate3.txt \
+               --output_dir ../results/01PARSE/{wildcards.sample} 2> {log}
              touch {output}
              """
 
