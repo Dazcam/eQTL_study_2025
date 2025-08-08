@@ -15,16 +15,49 @@ library(knitr)
 library(kableExtra)
 library(stringr)
 library(DT)
-in_dir <- '../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/'
+in_dir <- params$in_dir
 ```
 
 ## QC tables {.tabset}
 
 ***
 
+### QC 3: Sex ambiguity
+
+***
+
+```{r ancestry_summary, results='asis', echo=FALSE}
+sex_tbl <- system(
+  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc3.sexcheck"),
+  intern = TRUE
+) %>%
+  read_tsv(col_types = cols()) 
+
+datatable(sex_tbl, caption = 'Table 3. Sex ambiguities') 
+```
+
+***
+
+### QC 4: Kinship 
+
+***
+
+```{r ancestry_summary, results='asis', echo=FALSE}
+kinship_tbl <- system(
+  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc4.pcrelate.kin"),
+  intern = TRUE
+) %>%
+  read_tsv(col_types = cols()) 
+
+datatable(kinship_tbl, caption = 'Table 4. Related samples') 
+```
+
+***
+
+cat ../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
 
 
-### QC 5: Ancestry Inference
+### QC 5: Ancestry 
 
 ***
 
@@ -35,8 +68,9 @@ ancestry_tbl <- system(
 ) %>%
   read_tsv(col_types = cols()) 
 
-datatable(ancestry_tbl, caption = 'Ancestry prediction per sample, with probabilities') 
+datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample') 
 ```
 
 ***
+
 
