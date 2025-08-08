@@ -26,7 +26,7 @@ in_dir <- params$in_dir
 
 ***
 
-```{r ancestry_summary, results='asis', echo=FALSE}
+```{r sex_summary, results='asis', echo=FALSE}
 sex_tbl <- system(
   paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc3.sexcheck"),
   intern = TRUE
@@ -42,7 +42,7 @@ datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 
 ***
 
-```{r ancestry_summary, results='asis', echo=FALSE}
+```{r kinship_summary, results='asis', echo=FALSE}
 kinship_tbl <- system(
   paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc4.pcrelate.kin"),
   intern = TRUE
