@@ -32,7 +32,7 @@ sex_data <- system(
   intern = TRUE
 )
 
-sex_tbl <- read_tsv(file = I(sex_data), col_types = cols())
+sex_tbl <- read_delim(file = I(sex_data), col_types = cols())
 datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 ```
 
@@ -55,14 +55,11 @@ datatable(kinship_tbl, caption = 'Table 4. Related samples')
 
 ***
 
-cat ../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
-
-
-### QC 5: Ancestry
+### QC 5: Ancestry {.tabset}
 
 ***
 
-**ALL**
+#### All
 
 ```{r ancestry_summary, results='asis', echo=FALSE}
 ancestry_data <- system(
@@ -77,9 +74,7 @@ datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample')
 
 ***
 
-**Non_European**
-
-Non-European sample IDs: `r ancestry_tbl |> filter(biogeographic_prediction != 'European') |> pull(FID)`
+#### Non_European
 
 ```{r ancestry_nonEur_summary, results='asis', echo=FALSE}
 ancestry_nonEur_tbl <- ancestry_tbl |>
@@ -87,3 +82,5 @@ ancestry_nonEur_tbl <- ancestry_tbl |>
 
 datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) prediction per sample') 
 ```
+
+Non-European sample IDs: `r ancestry_tbl |> filter(biogeographic_prediction != 'European') |> pull(FID)`
