@@ -1,0 +1,42 @@
+---
+title: "Genotyping QC pre-Imputation"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+params:
+  in_dir: null
+---
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(stringr)
+library(DT)
+in_dir <- '../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/'
+```
+
+## QC tables {.tabset}
+
+***
+
+
+
+### QC 5: Ancestry Inference
+
+***
+
+```{r ancestry_summary, results='asis', echo=FALSE}
+ancestry_tbl <- system(
+  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc5.ancestry_inference.txt | cut -f 1-9"),
+  intern = TRUE
+) %>%
+  read_tsv(col_types = cols()) 
+
+datatable(ancestry_tbl, caption = 'Ancestry prediction per sample, with probabilities') 
+```
+
+***
+
