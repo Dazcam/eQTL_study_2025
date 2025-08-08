@@ -27,10 +27,13 @@ in_dir <- params$in_dir
 ***
 
 ```{r sex_summary, results='asis', echo=FALSE}
-sex_tbl <- system(paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc3.sexcheck"), intern = TRUE) %>%
-  read_delim(col_types = cols(), file = I(.))
+sex_data <- system(
+  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc3.sexcheck"),
+  intern = TRUE
+)
 
-datatable(sex_tbl, caption = 'Table 3. Sex ambiguities') 
+sex_tbl <- read_tsv(file = I(sex_data), col_types = cols())
+datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 ```
 
 ***
@@ -40,8 +43,12 @@ datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 ***
 
 ```{r kinship_summary, results='asis', echo=FALSE}
-kinship_tbl <- system(paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc4.pcrelate.kin"), intern = TRUE) %>%
-  read_delim(col_types = cols(), file = I(.))
+kinship_data <- system(
+  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc4.pcrelate.kin"),
+  intern = TRUE
+)
+
+kinship_tbl <- read_tsv(file = I(kinship_data), col_types = cols())
 
 datatable(kinship_tbl, caption = 'Table 4. Related samples') 
 ```
@@ -51,17 +58,32 @@ datatable(kinship_tbl, caption = 'Table 4. Related samples')
 cat ../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
 
 
-### QC 5: Ancestry 
+### QC 5: Ancestry
 
 ***
 
+**ALL**
+
 ```{r ancestry_summary, results='asis', echo=FALSE}
-ancestry_tbl <- system(paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc5.ancestry_inference.txt | cut -f 1-9"), intern = TRUE) %>%
-  read_delim(col_types = cols(), file = I(.))
+ancestry_data <- system(
+  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc5.ancestry_inference.txt | cut -f 1-9"),
+  intern = TRUE
+)
+
+ancestry_tbl <- read_tsv(file = I(ancestry_data), col_types = cols())
 
 datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample') 
 ```
 
 ***
 
+**Non_European**
 
+Non-European sample IDs: `r ancestry_tbl |> filter(biogeographic_prediction != 'European') |> pull(FID)`
+
+```{r ancestry_nonEur_summary, results='asis', echo=FALSE}
+ancestry_nonEur_tbl <- ancestry_tbl |>
+  filter(biogeographic_prediction != 'European')
+
+datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) prediction per sample') 
+```
