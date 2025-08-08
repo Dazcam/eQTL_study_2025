@@ -27,6 +27,11 @@ in_dir <- params$in_dir
 ***
 
 ```{r sex_summary, results='asis', echo=FALSE}
+sex_data <- system(
+  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc3.sexcheck"),
+  intern = TRUE
+)
+
 temp_file <- tempfile(fileext = ".txt")
 writeLines(sex_data, temp_file)
 
