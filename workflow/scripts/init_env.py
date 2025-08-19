@@ -33,7 +33,7 @@ def initialize_env(plate):
         else:
             root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
 
-        log_dir = os.path.join(root_dir, "results/00LOG/03SCANPY")
+        log_dir = os.path.join(root_dir, "results/00LOG/02SCANPY")
         os.makedirs(log_dir, exist_ok=True)
 
         if 'plate' in plate: 
@@ -87,10 +87,10 @@ def initialize_env(plate):
     cameron_dir = resources_dir + 'public_datasets/cameron_2023/'
     script_dir = root_dir + 'workflow/scripts/'
     results_dir = root_dir + 'results/'
-    parse_dir = results_dir + '02PARSE/'
+    parse_dir = results_dir + '01PARSE/'
     plate_dir = parse_dir + f'combine_{plate}/all-sample/DGE_filtered/'
-    scanpy_dir = results_dir + '03SCANPY/'
-    sc.settings.figdir = results_dir + '/figs/'
+    scanpy_dir = results_dir + '02SCANPY/'
+    sc.settings.figdir = root_dir + 'reports/figs/'
     sys.path.append(script_dir)
 
     # Log important directories
