@@ -17,6 +17,7 @@ from scipy.sparse import issparse
 import seaborn as sns
 from matplotlib import MatplotlibDeprecationWarning
 import logging
+from sklearn.decomposition import PCA
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
@@ -1016,3 +1017,106 @@ def plot_rank_genes_groups(adata, n_genes=5, key="t-test_ov", groupby="leiden_ha
 
     plt.tight_layout()
     plt.show()
+
+
+def classify_sample_sex(adata, output_csv="sex_assignments.csv"):
+    """
+    Classify samples by sex using expression of XIST, RPS4Y1, and DDX3Y from adata.raw.
+    Generates a visualization with three subplots: scatter plot, boxplot, and PCA.
+    
+    Parameters:
+        adata (AnnData): Annotated data matrix with raw counts in `adata.raw`.
+        output_csv (str): Path to save the resulting CSV file.
+    
+    Returns:
+        tuple: (pd.DataFrame, matplotlib.figure.Figure) containing the sex classification DataFrame
+               and the figure with three subplots.
+    """
+    
+    # Step 1: Access raw counts
+    raw_adata = adata.raw.to_adata()
+    
+    # Step 2: Identify available sex genes
+    sex_genes = ['XIST', 'RPS4Y1', 'DDX3Y']
+    available_genes = [gene for gene in sex_genes if gene in raw_adata.var_names]
+    missing_genes = [gene for gene in sex_genes if gene not in raw_adata.var_names]
+    print("Available genes in raw data:", available_genes)
+    print("Missing genes in raw data:", missing_genes)
+    
+    if not available_genes:
+        raise ValueError("No sex genes found in adata.raw!")
+    
+    # Step 3: Normalize and log-transform
+    sex_raw = raw_adata[:, available_genes]
+    sc.pp.normalize_total(sex_raw, target_sum=1e4)
+    sc.pp.log1p(sex_raw)
+    
+    # Step 4: Aggregate by sample
+    sex_adata = sex_raw.to_df()
+    sample_sex_exp = sex_adata.groupby(adata.obs['sample']).mean()
+    
+    # Step 5: Thresholds and classification
+    xist_thresh = sample_sex_exp['XIST'].median() + sample_sex_exp['XIST'].std()
+    y_thresh = 0.5  # adjustable if needed
+
+    def classify_sex(row):
+        if row['XIST'] > xist_thresh and row.get('RPS4Y1', 0) < y_thresh and row.get('DDX3Y', 0) < y_thresh:
+            return 'Female'
+        elif (row.get('RPS4Y1', 0) > y_thresh or row.get('DDX3Y', 0) > y_thresh) and row['XIST'] < xist_thresh:
+            return 'Male'
+        else:
+            return 'Ambiguous'
+
+    sample_sex_exp['Predicted_Sex'] = sample_sex_exp.apply(classify_sex, axis=1)
+    sample_sex_exp['Sex_Numeric'] = sample_sex_exp['Predicted_Sex'].map({'Male': 1, 'Female': 2, 'Ambiguous': 0})
+
+    # Step 6: Output DataFrame
+    output_df = sample_sex_exp[['Predicted_Sex', 'Sex_Numeric']].reset_index()
+    output_df.columns = ['Sample_ID', 'Predicted_Sex', 'Sex_Numeric']
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    output_df.to_csv(output_csv, index=False)
+    print(f"Saved to {output_csv}")
+
+    # Step 7: Visualization
+    # Choose a Y gene to visualize (prefer RPS4Y1, fallback to DDX3Y)
+    y_gene = 'RPS4Y1' if 'RPS4Y1' in available_genes else 'DDX3Y' if 'DDX3Y' in available_genes else None
+    if y_gene is None:
+        raise ValueError("No Y-linked gene found among available genes.")
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    
+    # Scatter plot: XIST vs Y gene
+    sns.scatterplot(
+        data=sample_sex_exp,
+        x='XIST',
+        y=y_gene,
+        hue='Predicted_Sex',
+        palette={'Male': 'blue', 'Female': 'red', 'Ambiguous': 'gray'},
+        ax=axes[0]
+    )
+    axes[0].axvline(xist_thresh, color='red', linestyle='--', label='XIST threshold')
+    axes[0].axhline(y_thresh, color='blue', linestyle='--', label=f'{y_gene} threshold')
+    axes[0].set_title(f'XIST vs {y_gene}')
+    axes[0].legend()
+
+    # Boxplot: all genes by Predicted_Sex
+    melted = sample_sex_exp.reset_index()[['Predicted_Sex'] + available_genes].melt(id_vars='Predicted_Sex')
+    sns.boxplot(data=melted, x='variable', y='value', hue='Predicted_Sex', ax=axes[1])
+    axes[1].set_title('Gene Expression by Predicted Sex')
+    axes[1].set_xlabel('Gene')
+    axes[1].set_ylabel('Log-normalized expression')
+    axes[1].legend(loc='upper right')
+
+    # PCA on available sex genes
+    df_pca_input = sample_sex_exp[available_genes].dropna()
+    pca = PCA(n_components=2)
+    pcs = pca.fit_transform(df_pca_input)
+    df_pca = pd.DataFrame(pcs, columns=['PC1', 'PC2'], index=df_pca_input.index)
+    df_pca['Predicted_Sex'] = sample_sex_exp.loc[df_pca.index, 'Predicted_Sex']
+
+    sns.scatterplot(data=df_pca, x='PC1', y='PC2', hue='Predicted_Sex', palette='Set1', ax=axes[2])
+    axes[2].set_title('PCA of Sex Gene Expression')
+
+    plt.tight_layout()
+
+    return output_df, fig
