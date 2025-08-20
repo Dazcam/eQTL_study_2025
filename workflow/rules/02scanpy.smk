@@ -6,6 +6,7 @@ rule scanpy_qc:
     resources: threads = 16, mem_mb = 160000, time = "0-3:00:00"
     params:  nb_out = config["scanpy"]["qc"]["nb_out"],
              html_out = config["scanpy"]["qc"]["html_out"]
+    benchmark: config["scanpy"]["qc"]["benchmark"]
     message: "Running Scanpy QC in Jupyter notebook and producing HTML output"
     log:     config["scanpy"]["qc"]["log"]
     shell:
@@ -24,6 +25,7 @@ rule scanpy_clustering:
 #    resources: threads = 10, mem_mb = 100000, time="0-3:00:00"
     params:  nb_out = config["scanpy"]["clustering"]["nb_out"],
              html_out = config["scanpy"]["clustering"]["html_out"]
+    benchmark: config["scanpy"]["clustering"]["benchmark"]
     message: "Running Scanpy clustering in Jupyter notebook and producing HTML output"
     log:     config["scanpy"]["clustering"]["log"]
     shell:

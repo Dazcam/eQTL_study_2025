@@ -5,7 +5,7 @@ use-envmodules: True
 conda-frontend: conda
 use-singularity: True
 keep-going: True
-jobs: 3
+jobs: 10
 rerun-incomplete: True
 #restart-times: 1
 printshellcmds: True

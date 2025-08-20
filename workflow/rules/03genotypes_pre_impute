@@ -59,3 +59,9 @@ rule genotype_qc2hrc:
               --lo-out 38 \
               --clean TRUE) > {log} 2>&1
              """
+
+### TODO
+
+# Add report rule: ../reports/03genotyping_pre_impute_report.html
+# Add rule to  rm MAF A/T and G/C SNPs with MAFs > 0.4
+# Add rm MAF < 0.01; check what genotypeqc2hrc restricts to

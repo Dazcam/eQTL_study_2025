@@ -1,7 +1,8 @@
 configfile: '../config/config.yaml'
 
-include: 'rules/01parse.smk' 
-#include: 'rules/02scanpy.smk'
+#include: 'rules/00check_fastqs.smk'
+#include: 'rules/01parse.smk' 
+include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute'
 #include: 'rules/04pegasus.smk'
 #include: 'rules/04qtl.smk'
@@ -58,19 +59,15 @@ qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]
 
 rule all:
     input:
-        "../resources/refs/ref.done",
-        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
-#        expand("../resources/fqs/{sample}", sample=samples) 
-#        expand("../resources/fqs/concat/{sample_id}_R{read}.fastq.gz", sample_id = config['samples'], read = [1,2]),
-#        expand("../results/{sample_id}/run.done", sample_id = config['samples']) 
-#        expand("../results/01MRGD_fqs/{sample}_R{read}.fastq.gz", sample = ALL_SAMPLES, read = [1,2])
-#        expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
-#        "../results/02PARSE/combine_plate1/run.done"
-#        expand("../results/03SCANPY/testing_runs/scanpy_qc_testing_{plate}.html", plate = config['plate'])
-#        expand("../results/03SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
+#        expand("/scratch/c.c1477909/fastqs/250716/{sample}_{lane}_R1_001.fastq.gz", sample=ALL_SAMPLES, lane=["L001", "L002", "L003", "L004"])
+#        "reports/read_counts/summary_read_counts.txt"
+#        "../resources/refs/ref.done",
+#        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
+#        "../results/01PARSE/combine_plate3/run.done"
+#        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
 #        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
 #        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html"
-#        "../results/03SCANPY/scanpy_clustering.html",
+        "../results/02SCANPY/scanpy_clustering.html",
 #        "../results/03SCANPY/scanpy_annotation.html",
 #        "../results/03SCANPY/scanpy_extra.html",
 #        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
