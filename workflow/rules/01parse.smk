@@ -89,44 +89,24 @@ rule run_parse:
              touch {output}
              """
 
-#rule run_parse_combine:
-#    input:  expand("../results/02PARSE/{sample}/run.done", sample = ALL_SAMPLES)
-#    output: "../results/01PARSE/combine_plate3/run.done" 
-#    resources: threads = 32, mem_mb = 360000, time="3-0:00:00"
-#    benchmark: "reports/benchmarks/run_parse_combine.benchmark.txt"
-#    message: "Combining Parse for fastq files"
-#    log:     "../results/00LOG/01PARSE/run_parse_combine.log"
-#    shell:
-#        """
-#        source activate spipe-1.3.1
-#        split-pipe \
-#        --mode comb \
-#        --sublibraries ../results/02PARSE/2_plate1 \
-#        ../results/02PARSE/3_plate1 \
-#        ../results/02PARSE/4_plate1 \
-#        ../results/02PARSE/5_plate1 \
-#        ../results/02PARSE/6_plate1 \
-#        ../results/02PARSE/7_plate1 \
-#        ../results/02PARSE/8_plate1 \
-#        ../results/02PARSE/9_plate1 \
-#        ../results/02PARSE/10_plate1 \
-#        ../results/02PARSE/11_plate1 \
-#        ../results/02PARSE/12_plate1 \
-#        ../results/02PARSE/13_plate1 \
-#        ../results/02PARSE/14_plate1 \
-#        ../results/02PARSE/15_plate1 \
-#        ../results/02PARSE/16_plate1 \
-#        --output_dir ../results/02PARSE/combine_plate1 2> {log}
-#        touch {output}
-#	"""
+rule run_parse_combine:
+    input:  expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
+    output: "../results/01PARSE/combine_plate3/run.done" 
+    resources: threads = 32, mem_mb = 360000, time="3-0:00:00"
+    benchmark: "reports/benchmarks/run_parse_combine.benchmark.txt"
+    message: "Combining Parse for fastq files"
+    log:     "../results/00LOG/01PARSE/run_parse_combine.log"
+    shell:
+        """
+        source activate spipe-1.3.1
+        split-pipe \
+        --mode comb \
+        --sublib_list ../config/sublib_lst_plate3.txt \
+        --output_dir ../results/01PARSE/combine_plate3 2> {log}
+        touch {output}
+	"""
 
-
-
-
-
-
-
-# Need to split spipe process into 3 rules to save time
+# It's possible to split spipe process into 3 rules to save time and resources
 
 #rule run_parse_pre:
 #    input:  r1 = "../results/01MRGD_fqs/{sample}_R1.fastq.gz",
