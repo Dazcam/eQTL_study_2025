@@ -67,40 +67,42 @@ parse:
 scanpy:
   qc:
     input: 
-      plate: ../results/02PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad
+      plate: ../results/01PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad
       nb: scripts/scanpy_qc.ipynb  
-    output: ../results/03SCANPY/scanpy_qc_{plate}.html
-    nb_out: ../results/03SCANPY/scanpy_qc_{plate}_pm.ipynb
+    output: ../results/02SCANPY/scanpy_qc_{plate}.html
+    nb_out: ../results/02SCANPY/scanpy_qc_{plate}_pm.ipynb
     html_out: scanpy_qc_{plate}.html
-    log: ../results/00LOG/03SCANPY/scanpy_qc_{plate}.log
+    benchmark: scanpy_qc.{plate}.benchmark.txt 
+    log: ../results/00LOG/01SCANPY/scanpy_qc_{plate}.log
 
   clustering:
     input: scripts/scanpy_clustering.ipynb
-    output: ../results/03SCANPY/scanpy_clustering.html 
-    nb_out: ../results/03SCANPY/scanpy_clustering_pm.ipynb
+    output: ../results/02SCANPY/scanpy_clustering.html 
+    nb_out: ../results/02SCANPY/scanpy_clustering_pm.ipynb
     html_out: scanpy_clustering.html
-    log: ../results/00LOG/03SCANPY/scanpy_clustering.log
+    benchmark: scanpy_clustering.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_clustering.log
 
   annotation:
     input: scripts/scanpy_annotation.ipynb
-    output: ../results/03SCANPY/scanpy_annotation.html
-    nb_out: ../results/03SCANPY/scanpy_annotation_pm.ipynb
+    output: ../results/02SCANPY/scanpy_annotation.html
+    nb_out: ../results/02SCANPY/scanpy_annotation_pm.ipynb
     html_out: scanpy_annotation.html
-    log: ../results/00LOG/03SCANPY/scanpy_annotation.log
+    log: ../results/00LOG/02SCANPY/scanpy_annotation.log
 
   pseudobulk:
     input: scripts/scanpy_cell_label_and_pseudobulk.ipynb
-    output: ../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html
-    nb_out: ../results/03SCANPY/scanpy_cell_label_and_pseudobulk_pm.ipynb
+    output: ../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html
+    nb_out: ../results/02SCANPY/scanpy_cell_label_and_pseudobulk_pm.ipynb
     html_out: scanpy_cell_label_and_pseudobulk.html
-    log: ../results/00LOG/03SCANPY/scanpy_cell_label_and_pseudobulk.log
+    log: ../results/00LOG/02SCANPY/scanpy_cell_label_and_pseudobulk.log
 
   extra:
     input: scripts/scanpy_extra.ipynb
-    output: ../results/03SCANPY/scanpy_extra.html
-    nb_out: ../results/03SCANPY/scanpy_extra_pm.ipynb
+    output: ../results/02SCANPY/scanpy_extra.html
+    nb_out: ../results/02SCANPY/scanpy_extra_pm.ipynb
     html_out: scanpy_extra.html
-    log: ../results/00LOG/03SCANPY/scanpy_extra.log
+    log: ../results/00LOG/02SCANPY/scanpy_extra.log
 
   env: "../envs/eqtl_study.yml"
 
