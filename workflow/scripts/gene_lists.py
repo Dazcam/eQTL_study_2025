@@ -210,6 +210,16 @@ ExN_3 = [
     'NKAIN2', 'LIMCH1', 'FRMD4B', 'EPHA3', 'CCSER1'
 ]
 
+nick_genes = [
+    'PLXNA4', 'SATB2', 'CUX2',  # Upper layer ExN
+    'BCL11B', 'TLE4',  # Deep layer ExN
+    'GLI3',  # Radial glia
+    'GAD1', 'GAD2', 'NRXN3',  # InN
+    'LAMA4', 'COL4A1',  # Endothelial cells
+    'PDGFRA',  # OPCs
+    'C3',  # Microglia
+]
+
 small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
                      'ACTA2', 'RGS5', 'ALDH1A1',      # Smooth muscle cells
                      'SLC38A2', 'SLC4A10', 'SLC26A2', 'SLC47A1', 'FXYD5',  # Fibroblast
