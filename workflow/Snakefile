@@ -67,10 +67,10 @@ rule all:
 #        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
 #        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
 #        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html"
-        "../results/02SCANPY/scanpy_clustering.html",
-#        "../results/03SCANPY/scanpy_annotation.html",
-#        "../results/03SCANPY/scanpy_extra.html",
-#        "../results/03SCANPY/scanpy_cell_label_and_pseudobulk.html",
+#        "../results/02SCANPY/scanpy_clustering.html",
+        "../results/02SCANPY/scanpy_annotation.html",
+#        "../results/02SCANPY/scanpy_extra.html",
+#        "../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #        expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
 #        qtl_files,
 #        qtl_plots,

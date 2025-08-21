@@ -38,7 +38,7 @@ rule scanpy_annotation:
              nb = config["scanpy"]["annotation"]["input"]
     output:  config["scanpy"]["annotation"]["output"]
     conda:   config["scanpy"]["env"]
-    resources: threads = 10, mem_mb = 100000, time="3-0:00:00"
+    resources: threads = 10, mem_mb = 200000, time="3-0:00:00"
     params:  nb_out = config["scanpy"]["annotation"]["nb_out"],
              html_out = config["scanpy"]["annotation"]["html_out"]
     message: "Running Scanpy annotation in Jupyter notebook and producing HTML output"

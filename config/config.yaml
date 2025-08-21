@@ -72,7 +72,7 @@ scanpy:
     output: ../results/02SCANPY/scanpy_qc_{plate}.html
     nb_out: ../results/02SCANPY/scanpy_qc_{plate}_pm.ipynb
     html_out: scanpy_qc_{plate}.html
-    benchmark: scanpy_qc.{plate}.benchmark.txt 
+    benchmark: reports/benchmarks/scanpy_qc.{plate}.benchmark.txt 
     log: ../results/00LOG/01SCANPY/scanpy_qc_{plate}.log
 
   clustering:
@@ -80,7 +80,7 @@ scanpy:
     output: ../results/02SCANPY/scanpy_clustering.html 
     nb_out: ../results/02SCANPY/scanpy_clustering_pm.ipynb
     html_out: scanpy_clustering.html
-    benchmark: scanpy_clustering.benchmark.txt
+    benchmark: reports/benchmarks/scanpy_clustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_clustering.log
 
   annotation:
@@ -105,6 +105,39 @@ scanpy:
     log: ../results/00LOG/02SCANPY/scanpy_extra.log
 
   env: "../envs/eqtl_study.yml"
+
+
+# ------------  GENOTYPES PRE_IMPUTATION  ----------------
+
+geno_pre_impute:
+  convert_raw:
+    input:
+      ped: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.ped
+      map: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.map
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed
+    in_prefix: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
+    out_prefix: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19
+    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/convert_raw.log
+
+  rm_dup_sample:
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.bed
+    out_prefix: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup
+    remove_file: ../config/rm_dup_sample.txt
+    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/rm_dup_sample.log
+
+  make_kgp3_pgen:
+    input: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen
+    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/make_kgp3_pgen.log
+    workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/
+
+  genotype-qc2hrc:
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
+    in_prefix: eqtl_genotypes_hg19
+    out_prefix: eqtl_genotypes_hg38_preTM
+    shortname: eqtlhg38tm
+    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/genotype-qc2hrc.log
+
 
 # ------------  eQTL  ----------------
 
@@ -266,31 +299,6 @@ plot_qtl:
   expression_dir: ../results/03SCANPY/pseudobulk
   log: ../results/00LOG/04TENSORQTL/plot_qtl.log 
 
-# ------------  GENOTYPES PRE_IMPUTATION  ----------------
-
-geno_pre_impute:
-  convert_raw:
-    input:
-      ped: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.ped 
-      map: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.map
-    output: ../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed
-    in_prefix: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
-    out_prefix: ../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19
-    log: ../results/00LOG/04GENOTYPES/GenotypeQCtoHRC/convert_raw.log
-  
-  make_kgp3_pgen:
-    input: ../results/04GENOTYPES/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
-    output: ../results/04GENOTYPES/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen  
-    log: ../results/00LOG/04GENOTYPES/GenotypeQCtoHRC/make_kgp3_pgen.log
-    workdir: ../results/04GENOTYPES/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/    
-
-  genotype-qc2hrc:
-    output: ../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
-    in_prefix: eqtl_genotypes_hg19
-    out_prefix: eqtl_genotypes_hg38_preTM
-    shortname: eqtlhg38tm
-    log: ../results/00LOG/04GENOTYPES/GenotypeQCtoHRC/genotype-qc2hrc.log
-    
 # ------------  GENOTYPES POST-IMPUTATION  ----------------
     
 genotypes:
