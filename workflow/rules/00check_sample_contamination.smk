@@ -1,135 +1,193 @@
-# Define input BAM paths and sublibraries
-BAM_PATHS = {
-    "13_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/13_plate1/process/barcode_headAligned_anno.bam",
-    "5_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/5_plate1/process/barcode_headAligned_anno.bam",
-    "9_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/9_plate1/process/barcode_headAligned_anno.bam",
-    "15_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/15_plate1/process/barcode_headAligned_anno.bam",
-    "14_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/14_plate1/process/barcode_headAligned_anno.bam",
-    "3_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/3_plate1/process/barcode_headAligned_anno.bam",
-    "7_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/7_plate1/process/barcode_headAligned_anno.bam",
-    "2_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/2_plate1/process/barcode_headAligned_anno.bam",
-    "4_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/4_plate1/process/barcode_headAligned_anno.bam",
-    "10_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/10_plate1/process/barcode_headAligned_anno.bam",
-    "11_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/11_plate1/process/barcode_headAligned_anno.bam",
-    "12_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/12_plate1/process/barcode_headAligned_anno.bam",
-    "16_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/16_plate1/process/barcode_headAligned_anno.bam",
-    "6_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/6_plate1/process/barcode_headAligned_anno.bam",
-    "8_plate1": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate1/8_plate1/process/barcode_headAligned_anno.bam",
-    "14_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/14/process/barcode_headAligned_anno.bam",
-    "16_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/16/process/barcode_headAligned_anno.bam",
-    "1_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/1/process/barcode_headAligned_anno.bam",
-    "10_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/10/process/barcode_headAligned_anno.bam",
-    "11_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/11/process/barcode_headAligned_anno.bam",
-    "12_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/12/process/barcode_headAligned_anno.bam",
-    "13_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/13/process/barcode_headAligned_anno.bam",
-    "15_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/15/process/barcode_headAligned_anno.bam",
-    "2_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/2/process/barcode_headAligned_anno.bam",
-    "4_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/4/process/barcode_headAligned_anno.bam",
-    "5_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/5/process/barcode_headAligned_anno.bam",
-    "6_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/6/process/barcode_headAligned_anno.bam",
-    "7_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/7/process/barcode_headAligned_anno.bam",
-    "8_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/8/process/barcode_headAligned_anno.bam",
-    "9_plate2": "/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/plate2/9/process/barcode_headAligned_anno.bam",
-    "5_plate3": "../results/01PARSE/5_plate3/process/barcode_headAligned_anno.bam",
-    "15_plate3": "../results/01PARSE/15_plate3/process/barcode_headAligned_anno.bam",
-    "4_plate3": "../results/01PARSE/4_plate3/process/barcode_headAligned_anno.bam",
-    "14_plate3": "../results/01PARSE/14_plate3/process/barcode_headAligned_anno.bam",
-    "10_plate3": "../results/01PARSE/10_plate3/process/barcode_headAligned_anno.bam",
-    "3_plate3": "../results/01PARSE/3_plate3/process/barcode_headAligned_anno.bam",
-    "12_plate3": "../results/01PARSE/12_plate3/process/barcode_headAligned_anno.bam",
-    "11_plate3": "../results/01PARSE/11_plate3/process/barcode_headAligned_anno.bam",
-    "1_plate3": "../results/01PARSE/1_plate3/process/barcode_headAligned_anno.bam",
-    "2_plate3": "../results/01PARSE/2_plate3/process/barcode_headAligned_anno.bam",
-    "8_plate3": "../results/01PARSE/8_plate3/process/barcode_headAligned_anno.bam",
-    "6_plate3": "../results/01PARSE/6_plate3/process/barcode_headAligned_anno.bam"
-}
+import json
+configfile: '../config/config.yaml'
 
-SUBLIBS = list(BAM_PATHS.keys())
+SUBLIBS = json.load(open(config['BAM_FILES']))
 CHROM = "chr22"  # Adjust to "22" if BAMs lack "chr" prefix
-SCRATCH_DIR = "/path/to/scratch/area"  # Replace with your scratch path
-COMMON_VCF = "/path/to/common_snps_chr22.vcf.gz"  # Filtered 1000 Genomes SNPs
-REF_VCF = "/path/to/ref_chr22.vcf.gz"  # Your reference genotypes for chr22
+COMMON_VCF = "../results/04GENOTYPES/GenotypeQCtoHRC/dragondata_extra/imputation-sites/ALL.TOPMed_freeze5_hg38_dbSNP.vcf.gz"
+REF_VCF = "../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/eqtl_genotypes_hg19.gh.topmed.chr22.vcf.gz"  # Your reference genotypes for chr22
 
-# Define local rules for head node execution
-localrules: index_bam, extract_chr
+# Note that I'm using preimputed genotypes here after running GenotypeQCtoHRC
 
-# Rule to generate all final outputs
+localrules: copy_bam, make_whitelist
+
+SCRATCH_BAM_DIR = "../results/00CHECK_SMPL_CONTAMINATION/bam_files"
+
 rule all:
     input:
-        expand("{scratch_dir}/{sublib}_vireo/donor_ids.tsv", scratch_dir=SCRATCH_DIR, sublib=SUBLIBS)
+        expand(os.path.join(SCRATCH_BAM_DIR, "{sublib}_vireo/donor_ids.tsv"), sublib=SUBLIBS.keys())
 
-# Rule to index full BAM files (on head node)
+# Copy BAMs from /nfs to local scratch
+rule copy_bam:
+    input:  lambda wc: SUBLIBS[wc.sublib]
+    output: os.path.join(SCRATCH_BAM_DIR, "{sublib}.bam")
+    benchmark: "reports/benchmarks/check_sample_contamination_copy_bam.{sublib}.benchmark.txt"
+    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/copy_{sublib}.log"
+    shell:  "cp {input} {output} > {log} 2>&1"
+
+rule make_whitelist:
+    input:  lambda wildcards: f"/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{wildcards.sublib.split('_')[1]}/{wildcards.sublib}/all-sample/DGE_filtered/cell_metadata.csv"
+    output: "../results/00CHECK_SMPL_CONTAMINATION/refs/{sublib}_whitelist.txt"
+    shell:
+        # Extract first column (bc_wells), skip header
+        "cut -d',' -f1 {input} | tail -n +2 > {output}"
+
+
+rule subset_vcf_chr22:
+    input: COMMON_VCF
+    output: "../results/00CHECK_SMPL_CONTAMINATION/refs/ALL.TOPMed_freeze5_hg38_dbSNP.chr22.vcf.gz"
+    conda: "../envs/cellsnp_lite.yml"
+    log: "../results/00LOG/00CHECK_SMPL_CONTAMINATION/subset_vcf_chr22.log"
+    shell:
+        """
+        bcftools view -r chr22 {input} \
+        | bcftools view -i 'MAF>=0.1 && INFO/AN>=20' \
+        -Oz -o {output} 2> {log}
+        bcftools index -t {output}
+        """
+
+# Sort full BAMs with sambamba
+rule sort_bam:
+    input:  os.path.join(SCRATCH_BAM_DIR, "{sublib}.bam")
+    output: os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam")
+    conda: "../envs/cellsnp_lite.yml"
+    resources: threads=16, mem_mb=80000, time="2-0:00:00"
+    priority: 10
+    benchmark: "reports/benchmarks/check_sample_contamination_sort_bam.{sublib}.benchmark.txt"
+    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/sort_{sublib}.log"
+    shell:  "sambamba sort -t {resources.threads} -m 56G -o {output} {input} > {log} 2>&1"
+
+# Index full sorted BAMs with sambamba
 rule index_bam:
-    input:  bam=lambda wildcards: BAM_PATHS[wildcards.sublib]
-    output: bai=lambda wildcards: BAM_PATHS[wildcards.sublib] + ".bai"
-    log:    "logs/index_bam_{sublib}.log"
+    input:  os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam")
+    output: os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam.bai")
+    conda: "../envs/cellsnp_lite.yml"
+    resources: threads=8, mem_mb=56000, time="2-0:00:00"
+    benchmark: "reports/benchmarks/check_sample_contamination_index_bam.{sublib}.benchmark.txt"
+    priority: 30
+    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/index_{sublib}.log"
+    shell:  "sambamba index -t {resources.threads} {input} > {log} 2>&1"
+
+
+rule extract_and_recode_chr22:
+    input:  bam=os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam"),
+            bai=os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam.bai")
+    output: bam=os.path.join(SCRATCH_BAM_DIR, "{sublib}.chr22.filtered.bam"),
+            bai=os.path.join(SCRATCH_BAM_DIR, "{sublib}.chr22.filtered.bam.bai")
+    conda:  "../envs/cellsnp_lite.yml"
+    resources: threads=8, mem_mb=32000, time="2-0:00:00"
+    benchmark: "reports/benchmarks/extract_recode_chr22.{sublib}.benchmark.txt"
+    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/extract_recode_chr22_{sublib}.log"
     shell:
         """
-        echo "==== Indexing {input.bam} ====" | tee -a {log}
-        samtools index {input.bam} 2>&1 | tee -a {log}
-        echo "==== Completed indexing {input.bam} ====" | tee -a {log}
-        echo | tee -a {log}
+        # Extract only chr22 (with hg38_22 prefix)
+        sambamba view -t {resources.threads} -f bam {input.bam} hg38_22 -o {output.bam} > {log} 2>&1
+
+        # Recode header to remove hg38_ prefix
+        samtools view -H {output.bam} | \
+        sed 's/^@SQ.*SN:hg38_22/@SQ\tSN:chr22/' > {input}_new_header.sam
+
+        samtools reheader {input}_new_header.sam {output.bam} > {output.bam}.tmp && mv {output.bam}.tmp {output.bam}
+
+        # Index the final BAM
+        samtools index {output.bam}
+
+        # Clean up
+        rm {input}_new_header.sam
         """
 
-# Rule to extract chr22 and copy to scratch (on head node)
-rule extract_chr:
-    input: bam=lambda wildcards: BAM_PATHS[wildcards.sublib],
-           bai=lambda wildcards: BAM_PATHS[wildcards.sublib] + ".bai"
-    output: extracted_bam="{scratch_dir}/{sublib}_{chrom}.bam"
-    log:  "logs/extract_chr_{sublib}.log"
-    shell:
-        """
-        echo "==== Extracting {wildcards.chrom} from {input.bam} ====" | tee -a {log}
-        samtools view -b {input.bam} {wildcards.chrom} > {output.extracted_bam} 2>&1 | tee -a {log}
-        echo "==== Completed extraction for {wildcards.sublib} ====" | tee -a {log}
-        echo | tee -a {log}
-        """
 
-# Rule to run cellsnp-lite (on compute nodes, no index needed)
+
+## Extract hg38_22 from sorted BAM files with sambamba
+#rule extract_chr:
+#    input: 
+#        bam=os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam"),
+#        bai=os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam.bai")
+#    output: os.path.join(SCRATCH_BAM_DIR, "{sublib}.hg38_22.sorted.bam")
+#    conda: "../envs/cellsnp_lite.yml"
+#    resources: threads=8, mem_mb=32000, time="2-0:00:00"
+#    priority: 50
+#    benchmark: "reports/benchmarks/check_sample_contamination_extract_chr.{sublib}.benchmark.txt"
+#    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/extract_chr_{sublib}.log"
+#    shell:  "sambamba view -t {resources.threads} -f bam {input.bam} hg38_22 -o {output} > {log} 2>&1"
+
+# Rm hg38_ from bam chr encoding
+#rule recode_bam_chr:
+#    input: os.path.join(SCRATCH_BAM_DIR, "{sublib}.hg38_22.sorted.bam")
+#    output:
+#        bam=os.path.join(SCRATCH_BAM_DIR, "{sublib}.chr22.sorted.bam"),
+#    conda: "../envs/cellsnp_lite.yml"
+#    envmodules: "samtools/1.9", "bcftools/1.16.0"
+#    resources: threads=4, mem_mb=16000, time="2-0:00:00"
+#    priority: 60    
+#    benchmark: "reports/benchmarks/check_sample_contamination_recode_bam_chr.{sublib}.benchmark.txt"
+#    log: "../results/00LOG/00CHECK_SMPL_CONTAMINATION/recode_chr_{sublib}.log"
+#    shell: """
+#           # Generate rename map from BAM header
+#           samtools view -H {input} | grep '^@SQ' | awk '{{split($2,a,":"); print a[2] "\t" (a[2]=="chr22" ? "chr22" : "chr"substr(a[2],6))}}' > chrom_recode.txt
+#
+#           # Apply new header
+#           samtools view -H {input} | \
+#             sed -f <(awk '{{print "s/"$1"/"$2"/"}}' chrom_recode.txt) \
+#             > new_header.sam
+#
+#             samtools reheader new_header.sam {input} > {output.bam}
+#
+#             # Index the new BAM
+#             samtools index {output.bam}
+#
+#             # Clean up
+#             rm new_header.sam chrom_recode.txt
+#             """
+
+# Rule to run cellsnp-lite
 rule cellsnp_lite:
-    input:  bam="{scratch_dir}/{sublib}_{chrom}.bam",
-            vcf=COMMON_VCF
-    output: vcf="{scratch_dir}/{sublib}_pileup/cellSNP.vcf.gz"
-    log:    "logs/cellsnp_lite_{sublib}.log"
-    threads: 4
-    resources: mem_mb=16000
+    input:  bam=os.path.join(SCRATCH_BAM_DIR, "{sublib}.chr22.filtered.bam"),
+            vcf=rules.subset_vcf_chr22.output,
+            whitelist=rules.make_whitelist.output
+    output: "../results/00CHECK_SMPL_CONTAMINATION/cellsnp_lite/{sublib}_pileup/cellSNP.cells.vcf.gz"
+    conda: "../envs/cellsnp_lite.yml"
+    resources: threads=8, mem_mb=80000
+    priority: 70
+    benchmark: "reports/benchmarks/check_sample_contamination_cellsnp_lite.{sublib}.benchmark.txt"
+    params: "../results/00CHECK_SMPL_CONTAMINATION/cellsnp_lite/{sublib}_pileup/" 
+    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/cellsnp_lite_{sublib}.log"
     shell:
         """
-        echo "==== Starting pileup for {wildcards.sublib} ====" | tee -a {log}
         cellsnp-lite -s {input.bam} \
-                     -O {wildcards.scratch_dir}/{wildcards.sublib}_pileup \
+                     -O {params} \
                      --cellTAG CB --UMItag UB \
                      -R {input.vcf} \
+                     --barcodeFile {input.whitelist} \
                      --genotype --gzip \
-                     --chrom {wildcards.chrom} 2>&1 | tee -a {log}
-        echo "==== Completed pileup for {wildcards.sublib} ====" | tee -a {log}
-        echo | tee -a {log}
+                     --chrom chr22 2>&1 \
+                     --minMAF 0.05 --minCOUNT 1 \
+                     -p {threads} 2>&1 | tee -a {log}
         """
 
-# Rule to run Vireo (on compute nodes)
+# Rule to run Vireo
 rule vireo:
-    input:  pileup_vcf="{scratch_dir}/{sublib}_pileup/cellSNP.vcf.gz",
-            ref_vcf=REF_VCF
-    output: donor_ids="{scratch_dir}/{sublib}_vireo/donor_ids.tsv"
-    log:    "logs/vireo_{sublib}.log"
-    threads: 2
-    resources:mem_mb=8000 
+    input:  pileup_vcf = "../results/00CHECK_SMPL_CONTAMINATION/cellsnp_lite/{sublib}_pileup/cellSNP.cells.vcf.gz",
+            ref_vcf = REF_VCF
+    output: os.path.join(SCRATCH_BAM_DIR, "{sublib}_vireo/donor_ids.tsv")
+    conda: "../envs/vireo.yml" 
+    resources: threads = 2, mem_mb = 8000
+    priority: 80
+    benchmark: "reports/benchmarks/check_sample_contamination_vireo.{sublib}.benchmark.txt"
+    params: os.path.join(SCRATCH_BAM_DIR, "{sublib}_vireo/") 
+    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/vireo_{sublib}.log"
     shell:
         """
-        echo "==== Starting Vireo for {wildcards.sublib} ====" | tee -a {log}
         vireo -c {input.pileup_vcf} \
               -d {input.ref_vcf} \
-              -o {wildcards.scratch_dir}/{wildcards.sublib}_vireo 2>&1 | tee -a {log}
-        echo "==== Completed Vireo for {wildcards.sublib} ====" | tee -a {log}
-        echo | tee -a {log}
+              -o {params} 2>&1 | tee -a {log}
         """
 
 # Optional: Clean up extracted BAMs to save space
-rule cleanup:
-    input:  donor_ids="{scratch_dir}/{sublib}_vireo/donor_ids.tsv"
-    output: touch="{scratch_dir}/{sublib}_cleanup.done"
-    shell:
-        """
-        rm {wildcards.scratch_dir}/{wildcards.sublib}_{wildcards.chrom}.bam
-        echo "==== Cleaned up extracted BAM for {wildcards.sublib} ====" | tee -a logs/cleanup_{wildcards.sublib}.log
-        """
+#rule cleanup:
+#    input:  donor_ids="{scratch_dir}/{sublib}_vireo/donor_ids.tsv"
+#    output: touch="{scratch_dir}/{sublib}_cleanup.done"
+#    shell:
+#        """
+#        rm {wildcards.scratch_dir}/{wildcards.sublib}_{wildcards.chrom}.bam
+#        echo "==== Cleaned up extracted BAM for {wildcards.sublib} ====" | tee -a logs/cleanup_{wildcards.sublib}.log
+#        """
