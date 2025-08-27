@@ -18,6 +18,21 @@ library(DT)
 in_dir <- params$in_dir
 ```
 
+## QC steps
+
+1.
+2. 
+3. 
+4. 
+5. 
+6. 
+7.
+8.
+9.
+10.
+
+***
+
 ## QC tables {.tabset}
 
 ***
@@ -47,12 +62,14 @@ sex_tbl <- read.table(
 
 file.remove(temp_file)
 
-datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
+datatable(sex_tbl, caption = 'Table 1. Sex ambiguities')
 ```
 
 ***
 
 ### QC 4: Kinship 
+
++ Note: 
 
 ***
 
@@ -64,7 +81,7 @@ kinship_data <- system(
 
 kinship_tbl <- read_tsv(file = I(kinship_data), col_types = cols())
 
-datatable(kinship_tbl, caption = 'Table 4. Related samples') 
+datatable(kinship_tbl, caption = 'Table 2. Related samples') 
 ```
 
 ***
@@ -83,7 +100,7 @@ ancestry_data <- system(
 
 ancestry_tbl <- read_tsv(file = I(ancestry_data), col_types = cols())
 
-datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample') 
+datatable(ancestry_tbl, caption = 'Table 3. Ancestry prediction per sample') 
 ```
 
 ***
@@ -94,7 +111,23 @@ datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample')
 ancestry_nonEur_tbl <- ancestry_tbl |>
   filter(biogeographic_prediction != 'European')
 
-datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) prediction per sample') 
+datatable(ancestry_nonEur_tbl, caption = 'Table 4. Ancestry (non European) prediction per sample') 
 ```
 
 **Non-European sample IDs**: `r ancestry_tbl |> filter(biogeographic_prediction != 'European') |> pull(FID)`
+
+***
+
+### QC 6: Post-GenotypeQCtoHRC checks 
+
++ Still to add counts of SNP removals from post-check logs
+
+***
+
+```{r, snp counts}
+pre_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'final_vcf_chr_counts.tsv'), col_names = c('chr', 'gQCtoHRC_cnts'))
+post_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'gQC2hrc_vcf_chr_counts.tsv'), col_names = c('chr', 'final_cnts'))
+final_snp_cnt_tbl <- pre_snp_cnts_tbl |>
+  left_join(post_snp_cnts_tbl)
+datatable(final_snp_cnt_tbl, caption = 'Table 5. SNP counts after GenotypeQCtoHRC and post-SNP checks') 
+```
