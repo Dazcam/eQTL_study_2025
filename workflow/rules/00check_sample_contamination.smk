@@ -14,7 +14,7 @@ SCRATCH_BAM_DIR = "../results/00CHECK_SMPL_CONTAMINATION/bam_files"
 
 rule all:
     input:
-        expand(os.path.join(SCRATCH_BAM_DIR, "{sublib}_vireo/donor_ids.tsv"), sublib=SUBLIBS.keys())
+        expand("../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_vireo/donor_ids.tsv", sublib=SUBLIBS.keys())
 
 # Copy BAMs from /nfs to local scratch
 rule copy_bam:
@@ -54,7 +54,7 @@ rule sort_bam:
     priority: 10
     benchmark: "reports/benchmarks/check_sample_contamination_sort_bam.{sublib}.benchmark.txt"
     log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/sort_{sublib}.log"
-    shell:  "sambamba sort -t {resources.threads} -m 56G -o {output} {input} > {log} 2>&1"
+    shell:  "samtools sort -@ {resources.threads} -m 4G -o {output} {input} > {log} 2>&1"
 
 # Index full sorted BAMs with sambamba
 rule index_bam:
@@ -65,7 +65,7 @@ rule index_bam:
     benchmark: "reports/benchmarks/check_sample_contamination_index_bam.{sublib}.benchmark.txt"
     priority: 30
     log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/index_{sublib}.log"
-    shell:  "sambamba index -t {resources.threads} {input} > {log} 2>&1"
+    shell:  "samtools index -@ {resources.threads} {input} > {log} 2>&1"
 
 
 rule extract_and_recode_chr22:
@@ -80,64 +80,30 @@ rule extract_and_recode_chr22:
     shell:
         """
         # Extract only chr22 (with hg38_22 prefix)
-        sambamba view -t {resources.threads} -f bam {input.bam} hg38_22 -o {output.bam} > {log} 2>&1
+         samtools view -@ {resources.threads} -b {input.bam} hg38_22 -o {output.bam} > {log} 2>&1
 
         # Recode header to remove hg38_ prefix
         samtools view -H {output.bam} | \
-        sed 's/^@SQ.*SN:hg38_22/@SQ\tSN:chr22/' > {input}_new_header.sam
+        sed 's/^@SQ.*SN:hg38_22/@SQ\tSN:chr22/' > {input.bam}_new_header.sam
 
-        samtools reheader {input}_new_header.sam {output.bam} > {output.bam}.tmp && mv {output.bam}.tmp {output.bam}
+        samtools reheader {input.bam}_new_header.sam {output.bam} > {output.bam}.tmp && mv {output.bam}.tmp {output.bam}
 
         # Index the final BAM
         samtools index {output.bam}
+        
+        # Check for presence of chr22 reads
+        READ_COUNT=$(samtools view -c {output.bam} chr22)
+        if [ "$READ_COUNT" -eq 0 ]; then
+            echo "ERROR: No reads found on chr22 in {output.bam}" >&2
+            exit 1
+        fi
+
+        # Print basic stats for logging/debugging
+        samtools idxstats {output.bam}
 
         # Clean up
-        rm {input}_new_header.sam
+        rm {input.bam}_new_header.sam
         """
-
-
-
-## Extract hg38_22 from sorted BAM files with sambamba
-#rule extract_chr:
-#    input: 
-#        bam=os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam"),
-#        bai=os.path.join(SCRATCH_BAM_DIR, "{sublib}.sorted.bam.bai")
-#    output: os.path.join(SCRATCH_BAM_DIR, "{sublib}.hg38_22.sorted.bam")
-#    conda: "../envs/cellsnp_lite.yml"
-#    resources: threads=8, mem_mb=32000, time="2-0:00:00"
-#    priority: 50
-#    benchmark: "reports/benchmarks/check_sample_contamination_extract_chr.{sublib}.benchmark.txt"
-#    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/extract_chr_{sublib}.log"
-#    shell:  "sambamba view -t {resources.threads} -f bam {input.bam} hg38_22 -o {output} > {log} 2>&1"
-
-# Rm hg38_ from bam chr encoding
-#rule recode_bam_chr:
-#    input: os.path.join(SCRATCH_BAM_DIR, "{sublib}.hg38_22.sorted.bam")
-#    output:
-#        bam=os.path.join(SCRATCH_BAM_DIR, "{sublib}.chr22.sorted.bam"),
-#    conda: "../envs/cellsnp_lite.yml"
-#    envmodules: "samtools/1.9", "bcftools/1.16.0"
-#    resources: threads=4, mem_mb=16000, time="2-0:00:00"
-#    priority: 60    
-#    benchmark: "reports/benchmarks/check_sample_contamination_recode_bam_chr.{sublib}.benchmark.txt"
-#    log: "../results/00LOG/00CHECK_SMPL_CONTAMINATION/recode_chr_{sublib}.log"
-#    shell: """
-#           # Generate rename map from BAM header
-#           samtools view -H {input} | grep '^@SQ' | awk '{{split($2,a,":"); print a[2] "\t" (a[2]=="chr22" ? "chr22" : "chr"substr(a[2],6))}}' > chrom_recode.txt
-#
-#           # Apply new header
-#           samtools view -H {input} | \
-#             sed -f <(awk '{{print "s/"$1"/"$2"/"}}' chrom_recode.txt) \
-#             > new_header.sam
-#
-#             samtools reheader new_header.sam {input} > {output.bam}
-#
-#             # Index the new BAM
-#             samtools index {output.bam}
-#
-#             # Clean up
-#             rm new_header.sam chrom_recode.txt
-#             """
 
 # Rule to run cellsnp-lite
 rule cellsnp_lite:
@@ -155,39 +121,46 @@ rule cellsnp_lite:
         """
         cellsnp-lite -s {input.bam} \
                      -O {params} \
-                     --cellTAG CB --UMItag UB \
+                     --UMItag None \
+                     --cellTAG CB \
                      -R {input.vcf} \
                      --barcodeFile {input.whitelist} \
-                     --genotype --gzip \
+                     --genotype \
+                     --gzip \
                      --chrom chr22 2>&1 \
-                     --minMAF 0.05 --minCOUNT 1 \
                      -p {threads} 2>&1 | tee -a {log}
         """
 
 # Rule to run Vireo
 rule vireo:
     input:  pileup_vcf = "../results/00CHECK_SMPL_CONTAMINATION/cellsnp_lite/{sublib}_pileup/cellSNP.cells.vcf.gz",
-            ref_vcf = REF_VCF
-    output: os.path.join(SCRATCH_BAM_DIR, "{sublib}_vireo/donor_ids.tsv")
+            geno_vcf = REF_VCF
+    output: "../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_vireo/donor_ids.tsv"
     conda: "../envs/vireo.yml" 
-    resources: threads = 2, mem_mb = 8000
+    resources: threads = 16, mem_mb = 160000
     priority: 80
     benchmark: "reports/benchmarks/check_sample_contamination_vireo.{sublib}.benchmark.txt"
-    params: os.path.join(SCRATCH_BAM_DIR, "{sublib}_vireo/") 
+    params: outdir = "../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_vireo",
+            tmp = "../results/00CHECK_SMPL_CONTAMINATION/vireo/tmp_{sublib}" 
     log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/vireo_{sublib}.log"
     shell:
         """
+        # Genotypes VCF checks 
+        zcat {input.geno_vcf} | grep -v '^#' | cut -f 1 | sort | uniq >> {log}   # Check chrs
+        zcat {input.geno_vcf} | grep -v '^##' | wc -l                 >> {log}   # Count SNPs
+        zcat {input.geno_vcf} | grep '^#CHROM' | cut -f 10- | wc -w   >> {log}   # Count samples
+
+        # Check overlaps
+        zcat ${input.pileup_vcf} | grep -v '^##' | cut -f 1-2 > {params.tmp}_cellsnp_positions.txt
+        zcat ${input.geno_vcf} | grep -v '^##' | cut -f 1-2 > {params.tmp}_donor_positions.txt
+        wc -l {params.tmp}_cellsnp_positions.txt >> {log}
+        wc -l {params.tmp}_donor_positions.txt >> {log}
+        comm -12 <(sort {params.tmp}_cellsnp_positions.txt) <(sort {params.tmp}_donor_positions.txt) | wc -l >> {log}
+        rm {params.tmp}*         
+
         vireo -c {input.pileup_vcf} \
-              -d {input.ref_vcf} \
-              -o {params} 2>&1 | tee -a {log}
+              -d {input.geno_vcf} \
+              -t GT \
+              -o {params.outdir} 2>&1 | tee -a {log}
         """
 
-# Optional: Clean up extracted BAMs to save space
-#rule cleanup:
-#    input:  donor_ids="{scratch_dir}/{sublib}_vireo/donor_ids.tsv"
-#    output: touch="{scratch_dir}/{sublib}_cleanup.done"
-#    shell:
-#        """
-#        rm {wildcards.scratch_dir}/{wildcards.sublib}_{wildcards.chrom}.bam
-#        echo "==== Cleaned up extracted BAM for {wildcards.sublib} ====" | tee -a logs/cleanup_{wildcards.sublib}.log
-#        """

@@ -1,6 +1,8 @@
 # ------------  GLOBAL  ----------------
 
 MERGE_FQ_JSON: ../config/samples_plate3.json
+BAM_FILES: ../config/bam_files_test.json
+
 plate:
   - plate1
   - plate2
@@ -136,8 +138,45 @@ geno_pre_impute:
     in_prefix: eqtl_genotypes_hg19
     out_prefix: eqtl_genotypes_hg38_preTM
     shortname: eqtlhg38tm
+    outdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
+    workdir: ../results/04GENOTYPES/GenotypeQCtoHRC
+    report_dir: reports/03GENOTYPES-PRE/
     log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/genotype-qc2hrc.log
 
+  cat_genotypes:
+    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.vcf.gz
+    in_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/
+
+  rm_maf_ambig:
+    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.bed
+    prefix_in: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.
+    prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig
+    ambig_snp_lst: reports/03GENOTYPES-PRE/ambig_high_maf_snp_lst.tsv
+    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/rm_maf_ambig.log
+
+  rm_rare_snps:
+    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps.bed
+    prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps 
+    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/rm_rare_snps.log
+
+  split_chrs:
+    output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done 
+    prefix_vcf: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.filt
+    outdir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/
+    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/split_chrs.log
+
+  gather_stats:
+    output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/gather_stats.done
+    gQC2hrc_vcf_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/  
+    final_vcf_dir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/    
+    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/gather_stats.log     
+
+  geno_pre_report:
+    rmd_script: scripts/genotyping_pre_impute_report.Rmd
+    html: reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
+    out_file: ../reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
+    in_dir: ../reports/03GENOTYPES-PRE/
+    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/geno_pre_report.log
 
 # ------------  eQTL  ----------------
 
