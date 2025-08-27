@@ -1,9 +1,10 @@
 configfile: '../config/config.yaml'
 
 #include: 'rules/00check_fastqs.smk'
+#include: 'rules/00check_sample_contamination.smk'
 #include: 'rules/01parse.smk' 
-include: 'rules/02scanpy.smk'
-#include: 'rules/03genotypes_pre_impute'
+#include: 'rules/02scanpy.smk'
+include: 'rules/03genotypes_pre_impute.smk'
 #include: 'rules/04pegasus.smk'
 #include: 'rules/04qtl.smk'
 #include: 'rules/04genotypes.smk'
@@ -65,10 +66,13 @@ rule all:
 #        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
 #        "../results/01PARSE/combine_plate3/run.done"
 #        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
-#        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
-#        "../results/04GENOTYPES/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html"
+        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html"
+#        "../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done"
+#        "../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
+#        "../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html"
+#        "../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.bed"
 #        "../results/02SCANPY/scanpy_clustering.html",
-        "../results/02SCANPY/scanpy_annotation.html",
+#        "../results/02SCANPY/scanpy_annotation.html",
 #        "../results/02SCANPY/scanpy_extra.html",
 #        "../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #        expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
