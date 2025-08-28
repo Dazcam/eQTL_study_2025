@@ -58,6 +58,22 @@ rule rm_dup_sample:
         echo "Samples after removal:  $(wc -l < {params.prefix_out}.fam)" >> {log}
         """
 
+# Just checking this for now, will assess if rm needed
+# Prune SNPss first to run on independent SNPs
+rule check_het:
+    input:  rules.rm_dup_sample.output
+    output: config["geno_pre_impute"]["check_het"]["output"]
+    params: prefix = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"]
+    envmodules: "plink/1.9"
+    message: "Check for sample autosomal heterozygosity, add a rule to rm samples if needed"
+    benchmark: "reports/benchmarks/geno_pre_impute.check_het.benchmark.txt"
+    log: config["geno_pre_impute"]["check_het"]["log"] 
+    shell:
+        """
+        plink --bfile {params.prefix} --indep-pairwise 50 5 0.2 --out {params.prefix}
+        plink --bfile {params.prefix} --extract {params.prefix}.prune.in --het --out {params.prefix}
+        """
+
 rule make_kgp3_pgen:
     input:   config["geno_pre_impute"]["make_kgp3_pgen"]["input"]
     output:  config["geno_pre_impute"]["make_kgp3_pgen"]["output"]

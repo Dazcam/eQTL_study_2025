@@ -133,6 +133,10 @@ geno_pre_impute:
     remove_file: ../config/rm_dup_sample.txt
     log: ../results/00LOG/03GENOTYPES-PRE/rm_dup_sample.log
 
+  check_het:
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.het
+    log: ../results/00LOG/03GENOTYPES-PRE/check_het.log
+
   make_kgp3_pgen:
     input: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen
