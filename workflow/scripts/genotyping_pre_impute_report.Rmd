@@ -94,7 +94,7 @@ write_tsv(outliers_tbl, paste0(in_dir, "het_outliers.txt"), col_names = FALSE)
 ***
 
 ```{r, het_plot, message = FALSE, fig.dim=c(10, 5)}
-het_plot <- ggplot(het_df, aes(x = het_rate)) +
+het_plot <- ggplot(het_tbl, aes(x = het_rate)) +
   geom_histogram(binwidth = 0.005, fill = "#4C78A8", color = "black", alpha = 0.7) +
   geom_vline(aes(xintercept = mean_het + 3 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
   geom_vline(aes(xintercept = mean_het - 3 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
@@ -115,7 +115,7 @@ het_plot <- ggplot(het_df, aes(x = het_rate)) +
   )
 
 # Create publication-ready F distribution plot
-f_plot <- ggplot(het_df, aes(x = F)) +
+f_plot <- ggplot(het_tbl, aes(x = F)) +
   geom_histogram(binwidth = 0.01, fill = "#F28E2B", color = "black", alpha = 0.7) +
   geom_vline(aes(xintercept = mean_F + 3 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
   geom_vline(aes(xintercept = mean_F - 3 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
