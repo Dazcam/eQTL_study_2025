@@ -66,7 +66,8 @@ rule all:
 #        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
 #        "../results/01PARSE/combine_plate3/run.done"
 #        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
-        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html"
+        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html",
+        "../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.het"
 #
 #        "../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done"
 #        "../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed"
