@@ -7,6 +7,7 @@ output:
     df_print: paged
 params:
   in_dir: null
+  bmark_dir: null
 ---
 
 ```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
@@ -16,6 +17,7 @@ library(kableExtra)
 library(stringr)
 library(DT)
 in_dir <- params$in_dir
+bmark_dir <- params$bmark_dir
 ```
 
 ## QC steps
@@ -131,3 +133,110 @@ final_snp_cnt_tbl <- pre_snp_cnts_tbl |>
   left_join(post_snp_cnts_tbl)
 datatable(final_snp_cnt_tbl, caption = 'Table 5. SNP counts after GenotypeQCtoHRC and post-SNP checks') 
 ```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
++ Why is the GenotypeQCtoHRC benchmark file missing?
+
+#### Table
+
+```{r benchmarking}
+# List all benchmark files
+files <- list.files(bmark_dir, pattern = "geno_pre_impute.*.benchmark.txt", full.names = TRUE)
+
+# Read and combine
+benchmarks <- map_dfr(files, function(f) {
+  df <- read.table(f, header = TRUE, sep = "\t")
+  # Add rule + sublib from filename
+  parts <- strsplit(basename(f), "\\.")[[1]]
+  tibble(
+    file = f,
+    rule = parts[2],           # e.g., "cellsnp_lite", "sort_bam"
+    sublib = parts[3],         # e.g., "10_plate1"
+    runtime_sec = df$s,        # runtime in seconds
+    runtime_hms = df$h.m.s.,   # hh:mm:ss string
+    max_rss = df$max_rss       # peak RAM in MB
+  )
+})
+
+# Summarize across replicates
+summary <- benchmarks %>%
+  group_by(rule) %>%
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) 
+
+datatable(summary, caption = 'Table 7. Rule benchmarking. Sd is null when only on instance of job is run.') 
+
+# Optional save summary tables
+#write.csv(benchmarks, paste0(bmark_dir, "benchmark_summary_detailed.csv"), row.names = FALSE)
+#write.csv(summary, "benchmark_summary_rules.csv", row.names = FALSE)
+```
+
+***
+
+#### Mean Runtime
+
+***
+
+```{r, runtime_plt}
+ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)", 
+       title = "Mean runtime per rule (± SD)") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+# ggsave(paste0(bmark_dir, "benchmark_runtime_per_rule.png"), width = 7, height = 5)
+```
+
+***
+
+#### Memory plot
+
+***
+
+```{r, memory_plt}
+ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)", 
+       title = "Mean RAM usage per rule (± SD)") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+
+#ggsave(paste0(bmark_dir, "benchmark_memory_per_rule.png"), width = 7, height = 5)
+```
+
+***
