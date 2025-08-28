@@ -135,7 +135,7 @@ rule vireo:
             geno_vcf = lambda wc: REF_VCF.format(chr=wc.chr)
     output: "../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_chr{chr}_vireo/donor_ids.tsv"
     conda: "../envs/vireo.yml" 
-    resources: threads = 16, mem_mb = 160000
+    resources: threads = 32, mem_mb = 360000
     priority: 80
     benchmark: "reports/benchmarks/check_sample_contamination_vireo.{sublib}.chr{chr}.benchmark.txt"
     params: outdir = "../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_chr{chr}_vireo",

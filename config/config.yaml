@@ -186,7 +186,7 @@ geno_pre_impute:
     html: reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
     out_file: ../reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
     in_dir: ../reports/03GENOTYPES-PRE/
-    bmark_dir: ../reports/benchmarking/
+    bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
 
 # ------------  eQTL  ----------------

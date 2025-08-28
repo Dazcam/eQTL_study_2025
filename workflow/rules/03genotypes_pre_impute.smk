@@ -63,7 +63,8 @@ rule rm_dup_sample:
 rule check_het:
     input:  rules.rm_dup_sample.output
     output: config["geno_pre_impute"]["check_het"]["output"]
-    params: prefix = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"]
+    params: prefix = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"],
+            report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
     envmodules: "plink/1.9"
     message: "Check for sample autosomal heterozygosity, add a rule to rm samples if needed"
     benchmark: "reports/benchmarks/geno_pre_impute.check_het.benchmark.txt"
@@ -72,6 +73,7 @@ rule check_het:
         """
         plink --bfile {params.prefix} --indep-pairwise 50 5 0.2 --out {params.prefix}
         plink --bfile {params.prefix} --extract {params.prefix}.prune.in --het --out {params.prefix}
+        cp {output} {params.report_dir}
         """
 
 rule make_kgp3_pgen:
