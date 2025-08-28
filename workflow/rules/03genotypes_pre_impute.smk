@@ -241,6 +241,7 @@ rule geno_pre_report:
             rmd_script = config["geno_pre_impute"]["geno_pre_report"]["rmd_script"]
     output: config["geno_pre_impute"]["geno_pre_report"]["html"]
     params: in_dir = config["geno_pre_impute"]["geno_pre_report"]["in_dir"],
+            bmark_dir = config["geno_pre_impute"]["geno_pre_report"]["bmark_dir"],
             output_file = config["geno_pre_impute"]["geno_pre_report"]["out_file"]
     singularity: config["containers"]["R"]
     message: "Generate genotyping pre-imputation report"
@@ -250,5 +251,5 @@ rule geno_pre_report:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(in_dir = '{params.in_dir}'))" > {log} 2>&1
+            params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
