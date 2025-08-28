@@ -15,29 +15,42 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 library(stringr)
+library(cowplot)
 library(DT)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 ```
 
-## QC steps
+## Genotyping pre-imputation QC steps
 
-1.
-2. 
-3. 
-4. 
-5. 
-6. 
-7.
-8.
-9.
-10.
+***
+
+Steps 3-7 were carried out using the [GenotypeQCtoHRC package](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC). 
+See the `eqtlgenotypeshg38pretm.qc_report.html` for those metrics. Some additional details for some of those tests are 
+below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQCtoHRC is [Lynham et al. 2023 (DOI:10.1192/bjo.2022.636)](https://www.cambridge.org/core/journals/bjpsych-open/article/dragondata-a-platform-and-protocol-for-integrating-genomic-and-phenotypic-data-across-large-psychiatric-cohorts/2531261CD4300FCF01FA33C6B8693375).
+
+1. Rm duplicate sample (14493 and 144FC same sample. 14493 removed)
+2. Check autosomal heterozygosity
+3. Missingness:
+  - Sample rm if > 5% markers missing, 
+  - SNPs excluded if missing in > 5% samples
+4. HWE p < 1 x 10-6
+5. Samples ambig. sex assignments removed (all passed)
+6. Relatedness assessed (duplicate sample identified 14493 and removed)
+7. Ancestry assessed
+8. Liftover hg19 to hg38
+9. Conversion of markers to dbSNP 156 (check this) using 1000G Phase 3
+10. [Genotype Harmonizer](https://github.com/molgenis/systemsgenetics/wiki/Genotype-Harmonizer) used to align curated markers to the Trans-Omics for Precision Medicine ([TopMED](https://topmed.nhlbi.nih.gov/)) imputation panel
+11. Remove ambiguous A/T, G/C SNP with MAF > 0.4 (none rm here does GenotypeQCtoHRC do this?), 
+12. Remove SNPs MAF < 0.01
 
 ***
 
 ## QC tables {.tabset}
 
 ***
+
+### QC 2: 
 
 ### QC 3: Sex ambiguity
 
@@ -114,6 +127,7 @@ ancestry_nonEur_tbl <- ancestry_tbl |>
   filter(biogeographic_prediction != 'European')
 
 datatable(ancestry_nonEur_tbl, caption = 'Table 4. Ancestry (non European) prediction per sample') 
+'~/Desktop/eQTL_study_2025/workflow/reports/03GENOTYPES-PRE/rm_rare_snps.txt'
 ```
 
 **Non-European sample IDs**: `r ancestry_tbl |> filter(biogeographic_prediction != 'European') |> pull(FID)`
@@ -122,13 +136,16 @@ datatable(ancestry_nonEur_tbl, caption = 'Table 4. Ancestry (non European) predi
 
 ### QC 6: Post-GenotypeQCtoHRC checks 
 
-+ Still to add counts of SNP removals from post-check logs
+***
+
++ `r cat(length(readLines(paste0(in_dir, 'ambig_high_maf_snp_lst.tsv'))), 'ambig SNPs with MAF > 0.4 removed')` 
++ `r cat(readLines(paste0(in_dir, 'rm_rare_snps.txt')), ", MAF < 0.01", sep = '')`
 
 ***
 
-```{r, snp counts}
-pre_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'final_vcf_chr_counts.tsv'), col_names = c('chr', 'gQCtoHRC_cnts'))
-post_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'gQC2hrc_vcf_chr_counts.tsv'), col_names = c('chr', 'final_cnts'))
+```{r, snp counts, echo = FALSE, message = FALSE, warning = FALSE}
+pre_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'gQC2hrc_vcf_chr_counts.tsv'), col_names = c('chr', 'gQCtoHRC_cnts'))
+post_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'final_vcf_chr_counts.tsv'), col_names = c('chr', 'final_cnts'))
 final_snp_cnt_tbl <- pre_snp_cnts_tbl |>
   left_join(post_snp_cnts_tbl)
 datatable(final_snp_cnt_tbl, caption = 'Table 5. SNP counts after GenotypeQCtoHRC and post-SNP checks') 
@@ -144,7 +161,7 @@ datatable(final_snp_cnt_tbl, caption = 'Table 5. SNP counts after GenotypeQCtoHR
 
 #### Table
 
-```{r benchmarking}
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files
 files <- list.files(bmark_dir, pattern = "geno_pre_impute.*.benchmark.txt", full.names = TRUE)
 
@@ -184,12 +201,12 @@ datatable(summary, caption = 'Table 7. Rule benchmarking. Sd is null when only o
 
 ***
 
-#### Mean Runtime
+#### Plot
 
 ***
 
-```{r, runtime_plt}
-ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+```{r, runtime_plt, fig.dim=c(10,10)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
                                  y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
   geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
@@ -207,17 +224,9 @@ ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
     panel.grid.minor = element_blank()
   )
 
-# ggsave(paste0(bmark_dir, "benchmark_runtime_per_rule.png"), width = 7, height = 5)
-```
 
-***
 
-#### Memory plot
-
-***
-
-```{r, memory_plt}
-ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
                                 y = mean_ram_gb)) +
   geom_col(fill = "darkorange") +
   geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
@@ -235,8 +244,13 @@ ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
     panel.grid.minor = element_blank()
   )
 
+plot_grid(runtime_plt, mem_plt)
 
-#ggsave(paste0(bmark_dir, "benchmark_memory_per_rule.png"), width = 7, height = 5)
+# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
+
+***
+
+
 
 ***
