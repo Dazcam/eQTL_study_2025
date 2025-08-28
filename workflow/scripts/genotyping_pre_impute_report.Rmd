@@ -79,7 +79,7 @@ datatable(het_tbl, caption = 'Table 1. Autosomal heterozygosity table')
 
 ***
 
-```{r, het_outliers}
+```{r, het_outliers, echo = FALSE, message = FALSE, warning = FALSE}
 outliers_tbl <- het_tbl %>%
   filter(outlier_het | outlier_F) %>%
   select(FID, IID, outlier_het, outlier_F)
@@ -296,7 +296,7 @@ datatable(summary, caption = 'Table 8. Rule benchmarking. Sd is null when only o
 
 ***
 
-```{r, runtime_plt, fig.dim=c(10,10)}
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,10)}
 runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
                                  y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
