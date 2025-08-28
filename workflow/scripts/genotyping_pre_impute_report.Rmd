@@ -17,6 +17,7 @@ library(kableExtra)
 library(stringr)
 library(cowplot)
 library(DT)
+library(glue)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 ```
@@ -93,7 +94,7 @@ write_tsv(outliers_tbl, paste0(in_dir, "het_outliers.txt"), col_names = FALSE)
 
 ***
 
-```{r, het_plot, message = FALSE, fig.dim=c(10, 5)}
+```{r, het_plot, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
 het_plot <- ggplot(het_tbl, aes(x = het_rate)) +
   geom_histogram(binwidth = 0.005, fill = "#4C78A8", color = "black", alpha = 0.7) +
   geom_vline(aes(xintercept = mean_het + 3 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
@@ -229,8 +230,9 @@ datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) predi
 
 ***
 
-+ `r cat(length(readLines(paste0(in_dir, 'ambig_high_maf_snp_lst.tsv'))), 'ambig SNPs with MAF > 0.4 removed')` 
-+ `r cat(readLines(paste0(in_dir, 'rm_rare_snps.txt')), ", MAF < 0.01", sep = '')`
++ `r glue("{length(readLines(file.path(in_dir, 'ambig_high_maf_snp_lst.tsv')))} ambiguous SNPs with MAF > 0.4 removed")`
++ `r glue("{readLines(paste0(in_dir, 'rm_rare_snps.txt'))} SNPs with MAF < 0.01 removed")`
+
 
 ***
 
