@@ -46,13 +46,105 @@ below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQC
 
 ***
 
-## QC tables {.tabset}
+## QC tables and plots {.tabset}
 
 ***
 
-### QC 2: 
+### QC 2: Autosomal Heterozygosity {.tabset}
 
-### QC 3: Sex ambiguity
+***
+
+#### Tables
+
+```{r, autosomal_het_table, results='asis', echo=FALSE}
+het_tbl <- read.table(paste0(in_dir, 'eqtl_genotypes_hg19_nodup.het'), header = T) |>
+  tibble() |>
+  rename(O_HOM = 'O.HOM.', E_HOM = 'E.HOM.', N_NM = 'N.NM.') |>
+  mutate(het_rate = (N_NM - O_HOM) / N_NM) |>
+  # ID outliers based on het rate
+  mutate(
+    mean_het = mean(het_rate),
+    sd_het = sd(het_rate),
+    outlier_het = abs(het_rate - mean_het) > 3 * sd_het
+  ) |>
+  # ID outliers based on inbreeding coefficient F
+    mutate(
+    mean_F = mean(F),
+    sd_F = sd(F),
+    outlier_F = abs(F - mean_F) > 3 * sd_F | F < -0.15 | F > 0.15
+  ) |>
+  mutate(across(where(is.numeric), ~round(., 3)))
+datatable(het_tbl, caption = 'Table 1. Autosomal heterozygosity table')
+```
+
+***
+
+```{r, het_outliers}
+outliers_tbl <- het_tbl %>%
+  filter(outlier_het | outlier_F) %>%
+  select(FID, IID, outlier_het, outlier_F)
+datatable(outliers_tbl, caption = 'Table 2. Autosomal heterozygosity oultliers table')
+write_tsv(outliers_tbl, paste0(in_dir, "het_outliers.txt"), col_names = FALSE)
+```
+
+***
+
+#### Plot
+
+***
+
+```{r, het_plot, message = FALSE, fig.dim=c(10, 5)}
+het_plot <- ggplot(het_df, aes(x = het_rate)) +
+  geom_histogram(binwidth = 0.005, fill = "#4C78A8", color = "black", alpha = 0.7) +
+  geom_vline(aes(xintercept = mean_het + 3 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = mean_het - 3 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
+  labs(
+    title = "Heterozygosity Rate Distribution",
+    x = "Heterozygosity Rate",
+    y = "Count",
+    caption = "Red dashed lines indicate ±3 SD thresholds"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+    plot.caption = element_text(size = 10, hjust = 0)
+  )
+
+# Create publication-ready F distribution plot
+f_plot <- ggplot(het_df, aes(x = F)) +
+  geom_histogram(binwidth = 0.01, fill = "#F28E2B", color = "black", alpha = 0.7) +
+  geom_vline(aes(xintercept = mean_F + 3 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = mean_F - 3 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = c(-0.15, 0.15), color = "#E31A1C", linetype = "solid", size = 1) +
+  labs(
+    title = "Inbreeding Coefficient (F) Distribution",
+    x = "Inbreeding Coefficient (F)",
+    y = "Count",
+    caption = "Red lines: solid = [-0.15, 0.15], dashed = ±3 SD"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+    plot.caption = element_text(size = 10, hjust = 0)
+  )
+
+combined_plot <- plot_grid(het_plot, f_plot, labels = c("A", "B"),
+                           label_size = 14, label_fontface = "bold",
+                           ncol = 2, align = "h")
+combined_plot
+#ggsave(paste0(ind_dir, "het_F_distribution_combined.png"), combined_plot,
+#       width = 10, height = 5, dpi = 300, bg = "white")
+```
+
+### QC 5: Sex ambiguity
 
 ***
 
@@ -77,12 +169,12 @@ sex_tbl <- read.table(
 
 file.remove(temp_file)
 
-datatable(sex_tbl, caption = 'Table 1. Sex ambiguities')
+datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 ```
 
 ***
 
-### QC 4: Kinship 
+### QC 6: Kinship 
 
 + Note: 
 
@@ -96,12 +188,12 @@ kinship_data <- system(
 
 kinship_tbl <- read_tsv(file = I(kinship_data), col_types = cols())
 
-datatable(kinship_tbl, caption = 'Table 2. Related samples') 
+datatable(kinship_tbl, caption = 'Table 4. Related samples') 
 ```
 
 ***
 
-### QC 5: Ancestry {.tabset}
+### QC 7: Ancestry {.tabset}
 
 ***
 
@@ -115,7 +207,7 @@ ancestry_data <- system(
 
 ancestry_tbl <- read_tsv(file = I(ancestry_data), col_types = cols())
 
-datatable(ancestry_tbl, caption = 'Table 3. Ancestry prediction per sample') 
+datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample') 
 ```
 
 ***
@@ -126,8 +218,7 @@ datatable(ancestry_tbl, caption = 'Table 3. Ancestry prediction per sample')
 ancestry_nonEur_tbl <- ancestry_tbl |>
   filter(biogeographic_prediction != 'European')
 
-datatable(ancestry_nonEur_tbl, caption = 'Table 4. Ancestry (non European) prediction per sample') 
-'~/Desktop/eQTL_study_2025/workflow/reports/03GENOTYPES-PRE/rm_rare_snps.txt'
+datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) prediction per sample') 
 ```
 
 **Non-European sample IDs**: `r ancestry_tbl |> filter(biogeographic_prediction != 'European') |> pull(FID)`
@@ -148,7 +239,7 @@ pre_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'gQC2hrc_vcf_chr_counts.tsv'), col_n
 post_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'final_vcf_chr_counts.tsv'), col_names = c('chr', 'final_cnts'))
 final_snp_cnt_tbl <- pre_snp_cnts_tbl |>
   left_join(post_snp_cnts_tbl)
-datatable(final_snp_cnt_tbl, caption = 'Table 5. SNP counts after GenotypeQCtoHRC and post-SNP checks') 
+datatable(final_snp_cnt_tbl, caption = 'Table 7. SNP counts after GenotypeQCtoHRC and post-SNP checks') 
 ```
 
 ***
@@ -192,7 +283,7 @@ summary <- benchmarks %>%
   ) %>%
   mutate(across(where(is.numeric), ~round(., 3))) 
 
-datatable(summary, caption = 'Table 7. Rule benchmarking. Sd is null when only on instance of job is run.') 
+datatable(summary, caption = 'Table 8. Rule benchmarking. Sd is null when only on instance of job is run.') 
 
 # Optional save summary tables
 #write.csv(benchmarks, paste0(bmark_dir, "benchmark_summary_detailed.csv"), row.names = FALSE)
@@ -248,9 +339,5 @@ plot_grid(runtime_plt, mem_plt)
 
 # ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
-
-***
-
-
 
 ***
