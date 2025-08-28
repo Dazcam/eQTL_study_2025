@@ -117,15 +117,21 @@ geno_pre_impute:
       ped: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.ped
       map: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.map
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed
-    in_prefix: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
-    out_prefix: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19
-    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/convert_raw.log
+    prefix_in: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
+    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19
+    log: ../results/00LOG/03GENOTYPES-PRE/convert_raw.log
 
+  add_sex_to_fam:
+    sexfile: ../resources/sheets/samples_sex_plink.tsv
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex.bed
+    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex
+    log: ../results/00LOG/03GENOTYPES-PRE/add_sex_to_fam.log 
+   
   rm_dup_sample:
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.bed
-    out_prefix: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup
+    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup
     remove_file: ../config/rm_dup_sample.txt
-    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/rm_dup_sample.log
+    log: ../results/00LOG/03GENOTYPES-PRE/rm_dup_sample.log
 
   make_kgp3_pgen:
     input: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
@@ -135,13 +141,13 @@ geno_pre_impute:
 
   genotype-qc2hrc:
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
-    in_prefix: eqtl_genotypes_hg19
-    out_prefix: eqtl_genotypes_hg38_preTM
+    prefix_in: eqtl_genotypes_hg19_nodup
+    prefix_out: eqtl_genotypes_hg38_preTM
     shortname: eqtlhg38tm
     outdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
-    workdir: ../results/04GENOTYPES/GenotypeQCtoHRC
+    workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC
     report_dir: reports/03GENOTYPES-PRE/
-    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/genotype-qc2hrc.log
+    log: ../results/00LOG/03GENOTYPES-PRE/genotype-qc2hrc.log
 
   cat_genotypes:
     output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.vcf.gz
@@ -152,31 +158,32 @@ geno_pre_impute:
     prefix_in: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.
     prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig
     ambig_snp_lst: reports/03GENOTYPES-PRE/ambig_high_maf_snp_lst.tsv
-    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/rm_maf_ambig.log
+    log: ../results/00LOG/03GENOTYPES-PRE/rm_maf_ambig.log
 
   rm_rare_snps:
     output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps.bed
     prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps 
-    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/rm_rare_snps.log
+    log: ../results/00LOG/03GENOTYPES-PRE/rm_rare_snps.log
 
   split_chrs:
     output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done 
     prefix_vcf: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.filt
     outdir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/
-    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/split_chrs.log
+    log: ../results/00LOG/03GENOTYPES-PRE/split_chrs.log
 
   gather_stats:
     output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/gather_stats.done
     gQC2hrc_vcf_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/  
     final_vcf_dir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/    
-    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/gather_stats.log     
+    log: ../results/00LOG/03GENOTYPES-PRE/gather_stats.log     
 
   geno_pre_report:
     rmd_script: scripts/genotyping_pre_impute_report.Rmd
     html: reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
     out_file: ../reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
     in_dir: ../reports/03GENOTYPES-PRE/
-    log: ../results/00LOG/03GENOTYPES-PRE/genotypes/geno_pre_report.log
+    bmark_dir: ../reports/benchmarking/
+    log: ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
 
 # ------------  eQTL  ----------------
 
