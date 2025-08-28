@@ -5,32 +5,57 @@ rule convert_raw:
              map = config["geno_pre_impute"]["convert_raw"]["input"]["map"]
     output:  config["geno_pre_impute"]["convert_raw"]["output"]
     resources: threads = 1, mem_mb = 50000, time = "0-1:00:00"
-    params:  in_prefix = config["geno_pre_impute"]["convert_raw"]["in_prefix"],
-             out_prefix = config["geno_pre_impute"]["convert_raw"]["out_prefix"]
+    params:  prefix_in = config["geno_pre_impute"]["convert_raw"]["prefix_in"],
+             prefix_out = config["geno_pre_impute"]["convert_raw"]["prefix_out"]
     envmodules: 'plink/1.9'
     message: "Converting raw genotypes to plink format"
     benchmark: "reports/benchmarks/geno_pre_impute.convert_raw.benchmark.txt"
     log:     config["geno_pre_impute"]["convert_raw"]["log"]
     shell:
         """
-        plink --file {params.in_prefix} --make-bed --out {params.out_prefix} > {log} 2>&1
-        plink --bfile {params.out_prefix} --freq --out {params.out_prefix} >> {log} 2>&1
+        plink --file {params.prefix_in} --make-bed --freq --out {params.prefix_out} > {log} 2>&1
+        """
+
+rule add_sex_to_fam:
+    input:  bed  = rules.convert_raw.output,
+            sexfile = config["geno_pre_impute"]["add_sex_to_fam"]["sexfile"]
+    output: config["geno_pre_impute"]["add_sex_to_fam"]["output"]
+    params: prefix_in = config["geno_pre_impute"]["convert_raw"]["prefix_out"],
+            prefix_out = config["geno_pre_impute"]["add_sex_to_fam"]["prefix_out"]
+    envmodules: "plink/1.9"
+    message: "Standardise fam col 1 and col2 and add sex annotations to fam"
+    benchmark: "reports/benchmarks/geno_pre_impute.add_sex_to_fam.benchmark.txt"
+    log:    config["geno_pre_impute"]["add_sex_to_fam"]["log"]
+    shell:
+        """
+        # Step 1: overwrite fam so FID = IID
+        awk '{{ $1=$2; print }}' {params.prefix_in}.fam > {params.prefix_in}.fam.tmp
+        mv {params.prefix_in}.fam.tmp {params.prefix_in}.fam
+
+        # Step 2: add sex annotations
+        plink --bfile {params.prefix_in} \
+              --update-sex {input.sexfile} \
+              --make-bed --freq \
+              --out {params.prefix_out} > {log} 2>&1
+        head {params.prefix_out}.fam >> {log}
         """
 
 rule rm_dup_sample:
-    input:  rules.convert_raw.output
+    input:  rules.add_sex_to_fam.output
     output: config["geno_pre_impute"]["rm_dup_sample"]["output"]
-    params: prefix_in = config["geno_pre_impute"]["convert_raw"]["out_prefix"],
-            prefix_out = config["geno_pre_impute"]["rm_dup_sample"]["out_prefix"],
+    params: prefix_in = config["geno_pre_impute"]["add_sex_to_fam"]["prefix_out"],
+            prefix_out = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"],
             remove_file = config["geno_pre_impute"]["rm_dup_sample"]["remove_file"]
     envmodules: "plink/1.9"
+    message: "Remove duplicate sample: 14493"
     benchmark: "reports/benchmarks/geno_pre_impute.rm_dup_sample.benchmark.txt"
     log:    config["geno_pre_impute"]["rm_dup_sample"]["log"]
     shell:
         """
         plink --bfile {params.prefix_in} \
               --remove {params.remove_file} \
-              --make-bed --out {params.prefix_out} > {log} 2>&1
+              --make-bed -freq --out {params.prefix_out} > {log} 2>&1
+        echo "Samples after removal:  $(wc -l < {params.prefix_out}.fam)" >> {log}
         """
 
 rule make_kgp3_pgen:
@@ -58,8 +83,8 @@ rule genotype_qc2hrc:
     output: config["geno_pre_impute"]["genotype-qc2hrc"]["output"]
     singularity: config["containers"]["genotype-qc2hrc"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
-    params: in_prefix = config["geno_pre_impute"]["genotype-qc2hrc"]["in_prefix"],
-            out_prefix = config["geno_pre_impute"]["genotype-qc2hrc"]["out_prefix"],
+    params: prefix_in = config["geno_pre_impute"]["genotype-qc2hrc"]["prefix_in"],
+            prefix_out = config["geno_pre_impute"]["genotype-qc2hrc"]["prefix_out"],
             shortname = config["geno_pre_impute"]["genotype-qc2hrc"]["shortname"],
             outdir = config["geno_pre_impute"]["genotype-qc2hrc"]["outdir"],
             workdir = config["geno_pre_impute"]["genotype-qc2hrc"]["workdir"],
@@ -70,8 +95,8 @@ rule genotype_qc2hrc:
     shell:
             """
             (cd {params.workdir} && Rscript GenotypeQCtoHRC.R \
-              --file {params.in_prefix} \
-              --name {params.out_prefix} \
+              --file {params.prefix_in} \
+              --name {params.prefix_out} \
               --shortname {params.shortname} \
               --gh TRUE \
               --gh-ref TopMed \
@@ -83,7 +108,7 @@ rule genotype_qc2hrc:
              cp {output} {params.report_dir}
              cp {params.outdir}eqtl_genotypes_hg19.qc3.sexcheck {params.report_dir}
              cp {params.outdir}eqtl_genotypes_hg19.qc4.pcrelate.kin {params.report_dir}
-             cp {params.outdir}eqtl_genotypes_hg19.qc5.ancestry_inference.txt | cut -f 1-9 {params.report_dir}
+             cut -f 1-9 {params.outdir}eqtl_genotypes_hg19.qc5.ancestry_inference.txt > {params.report_dir}
              """
 
 rule cat_genotypes:
@@ -92,6 +117,7 @@ rule cat_genotypes:
     output: config["geno_pre_impute"]["cat_genotypes"]["output"]  
     envmodules: "bcftools/1.16.0"
     params: config["geno_pre_impute"]["cat_genotypes"]["in_dir"]
+    message: "Cat chr specific genotypes into a single file"
     benchmark: "reports/benchmarks/geno_pre_impute.cat_genotypes.benchmark.txt"
     shell:
         """ 
@@ -108,6 +134,7 @@ rule rm_maf_ambig:
             prefix_out = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_out"],
             ambig_snp_lst = config["geno_pre_impute"]["rm_maf_ambig"]["ambig_snp_lst"]
     envmodules: "plink/1.9"
+    message: "Rm strand ambiguous SNPs with MAF > 0.4"
     benchmark: "reports/benchmarks/geno_pre_impute.rm_maf_ambig.benchmark.txt"
     log:    config["geno_pre_impute"]["rm_maf_ambig"]["log"]
     shell:
@@ -131,8 +158,10 @@ rule rm_rare_snps:
     input:  rules.rm_maf_ambig.output
     output: config["geno_pre_impute"]["rm_rare_snps"]["output"]
     params: prefix_in = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_out"],
-            prefix_out = config["geno_pre_impute"]["rm_rare_snps"]["prefix_out"]
+            prefix_out = config["geno_pre_impute"]["rm_rare_snps"]["prefix_out"],
+            report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
     envmodules: "plink/1.9"
+    message: "Rm rare SNPs with MAF < 0.01"
     benchmark: "reports/benchmarks/geno_pre_impute.rm_rm_rare_snps.benchmark.txt"
     log:    config["geno_pre_impute"]["rm_rare_snps"]["log"]    
     shell:
@@ -140,6 +169,7 @@ rule rm_rare_snps:
         plink --bfile {params.prefix_in} \
               --maf 0.01 \
               --make-bed --out {params.prefix_out} > {log} 2>&1
+        grep removed {log} > {params.report_dir}rm_rare_snps.txt
         """
 
 rule split_chrs:
@@ -149,6 +179,7 @@ rule split_chrs:
             prefix_vcf = config["geno_pre_impute"]["split_chrs"]["prefix_vcf"], 
             outdir = config["geno_pre_impute"]["split_chrs"]["outdir"]
     benchmark: "reports/benchmarks/geno_pre_impute.split_chrs.benchmark.txt"
+    message: "Split chrs for TOPMED imputation"
     envmodules: "plink/1.9", "compiler/gnu/7/3.0", "bcftools/1.16.0"
     log: config["geno_pre_impute"]["split_chrs"]["log"]
     shell:
@@ -173,6 +204,8 @@ rule gather_stats:
     params: gQC2hrc_vcf_dir = config["geno_pre_impute"]["gather_stats"]["gQC2hrc_vcf_dir"],
             final_vcf_dir = config["geno_pre_impute"]["gather_stats"]["final_vcf_dir"],
             report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
+    message: "Gather SNP stats for reporting"
+    benchmark: "reports/benchmarks/geno_pre_impute.gather_stats.benchmark.txt"
     log: config["geno_pre_impute"]["gather_stats"]["log"]
     shell:
         """
@@ -210,6 +243,8 @@ rule geno_pre_report:
     params: in_dir = config["geno_pre_impute"]["geno_pre_report"]["in_dir"],
             output_file = config["geno_pre_impute"]["geno_pre_report"]["out_file"]
     singularity: config["containers"]["R"]
+    message: "Generate genotyping pre-imputation report"
+    benchmark: "reports/benchmarks/geno_pre_impute.geno_pre_report.benchmark.txt"
     log: config["geno_pre_impute"]["geno_pre_report"]["log"]
     shell:
         """
