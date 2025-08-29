@@ -189,6 +189,75 @@ geno_pre_impute:
     bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
 
+
+# ------------  GENOTYPES POST-IMPUTATION  ----------------
+    
+geno_post_impute:
+  impute_check:
+    input:  ../results/04GENOTYPES-POST/TOPMED/chr_{chr}.zip
+    tsv: reports/04GENOTYPES-POST/impute_check/chr_{chr}_summary.tsv
+    vcf: ../results/04GENOTYPES-POST/TOPMED/chr{chr}.dose.vcf.gz
+    in_dir: ../results/04GENOTYPES-POST/TOPMED/
+    pwd: ../config/passwords/topmed.txt 
+    log: ../results/00LOG/04GENOTYPES-POST/impute_check_{chr}.log
+  impute_check_cat:
+    output: ../results/04GENOTYPES-POST/impute_check/chr_ALL_summary.tsv
+  dwnld_dbsnp_ref:
+    output: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz
+    web_link: https://ftp.ncbi.nih.gov/snp/redesign/latest_release/VCF/GCF_000001405.40.gz
+    prefix: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz 
+    log: ../results/00LOG/04GENOTYPES-POST/dwnld_dbsnp_ref.log
+  add_rsID:
+    output: ../results/04GENOTYPES-POST/dbSNP_annotated/chr{chr}.dbSNP.vcf.gz
+    log: ../results/00LOG/04GENOTYPES-POST/add_rsID_{chr}.log     
+  vcf_cat:
+    output: ../results/04GENOTYPES-POST/dbSNP_annotated/chrALL.dbSNP.vcf.gz
+    log: ../results/00LOG/04GENOTYPES-POST/vcf_cat.log    
+  filter_tags:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL.filt.vcf.gz
+    hwe: 0.0001
+    maf: 0.05
+    rsq: 0.8  
+    log: ../results/00LOG/04GENOTYPES-POST/filter_tags.log    
+  check_VCF:  
+    ref_gz: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    log_out: ../results/04GENOTYPES-POST/filtered/check_vcf.check.log
+    list: ../results/04GENOTYPES-POST/filtered/exclusion_list.txt
+    ref: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+    fai: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
+    prefix_out: ../results/04GENOTYPES-POST/filtered/check_vcf
+    log: ../results/00LOG/04GENOTYPES-POST/check_VCF.log
+  exclude_SNPs:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    log: ../results/00LOG/04GENOTYPES-POST/exclde_SNPs.log
+  idx_vcf:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz.tbi
+    log: ../results/00LOG/04GENOTYPES-POST/idx_vcf.log
+  create_combined_log:
+    output: ../results/04GENOTYPES-POST/filtered/combined_genotype_processing.log
+    log: ../results/00LOG/04GENOTYPES-POST/create_combined_log 
+  get_sample_list:
+    output: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+  vcf_to_plink:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bed
+    params: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt
+    log: ../results/00LOG/04GENOTYPES-POST/vcf_to_plink.log
+  get_ld_pruned_snps:
+    output: ../results/04GENOTYPES-POST/covariates/ld_prune.prune.in
+    params: ../results/04GENOTYPES-POST/covariates/ld_prune
+    log: ../results/00LOG/04GENOTYPES-POST/get_ld_pruned_snps.log
+  prune_genotypes:
+    output: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned.bed
+    params: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned
+    log: ../results/00LOG/04GENOTYPES-POST/prune_genotypes.log
+  calc_genotype_pcs:
+    output: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    params: ../results/04GENOTYPES-POST/covariates/pca
+    pcs: 10
+    log: ../results/00LOG/04GENOTYPES-POST/calc_genotype_pcs.log
+
+
+
 # ------------  eQTL  ----------------
 
 eQTL:

@@ -124,6 +124,7 @@ rule cellsnp_lite:
                      -R {input.vcf} \
                      --barcodeFile {input.whitelist} \
                      --genotype \
+                     --minCOUNT 20 and --minMAF 0.2 \
                      --gzip \
                      --chrom chr{wildcards.chr} 2>&1 \
                      -p {threads} 2>&1 | tee -a {log}
