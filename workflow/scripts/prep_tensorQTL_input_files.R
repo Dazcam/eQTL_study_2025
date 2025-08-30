@@ -34,12 +34,13 @@ library(tidyverse)
 cov_file <- snakemake@input[["cov_file"]]
 sex_file <- snakemake@input[["sex_file"]]
 gene_lookup <- snakemake@input[["gene_lookup"]]
-cov_out <- snakemake@input[["cov_out"]]
-exp_out <- snakemake@input[["exp_out"]]
-pseudoblk_dir <- snakemake@input[["pseudoblk_dir"]]
-report_dir <- snakemake@input[["report_dir"]]
-out_dir <- snakemake@input[["out_dir"]]
-cell_type <- exp_out |> basename() |> str_remove("_tmm\\.bed$")
+cov_out <- snakemake@output[["cov_out"]]
+exp_out <- snakemake@output[["exp_out"]]
+pseudoblk_dir <- snakemake@params[["pseudoblk_dir"]]
+report_dir <- snakemake@params[["report_dir"]]
+out_dir <- snakemake@params[["out_dir"]]
+cell_type <- snakemake@wildcards[["cell_type"]]
+#cell_type <- exp_out |> basename() |> str_remove("_tmm\\.bed$")
 
 # Make a tibble showing what each variable is set to
 tibble(
