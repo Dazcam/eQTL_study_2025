@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
 #
-#    Divide covriates for tensorQTL tensorQTL
+#    Split covariates for tensorQTL tensorQTL
 #
 #--------------------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nPulling out genotype and expression PC covarite combinations ...")
+message("\n\nPulling out genotype and expression PC covariate combinations ...")
 
 ##  Load Packages, functions and variables  -------------------------------------------
 # Install and load required libraries
@@ -41,23 +41,28 @@ message("============================\n")
     
   
 # Pull out genotype and expression PC covarite combinations  
-cov_tbl <- read_tsv(cov_input)
+cov_tbl <- read_tsv(cov_input, show_col_types = FALSE) |>
+  rename(covariate = `...1`)
 message("Input covariate matrix for ", cell_type, ":\n")
-cov_tbl
+print(cov_tbl)
 
 cov_final_tbl <- cov_tbl |>
-  dplyr::select(
-    id, PCW, Sex = sex_code,
-    all_of(paste0("genPC", 1:geno_pc)),
-    all_of(paste0("expPC", 1:exp_pc))
-  ) 
+  filter(covariate %in% c("PCW", "sex_code", paste0("genPC", 1:geno_pc), paste0("expPC", 1:exp_pc))) |>
+  mutate(covariate = if_else(covariate == "sex_code", "Sex", covariate))
 
 message("\nOutput covariate matrix:\n")
-cov_final_tbl
+print(cov_final_tbl)
 
-message("\nWriting covarite matrix ...\n")
-write.table(cov_final_tbl, 
-            file = paste0(out_dir, cell_type, "_genPC_", geno_pc, "_expPC_", exp_pc, "_covariates.txt"), 
+# Create matrix with covariates as rows and samples as columns
+cov_matrix <- as.matrix(cov_final_tbl[, -1])
+rownames(cov_matrix) <- cov_final_tbl$covariate
+colnames(cov_matrix) <- colnames(cov_final_tbl)[-1]
+message("\nCovariate matrix (first 5 rows and columns):\n")
+print(cov_matrix[1:5, 1:5])
+
+message("\nWriting covariate matrix ...\n")
+write.table(cov_matrix, 
+            file = cov_output, 
             sep = "\t", 
             quote = FALSE, 
             col.names = NA,    # Write sample IDs as column names
