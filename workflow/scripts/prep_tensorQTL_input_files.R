@@ -43,12 +43,17 @@ cell_type <- snakemake@wildcards[["cell_type"]]
 #cell_type <- exp_out |> basename() |> str_remove("_tmm\\.bed$")
 
 # Make a tibble showing what each variable is set to
+message("Variables")
+message("============================\n")
 tibble(
   variable = c("cov_file", "sex_file", "gene_lookup", "cov_out", "exp_out", 
                "pseudoblk_dir", "report_dir", "out_dir", "cell_type"),
   value    = c(cov_file, sex_file, gene_lookup, cov_out, exp_out, 
                pseudoblk_dir, report_dir, out_dir, cell_type)
-) |> print(n = Inf)
+) |> 
+  knitr::kable(format = "simple", align = "c") |>
+  print()
+message("============================\n")
 
 # cov_file <- "~/Desktop/eQTL_study_2025/results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
 # sex_file <- "~/Desktop/eQTL_study_2025/results/03SCANPY/sex_assign_final_tbl.tsv"
@@ -80,7 +85,7 @@ cov_tbl <- meta_data |>
 gene_lookup <- read_tsv(gene_lookup)
 
 #Print message with formatted tables
-message("Sample Counts\n")
+message("Sample Counts")
 message("============================\n")
 
 message("Sample cnt in genotype covariate file: ", nrow(genotype_cov_tbl))
@@ -93,7 +98,7 @@ meta_data %>%
   knitr::kable(format = "simple", align = "c") %>%
   print()
 
-message("\nCounts by Sex:\n")
+message("\nCounts by Sex:")
 meta_data %>%
   group_by(sex_code) %>%
   dplyr::count() %>%
