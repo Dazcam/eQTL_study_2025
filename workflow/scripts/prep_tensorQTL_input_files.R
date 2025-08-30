@@ -51,7 +51,7 @@ tibble(
   value    = c(cov_file, sex_file, gene_lookup, cov_out, exp_out, 
                pseudoblk_dir, report_dir, out_dir, cell_type)
 ) |> 
-  knitr::kable(format = "simple", align = "c") |>
+  knitr::kable(format = "simple", align = "l") |>
   print()
 message("============================\n")
 
@@ -119,7 +119,7 @@ report_list <- list()
   
   # Load counts: don't use dplyr as we want to keep rownames
   message('\nLoading counts ... \n')
-  pseudblk_cnts <- read.csv(paste0(pseudblk_dir, cell_type, "_pseudobulk.csv"), row.names = 1)
+  pseudblk_cnts <- read.csv(paste0(pseudoblk_dir, cell_type, "_pseudobulk.csv"), row.names = 1)
   print(pseudblk_cnts[1:5, 1:5])
   
   # Transpose to genes as rows, samples as columns (TensorQTL format)
