@@ -1,370 +1,297 @@
 #--------------------------------------------------------------------------------------
 #
-#    Prep QTL input files - draft
+#    Prep input files for tensorQTL
 #
 #--------------------------------------------------------------------------------------
 
+# As output wildcards need to be standardised in smk, I run this twice each instance
+# tracking either the gene exp {cell_type}_tmm.bed files or the covaraite
+# {cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_tmm.bed files. Could separate the scripts
+# but I'd like to run the checks together
+
 ## Info  ------------------------------------------------------------------------------
 
-#  Prep input bed and covarite files for FastQTL 
-#  Running locally for now
+## Set up logging for Snakemake
+if (exists("snakemake")) {
+  log_smk <- function() {
+    if (exists("snakemake") && length(snakemake@log) != 0) {
+      log <- file(snakemake@log[[1]], open = "wt")
+      sink(log, append = TRUE)
+      sink(log, append = TRUE, type = "message")
+    }
+  }
+  log_smk()
+}
 
-# TODO:
-
-#- Try and salvage NA genes across symbol and ens IDs for each cell type
-#- Need a comprehensive strategy to deal with duplicates (dirty solution for now)
-#- Explore Peer and different PC num for covariates (variance partition)
-#- Add sublibrary, plate?
-#- Some cell types do not fully overlap with overlap list changed final counts tbl 
-#- to any_of instead of all_of to avoid error
-#- Duplicate sample 14993 and 14993_FC, keeping the latter (need to remove this before imputation)
-#- 17630 has NA in PCW annotated as 0
-#- 15611 labelled 1st Tri ? labelled 0
+message("\n\nPrepping input files for tensorQTL input ...")
 
 ##  Load Packages, functions and variables  -------------------------------------------
 # Install and load required libraries
 library(edgeR)
-library(variancePartition)
 library(tidyverse)
-library(readxl)
-library(ggcorrplot)
-#library(peer) # Old package: non-standard installation
 
+# Input and output paths
+# cov_file <- snakemake@input[["cov_file"]]
+# sex_file <- snakemake@input[["sex_file"]]
+# gene_lookup <- snakemake@input[["gene_lookup"]]
+# cov_out <- snakemake@input[["cov_out"]]
+# exp_out <- snakemake@input[["exp_out"]]
+# pseudoblk_dir <- snakemake@input[["pseudoblk_dir"]]
+# report_dir <- snakemake@input[["report_dir"]]
+# out_dir <- snakemake@input[["out_dir"]]
+
+cov_file <- "~/Desktop/eQTL_study_2025/results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
+sex_file <- "~/Desktop/eQTL_study_2025/results/03SCANPY/sex_assign_final_tbl.tsv"
+cell_types <- c('RG', 'InN', 'ExN-2', 'OPC', 'Endo-Peri', 'MG')
+gene_lookup <- "~/Desktop/eQTL_study_2025/resources/sheets/gene_lookup_hg38.tsv"
+geno_pcs <- 3
+exp_pcs <- c(10, 20, 30, 40, 50)
+pseudobulk_dir <- "~/Desktop/eQTL_study_2025/results/03SCANPY/pseudobulk/"
+out_dir <- "~/Desktop/eQTL_study_2025/results/05TENSORQTL/"
+report_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/"
 
 ## Load data  -------------------------------------------------------------------------
-data_dir <- "~/Desktop/eQTL_study_2025/results/03SCANPY/pseudobulk/"
-cov_dir <- "~/Desktop/eQTL_study_2025/results/04GENOTYPES/TOPMED/covariates/"
-resources_dir <- "~/Desktop/eQTL_study_2025/resources/sheets/"
-scanpy_dir <- "~/Desktop/eQTL_study_2025/results/03SCANPY/"
-script_dir <- "~/Desktop/eQTL_study_2025/workflow/scripts/"
-list_dir <- "~/Desktop/eQTL_study_2025/results/04GENOTYPES/TOPMED/filtered/"
-lookup_dir <- "~/Desktop/eQTL_study_2025/results/02PARSE/combine_plate1/all-sample/DGE_filtered/"
-geno_dir <- "~/Desktop/GenotypeQCtoHRC/eqtlhg38tm/"
-gene_lookup <- read_csv(paste0(lookup_dir, 'all_genes.csv'), col_types = 'ccc')
-cell_types <- c('RG', 'ExN-1', 'InN-1', 'ExN-2', 'InN-2', 'Endo-Peri', 'MG', 'Mig-N')
-source(paste0(script_dir, 'functions.R'))
+# Genotype covariate file generate in calc_genotype_pcs rule
+genotype_cov_tbl <- read_delim(cov_file, delim = ' ', 
+                               col_names = c('sample', 'sample2', paste0('genPC', seq(1,10,1)))) |>
+  dplyr::select(-sample2)
 
-# Load biomart gene lookup tables
-hg38_lookup <- get_biomart_gene_lookup('hg38')
-hg19_lookup <- get_biomart_gene_lookup('hg19')
+# Sex and PCW sample info generated in scanpy_clustering script
+meta_data <- read_tsv(sex_file) |>
+  dplyr::select(sample, sex_code, PCW) |>
+  filter(sex_code != 0) |>
+  filter(PCW != 'unknown') 
 
-# Need to order samples in input files in same order
-sample_lst <- read_tsv(paste0(list_dir, 'geno_sample_list.txt'), col_types = 'c', col_names = 'sample') 
+cov_tbl <- meta_data |>
+  left_join(genotype_cov_tbl)
 
-## Covariates
-genotype_cov_tbl <- read_delim(paste0(cov_dir, 'pca.eigenvec'), delim = ' ', 
-                      col_names = c('sample', 'sample2', paste0('genPC', seq(1,10,1)))) |>
-  dplyr::select(-sample2) 
-  
-## Metadata
-cov_tbl <- read_excel(paste0(resources_dir, 'Fetal single cell eQTL_genotypes_hg19.xlsx'), sheet = 'Sheet2') |>
-  dplyr::rename(sample = ...1) |>
-  mutate(sample = str_replace_all(sample, " \\(A\\)", "_A")) |>
-  mutate(sample = str_replace_all(sample, " \\(a\\)", "_a")) |>
-  dplyr::select(sample, PCW, Sex) |>
-  left_join(genotype_cov_tbl) |>
-  print(n = Inf)
+# Load Biomart gene lookup tables
+# Run once: hg38_lookup <- get_biomart_gene_lookup('hg38'); see workflow/scripts/functions.R
+gene_lookup <- read_tsv(gene_lookup)
 
-cov_tbl |>
-  group_by(PCW) |>
-  dplyr::count()
-  
-cov_tbl |>
-  group_by(Sex) |>
-  dplyr::count()
+#Print message with formatted tables
+message("Sample Counts\n")
+message("============================\n")
 
-message('Samples with NA across genotypes: ')
-cov_tbl |>
-  filter(if_any(starts_with("genPC"), ~ is.na(.)))
+message("Sample cnt in genotype covariate file: ", nrow(genotype_cov_tbl))
+message("Sample cnt in metadata file: ", nrow(meta_data))
 
-cov_tbl <- cov_tbl |>
-  filter(if_any(starts_with("genPC"), ~ !is.na(.)))
+message("Counts by PCW:\n")
+meta_data %>%
+  group_by(PCW) %>%
+  dplyr::count() %>%
+  knitr::kable(format = "simple", align = "c") %>%
+  print()
 
-### Move this to scanpy_clustering doc. ####
+message("\nCounts by Sex:\n")
+meta_data %>%
+  group_by(sex_code) %>%
+  dplyr::count() %>%
+  knitr::kable(format = "simple", align = "c") %>%
+  print()
 
-## Sex assignments from expression data
-sex_assign_exp_tbl <- read_csv(paste0(scanpy_dir, 'sex_assignments.csv')) |>
-  dplyr::rename(sample = Sample_ID) |>
-  mutate(Sex_exp = case_when(
-    Predicted_Sex == 'Female' ~ "F",
-    Predicted_Sex == 'Male' ~ "M",
-    Predicted_Sex == 'Ambiguous' ~ "A"))
+message("\nNAs in cov table:", meta_data |> anyNA())
+message("Sample in mrgd covariate tbl: ", nrow(cov_tbl))
 
-sex_assign_geno_tbl <- read.table(
-  paste0(geno_dir, 'eQTL_genotypes_hg19.qc3.sexcheck'), header = TRUE) |>
-  as_tibble() |>
-  mutate(sex_geno = case_when(
-    F <= 0.2 ~ 'F',
-    F >= 0.8 ~ 'M'
-  ))
-
-# Compare
-sex_assign_final_tbl <- cov_tbl |>
-  dplyr::select(sample, meta_sex = Sex) |>
-  left_join(sex_assign_exp_tbl |> dplyr::select(sample, Sex_exp)) |>
-  left_join(sex_assign_geno_tbl |> dplyr::select(sample = FID, sex_geno)) |>
-  mutate(
-    # Count "F" and "M" occurrences across the three columns
-    f_count = rowSums(across(c(meta_sex, Sex_exp, sex_geno), ~ . == "F"), na.rm = TRUE),
-    m_count = rowSums(across(c(meta_sex, Sex_exp, sex_geno), ~ . == "M"), na.rm = TRUE),
-    # Determine sex_final based on counts
-    sex_final = case_when(
-      f_count == 3 | (f_count == 2 & m_count <= 1) ~ "F",  # All F or 2F + 0/1M/NA
-      m_count == 3 | (m_count == 2 & f_count <= 1) ~ "M",  # All M or 2M + 0/1F/NA
-      TRUE ~ "A"                                            # Otherwise ambiguous
-    ),
-    # Assign numeric codes: F=2, M=1, A=0
-    sex_code = case_when(
-      sex_final == "F" ~ 2,
-      sex_final == "M" ~ 1,
-      sex_final == "A" ~ 0
-    )
-  ) 
-
-##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### ##### 
-
-cov_tbl <- cov_tbl |>
-  left_join(sex_assign_final_tbl |> dplyr::select(sample, sex_code)) |>
-  dplyr::select(-Sex) |>
-  relocate(sample, PCW, Sex = sex_code)
+message("\n============================\n")
 
 ## Generate cell-specific TMM normalised counts and covariates for QTL analyses  ------
 report_list <- list()
 for (cell_type in cell_types) {
   
-  message('Creating TMM normalised counts and covariate files for: ', cell_type)
+  message('\n\nCreating TMM normalised counts and covariate files for: ', cell_type)
   report_tibble <- tibble(cell_type = cell_type)
   
   # Load counts: don't use dplyr as we want to keep rownames
   message('\nLoading counts ... \n')
-  pseudobulk_counts <- read.csv(paste0(data_dir, cell_type, "_pseudobulk.csv"), row.names = 1)
-  message('Sample names in pseudobulk_counts: ', paste(rownames(pseudobulk_counts)[1:5], collapse = ' '))
-  message('Sample names in sample_lst: ', paste(sample_lst$sample[1:5], collapse = ' '), '\n')
+  pseudblk_cnts <- read.csv(paste0(pseudblk_dir, cell_type, "_pseudobulk.csv"), row.names = 1)
+  print(pseudblk_cnts[1:5, 1:5])
   
   # Transpose to genes as rows, samples as columns (TensorQTL format)
-  pseudobulk_counts <- t(pseudobulk_counts)
-  print(pseudobulk_counts[1:5, 1:5])
+  message('\nTransposing counts ... \n')
+  pseudblk_cnts <- t(pseudblk_cnts)
+  message('\nDimensions of ', cell_type, ' pseudblk cnts counts: ', 
+          paste0(dim(pseudblk_cnts)[1], ' x ', dim(pseudblk_cnts)[2]))
+  print(pseudblk_cnts[1:5, 1:5])
   
   # Subset sample_lst to available samples
-  available_samples <- intersect(sample_lst$sample, colnames(pseudobulk_counts))
+  available_samples <- intersect(cov_tbl$sample, colnames(pseudblk_cnts))
   if (length(available_samples) == 0) {
     stop('No overlapping samples between genotypes and expression for ', cell_type, 
          '. Check sample name formats.')
   }
-  message('Samples in genotypes but not in expression for ', cell_type, ': ', 
-          paste(setdiff(sample_lst$sample, colnames(pseudobulk_counts)), collapse = ' '))
+  message('\nSamples in genotypes but not in expression for ', cell_type, ': ', 
+          paste(setdiff(cov_tbl$sample, colnames(pseudblk_cnts)), collapse = ' '))
   
   # Filter zero-sum genes (rows) and reorder samples (columns)
-  if (sum(rowSums(pseudobulk_counts) == 0) != 0) {
-    message('Removed ', sum(rowSums(pseudobulk_counts) == 0), ' genes not expressed in cell type')
-    pseudobulk_counts <- pseudobulk_counts[rowSums(pseudobulk_counts != 0) > 0, , drop = FALSE]
+  if (sum(rowSums(pseudblk_cnts) == 0) != 0) {
+    message('Removed ', sum(rowSums(pseudblk_cnts) == 0), ' genes not expressed in cell type')
+    pseudblk_cnts <- pseudblk_cnts[rowSums(pseudblk_cnts != 0) > 0, , drop = FALSE]
   }
   
   # Reorder samples to match available subset of sample_lst
-  pseudobulk_counts <- pseudobulk_counts[, match(available_samples, colnames(pseudobulk_counts)), drop = FALSE]
+  pseudblk_cnts <- pseudblk_cnts[, match(available_samples, colnames(pseudblk_cnts)), drop = FALSE]
 
   # TMM normalization
   # Create a DGEList object
   message('\nTMM normalising counts ... \n')
-  dge <- DGEList(counts = pseudobulk_counts)
+  dge <- DGEList(counts = pseudblk_cnts)
   dge <- calcNormFactors(dge, method = "TMM") # Do we need two normalisation factors here?
-  normalized_counts <- edgeR::cpm(dge, normalized.lib.sizes = TRUE)
-  print(normalized_counts[1:5, 1:5])
+  normalised_cnts <- edgeR::cpm(dge, normalized.lib.sizes = TRUE)
+  print(normalised_cnts[1:5, 1:5])
+  message('\nDimensions of normalised counts: ', 
+          paste0(dim(normalised_cnts)[1], ' x ', dim(normalised_cnts)[2]))
+  
+  
+  # Filter genes with log2 CPM < 2.0 in all samples - Fugita
+  # message('\nFiltering genes with log2 CPM < 2.0 in all samples ... \n')
+  # log2_cpm <- log2(normalised_cnts + 1)  # Add 1 to avoid log(0)
+  # print(log2_cpm[1:5, 1:5])
+  # low_expr_genes <- rowSums(log2_cpm >= 2.0) == 0  # Genes with log2 CPM < 2.0 in all samples
+  # if (sum(low_expr_genes) > 0) {
+  #   message('Removed ', sum(low_expr_genes), ' genes with log2 CPM < 2.0 in all samples for ', cell_type)
+  #   normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
+  # }
+  # message('\nDimensions after log2 CPM filtering: ', 
+  #         paste0(dim(normalised_cnts)[1], ' x ', dim(normalised_cnts)[2]))
+  
+  #Filter genes with mean CPM < 1 - Bryois - more stringent
+  message('\nFiltering genes with mean CPM < 1 ... \n')
+  mean_cpm <- rowMeans(normalised_cnts)
+  low_expr_genes <- mean_cpm < 1
+  if (sum(low_expr_genes) > 0) {
+    message('Removed ', sum(low_expr_genes), ' genes with mean CPM < 1 for ', cell_type)
+    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
+  }
+  message('\nDimensions after mean CPM filtering: ',
+          paste0(dim(normalised_cnts)[1], ' x ', dim(normalised_cnts)[2]))
   
   # PCA Analysis
   message('\nRunning PCA on expression values ...\n')
-  pca <- prcomp(t(normalized_counts), scale. = TRUE)
-  exp_pc_scores <- as.data.frame(pca$x[, 1:30]) |> 
+  pca <- prcomp(t(normalised_cnts), scale. = TRUE)
+  exp_pc_scores <- as.data.frame(pca$x[, 1:50]) |> 
     as_tibble(rownames = 'sample') |>
     rename_with(~ paste0("exp", .), .cols = starts_with("PC"))
   
   # Variance explained by expression PCs
-  exp_var_explained <- summary(pca)$importance[2, 1:30]  # Proportion of variance
+  exp_var_explained <- summary(pca)$importance[2, 1:50]  # Proportion of variance
   report_tibble$exp_var_explained <- list(exp_var_explained)
     
   # Combine exp pcs with genotype covariates
-  cov_full_tbl <- cov_tbl |> 
-    left_join(exp_pc_scores, by = "sample") |>
-    mutate(PCW = str_replace(PCW, '1st tri\\s*\\?', '0')) |>
-    mutate(PCW = replace(PCW, is.na(PCW), '0')) |>
-    mutate(PCW = as.numeric(PCW))
-  
-  # Correlation between genotype and expression PCs
-  cor_matrix <- cor(cov_full_tbl[-1], use = "pairwise.complete.obs")
-  report_tibble$cor_matrix <- list(cor_matrix)
-
-  # PEER Analysis - Need to do this in a independent script
-  # num_factors <- 10
-  # model <- PEER()
-  # PEER_setPhenoMean(model, as.matrix(t(normalized_counts)))
-  # PEER_setNk(model, num_factors)
-  # PEER_update(model)
-  # 
-  # peer_factors <- as.data.frame(PEER_getX(model)[, 1:num_factors])
-  # colnames(peer_factors) <- paste0("PEER", 1:num_factors)
-  # peer_factors$Sample <- rownames(peer_factors)
-  
-  # Covariates file
-  # message('Creating covariate files ... ')
-  # cov_full_tbl <- cov_tbl |> 
-  #   inner_join(exp_pc_scores, by = "sample") |> 
-  #   mutate(sample = factor(sample, levels = available_samples)) |> 
-  #   arrange(match(sample, available_samples)) |>  # Reorder to match
-  #   dplyr::rename(id = sample) |>
-  #   dplyr::select(id, PCW, Sex, genPC1:genPC3, expPC1:expPC10) |>
-  #   write_tsv(paste0(data_dir, cell_type, "_covariates.txt"))
-  # 
-  # # Don't think I need this
-  # transposed_cov <- cov_full_tbl |>
-  #   as.data.frame() |>
-  #   t()
-  # rownames(transposed_cov)
-  # write.table(transposed_cov, paste0(data_dir, cell_type, "_covariates_t.txt"), quote = F, sep = '\t', col.names = F)
-  
   cov_full_tbl <- cov_tbl |> 
     inner_join(exp_pc_scores, by = "sample") |> 
     mutate(sample = factor(sample, levels = available_samples)) |> 
     arrange(match(sample, available_samples)) |> 
     dplyr::rename(id = sample) |> 
-    mutate(PCW = str_replace(PCW, '1st tri\\s*\\?', '0')) |>
-    mutate(PCW = replace(PCW, is.na(PCW), '0')) |>
-    mutate(PCW = as.numeric(PCW)) |>
-    dplyr::select(id, PCW, Sex, genPC1:genPC3, expPC1:expPC10) 
+    mutate(PCW = as.numeric(PCW)) 
+
+  # Correlation between genotype and expression PCs
+  cor_matrix <- cor(cov_full_tbl[-1], use = "pairwise.complete.obs")
+  report_tibble$cor_matrix <- list(cor_matrix)
   
   # Transpose and set row names
   cov_matrix <- t(as.matrix(cov_full_tbl[, -1]))  # Exclude 'id' column, transpose
   colnames(cov_matrix) <- cov_full_tbl$id         # Set sample IDs as column names
   rownames(cov_matrix) <- colnames(cov_full_tbl)[-1]  # Set covariate names as row names
   cov_matrix[1:5, 1:5]
-
+  
   # Write to file without column name for the index
+  message('Writing ', cell_type, ' covariate matrix ...')
   write.table(cov_matrix, 
-              file = paste0(data_dir, cell_type, "_covariates.txt"), 
+              file = paste0(out_dir, cell_type, "_covariates.txt"), 
               sep = "\t", 
               quote = FALSE, 
               col.names = NA,    # Write sample IDs as column names
               row.names = TRUE,    # Write covariate names as row names
               append = FALSE)
-  
-  # cov_full_tbl %>%
-  #   column_to_rownames("Sample") %>%  # Move 'Sample' to row names
-  #   as_tibble() %>%                   # Convert to tibble (preserves row names)
-  #   t() %>%                           # Transpose the data
-  #   as_tibble(rownames = "Sample") %>% # Convert back to tibble with row names as 'Sample'
-  #   mutate(Sample = c("", Sample[-1]))
-  
+
+
   ## Prepare gene expression data -----
   
   # Gene expression data
-  # Add hg38 Ensembl IDs using Parse gene lookup
-  # Potentially blanks and duplicates here as more rows after join!!
-  pseudobulk_counts <- normalized_counts |>
+  # Add Ensembl IDs using BiomaRt Gene lookup; some genes are symbol, so are emsembl ID
+  message('Harmonising gene expression gene IDs to Ensembl ... ')
+  message('Rows in pseudobulk before merging with gene lookup: ', nrow(normalised_cnts))
+  pseudblk_ensembl_cnts <- normalised_cnts |>
     as_tibble(rownames = 'genes') |>
-    left_join(gene_lookup, by = join_by(genes == gene_name)) |>
-    relocate(genes, gene_id, genome) 
-  
-  message('Counts tbl dimensions (Genes x [Samples + 3 annotation cols]): ', 
-          paste0(dim(pseudobulk_counts)[1], ' x ', dim(pseudobulk_counts)[2]))
-  report_tibble$initial_dims <- paste0(dim(pseudobulk_counts)[1], "x", dim(pseudobulk_counts)[2])
-    
-  # Handle NAs and duplicates
-  # Some genes are not in Parse lookup table why?
-  # How were these annotated?? By Scanpy??
-  # Rm for now
-  pseudobulk_counts_nas <- pseudobulk_counts |>
-    filter(if_any(everything(), is.na)) 
-  message('Counts tbl gene ID NAs: ', dim(pseudobulk_counts_nas)[1])
-  report_tibble$NAs <- dim(pseudobulk_counts_nas)[1]
-  
-  pseudobulk_counts_symbol_dups <- pseudobulk_counts |>
+    filter(str_detect(genes, '^ENSG')) |>
+    inner_join(gene_lookup, by = join_by(genes == ensembl_gene_id)) |>
+    dplyr::select(-hgnc_symbol, -hgnc_id, -entrezgene_id, -external_gene_name) |> # Need to rm these col or all cols NA
     drop_na() |>
-    left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
-    group_by(genes) %>%
-    filter(n() > 1) %>%
-    ungroup()
-  message('Counts tbl gene symbol dups: ', length(pseudobulk_counts_symbol_dups$genes |> unique()))
-  report_tibble$symbol_dups <- length(pseudobulk_counts_symbol_dups$genes |> unique())
-  
-  pseudobulk_counts_ens_dups <- pseudobulk_counts |>
-    drop_na() |>
-    left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
-    group_by(gene_id) %>%
-    filter(n() > 1) %>%
-    ungroup()
-  message('Counts tbl gene ensembl dups: ', length(pseudobulk_counts_ens_dups$genes |> unique()))
-  report_tibble$ensembl_dups <- length(pseudobulk_counts_ens_dups$genes |> unique())
-  
-  # Final BED file
-  pseudobulk_counts <- pseudobulk_counts |>
-    drop_na() |>
-    left_join(hg38_lookup, by = join_by(gene_id == ensembl_gene_id)) |>
     mutate(
       TSS = if_else(strand == 1, start_position, end_position),  # Determine TSS based on strand
       cis_start = TSS,  # Prevent negative coordinates
       cis_end = TSS + 1 
     ) |>
-    distinct(gene_id, .keep_all = TRUE) |> # Keep first occurrence dirty for now
-    dplyr::select(Chr = chromosome_name, start = cis_start, end = cis_end, TargetID = gene_id, any_of(sample_lst[[1]])) |>
-    arrange(Chr, as.numeric(start), as.numeric(end)) |>
-    filter(Chr %in% seq(1,22,1)) |>
-    dplyr::rename('#Chr' = Chr) |> # Required or tabix chokes at fastQTL step
-    write_tsv(paste0(data_dir, cell_type, '_tmm.bed'))
+    distinct(genes, .keep_all = TRUE) |> # Keep first occurrence dirty for now
+    dplyr::select(Chr = chromosome_name, start = cis_start, end = cis_end, TargetID = genes, any_of(available_samples)) 
+  message('Rows annotated to Ensembl ID rather than symbol: ', nrow(pseudblk_ensembl_cnts))
   
-  message('Final counts tbl dims: ', paste0(dim(pseudobulk_counts)[1], ' x ', dim(pseudobulk_counts)[2]), '\n')
-  report_tibble$final_dims <- paste0(dim(pseudobulk_counts)[1], 'x', dim(pseudobulk_counts)[2])
+  pseudblk_cnts <- normalised_cnts |>
+    as_tibble(rownames = 'genes') |>
+    left_join(gene_lookup, by = join_by(genes == external_gene_name)) |>
+    relocate(genes, ensembl_gene_id) 
+  
+  message('Counts tbl dimensions after first merge on gene id (Genes x [Samples + 8 annotation cols]): ', 
+          paste0(dim(pseudblk_cnts)[1], ' x ', dim(pseudblk_cnts)[2]))
+  report_tibble$initial_dims <- paste0(dim(pseudblk_cnts)[1], "x", dim(pseudblk_cnts)[2])
+    
+  # Handle NAs and duplicates: scope here to try to retain more genes
+  pseudblk_cnts_nas <- pseudblk_cnts |>
+    dplyr::filter(if_any(everything(), is.na)) 
+  message('Counts tbl gene ID NAs (note some : ', dim(pseudblk_cnts_nas)[1])
+  report_tibble$NAs <- dim(pseudblk_cnts_nas)[1]
+  
+  pseudblk_cnts_symbol_dups <- pseudblk_cnts |>
+    drop_na() |>
+    group_by(genes) %>%
+    dplyr::filter(n() > 1) %>%
+    ungroup()
+  message('Counts tbl gene symbol dups: ', length(pseudblk_cnts_symbol_dups$genes |> unique()))
+  report_tibble$symbol_dups <- length(pseudblk_cnts_symbol_dups$genes |> unique())
+  
+  pseudblk_cnts_ens_dups <- pseudblk_cnts |>
+    drop_na() |>
+    group_by(ensembl_gene_id) %>%
+    dplyr::filter(n() > 1) %>%
+    ungroup()
+  message('Counts tbl gene ensembl dups: ', length(pseudblk_cnts_ens_dups$genes |> unique()))
+  report_tibble$ensembl_dups <- length(pseudblk_cnts_ens_dups$genes |> unique())
+  
+  # Double check: Drop genes with zero expression across all samples
+  pseudblk_cnts <- pseudblk_cnts %>%
+    filter(rowSums(across(all_of(available_samples))) > 0)
+  
+  # Final BED file
+  message('Writing final tmm normalised gene expression matrix ... ')
+  pseudblk_cnts <- pseudblk_cnts |>
+    drop_na() |>
+    mutate(
+      TSS = if_else(strand == 1, start_position, end_position),  # Determine TSS based on strand
+      cis_start = TSS,  # Prevent negative coordinates
+      cis_end = TSS + 1 
+    ) |>
+    distinct(ensembl_gene_id, .keep_all = TRUE) |> # Keep first occurrence dirty for now
+    dplyr::select(Chr = chromosome_name, start = cis_start, end = cis_end, TargetID = ensembl_gene_id, any_of(available_samples)) |>
+    rbind(pseudblk_ensembl_cnts) |> # Salvage genes marked as ENSEMBL ID, rather than symbol initally
+    distinct(TargetID, .keep_all = TRUE) |>
+    arrange(Chr, as.numeric(start), as.numeric(end)) |>
+    dplyr::filter(Chr %in% seq(1,22,1)) |>
+    dplyr::rename('#Chr' = Chr) |> # Required or tabix chokes at fastQTL step
+    write_tsv(paste0(out_dir, cell_type, '_tmm.bed'))
+  
+  message('Final counts tbl dims: ', paste0(dim(pseudblk_cnts)[1], ' x ', dim(pseudblk_cnts)[2]), '\n')
+  report_tibble$final_dims <- paste0(dim(pseudblk_cnts)[1], 'x', dim(pseudblk_cnts)[2])
   report_list[[cell_type]] <- report_tibble
   
 }
-
-setdiff(as.character(cov_full_tbl$id), colnames(pseudobulk_counts)[5:ncol(pseudobulk_counts)])
 
 # Combine all reports into a single tibble
 final_report <- bind_rows(report_list) |>
   print()
 
-# Plot
-var_explained_plt_lst <- list()
-cor_plt_lst <- list()
+write_rds(final_report, paste0(report_dir, 'gene_exp_matrix_report.rds'))
 
-for (cell_type in names(report_list)) {
-  
-  exp_var_explained <- report_list[[cell_type]]$exp_var_explained[[1]]
-  
-  # Variance Explained Plot for Expression PCs
-  var_df <- tibble(
-    PC = 1:30,
-    Variance = exp_var_explained,
-    Cumulative = cumsum(exp_var_explained)
-  )
-  p_var <- ggplot(var_df, aes(x = PC)) +
-    geom_line(aes(y = Variance), color = "blue") +
-    geom_point(aes(y = Variance), color = "blue") +
-    geom_line(aes(y = Cumulative), color = "red") +
-    labs(title = paste("Expression PC Variance Explained -", cell_type),
-         y = "Proportion of Variance",
-         x = "Principal Component") +
-    theme_minimal()
-  print(p_var)
-  var_explained_plt_lst[[cell_type]] <- p_var
-  #ggsave(paste0(data_dir, cell_type, "_exp_pc_variance.png"), p_var, width = 8, height = 6)
-  
-  # Correlation Heatmap
-  p_cor <- ggcorrplot::ggcorrplot(cor_matrix, 
-                      hc.order = F, 
-                      type = "lower", 
-                      lab = TRUE, 
-                      lab_size = 2,
-                      title = paste("Correlation of PCs -", cell_type)) +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  print(p_cor)
-  cor_plt_lst[[cell_type]] <- p_cor
-# ggsave(paste0(data_dir, cell_type, "_pc_correlation.png"), p_cor, width = 10, height = 10)
-
-}
-
-cowplot::plot_grid(plotlist = var_explained_plt_lst)
-cowplot::plot_grid(plotlist = cor_plt_lst)
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
