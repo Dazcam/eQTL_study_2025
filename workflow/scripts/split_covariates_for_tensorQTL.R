@@ -29,6 +29,16 @@ cov_output <- snakemake@output
 cell_type <- snakemake@wildcards[["cell_type"]]
 geno_pc <- snakemake@wildcards[["geno_pc"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
+
+# Make a tibble showing what each variable is set to
+message("Variables")
+message("============================\n")
+tibble(
+  variable = c("cov_input", "cov_output", "cell_type", "geno_pc", "exp_pc"),
+  value    = c(cov_input, cov_output, cell_type, geno_pct, exp_pc)) |> 
+  knitr::kable(format = "simple", align = "l") |>
+  print()
+message("============================\n")
     
   
 # Pull out genotype and expression PC covarite combinations  

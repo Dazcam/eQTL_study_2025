@@ -49,8 +49,7 @@ tibble(
   variable = c("cov_file", "sex_file", "gene_lookup", "cov_out", "exp_out", 
                "pseudoblk_dir", "report_dir", "out_dir", "cell_type"),
   value    = c(cov_file, sex_file, gene_lookup, cov_out, exp_out, 
-               pseudoblk_dir, report_dir, out_dir, cell_type)
-) |> 
+               pseudoblk_dir, report_dir, out_dir, cell_type)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("============================\n")
