@@ -39,6 +39,15 @@ exp_out <- snakemake@input[["exp_out"]]
 pseudoblk_dir <- snakemake@input[["pseudoblk_dir"]]
 report_dir <- snakemake@input[["report_dir"]]
 out_dir <- snakemake@input[["out_dir"]]
+cell_type <- exp_out |> basename() |> str_remove("_tmm\\.bed$")
+
+# Make a tibble showing what each variable is set to
+tibble(
+  variable = c("cov_file", "sex_file", "gene_lookup", "cov_out", "exp_out", 
+               "pseudoblk_dir", "report_dir", "out_dir", "cell_type"),
+  value    = c(cov_file, sex_file, gene_lookup, cov_out, exp_out, 
+               pseudoblk_dir, report_dir, out_dir, cell_type)
+) |> print(n = Inf)
 
 # cov_file <- "~/Desktop/eQTL_study_2025/results/04GENOTYPES/TOPMED/covariates/pca.eigenvec"
 # sex_file <- "~/Desktop/eQTL_study_2025/results/03SCANPY/sex_assign_final_tbl.tsv"
@@ -97,7 +106,7 @@ message("\n============================\n")
 
 ## Generate cell-specific TMM normalised counts and covariates for QTL analyses  ------
 report_list <- list()
-for (cell_type in cell_types) {
+#for (cell_type in cell_types) { # Only need loop for local testing
   
   message('\n\nCreating TMM normalised counts and covariate files for: ', cell_type)
   report_tibble <- tibble(cell_type = cell_type)
@@ -131,7 +140,7 @@ for (cell_type in cell_types) {
   
   # Reorder samples to match available subset of sample_lst
   pseudblk_cnts <- pseudblk_cnts[, match(available_samples, colnames(pseudblk_cnts)), drop = FALSE]
-  
+
   # TMM normalization
   # Create a DGEList object
   message('\nTMM normalising counts ... \n')
@@ -176,7 +185,7 @@ for (cell_type in cell_types) {
   # Variance explained by expression PCs
   exp_var_explained <- summary(pca)$importance[2, 1:50]  # Proportion of variance
   report_tibble$exp_var_explained <- list(exp_var_explained)
-  
+    
   # Combine exp pcs with genotype covariates
   cov_full_tbl <- cov_tbl |> 
     inner_join(exp_pc_scores, by = "sample") |> 
@@ -184,7 +193,7 @@ for (cell_type in cell_types) {
     arrange(match(sample, available_samples)) |> 
     dplyr::rename(id = sample) |> 
     mutate(PCW = as.numeric(PCW)) 
-  
+
   # Correlation between genotype and expression PCs
   cor_matrix <- cor(cov_full_tbl[-1], use = "pairwise.complete.obs")
   report_tibble$cor_matrix <- list(cor_matrix)
@@ -204,8 +213,8 @@ for (cell_type in cell_types) {
               col.names = NA,    # Write sample IDs as column names
               row.names = TRUE,    # Write covariate names as row names
               append = FALSE)
-  
-  
+
+
   ## Prepare gene expression data -----
   
   # Gene expression data
@@ -235,7 +244,7 @@ for (cell_type in cell_types) {
   message('Counts tbl dimensions after first merge on gene id (Genes x [Samples + 8 annotation cols]): ', 
           paste0(dim(pseudblk_cnts)[1], ' x ', dim(pseudblk_cnts)[2]))
   report_tibble$initial_dims <- paste0(dim(pseudblk_cnts)[1], "x", dim(pseudblk_cnts)[2])
-  
+    
   # Handle NAs and duplicates: scope here to try to retain more genes
   pseudblk_cnts_nas <- pseudblk_cnts |>
     dplyr::filter(if_any(everything(), is.na)) 
@@ -284,17 +293,17 @@ for (cell_type in cell_types) {
   report_tibble$final_dims <- paste0(dim(pseudblk_cnts)[1], 'x', dim(pseudblk_cnts)[2])
   report_list[[cell_type]] <- report_tibble
   
-}
+#}
 
 # Combine all reports into a single tibble
 final_report <- bind_rows(report_list) |>
   print()
 
-write_rds(final_report, paste0(report_dir, 'gene_exp_matrix_report.rds'))
+write_rds(final_report, paste0(report_dir, 'gene_exp_matrix_report_', cell_type, '.rds'))
 
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
-
+  
 
 
