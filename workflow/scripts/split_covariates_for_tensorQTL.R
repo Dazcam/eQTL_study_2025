@@ -35,7 +35,7 @@ message("Variables")
 message("============================\n")
 tibble(
   variable = c("cov_input", "cov_output", "cell_type", "geno_pc", "exp_pc"),
-  value    = c(cov_input, cov_output, cell_type, geno_pct, exp_pc)) |> 
+  value    = c(cov_input, cov_output, cell_type, geno_pc, exp_pc)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("============================\n")
