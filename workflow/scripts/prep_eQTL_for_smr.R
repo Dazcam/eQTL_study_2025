@@ -55,8 +55,8 @@ frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d")) |>
 # Filter for significant eQTLs (qval < threshold)
 message('Extracting eQTL cols ...')
 eqtl_filt_tbl <- eqtl_tbl  |>
-#  filter(qval < fdr_thresh) %>% # Too stringent; HEIDI fails for all SNPs
-#  filter(pval_nominal < 0.05) %>%  # Could use nominal p-value to include more SNPs
+  #  filter(qval < fdr_thresh) %>% # Too stringent; HEIDI fails for all SNPs
+  #  filter(pval_nominal < 0.05) %>%  # Could use nominal p-value to include more SNPs
   select(
     SNP = variant_id,
     Gene = phenotype_id,
