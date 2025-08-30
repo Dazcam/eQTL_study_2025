@@ -213,7 +213,7 @@ report_list <- list()
   # Write to file without column name for the index
   message('Writing ', cell_type, ' covariate matrix ...')
   write.table(cov_matrix, 
-              file = paste0(out_dir, cell_type, "_covariates.txt"), 
+              file = paste0(out_dir, cell_type, "_base_covariates.txt"), 
               sep = "\t", 
               quote = FALSE, 
               col.names = NA,    # Write sample IDs as column names
