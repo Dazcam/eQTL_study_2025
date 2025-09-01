@@ -33,6 +33,7 @@ containers:
   tensorqtl: ../resources/containers/tensorqtl.sif
   genotype-qc2hrc: ../resources/containers/genotype-qc2hrc_latest.sif
   R: ../resources/containers/seurat5f.sif
+  r_eqtl: ../resources/containers/r_eqtl.sif
   susie: ../resources/containers/susier_v24.01.1.sif
   ubuntu: ../resources/containers/ubuntu_22.04.sif
   twas: ../resources/containers/twas.sif
@@ -256,11 +257,9 @@ geno_post_impute:
     pcs: 10
     log: ../results/00LOG/04GENOTYPES-POST/calc_genotype_pcs.log
 
+# ------------  tensorQTL  ----------------
 
-
-# ------------  eQTL  ----------------
-
-eQTL:
+tensorQTL:
   tool: tensorqtl
   num_chunks: 100
   perm_min: 1000
@@ -268,6 +267,47 @@ eQTL:
   plink_prefix: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
   out_prefix: ../results/04TENSORQTL/chrALL_final.filt
   window: 500000
+  geno_pcs: 4
+  exp_pcs: [10,20,30,40,50] 
+
+  prep_tensorQTL_input:
+    cov_file: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    sex_file: reports/02SCANPY/02_metadata_per_sample.tsv
+    gene_lookup: ../resources/sheets/gene_lookup_hg38.tsv
+    exp_out: ../results/05TENSORQTL/prep_input/{cell_type}_tmm.bed
+    cov_out: ../results/05TENSORQTL/prep_input/{cell_type}_base_covariates.txt
+    pseudoblk_dir: ../results/03SCANPY/pseudobulk/
+    out_dir: ../results/05TENSORQTL/prep_input/
+    report_dir: reports/05TENSORQTL/
+    log: ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}.log
+
+  zip_pblk_cnts:
+    output: ../results/05TENSORQTL/prep_input/{cell_type}_tmm.bed.gz
+    log: ../results/00LOG/05TENSORQTL/zip_pblk_cnts_{cell_type}.log
+
+  convert_genotypes:
+    input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    output: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen    
+    prefix_out: ../results/05TENSORQTL/prep_input/chrALL_final.filt  
+    log: ../results/00LOG/05TENSORQTL/convert_genotypes.log
+
+  split_covariates:
+    output: ../results/05TENSORQTL/prep_input/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt
+    log: ../results/00LOG/05TENSORQTL/split_covariates_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.log
+
+  tensorqtl_nom:
+    output: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_nom.cis_qtl_pairs.4.parquet
+    prefix_out: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_nom
+    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt    
+    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_nom.log    
+
+
+  tensorqtl_perm:
+    output: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_perm.cis_qtl.txt.gz
+    prefix_out: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_perm
+    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
+
 input_files:
   counts: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
   genotypes: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
@@ -417,78 +457,6 @@ plot_qtl:
   out_file: ../results/04TENSORQTL/plots/plot_qtl.done
   expression_dir: ../results/03SCANPY/pseudobulk
   log: ../results/00LOG/04TENSORQTL/plot_qtl.log 
-
-# ------------  GENOTYPES POST-IMPUTATION  ----------------
-    
-genotypes:
-  impute_check:
-    input:  ../results/04GENOTYPES/TOPMED/chr_{chr}.zip
-    output: 
-      tsv: ../results/04GENOTYPES/TOPMED/impute_check/chr_{chr}_summary.tsv
-      vcf: ../results/04GENOTYPES/TOPMED/chr{chr}.dose.vcf.gz
-    params: 
-      dir: ../results/04GENOTYPES/TOPMED/
-      pwd: ../config/passwords/topmed.txt 
-    log: ../results/00LOG/04GENOTYPES/TOPMED/impute_check_{chr}.log
-  impute_check_cat:
-    output: ../results/04GENOTYPES/TOPMED/impute_check/chr_ALL_summary.tsv
-  dwnld_dbsnp_ref:
-    output: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz.tbi 
-    params:
-      web_link: https://ftp.ncbi.nih.gov/snp/redesign/latest_release/VCF/GCF_000001405.40.gz
-      prefix: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz 
-    log: ../results/00LOG/04GENOTYPES/TOPMED/dwnld_dbsnp_ref.log
-  add_rsID:
-    output: ../results/04GENOTYPES/TOPMED/dbSNP_annotated/chr{chr}.dbSNP.vcf.gz
-    log: ../results/00LOG/04GENOTYPES/TOPMED/add_rsID_{chr}.log     
-  vcf_cat:
-    output: ../results/04GENOTYPES/TOPMED/dbSNP_annotated/chrALL.dbSNP.vcf.gz
-    log: ../results/00LOG/04GENOTYPES/TOPMED/vcf_cat.log    
-  filter_tags:
-    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL.filt.vcf.gz
-    params:
-      hwe: 0.0001
-      maf: 0.05
-      rsq: 0.8  
-    log: ../results/00LOG/04GENOTYPES/TOPMED/filter_tags.log    
-  check_VCF:  
-    input:
-      ref_gz: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-    output: 
-      log: ../results/04GENOTYPES/TOPMED/filtered/check_vcf.check.log
-      list: ../results/04GENOTYPES/TOPMED/filtered/exclusion_list.txt
-      ref: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa
-      fai: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
-    params: ../results/04GENOTYPES/TOPMED/filtered/check_vcf
-    log: ../results/00LOG/04GENOTYPES/TOPMED/check_VCF.log
-  exclude_SNPs:
-    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
-    log: ../results/00LOG/04GENOTYPES/TOPMED/exclde_SNPs.log
-  idx_vcf:
-    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz.tbi
-    log: ../results/00LOG/04GENOTYPES/TOPMED/idx_vcf.log
-  create_combined_log:
-    output: ../results/04GENOTYPES/TOPMED/filtered/combined_genotype_processing.log
-    log: ../results/00LOG/04GENOTYPES/TOPMED/create_combined_log.log 
-  get_sample_list:
-    output: ../results/04GENOTYPES/TOPMED/filtered/geno_sample_list.txt
-  vcf_to_plink:
-    output: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.bed
-    params: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
-    log: ../results/00LOG/04GENOTYPES/TOPMED/vcf_to_plink.log
-  get_ld_pruned_snps:
-    output: ../results/04GENOTYPES/TOPMED/covariates/ld_prune.prune.in
-    params: ../results/04GENOTYPES/TOPMED/covariates/ld_prune
-    log: ../results/00LOG/04GENOTYPES/TOPMED/get_ld_pruned_snps.log
-  prune_genotypes:
-    output: ../results/04GENOTYPES/TOPMED/covariates/chrALL_final.filt.ld_pruned.bed
-    params: ../results/04GENOTYPES/TOPMED/covariates/chrALL_final.filt.ld_pruned
-    log: ../results/00LOG/04GENOTYPES/TOPMED/prune_genotypes.log
-  calc_genotype_pcs:
-    output: ../results/04GENOTYPES/TOPMED/covariates/pca.eigenvec
-    params: ../results/04GENOTYPES/TOPMED/covariates/pca
-    pcs: 10
-    log: ../results/00LOG/04GENOTYPES/TOPMED/calc_genotype_pcs.log
 
 # ---------  TWAS  ----------
 
