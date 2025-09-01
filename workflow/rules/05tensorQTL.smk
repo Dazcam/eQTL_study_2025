@@ -1,134 +1,118 @@
 configfile: "../config/config.yaml"
 
-rule zip_cnts:
-    input:   config["input_files"]["counts"]
-    output:  config["output_files"]["counts_gz"]
+rule prep_tensorQTL_input:
+    input:  cov_file = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
+            sex_file = config["tensorQTL"]["prep_tensorQTL_input"]["sex_file"],
+            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"] 
+    output: cov_out = config["tensorQTL"]["prep_tensorQTL_input"]["cov_out"],
+            exp_out = config["tensorQTL"]["prep_tensorQTL_input"]["exp_out"]
+    params: pseudoblk_dir = config["tensorQTL"]["prep_tensorQTL_input"]["pseudoblk_dir"],
+            report_dir = config["tensorQTL"]["prep_tensorQTL_input"]["report_dir"],
+            out_dir = config["tensorQTL"]["prep_tensorQTL_input"]["out_dir"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 1, mem_mb = 6000, time="5:00:00"
+    message: "Prep pseudoblk GeX and covariate matricies for tensorQTL"
+    benchmark: "reports/benchmarks/05tensorQTL.prep_tensorQTL_input_{cell_type}.txt"
+    log:    config["tensorQTL"]["prep_tensorQTL_input"]["log"]
+    script: "../scripts/prep_tensorQTL_input_files.R"
+
+rule zip_pblk_cnts:
+    input:   rules.prep_tensorQTL_input.output.exp_out
+    output:  config["tensorQTL"]["zip_pblk_cnts"]["output"]
     singularity: config["containers"]["fastqtl"] # Use bgzip and tabix in container
-    log:     config["log_files"]["fastqtl_zip"]
+    message: "bgzip and index pseudoblk counts"
+    benchmark: "reports/benchmarks/05tensorQTL.zip_pbulk_cnts_{cell_type}.txt"
+    log:     config["tensorQTL"]["zip_pblk_cnts"]["log"]
     shell:
              """
              bgzip -c {input} > {output}
              tabix -p bed {output}
              """
 
-rule fast_qtl:
-    input:  counts = config["output_files"]["counts_gz"],
-            genotypes = config["input_files"]["genotypes"],
-            covariates = config["input_files"]["covariates"]
-    output: config["output_files"]["fastqtl_output"]
-    singularity: config["containers"]["fastqtl"]
-    resources: threads = 1, mem_mb = 6000, time="5:00:00"
-    params: chunk = lambda wc: {wc.chunk},
-            num_chunks = config["eQTL"]["num_chunks"]
-    log:    config["log_files"]["fastqtl"]
-    shell:
-            """
-            fastQTL --vcf {input.genotypes} \
-                    --bed {input.counts} \
-                    --chunk {params.chunk} {params.num_chunks} \
-                    --cov {input.covariates} \
-                    --out {output} \
-                    --log {log} \
-                    --normal >> {log} 2>&1
-            """
-
-rule fast_qtl_perms:
-    input:  counts = config["output_files"]["counts_gz"],
-            genotypes = config["input_files"]["genotypes"],
-            covariates = config["input_files"]["covariates"]
-    output: config["output_files"]["fastqtl_perm_output"]
-    singularity: config["containers"]["fastqtl"]
-    resources: threads = 1, mem_mb = 6000, time="5:00:00"
-    params: chunk = lambda wc: {wc.chunk},
-            num_chunks = config["eQTL"]["num_chunks"],
-            min = config["eQTL"]["perm_min"],
-            max = config["eQTL"]["perm_max"]
-    log:    config["log_files"]["fastqtl_perm"]
-    shell:
-            """
-            fastQTL --vcf {input.genotypes} \
-                    --bed {input.counts} \
-                    --chunk {params.chunk} {params.num_chunks} \
-                    --cov {input.covariates} \
-                    --permute {params.min} {params.max} \
-                    --out {output} \
-                    --log {log} \
-                    --normal >> {log} 2>&1
-            """
-
 rule convert_genotypes:
-    input:  config["input_files"]["genotypes"]
-    output: config["output_files"]["genotypes_plink"]
-    params: config["eQTL"]["out_prefix"]
+    input:  config["tensorQTL"]["convert_genotypes"]["input"]
+    output: config["tensorQTL"]["convert_genotypes"]["output"]
+    params: config["tensorQTL"]["convert_genotypes"]["prefix_out"]
     envmodules: "plink/2.0"
+    message: "Convert genotypes to plink2 format for tensorQTL"
+    benchmark: "reports/benchmarks/05tensorQTL.convert_genotypes.txt"
     shell: "plink2 --vcf {input} --make-pgen --out {params}" 
-     
-rule tensorqtl:
-    input:  genotypes = config["output_files"]["genotypes_plink"],
-            counts = config["output_files"]["counts_gz"],
-            covariates = config["input_files"]["covariates"]
-    output: config["output_files"]["tensorqtl_output"]
+
+rule split_covariates:
+    input:  rules.prep_tensorQTL_input.output.cov_out
+    output:  config["tensorQTL"]["split_covariates"]["output"],
+    singularity: config["containers"]["R"]
+    resources: threads = 1, mem_mb = 6000, time="5:00:00"
+    message: "Divide covariate file to test different PC thresholds in tensorQTL"
+    benchmark: "reports/benchmarks/05tensorQTL.split_covariates_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.txt"    
+    log:    config["tensorQTL"]["split_covariates"]["log"]
+    script: "../scripts/split_covariates_for_tensorQTL.R"
+
+rule tensorqtl_nom:
+    input:  genotypes = rules.convert_genotypes.output,
+            counts = rules.zip_pblk_cnts.output,
+            covariates = rules.split_covariates.output
+    output: config["tensorQTL"]["tensorqtl_nom"]["output"]
+    params: prefix_in = config["tensorQTL"]["tensorqtl_nom"]["prefix_in"],
+            prefix_out = config["tensorQTL"]["tensorqtl_nom"]["prefix_out"],
+            window = config["tensorQTL"]["window"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
-    params: plink_prefix = config["eQTL"]["out_prefix"],
-            out_prefix = config["output_files"]["tensorqtl_out_prefix"],
-            window = config["eQTL"]["window"]
-    log:    config["log_files"]["tensorqtl"]
+    message: "Run tensoQTL nominal"
+    benchmark: "reports/benchmarks/05tensorQTL.nom_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["tensorQTL"]["tensorqtl_nom"]["log"]
     shell:
             """
-            python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
+            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
                --covariates {input.covariates} \
                --window {params.window} \
                --mode cis_nominal >> {log} 2>&1
-             """
+            """
 
 rule tensorqtl_perm:
-    input:  genotypes = config["output_files"]["genotypes_plink"],
-            counts = config["output_files"]["counts_gz"],
-            covariates = config["input_files"]["covariates"]
-    output: out = config["output_files"]["tensorqtl_perm_output"],
-            log = config["output_files"]["tensorqtl_perm_log"]
+    input:  genotypes = rules.convert_genotypes.output,
+            counts = rules.zip_pblk_cnts.output,
+            covariates = rules.split_covariates.output  
+    output: config["tensorQTL"]["tensorqtl_perm"]["output"]
+    params: prefix_in = config["tensorQTL"]["tensorqtl_perm"]["prefix_in"],
+            prefix_out = config["tensorQTL"]["tensorqtl_perm"]["prefix_out"],
+            window = config["tensorQTL"]["window"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
-    params: plink_prefix = config["eQTL"]["out_prefix"],
-            out_prefix = config["output_files"]["tensorqtl_perm_out_prefix"],
-            window = config["eQTL"]["window"]
-    log:    config["log_files"]["tensorqtl_perm"]
+    message: "Run tensoQTL nominal"
+    benchmark: "reports/benchmarks/05tensorQTL.perm_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["tensorQTL"]["tensorqtl_perm"]["log"]
     shell:
             """
-            python3 -m tensorqtl {params.plink_prefix} {input.counts} {params.out_prefix} \
+            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
                --covariates {input.covariates} \
                --window {params.window} \
                --mode cis >> {log} 2>&1 
             """
 
-rule tensorqtl_tss_and_sumstats:
-    input:  expand(config["output_files"]["tensorqtl_perm_log"], cell_type = config['cell_types'])
-    output: config["output_files"]["tensorqtl_tss_plt"],
-            config["output_files"]["tensorqtl_tss_tbl"]
-    singularity: config["containers"]["R"]
-    params: root_dir = config["root_dir"],
-            cell_types = config["cell_types"]
-    log:    config["log_files"]["tensorqtl_tss"]    
-    script: "scripts/tensorqtl_tss_and_sumstats.R"
+#rule tensorqtl_tss_and_sumstats:
+#    input:  expand(config["output_files"]["tensorqtl_perm_log"], cell_type = config['cell_types'])
+#    output: config["output_files"]["tensorqtl_tss_plt"],
+#            config["output_files"]["tensorqtl_tss_tbl"]
+#    singularity: config["containers"]["R"]
+#    params: root_dir = config["root_dir"],
+#            cell_types = config["cell_types"]
+#    log:    config["log_files"]["tensorqtl_tss"]    
+#    script: "scripts/tensorqtl_tss_and_sumstats.R"
 
-rule plot_qtl:
-    input:  genotypes = config["input_files"]["genotypes"],
-            pairs_file = config["plot_qtl"]["pairs_file"]
-    output: config["plot_qtl"]["out_file"]
-    singularity: config["containers"]["tensorqtl"]
-    params: expression_dir = config["plot_qtl"]["expression_dir"],
-            output_dir = config["plot_qtl"]["out_dir"]
-    log:    config["plot_qtl"]["log"]
-    shell:
-            """
-            python3 scripts/eqtl_plot.py \
-               --pairs_file {input.pairs_file} \
-               --genotype_file {input.genotypes} \
-               --expression_dir {params.expression_dir} \
-               --output_dir {params.output_dir} >> {log}
-             """
-
-
-
-
+#rule plot_qtl:
+#    input:  genotypes = config["input_files"]["genotypes"],
+#            pairs_file = config["plot_qtl"]["pairs_file"]
+#    output: config["plot_qtl"]["out_file"]
+#    singularity: config["containers"]["tensorqtl"]
+#    params: expression_dir = config["plot_qtl"]["expression_dir"],
+#            output_dir = config["plot_qtl"]["out_dir"]
+#    log:    config["plot_qtl"]["log"]
+#    shell:
+#            """
+#            python3 scripts/eqtl_plot.py \
+#               --pairs_file {input.pairs_file} \
+#               --genotype_file {input.genotypes} \
+#               --expression_dir {params.expression_dir} \
+#               --output_dir {params.output_dir} >> {log}
+#             """
