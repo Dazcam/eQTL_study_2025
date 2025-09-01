@@ -78,7 +78,6 @@ Sample_ID,Predicted_Sex,Sex_Numeric
 15444,Female,2
 15517,Male,1
 1558,Female,2
-15611,Male,1
 15626,Male,1
 15658,Female,2
 15699,Female,2
@@ -114,7 +113,6 @@ Sample_ID,Predicted_Sex,Sex_Numeric
 17369,Male,1
 17486,Female,2
 17629,Male,1
-17630,Female,2
 17634,Female,2
 17671,Male,1
 17754,Male,1

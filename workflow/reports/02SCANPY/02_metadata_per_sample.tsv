@@ -72,7 +72,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 15432		M	M	0	2	M	1	16
 15444		F	F	2	0	F	2	12
 15517	M	M	M	0	3	M	1	13
-15611		M	M	0	2	M	1	unknown
+15611			M	0	1	A	0	unknown
 15626	M	M	M	0	3	M	1	12
 15658	F	F	F	3	0	F	2	14
 15699	F	F	F	3	0	F	2	19
@@ -107,7 +107,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 17369	M	M	M	0	3	M	1	15
 17486	F	F	F	3	0	F	2	18
 17629	M	M	M	0	3	M	1	15
-17630		F	F	2	0	F	2	unknown
+17630			F	1	0	A	0	unknown
 17634	F	F	F	3	0	F	2	21
 17671	M	M	M	0	3	M	1	16
 17754	M	M	M	0	3	M	1	13
