@@ -1,0 +1,23 @@
+[Aug 30 23:49:24] Running TensorQTL: cis-QTL mapping
+  * WARNING: using CPU!
+  * reading phenotypes (../results/05TENSORQTL/prep_input/Endo-Peri_tmm.bed.gz)
+  * cis-window detected as position ± 500,000
+  * reading covariates (../results/05TENSORQTL/prep_input/Endo-Peri_genPC_4_expPC_50_split_covariates.txt)
+  * loading genotypes
+cis-QTL mapping: empirical p-values for phenotypes
+  * 139 samples
+  * 16870 phenotypes
+  * 56 covariates
+  * 5794957 variants
+  * cis-window: ±500,000
+  * computing permutations
+  Time elapsed: 104.22 min
+done.
+  * writing output
+Computing q-values
+  * Number of phenotypes tested: 16753
+  * Correlation between Beta-approximated and empirical p-values: 0.9999
+  * Proportion of significant phenotypes (1-pi0): 0.06
+  * QTL phenotypes @ FDR 0.05: 56
+  * min p-value threshold @ FDR 0.05: 0.00016982
+[Aug 31 01:34:00] Finished mapping
