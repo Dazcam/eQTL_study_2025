@@ -59,7 +59,8 @@ rule scanpy_cell_label_and_pseudobulk:
     log:     config["scanpy"]["pseudobulk"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate cell_label_and_pseudobulk >> {log} 2>&1 && "
-             "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
+             "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1 "
+             "cp {output} reports/02SCANPY/"
 
 rule scanpy_extra:
     # Rule to run quick minor tests
