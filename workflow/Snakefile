@@ -76,9 +76,9 @@ rule all:
 #        "../resources/refs/ref.done",
 #        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
 #        "../results/01PARSE/combine_plate3/run.done"
-#        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
+        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
 #        "../results/02SCANPY/scanpy_clustering.html",
-        "../results/02SCANPY/scanpy_annotation.html",
+#        "../results/02SCANPY/scanpy_annotation.html",
 #        "../results/02SCANPY/scanpy_extra.html",
 #        "../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html",

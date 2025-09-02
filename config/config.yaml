@@ -11,12 +11,12 @@ plate:
 root_dir: /scratch/c.c1477909/eQTL_study_2025/
 
 cell_types: 
-#  - "ExN-1"
-  - "ExN-2"
-  - "InN"
-  - "OPC"
+  - "ExN-UL"
+  - "ExN-DL"
   - "RG"
+  - "InN"
   - "Endo-Peri"
+  - "OPC" 
   - "MG"
 
 eqtl_fdr: 0.05
@@ -276,7 +276,7 @@ tensorQTL:
     gene_lookup: ../resources/sheets/gene_lookup_hg38.tsv
     exp_out: ../results/05TENSORQTL/prep_input/{cell_type}_tmm.bed
     cov_out: ../results/05TENSORQTL/prep_input/{cell_type}_base_covariates.txt
-    pseudoblk_dir: ../results/03SCANPY/pseudobulk/
+    pseudoblk_dir: ../results/02SCANPY/pseudobulk/
     out_dir: ../results/05TENSORQTL/prep_input/
     report_dir: reports/05TENSORQTL/
     log: ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}.log
