@@ -2,7 +2,7 @@ import json
 configfile: '../config/config.yaml'
 
 SUBLIBS = json.load(open(config['BAM_FILES']))
-CHROM = [1,2]  
+CHROM = [1,2,3,4,5,6,22]  
 COMMON_VCF = "../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/imputation-sites/ALL.TOPMed_freeze5_hg38_dbSNP.vcf.gz"
 REF_VCF = "../results/03GENOTYPES-PRE/genotypes_for_TOPMED/eqtl_genotypes_hg38.gh.topmed.chr{chr}.vcf.gz"
 
