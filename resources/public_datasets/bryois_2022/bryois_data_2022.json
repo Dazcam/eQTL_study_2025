@@ -1,0 +1,3578 @@
+{
+  "access": {
+    "embargo": {
+      "active": false,
+      "reason": null
+    },
+    "files": "public",
+    "record": "public",
+    "status": "open"
+  },
+  "created": "2023-01-10T09:08:07.705833+00:00",
+  "custom_fields": {},
+  "deletion_status": {
+    "is_deleted": false,
+    "status": "P"
+  },
+  "files": {
+    "count": 200,
+    "enabled": true,
+    "entries": {
+      "Astrocytes.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:a266f6d00f9cc721d0b7e0d2355750b1",
+        "ext": "gz",
+        "id": "92ee3ead-d1c2-45f7-bac3-319384ff4ccb",
+        "key": "Astrocytes.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 46318015,
+        "storage_class": "L"
+      },
+      "Astrocytes.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:297415a0b61a74d77d5860b3a4e6d311",
+        "ext": "gz",
+        "id": "8c1031fc-50de-461c-b829-4c25b7ea9756",
+        "key": "Astrocytes.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22302149,
+        "storage_class": "L"
+      },
+      "Astrocytes.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:3bcf97557ccd4464d645b020db3a7066",
+        "ext": "gz",
+        "id": "a3bacee3-61c0-469f-a762-c93b97274f03",
+        "key": "Astrocytes.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 28146490,
+        "storage_class": "L"
+      },
+      "Astrocytes.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:001d5a5c86a486805bb0c50f599bc719",
+        "ext": "gz",
+        "id": "5943d4c7-d595-4679-9ddb-305c1429c6cf",
+        "key": "Astrocytes.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 27302823,
+        "storage_class": "L"
+      },
+      "Astrocytes.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:657d57971849c7cb21fef4b7c545d2ae",
+        "ext": "gz",
+        "id": "a1796faa-af30-4191-af5a-17ab7ce19211",
+        "key": "Astrocytes.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 10580141,
+        "storage_class": "L"
+      },
+      "Astrocytes.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:32c2ee611263a84df0457ddd3e65a3be",
+        "ext": "gz",
+        "id": "a92c6e18-4480-46ae-96d3-6d7813471e6b",
+        "key": "Astrocytes.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 19685037,
+        "storage_class": "L"
+      },
+      "Astrocytes.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:10a4e290abc4c000885c9f0795bca9d7",
+        "ext": "gz",
+        "id": "0af7feed-8f7a-4453-9f30-0b6d348070f4",
+        "key": "Astrocytes.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 18464977,
+        "storage_class": "L"
+      },
+      "Astrocytes.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:cfb1f148676d756f18a7af83f9b96cc4",
+        "ext": "gz",
+        "id": "661ecdcb-19ef-4ffe-a699-f52cbc31da01",
+        "key": "Astrocytes.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 26342166,
+        "storage_class": "L"
+      },
+      "Astrocytes.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c63d4f804a9ced46d04a6aed19d1d677",
+        "ext": "gz",
+        "id": "dd5fabe4-8549-46c2-a304-2c173b46ad51",
+        "key": "Astrocytes.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 29125493,
+        "storage_class": "L"
+      },
+      "Astrocytes.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:9e33e092f56dce02c08ac516d84f9474",
+        "ext": "gz",
+        "id": "330701c6-20e6-420b-81a8-93ab99763ba3",
+        "key": "Astrocytes.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 9509386,
+        "storage_class": "L"
+      },
+      "Astrocytes.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:abd52cf6167858a200a378eda8d08d3a",
+        "ext": "gz",
+        "id": "9690d8ab-556b-4070-91d1-4f4bbc0bc6a7",
+        "key": "Astrocytes.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 41836429,
+        "storage_class": "L"
+      },
+      "Astrocytes.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:eadfe498134569b08827c361ed33b444",
+        "ext": "gz",
+        "id": "9b0e1052-054e-40bb-b966-58a8d8bf552a",
+        "key": "Astrocytes.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 36252255,
+        "storage_class": "L"
+      },
+      "Astrocytes.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:f70626d80f46cf576885329360a07375",
+        "ext": "gz",
+        "id": "1a3b43b5-b4fe-4ed2-b604-ad86d702d4da",
+        "key": "Astrocytes.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 13359394,
+        "storage_class": "L"
+      },
+      "Astrocytes.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:d6d5b143f2b8e7f40e067909b312194f",
+        "ext": "gz",
+        "id": "85ba560a-8628-4c7c-8b00-1e9c28772d71",
+        "key": "Astrocytes.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 6701427,
+        "storage_class": "L"
+      },
+      "Astrocytes.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7be2ef9fe357ae5ea851220859b4f510",
+        "ext": "gz",
+        "id": "7140b113-7b94-40d9-af16-25bd3b71bad1",
+        "key": "Astrocytes.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 13048872,
+        "storage_class": "L"
+      },
+      "Astrocytes.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b2a04e8806442442a85aaf10997c2e65",
+        "ext": "gz",
+        "id": "519a155e-fb08-4b7d-94c6-f67ac4fed1ec",
+        "key": "Astrocytes.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 31048494,
+        "storage_class": "L"
+      },
+      "Astrocytes.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:003c02f45dd22a99ffd3f900fb5c6aef",
+        "ext": "gz",
+        "id": "28e08ffd-cbdc-4aee-8eba-bd246d5b97c1",
+        "key": "Astrocytes.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24550296,
+        "storage_class": "L"
+      },
+      "Astrocytes.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:1fdea3eed3df0697bd9a85a3b8c356d8",
+        "ext": "gz",
+        "id": "d88e6daa-6d74-4390-abd4-50d1e9f4c569",
+        "key": "Astrocytes.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24464777,
+        "storage_class": "L"
+      },
+      "Astrocytes.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:82366e235ce6a5bc61c5a3d02806e5ce",
+        "ext": "gz",
+        "id": "5d892a79-88ba-4e57-a711-9641fb42c3bd",
+        "key": "Astrocytes.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 33835239,
+        "storage_class": "L"
+      },
+      "Astrocytes.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:af4e9d99e2cf628b4589eb4249634df1",
+        "ext": "gz",
+        "id": "9fd4d6fa-d798-4d88-bcad-337cada4d4c2",
+        "key": "Astrocytes.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 26441039,
+        "storage_class": "L"
+      },
+      "Astrocytes.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:bdc95d24338bdabeb58b7ff9cd1e418d",
+        "ext": "gz",
+        "id": "7de66630-35dc-4b86-b61f-7906ffb6dab4",
+        "key": "Astrocytes.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22009181,
+        "storage_class": "L"
+      },
+      "Astrocytes.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:2c9bc6d45854ede5b882609a346e56d9",
+        "ext": "gz",
+        "id": "8d44fcb8-7aaa-496a-8a64-2bd33abfe6bc",
+        "key": "Astrocytes.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Astrocytes.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Astrocytes.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 21564170,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:e383d81e2b5afc8f8743f1aed58ed9c3",
+        "ext": "gz",
+        "id": "ef92fa2c-c770-4ce5-ad8c-13d4377346e7",
+        "key": "Endothelial.cells.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 44641037,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7e2375935a35b9cc9ff8826ddd3fa709",
+        "ext": "gz",
+        "id": "fe9a7d23-acff-4985-a65b-9d88321fc26a",
+        "key": "Endothelial.cells.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20079497,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:5a90416aeff2f08bb0d7649a0c678ec0",
+        "ext": "gz",
+        "id": "ad4eb7a3-4b1a-481e-9220-5709f2e3a6cf",
+        "key": "Endothelial.cells.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 26322340,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:fd9c9f6d2b6935fbeed309ec338cf18e",
+        "ext": "gz",
+        "id": "7207240c-83b4-4ef5-90fe-6fdb035a690a",
+        "key": "Endothelial.cells.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 26315672,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:d9e9015087d702f5218d3bbfd6342642",
+        "ext": "gz",
+        "id": "ff83cd3e-6e46-4b4c-aa0d-3490fb629e4c",
+        "key": "Endothelial.cells.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 9278076,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:725b7515b929aa92413d4e877524d771",
+        "ext": "gz",
+        "id": "06b6f15a-27ef-48a2-b14c-2b4bfef59b20",
+        "key": "Endothelial.cells.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 17116372,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:afbbfb1a94be75891202fcfc5a9d593c",
+        "ext": "gz",
+        "id": "b2c291f9-7e59-4a01-83d1-074f2985d16d",
+        "key": "Endothelial.cells.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 15183271,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:962cfed4139830342b9bec8478624683",
+        "ext": "gz",
+        "id": "89f787ff-2d74-40ac-adb9-a0b9d5b3cee3",
+        "key": "Endothelial.cells.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22947584,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c2f067d40d5d1f1b95f5822f9e0f92a7",
+        "ext": "gz",
+        "id": "8622a2bc-aded-4f01-82b7-16881e3ee5ea",
+        "key": "Endothelial.cells.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 29153064,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:32997266a9cd8ae9b400bd19ed3128e9",
+        "ext": "gz",
+        "id": "0445590f-3571-4a54-9b96-5383c876e5ba",
+        "key": "Endothelial.cells.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 7847640,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:962d3b16fbac60030188c9b3fb97bec0",
+        "ext": "gz",
+        "id": "ce744e99-b636-4d55-95e0-639ecc9e15d7",
+        "key": "Endothelial.cells.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 40108163,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:1b8e32d5ae1df330f7cabb061c6fa312",
+        "ext": "gz",
+        "id": "9732b67b-4fbf-41dc-8ab1-8c606908a5fd",
+        "key": "Endothelial.cells.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 33190407,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:092156ee7aa9fbaa26396e55729bae48",
+        "ext": "gz",
+        "id": "1cb3b39f-51e5-48b1-8228-84d4d3e7b5d6",
+        "key": "Endothelial.cells.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 13600471,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:6c1012fb329896fb4f05581594cb97de",
+        "ext": "gz",
+        "id": "f5bcb065-0614-499b-ba2f-38edab637949",
+        "key": "Endothelial.cells.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 6693588,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:e832a16dbf9404ef7d8971910ad7674d",
+        "ext": "gz",
+        "id": "89eea995-4189-4a96-8f0e-5d6259382fb5",
+        "key": "Endothelial.cells.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 11907607,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:3f7a3108fdb2393a461e03703f33d664",
+        "ext": "gz",
+        "id": "a3feaca5-acf6-41bd-b788-4def43895a77",
+        "key": "Endothelial.cells.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 27487879,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:12bd17d25b0ea747dbe2a04321e7d70b",
+        "ext": "gz",
+        "id": "5bd75d89-8eb7-4a75-906c-2717b74f5c65",
+        "key": "Endothelial.cells.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 21387666,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:347f9bbdc819cbd331f03d92bed1c4eb",
+        "ext": "gz",
+        "id": "f52a3f6b-8cbd-47fc-a793-f5207e7e797c",
+        "key": "Endothelial.cells.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22599020,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7a86ca57bf6a42dbb8f264a7e92146bf",
+        "ext": "gz",
+        "id": "7bd83cdd-6515-408b-ae68-e8fec909ca72",
+        "key": "Endothelial.cells.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 34480834,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:9f92ece86b7e726264158758ea0f3083",
+        "ext": "gz",
+        "id": "15ed068b-d355-4b93-a1c6-80b603eb0303",
+        "key": "Endothelial.cells.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22895679,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:fb7a78f44b26e0a47a1bd470f669ee7f",
+        "ext": "gz",
+        "id": "8249b2d8-1c14-4033-a97d-ea141c4c0606",
+        "key": "Endothelial.cells.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 17937114,
+        "storage_class": "L"
+      },
+      "Endothelial.cells.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c1eba97cade17b7aa07c8293e741942e",
+        "ext": "gz",
+        "id": "c9fdd271-4a89-4b60-8074-7b58c21bae75",
+        "key": "Endothelial.cells.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Endothelial.cells.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 19351912,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:2fa4415b7fcae46108e38edc28284cc0",
+        "ext": "gz",
+        "id": "de04ce00-535f-47fa-957e-a40e50564640",
+        "key": "Excitatory.neurons.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 60500512,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:5feaa618e05fdc8d40d1bbb569ad1b33",
+        "ext": "gz",
+        "id": "aa0c5605-d654-4b7f-82d1-da17a7577223",
+        "key": "Excitatory.neurons.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 27831732,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:13d3965c21ecc21f8dc1ed42fdeb3509",
+        "ext": "gz",
+        "id": "42af1633-cd9f-4cf5-8eda-5676a1258f10",
+        "key": "Excitatory.neurons.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 35448644,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:02845674f60137e9c670b52b6d41f703",
+        "ext": "gz",
+        "id": "558dca23-b040-4e78-bb08-b8b0aa5ba3f5",
+        "key": "Excitatory.neurons.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 36065833,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7369a5909c82575e49053fd6d87dfb1c",
+        "ext": "gz",
+        "id": "c4fa0435-3889-44f7-bc40-2d3850f48a12",
+        "key": "Excitatory.neurons.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 14366961,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7cb945a9b40be1d9fe54da27a1aff511",
+        "ext": "gz",
+        "id": "81ed74c3-8825-4a75-9c3b-d0ca47b0a398",
+        "key": "Excitatory.neurons.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24500969,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c6fdb61fa15c02bfaddd95173c514dff",
+        "ext": "gz",
+        "id": "3084d240-1969-4904-b8c5-4eaf37648e9b",
+        "key": "Excitatory.neurons.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22958524,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:780620335aaaf4d5996b0c8eb7f6e2b1",
+        "ext": "gz",
+        "id": "9705f278-9184-4beb-b383-f1e7f705c63a",
+        "key": "Excitatory.neurons.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 32202215,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7ddcbbc26b2171ec18a9062f74c79a1e",
+        "ext": "gz",
+        "id": "0b4ff154-4727-45ae-b5dc-e2406505416c",
+        "key": "Excitatory.neurons.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 36424739,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7bc77aaecb9387205fac2bd27968340e",
+        "ext": "gz",
+        "id": "b322fccb-ccf9-4c71-917c-e81c5a39af1f",
+        "key": "Excitatory.neurons.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 12256874,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:879bea584332c2d616a6cd86e8d0e81d",
+        "ext": "gz",
+        "id": "abaae3ce-9447-4202-9764-9698386166bd",
+        "key": "Excitatory.neurons.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 52556247,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:66e3591df655d7e73a61caf2cc2939b3",
+        "ext": "gz",
+        "id": "7afc9dbc-c265-41af-920c-f9ce0f1d7c17",
+        "key": "Excitatory.neurons.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 47145032,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:5056c3f7f46bcb7b5f22a1cc0d8f9a92",
+        "ext": "gz",
+        "id": "b0454bfb-0818-4c1e-90fb-8c3844425e3c",
+        "key": "Excitatory.neurons.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 18087076,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:152eb13d29d96fbb0e14fd7e125dd771",
+        "ext": "gz",
+        "id": "309479b2-48e5-41f1-8e0c-fc9c0d774e19",
+        "key": "Excitatory.neurons.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 8690763,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7b2ac81bdc0659861a480d1bafceead4",
+        "ext": "gz",
+        "id": "1928216d-408f-4252-823b-2e46121e2ec2",
+        "key": "Excitatory.neurons.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 15760239,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:48f5ca2e20908fc5f179275be1cab9d7",
+        "ext": "gz",
+        "id": "10670dc2-aadd-44e5-b67d-224aaf95b695",
+        "key": "Excitatory.neurons.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 38828504,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:437d644ad1de1cd57c1f8ed6ba170eae",
+        "ext": "gz",
+        "id": "0d34c864-c29f-41cd-ae64-2b5a4a946197",
+        "key": "Excitatory.neurons.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 30662094,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:86dc91ce73d8ea13b6e263a0b667305d",
+        "ext": "gz",
+        "id": "d29e9cb6-0e04-4a0b-b1db-e17dc75281a9",
+        "key": "Excitatory.neurons.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 33907409,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:41762f8869f06946bd87d239e9f947b0",
+        "ext": "gz",
+        "id": "3c85006c-85f0-4252-8971-368c190a7fa9",
+        "key": "Excitatory.neurons.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 40455941,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:04e8155195f73f20a417beeab29928e1",
+        "ext": "gz",
+        "id": "944772d3-7300-4e0f-a559-961182dcded3",
+        "key": "Excitatory.neurons.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 32663130,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b25bac863f9cad14420fc689adcb1a42",
+        "ext": "gz",
+        "id": "a3eda318-2067-4c67-95c6-c2f380b22b71",
+        "key": "Excitatory.neurons.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 28083732,
+        "storage_class": "L"
+      },
+      "Excitatory.neurons.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:f02d0384846f779ea07d94980a91d1ad",
+        "ext": "gz",
+        "id": "3466d050-45ef-4827-bf31-1ffea94c280e",
+        "key": "Excitatory.neurons.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Excitatory.neurons.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 27546021,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:a3a6cc7b771282f90821167e410bbd06",
+        "ext": "gz",
+        "id": "0cf2b3a7-8383-4eb9-8a07-2c5ee0e12b1d",
+        "key": "Inhibitory.neurons.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 52367737,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b1ad8d07591c799765989360412ebf32",
+        "ext": "gz",
+        "id": "16f88772-6227-4d63-aed8-baaef17c3b3e",
+        "key": "Inhibitory.neurons.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24440735,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:67ad287d518d20635225bc7b4196fbcb",
+        "ext": "gz",
+        "id": "5c2ea896-de53-49e0-b976-1dbc821e1648",
+        "key": "Inhibitory.neurons.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 30125100,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:255173e49feead5443c95955e2a84123",
+        "ext": "gz",
+        "id": "8cb1166e-9d7c-4451-9799-104e5b6c8cdc",
+        "key": "Inhibitory.neurons.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 31948481,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:1954a971a36759c8b8a93ab4fe8aa58d",
+        "ext": "gz",
+        "id": "c3501587-2b56-4a00-a776-913083b060dd",
+        "key": "Inhibitory.neurons.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 12519258,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:568beb9f491d155f728b288135829416",
+        "ext": "gz",
+        "id": "e0c0dbe9-394f-40d6-8d75-39354b009b73",
+        "key": "Inhibitory.neurons.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 21084564,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:84105f6ccddeacb65a15d3fe51548114",
+        "ext": "gz",
+        "id": "2e292c75-5b9f-4f7a-9326-80270201d3c3",
+        "key": "Inhibitory.neurons.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20473572,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c76652c51cb45604ddb05465168a2667",
+        "ext": "gz",
+        "id": "c9da5aca-153e-4350-9ae7-f15ecae7bce6",
+        "key": "Inhibitory.neurons.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 29403873,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:fdcd5178290901bb17bbb563d0560b0b",
+        "ext": "gz",
+        "id": "fecf4643-c8a1-426a-a50b-bc26972e8a0d",
+        "key": "Inhibitory.neurons.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 31980981,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:78a1263eafb98d966d9fee79a2440967",
+        "ext": "gz",
+        "id": "9c8a4352-c3fc-4c45-a5f2-4433fdd04585",
+        "key": "Inhibitory.neurons.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 11025901,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:72ca40fb0f73fa704832dbeb7e073a73",
+        "ext": "gz",
+        "id": "311617d2-f408-465b-89a0-0fc656726eeb",
+        "key": "Inhibitory.neurons.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 46118677,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:6218d090bf9b38c6509619a34294c621",
+        "ext": "gz",
+        "id": "d9433d61-adb9-4fa8-b5d6-c2f63e9d480c",
+        "key": "Inhibitory.neurons.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 42289384,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:acf3f1f3ee4975db869745a290bbfefe",
+        "ext": "gz",
+        "id": "1f1f42cb-995f-4706-996c-7ef63f1d2552",
+        "key": "Inhibitory.neurons.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 15571554,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:48814340bfc4cf985c6b340468e38e7b",
+        "ext": "gz",
+        "id": "f1c626a2-e45d-41ed-bd5b-2585279cffbf",
+        "key": "Inhibitory.neurons.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 7439615,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c2e3bf0f493635865c14d13754f478c3",
+        "ext": "gz",
+        "id": "4e673a49-9c66-4b63-99da-87d24f3b3561",
+        "key": "Inhibitory.neurons.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 13927137,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:8a7d28f697e02a0d592acc8e2b3fb783",
+        "ext": "gz",
+        "id": "9b5b3625-36a5-4608-8aa3-916f60e103f6",
+        "key": "Inhibitory.neurons.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 35077482,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:1c618d644dc83b63f42eb00852f524cb",
+        "ext": "gz",
+        "id": "265a817a-087d-421b-8ff2-54a947650b1d",
+        "key": "Inhibitory.neurons.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 27314826,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:71f8e06f5b3c11c4d47ba7d78ecbfa01",
+        "ext": "gz",
+        "id": "047c0425-8e90-44f4-aabf-dc08005f2174",
+        "key": "Inhibitory.neurons.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 30697997,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:812510131be2c831bc50a3e7e4d24185",
+        "ext": "gz",
+        "id": "d2196edf-a1e7-47cc-b771-390d0b051f16",
+        "key": "Inhibitory.neurons.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 36013195,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:8af3debf3e11929734d4773604bd127e",
+        "ext": "gz",
+        "id": "8a053f1f-04f2-4d47-b70f-8cfbc283597e",
+        "key": "Inhibitory.neurons.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 29402434,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:31e3f470cfdccdede9e3aa97c48225fb",
+        "ext": "gz",
+        "id": "a059b447-fe79-4b4d-8430-7801a63db21d",
+        "key": "Inhibitory.neurons.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24563415,
+        "storage_class": "L"
+      },
+      "Inhibitory.neurons.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:818c0e4c96c50cdc01f376ddf07fcd8e",
+        "ext": "gz",
+        "id": "cea14c25-797a-406e-a6ae-856f90a04ce5",
+        "key": "Inhibitory.neurons.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Inhibitory.neurons.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 23756293,
+        "storage_class": "L"
+      },
+      "Microglia.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:f145af8667d8e3b455eaf8b1811967ed",
+        "ext": "gz",
+        "id": "cc7a454d-5b7d-4445-bbf7-ff5315545b28",
+        "key": "Microglia.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 38258225,
+        "storage_class": "L"
+      },
+      "Microglia.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:0d0d77bcf396464a6b9f9edf61952b62",
+        "ext": "gz",
+        "id": "dc107703-1eb2-41ec-aa1e-06d334080aee",
+        "key": "Microglia.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 18366935,
+        "storage_class": "L"
+      },
+      "Microglia.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:f114036dda40641ff9a13b4eb6b2f8e8",
+        "ext": "gz",
+        "id": "4537cbc6-293a-4751-b7b5-3bd37f394859",
+        "key": "Microglia.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20880897,
+        "storage_class": "L"
+      },
+      "Microglia.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c37b218aed51ac34ba69dd7c535e5c17",
+        "ext": "gz",
+        "id": "5bb276c8-c624-4f3f-a451-eecb587156c9",
+        "key": "Microglia.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22637618,
+        "storage_class": "L"
+      },
+      "Microglia.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:ff30decc2ee05768827aa97000fdcded",
+        "ext": "gz",
+        "id": "1c454505-5c55-4e42-8eb4-073bde31b01f",
+        "key": "Microglia.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 7867043,
+        "storage_class": "L"
+      },
+      "Microglia.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:558dd9d2ce72bf107068eac698285cc1",
+        "ext": "gz",
+        "id": "d74b9111-9c84-43dc-b0c1-8bfa57dd8dfb",
+        "key": "Microglia.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 15165683,
+        "storage_class": "L"
+      },
+      "Microglia.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c0336c5cea18893f1ef090d6f0c34a35",
+        "ext": "gz",
+        "id": "61bd7c6f-dd1d-4ad3-8e67-16f5b9aa39d6",
+        "key": "Microglia.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 12920975,
+        "storage_class": "L"
+      },
+      "Microglia.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:788cf4d7489e10ea2b11d3cbf8bbe085",
+        "ext": "gz",
+        "id": "23c401bf-8616-4fdc-8d19-ef09d8fecc6d",
+        "key": "Microglia.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 19158510,
+        "storage_class": "L"
+      },
+      "Microglia.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:fba50611a1ef4f7d804d5b56926f666a",
+        "ext": "gz",
+        "id": "6698c777-9919-49a4-ba75-bb4d5a047c1f",
+        "key": "Microglia.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24159351,
+        "storage_class": "L"
+      },
+      "Microglia.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b99981da8b88a10d2bf2b746eabc72ad",
+        "ext": "gz",
+        "id": "d9493e1b-41b0-4f28-97c3-2569cdacd928",
+        "key": "Microglia.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 7283794,
+        "storage_class": "L"
+      },
+      "Microglia.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7e6dd3df94283193cc80c71504611f0f",
+        "ext": "gz",
+        "id": "6d32eb4e-877f-451a-b612-2faefef11db4",
+        "key": "Microglia.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 33978874,
+        "storage_class": "L"
+      },
+      "Microglia.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:4a43d39176bece2800160cbde2e71f3c",
+        "ext": "gz",
+        "id": "ec9439ea-1568-48b9-9691-650411f58ed3",
+        "key": "Microglia.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 28050327,
+        "storage_class": "L"
+      },
+      "Microglia.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7719e22b48bae590f8dc98c0c4a3b2bd",
+        "ext": "gz",
+        "id": "c3ca38aa-50f5-49c8-b249-befe7c20e70a",
+        "key": "Microglia.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 10474209,
+        "storage_class": "L"
+      },
+      "Microglia.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:a2f40bb99917cb995a4e22e514b5f230",
+        "ext": "gz",
+        "id": "e2681a57-4a5b-4a62-984b-106c5fb852d9",
+        "key": "Microglia.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 5839488,
+        "storage_class": "L"
+      },
+      "Microglia.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:06e93dee821937dab62a05d9c048bb2d",
+        "ext": "gz",
+        "id": "f0e2a2ed-55ca-45e8-8179-406a50f6ff76",
+        "key": "Microglia.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 9989670,
+        "storage_class": "L"
+      },
+      "Microglia.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b9fbeab220a1bf3689874d5e94ae17d5",
+        "ext": "gz",
+        "id": "b3dcd3fc-40b1-498a-9eb6-2a3f238e8727",
+        "key": "Microglia.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 21874404,
+        "storage_class": "L"
+      },
+      "Microglia.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:a5cb545cc0147694069f97aabd715772",
+        "ext": "gz",
+        "id": "a4474ed9-e041-4a17-8aad-fc2b0d33ca29",
+        "key": "Microglia.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 17752403,
+        "storage_class": "L"
+      },
+      "Microglia.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:8382397297e90be013f38808cbb92d55",
+        "ext": "gz",
+        "id": "dfb2e465-970e-485d-87fd-310887e8ea60",
+        "key": "Microglia.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 18350780,
+        "storage_class": "L"
+      },
+      "Microglia.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:cef2fa519f15bf6d9f379dc412601c79",
+        "ext": "gz",
+        "id": "b002cb52-3fa9-4a4c-b354-06797534de2b",
+        "key": "Microglia.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 28124982,
+        "storage_class": "L"
+      },
+      "Microglia.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:af552c27f092ceb04bb37f7bcf75189a",
+        "ext": "gz",
+        "id": "cb96ce87-957b-4698-8557-7ea4241b7775",
+        "key": "Microglia.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20325734,
+        "storage_class": "L"
+      },
+      "Microglia.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:588ccdc938e36f2de64e9a500d8e7d2c",
+        "ext": "gz",
+        "id": "6252f058-eae2-4694-8f37-a13689ad824a",
+        "key": "Microglia.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 16552693,
+        "storage_class": "L"
+      },
+      "Microglia.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:30b7e279448e9710227e736803142e56",
+        "ext": "gz",
+        "id": "cf0e91e3-f4be-44ea-bf46-46fa4580c97c",
+        "key": "Microglia.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Microglia.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Microglia.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 16144893,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:6951411572883434ca89401f7a5ab9b1",
+        "ext": "gz",
+        "id": "505cec1a-75dc-408a-8775-05c8a65ae09f",
+        "key": "OPCs...COPs.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 44259474,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:3f1311ef8fe98afe324d3a97e0d19737",
+        "ext": "gz",
+        "id": "c9e7059c-a12b-481c-a4e1-156a0e28acb8",
+        "key": "OPCs...COPs.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20280692,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:36cc4b1b54d804cea52c90831379e2f0",
+        "ext": "gz",
+        "id": "56a743a2-c9e7-4e4d-8dd5-39d47011634f",
+        "key": "OPCs...COPs.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 25465583,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:9e53d7034c3afcb0f19201eff765c5b7",
+        "ext": "gz",
+        "id": "e1cad8a9-51eb-4ffb-9238-d080bf78e7ed",
+        "key": "OPCs...COPs.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 26657612,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:f9f4dadbb367629dd9362eddaacd5ea4",
+        "ext": "gz",
+        "id": "80a40e07-b715-4a08-b1f0-1aa4e23c523c",
+        "key": "OPCs...COPs.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 10819251,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:a31e3d41cb607d66b9a7e5924a99fb2b",
+        "ext": "gz",
+        "id": "2c6b83a5-2ac0-46f3-93a3-13d09f802323",
+        "key": "OPCs...COPs.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 19195562,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:05542f35aa5b204cc47872a1b56e5555",
+        "ext": "gz",
+        "id": "dff0648d-9e07-494c-8a59-8ed31eea81b5",
+        "key": "OPCs...COPs.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 16742541,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:99e15220ee26c870bff1da3a6c023a60",
+        "ext": "gz",
+        "id": "1cf741b5-594f-4fec-aa70-afb54f894f00",
+        "key": "OPCs...COPs.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 23979133,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:faa0df1b759a638cc487a923f8e29612",
+        "ext": "gz",
+        "id": "359e31ce-2b8c-4658-93a8-10cb6fb56964",
+        "key": "OPCs...COPs.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 25759306,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:853cd5bf5b41fb8a514ae5a17c4f1b09",
+        "ext": "gz",
+        "id": "77f888c0-14cb-43a9-a12c-72a3a55e7f96",
+        "key": "OPCs...COPs.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 10072173,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:e8ff0a8206193efa7de3102a3d5d6454",
+        "ext": "gz",
+        "id": "c2a42398-ce24-4a03-aaa4-a4079f87411b",
+        "key": "OPCs...COPs.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 36855529,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:53159b22713431ef2e708463265b5001",
+        "ext": "gz",
+        "id": "97cdbe98-385b-4543-9366-6da851f461c5",
+        "key": "OPCs...COPs.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 36619585,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:5adfa94716b92ed13895138e7f0bf122",
+        "ext": "gz",
+        "id": "d5ff026b-dbfa-4230-bc0b-4c0f58759c8b",
+        "key": "OPCs...COPs.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 12780288,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:33414a1a93a71c5438610681d6ad3ad9",
+        "ext": "gz",
+        "id": "b1b50d88-6213-4731-8985-1d8584a8fc33",
+        "key": "OPCs...COPs.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 6689982,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:0e105b1eb42e62454ff5365180be0510",
+        "ext": "gz",
+        "id": "3027fe75-0b3c-49f4-acad-f6e3d11b64c9",
+        "key": "OPCs...COPs.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 11121004,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:fe29e244cf7a05e7a79bf102a1f7acfa",
+        "ext": "gz",
+        "id": "31380996-f11f-4021-aec9-c425831c20e3",
+        "key": "OPCs...COPs.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 30440888,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b855d6d40ccd644e40c47926515c0922",
+        "ext": "gz",
+        "id": "8bc6568f-6cc4-4335-af48-6e0ebd109b4d",
+        "key": "OPCs...COPs.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22950835,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:6003f7ed8ead430f7c02fb3cda601a02",
+        "ext": "gz",
+        "id": "e7346241-48d9-415f-9962-b6f34faebb5c",
+        "key": "OPCs...COPs.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24224047,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:21554c3d34f550592f8d1893594fcdee",
+        "ext": "gz",
+        "id": "ca177cb5-ada6-4af3-a8dc-614e1a929faa",
+        "key": "OPCs...COPs.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 29848167,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:95b3122b8af32fe02b96f239084d4290",
+        "ext": "gz",
+        "id": "23f6e8e5-25f3-4d8b-9752-e115218acc3d",
+        "key": "OPCs...COPs.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 25976080,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:90206b421690aad4bdb4bb0e86df3b2d",
+        "ext": "gz",
+        "id": "421b0e8e-2b92-44f7-91ba-1182cbbfec21",
+        "key": "OPCs...COPs.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20639742,
+        "storage_class": "L"
+      },
+      "OPCs...COPs.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b3f6b93c90dbc2348fff8e5d44bd9dd4",
+        "ext": "gz",
+        "id": "e0583283-6487-4845-8f66-a2caa1c67b74",
+        "key": "OPCs...COPs.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/OPCs...COPs.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 19334565,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:765b5363e61a29fc4134cf07f63b3c80",
+        "ext": "gz",
+        "id": "adf80c82-0e87-49c0-8b0e-e316f498303c",
+        "key": "Oligodendrocytes.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 44194334,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:337b1ff5a0107136b5239fe1be5df465",
+        "ext": "gz",
+        "id": "c21bd327-1a30-4916-b331-91f8f728ad3c",
+        "key": "Oligodendrocytes.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 21018225,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7a3dceb0faa0b83744024dd58f090dc3",
+        "ext": "gz",
+        "id": "2517e454-0f9d-4be5-8a6f-cdbc89dda452",
+        "key": "Oligodendrocytes.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 25644362,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:ab5fc05a73d0aed3a706823af64429f3",
+        "ext": "gz",
+        "id": "577b6156-14a9-4682-9cfd-c19de247f164",
+        "key": "Oligodendrocytes.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24859610,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:6420491ff2dc920ba00e8701a6f97e71",
+        "ext": "gz",
+        "id": "d1a3a780-fa0d-4213-9e3e-1d5fe85ca949",
+        "key": "Oligodendrocytes.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 10372376,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:e8cd16ba5b4606d5b0b595ba7ebe4175",
+        "ext": "gz",
+        "id": "050f9252-c0a6-40a7-9d8d-fd218f971942",
+        "key": "Oligodendrocytes.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 18954718,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b59714427c7313933e2be5a98c3e55a2",
+        "ext": "gz",
+        "id": "636fbbc5-4860-4581-be20-8cda453f9184",
+        "key": "Oligodendrocytes.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 16786623,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:9c02d0b5ff10e13fd2fd1a3e4836a845",
+        "ext": "gz",
+        "id": "b2f7f848-9aa3-4995-87a1-7f70703fdbf7",
+        "key": "Oligodendrocytes.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 25460216,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b80b7f89a031fb9646ec529c165527d2",
+        "ext": "gz",
+        "id": "2c22a2c3-21b6-4a22-b353-fe4b30824c3c",
+        "key": "Oligodendrocytes.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 28024011,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:0196ca0a7621e1338423d1190957d739",
+        "ext": "gz",
+        "id": "fdc93def-829a-4de1-962a-767c07c0fa9a",
+        "key": "Oligodendrocytes.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 9868429,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:4158e86f87939fa60bb86d400a5cc61b",
+        "ext": "gz",
+        "id": "0662e888-8149-4573-80ac-2e0109843a08",
+        "key": "Oligodendrocytes.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 42231042,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:3cd70c4002c7f0472c19460143dbe1c2",
+        "ext": "gz",
+        "id": "f0204b98-e68e-4911-8a40-9071128ca243",
+        "key": "Oligodendrocytes.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 34233728,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b09b26e976f11d8ddd3cd94331882705",
+        "ext": "gz",
+        "id": "75bd4e31-6540-44a7-8767-ad0b743bf60f",
+        "key": "Oligodendrocytes.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 12968438,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:ba91cda1dc8b0eb32fcd1bea52fd2134",
+        "ext": "gz",
+        "id": "0aa22e1d-c79c-4759-be29-97dfdc88b32f",
+        "key": "Oligodendrocytes.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 7066046,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:4f22c4d6bc6afc16318fe8cdb81e4f2f",
+        "ext": "gz",
+        "id": "81895e7f-283b-43c9-9f00-0f0abc0cb79c",
+        "key": "Oligodendrocytes.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 11070560,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:4fed2edde13b9574e0df682995b2af65",
+        "ext": "gz",
+        "id": "37099764-62e6-4de5-8367-7744ab163961",
+        "key": "Oligodendrocytes.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 28309689,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:9943285681b516959c30f04063d49a51",
+        "ext": "gz",
+        "id": "1208ab73-2ec0-4022-bc64-d27575b68e0d",
+        "key": "Oligodendrocytes.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 21660211,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:d00fbff55de2fe81a14a7e10948a56c7",
+        "ext": "gz",
+        "id": "24163750-0570-4246-8379-dcf03ba2a983",
+        "key": "Oligodendrocytes.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24933872,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:261bc135175f9562fd3d3ab83ca49f48",
+        "ext": "gz",
+        "id": "9677b410-5efd-4113-a2e5-80c91d53b633",
+        "key": "Oligodendrocytes.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 30503875,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:71f36bcb4189e91d2a6fd74702577f71",
+        "ext": "gz",
+        "id": "c6b33e23-5619-45de-a30b-31079d4a4eef",
+        "key": "Oligodendrocytes.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 24796359,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:2f92ebcbce8de8f2e7ccf79288e099c4",
+        "ext": "gz",
+        "id": "a20d255a-8647-466f-b046-139f252b4858",
+        "key": "Oligodendrocytes.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 17311635,
+        "storage_class": "L"
+      },
+      "Oligodendrocytes.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:fa49899993c8ffd3c14e2db281bb5e02",
+        "ext": "gz",
+        "id": "71cb5cbf-48ee-4c54-b1e4-18b50db45ebe",
+        "key": "Oligodendrocytes.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Oligodendrocytes.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20766094,
+        "storage_class": "L"
+      },
+      "Pericytes.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:457c40bc98a13064077a3b04076c5ceb",
+        "ext": "gz",
+        "id": "b517c68e-c9aa-4b46-ba0c-190635701b16",
+        "key": "Pericytes.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 27981752,
+        "storage_class": "L"
+      },
+      "Pericytes.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:716242ea0ae7c2c5dd16321f879c52b5",
+        "ext": "gz",
+        "id": "d0f4b752-2050-4d55-8142-7313e23eccad",
+        "key": "Pericytes.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 13735229,
+        "storage_class": "L"
+      },
+      "Pericytes.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:650263aa679f4853409313a4cc3a7f6d",
+        "ext": "gz",
+        "id": "1bbccd95-ae4f-4b53-9c29-b482a6737755",
+        "key": "Pericytes.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 17470155,
+        "storage_class": "L"
+      },
+      "Pericytes.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:5c2c861282d427e03ea1c944886ca300",
+        "ext": "gz",
+        "id": "51824b35-37d8-43aa-81cf-5b734e4e1163",
+        "key": "Pericytes.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 16969040,
+        "storage_class": "L"
+      },
+      "Pericytes.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:af901ef038f6570e2886317357352448",
+        "ext": "gz",
+        "id": "88b15b42-4d95-4870-bda7-876824807f7e",
+        "key": "Pericytes.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 5872099,
+        "storage_class": "L"
+      },
+      "Pericytes.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:ef88cdc805ed9d6aece05d6c9cf0d5c6",
+        "ext": "gz",
+        "id": "dab5eecb-bedc-45d7-a8f4-19528f500df5",
+        "key": "Pericytes.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 10229603,
+        "storage_class": "L"
+      },
+      "Pericytes.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:3a1d2dfedfc63aa256baa1af67b3e08f",
+        "ext": "gz",
+        "id": "15f12b98-3a94-4ad9-a632-591bc17781ac",
+        "key": "Pericytes.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 10333236,
+        "storage_class": "L"
+      },
+      "Pericytes.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:0b16de3e48b768e2544c91d706d46737",
+        "ext": "gz",
+        "id": "2d04db90-3ec3-4c8a-8b0d-b2d8c1b077e3",
+        "key": "Pericytes.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 13446239,
+        "storage_class": "L"
+      },
+      "Pericytes.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:9aa5f4a3b20c01e278962cc735968a3f",
+        "ext": "gz",
+        "id": "e5f71f8a-a530-4312-a67a-ae2e7cdbb939",
+        "key": "Pericytes.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 18559419,
+        "storage_class": "L"
+      },
+      "Pericytes.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:07780294e9df38433cdc7c5fe46cd44e",
+        "ext": "gz",
+        "id": "45fd545e-6084-4268-9841-97d6da952c3c",
+        "key": "Pericytes.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 5733519,
+        "storage_class": "L"
+      },
+      "Pericytes.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:daa529de2c79bca1223e508fa1a94cf7",
+        "ext": "gz",
+        "id": "5c5f5e17-a7c0-4ca9-8ba5-6740ad370f6d",
+        "key": "Pericytes.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 25308260,
+        "storage_class": "L"
+      },
+      "Pericytes.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c238f034207cda566435d5a7d933877f",
+        "ext": "gz",
+        "id": "bb6ee363-33b9-44fa-8d7c-3121c4ad7044",
+        "key": "Pericytes.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22271939,
+        "storage_class": "L"
+      },
+      "Pericytes.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c6e472cd1d7892edb1ffe9e22f4acf3f",
+        "ext": "gz",
+        "id": "01f55087-d95b-4bea-8503-0a0d75b42a87",
+        "key": "Pericytes.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 8883918,
+        "storage_class": "L"
+      },
+      "Pericytes.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:a511d5d9cd723e731c1ccd862d229d3a",
+        "ext": "gz",
+        "id": "8f4c5edd-aee0-4611-b24c-9582d92dc905",
+        "key": "Pericytes.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 5411189,
+        "storage_class": "L"
+      },
+      "Pericytes.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:308cff0e535906d616f0c588b2703f2d",
+        "ext": "gz",
+        "id": "12b6134b-294f-4d43-9c37-ceece714d243",
+        "key": "Pericytes.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 7756611,
+        "storage_class": "L"
+      },
+      "Pericytes.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:203de931cfd96a329cd07ab6f35a6c0e",
+        "ext": "gz",
+        "id": "b845876f-64ea-4285-95bd-e402c221cc27",
+        "key": "Pericytes.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 18001931,
+        "storage_class": "L"
+      },
+      "Pericytes.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7ab800883cc2d291753bec6bfda77de0",
+        "ext": "gz",
+        "id": "419e0606-e5c8-407e-adda-6bd3fbb1e94b",
+        "key": "Pericytes.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 14012253,
+        "storage_class": "L"
+      },
+      "Pericytes.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:d459aceaab2ca554c12394d49fa4c3dc",
+        "ext": "gz",
+        "id": "8191daad-0798-4852-a69a-d74ae79012a6",
+        "key": "Pericytes.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 15186225,
+        "storage_class": "L"
+      },
+      "Pericytes.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:bf5cae9f31934dbd67a85724f11d8aa3",
+        "ext": "gz",
+        "id": "2c18347d-91fa-446c-8e8d-887c62e50e47",
+        "key": "Pericytes.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 22425717,
+        "storage_class": "L"
+      },
+      "Pericytes.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:707f75304a384708f729726ee1e9c74f",
+        "ext": "gz",
+        "id": "7cf7fd62-9769-4823-ac27-26cee904e232",
+        "key": "Pericytes.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 15108473,
+        "storage_class": "L"
+      },
+      "Pericytes.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:f045af73d6960da057ca88c5b498a82f",
+        "ext": "gz",
+        "id": "b167ce22-e17b-4ba2-bc3e-646a73838268",
+        "key": "Pericytes.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 12448215,
+        "storage_class": "L"
+      },
+      "Pericytes.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:53822fb4c6aba74542b2449f493b6398",
+        "ext": "gz",
+        "id": "5ee6c38b-2d76-4e54-a84b-782f75a8b3f2",
+        "key": "Pericytes.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/Pericytes.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/Pericytes.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 11378603,
+        "storage_class": "L"
+      },
+      "pb.1.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b69c7da986bd959d4b6b4726d41ee9ed",
+        "ext": "gz",
+        "id": "79977099-7dff-4740-ba46-82ab6e0d030a",
+        "key": "pb.1.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.1.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.1.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 68509635,
+        "storage_class": "L"
+      },
+      "pb.10.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:7ba4a408f0f3b7b0057e41ee0b1d6e40",
+        "ext": "gz",
+        "id": "55919ef8-36f7-49af-beb1-beee39017b32",
+        "key": "pb.10.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.10.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.10.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 31815650,
+        "storage_class": "L"
+      },
+      "pb.11.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:0a886e3c06ef903d85d74f3b562f123a",
+        "ext": "gz",
+        "id": "08972b90-ce58-4ef0-bc7e-0a99568a2a29",
+        "key": "pb.11.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.11.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.11.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 41089437,
+        "storage_class": "L"
+      },
+      "pb.12.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:30bec562513ecc5d4f660caeafa3a923",
+        "ext": "gz",
+        "id": "de425a25-3107-47d1-8bbd-32bc908ea0ba",
+        "key": "pb.12.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.12.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.12.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 40976238,
+        "storage_class": "L"
+      },
+      "pb.13.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:fe0502bfbd2fc67f2348a9b4eb4bad30",
+        "ext": "gz",
+        "id": "c6388c92-091f-4541-9f68-bf5f1a9a1ca1",
+        "key": "pb.13.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.13.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.13.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 15434798,
+        "storage_class": "L"
+      },
+      "pb.14.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:e872e3239aae24b4fec6fb3ad20b96f0",
+        "ext": "gz",
+        "id": "c87d2909-d3a1-48eb-83e6-80218a469641",
+        "key": "pb.14.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.14.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.14.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 27099214,
+        "storage_class": "L"
+      },
+      "pb.15.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:e7e1fa0237b19761c5bc878932316c60",
+        "ext": "gz",
+        "id": "38e8bc3b-cdb4-4be0-bd1b-4623e76f950b",
+        "key": "pb.15.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.15.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.15.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 25650494,
+        "storage_class": "L"
+      },
+      "pb.16.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c2df8e959e37aae804d5591ce6baa0fd",
+        "ext": "gz",
+        "id": "37d1c33a-9cb6-4976-a87d-0831b4432727",
+        "key": "pb.16.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.16.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.16.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 36938112,
+        "storage_class": "L"
+      },
+      "pb.17.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:b6b7b3b968c6f7aefc17d2183f94039d",
+        "ext": "gz",
+        "id": "310816df-96db-458a-9089-185f60b74c65",
+        "key": "pb.17.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.17.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.17.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 41900313,
+        "storage_class": "L"
+      },
+      "pb.18.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:568f1e23c51e5fceaa2a91671bdcce9c",
+        "ext": "gz",
+        "id": "d7ba9ce5-d868-4e91-80e4-c32b19297496",
+        "key": "pb.18.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.18.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.18.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 13812631,
+        "storage_class": "L"
+      },
+      "pb.19.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:c461a7962b956f566b904c2b47695c93",
+        "ext": "gz",
+        "id": "78af6a13-48cb-45c4-92d9-bb17c0fae229",
+        "key": "pb.19.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.19.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.19.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 61089561,
+        "storage_class": "L"
+      },
+      "pb.2.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:d18a5391b63d68b5a25c7279138af603",
+        "ext": "gz",
+        "id": "7323cc3b-6f48-4431-a1c1-f83e5967db51",
+        "key": "pb.2.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.2.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.2.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 53289089,
+        "storage_class": "L"
+      },
+      "pb.20.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:6620d923f4baf0748bfd8ac8273bb731",
+        "ext": "gz",
+        "id": "11354029-f874-4104-8180-cab0ee324f79",
+        "key": "pb.20.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.20.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.20.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 20372747,
+        "storage_class": "L"
+      },
+      "pb.21.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:8247fee8ff976f9aad259dd1b0f615f9",
+        "ext": "gz",
+        "id": "35fac1f1-9a46-4567-9d48-6d4a99c7866d",
+        "key": "pb.21.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.21.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.21.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 9932606,
+        "storage_class": "L"
+      },
+      "pb.22.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:6e6293664dc218d672708ae97d7e8ed3",
+        "ext": "gz",
+        "id": "91e864c0-3c3b-42a6-b828-d9b8bd7a190c",
+        "key": "pb.22.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.22.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.22.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 17947359,
+        "storage_class": "L"
+      },
+      "pb.3.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:950a475a3eeb4ab31cddec4136040ec6",
+        "ext": "gz",
+        "id": "4ce62884-6763-47d5-bca3-4b36aa3c1d4d",
+        "key": "pb.3.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.3.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.3.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 42998702,
+        "storage_class": "L"
+      },
+      "pb.4.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:e4aae7d1b9283a97df80a25e5c59eefa",
+        "ext": "gz",
+        "id": "4902a33f-1641-4293-ae55-9217db9b25a1",
+        "key": "pb.4.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.4.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.4.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 35309629,
+        "storage_class": "L"
+      },
+      "pb.5.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:43b41d7483a62102f1f60be161b76948",
+        "ext": "gz",
+        "id": "6f105ba8-b007-4761-b532-95607c685a37",
+        "key": "pb.5.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.5.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.5.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 37830056,
+        "storage_class": "L"
+      },
+      "pb.6.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:4ecf997a3b0ae5c96a6f65a493e8526c",
+        "ext": "gz",
+        "id": "6e7a762b-9e92-4588-9365-8575ea826b5b",
+        "key": "pb.6.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.6.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.6.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 49093598,
+        "storage_class": "L"
+      },
+      "pb.7.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:69d6ed33e70b4182f60f09e2c137ce69",
+        "ext": "gz",
+        "id": "38336f13-014b-4101-99ce-669586342238",
+        "key": "pb.7.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.7.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.7.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 37912011,
+        "storage_class": "L"
+      },
+      "pb.8.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:54849959f7349988cd924e2a1c56f130",
+        "ext": "gz",
+        "id": "072fbb95-b0aa-448d-9a59-4962e2475f63",
+        "key": "pb.8.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.8.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.8.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 31227321,
+        "storage_class": "L"
+      },
+      "pb.9.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:2a70d428af8da59be861ab54ee071b16",
+        "ext": "gz",
+        "id": "1ef096a0-6781-401f-814a-b50b3423ca8d",
+        "key": "pb.9.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/pb.9.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/pb.9.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 30802971,
+        "storage_class": "L"
+      },
+      "snp_pos.txt": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:846245eab16ab43ff1a8c646344bba1a",
+        "ext": "txt",
+        "id": "355848b0-7004-4f1d-a4ec-1c65ce9e2921",
+        "key": "snp_pos.txt",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/snp_pos.txt/content",
+          "self": "https://zenodo.org/api/records/7276971/files/snp_pos.txt"
+        },
+        "metadata": null,
+        "mimetype": "text/plain",
+        "size": 204520451,
+        "storage_class": "L"
+      },
+      "snp_pos.txt.gz": {
+        "access": {
+          "hidden": false
+        },
+        "checksum": "md5:309df692b9a7e23553445395ae1c7eab",
+        "ext": "gz",
+        "id": "1efc05c4-4e4e-44cd-893b-95cf37cc697d",
+        "key": "snp_pos.txt.gz",
+        "links": {
+          "content": "https://zenodo.org/api/records/7276971/files/snp_pos.txt.gz/content",
+          "self": "https://zenodo.org/api/records/7276971/files/snp_pos.txt.gz"
+        },
+        "metadata": null,
+        "mimetype": "application/gzip",
+        "size": 75979576,
+        "storage_class": "L"
+      }
+    },
+    "order": [],
+    "total_bytes": 5083858349
+  },
+  "id": "7276971",
+  "is_draft": false,
+  "is_published": true,
+  "links": {
+    "access": "https://zenodo.org/api/records/7276971/access",
+    "access_grants": "https://zenodo.org/api/records/7276971/access/grants",
+    "access_links": "https://zenodo.org/api/records/7276971/access/links",
+    "access_request": "https://zenodo.org/api/records/7276971/access/request",
+    "access_users": "https://zenodo.org/api/records/7276971/access/users",
+    "archive": "https://zenodo.org/api/records/7276971/files-archive",
+    "archive_media": "https://zenodo.org/api/records/7276971/media-files-archive",
+    "communities": "https://zenodo.org/api/records/7276971/communities",
+    "communities-suggestions": "https://zenodo.org/api/records/7276971/communities-suggestions",
+    "doi": "https://doi.org/10.5281/zenodo.7276971",
+    "draft": "https://zenodo.org/api/records/7276971/draft",
+    "files": "https://zenodo.org/api/records/7276971/files",
+    "latest": "https://zenodo.org/api/records/7276971/versions/latest",
+    "latest_html": "https://zenodo.org/records/7276971/latest",
+    "media_files": "https://zenodo.org/api/records/7276971/media-files",
+    "parent": "https://zenodo.org/api/records/5543734",
+    "parent_doi": "https://doi.org/10.5281/zenodo.5543734",
+    "parent_doi_html": "https://zenodo.org/doi/10.5281/zenodo.5543734",
+    "parent_html": "https://zenodo.org/records/5543734",
+    "preview_html": "https://zenodo.org/records/7276971?preview=1",
+    "requests": "https://zenodo.org/api/records/7276971/requests",
+    "reserve_doi": "https://zenodo.org/api/records/7276971/draft/pids/doi",
+    "self": "https://zenodo.org/api/records/7276971",
+    "self_doi": "https://doi.org/10.5281/zenodo.7276971",
+    "self_doi_html": "https://zenodo.org/doi/10.5281/zenodo.7276971",
+    "self_html": "https://zenodo.org/records/7276971",
+    "self_iiif_manifest": "https://zenodo.org/api/iiif/record:7276971/manifest",
+    "self_iiif_sequence": "https://zenodo.org/api/iiif/record:7276971/sequence/default",
+    "versions": "https://zenodo.org/api/records/7276971/versions"
+  },
+  "media_files": {
+    "count": 0,
+    "enabled": false,
+    "entries": {},
+    "order": [],
+    "total_bytes": 0
+  },
+  "metadata": {
+    "creators": [
+      {
+        "affiliations": [
+          {
+            "name": "Roche"
+          }
+        ],
+        "person_or_org": {
+          "family_name": "Bryois",
+          "given_name": "Julien",
+          "identifiers": [
+            {
+              "identifier": "0000-0002-4747-2166",
+              "scheme": "orcid"
+            }
+          ],
+          "name": "Bryois, Julien",
+          "type": "personal"
+        }
+      }
+    ],
+    "description": "<p>This dataset contains eQTL summary statistics for all SNPs-gene pairs&nbsp;in 8 major brain cell types (within 1MB window surrounding the TSS of each expressed gene). For each cell type, there is one file per chromosome.</p>\n\n<p>Column&nbsp;description:</p>\n\n<p>1. Gene_id</p>\n\n<p>2. SNP_id</p>\n\n<p>3. Distance to TSS</p>\n\n<p>4. Nominal p-value</p>\n\n<p>5. Beta</p>\n\n<p>In addition, a file contains the SNP positions (snp_pos.txt) and tested allele.</p>\n\n<p>Update February 2023: The summary statistics from our &#39;tissue-like&#39; analysis were added (pb[1-22].gz). These file contain eQTL summary statistics after aggregating all reads from all nuclei for each individual (instead of per cell type).</p>",
+    "publication_date": "2021-10-01",
+    "publisher": "Zenodo",
+    "resource_type": {
+      "id": "dataset",
+      "title": {
+        "de": "Datensatz",
+        "en": "Dataset"
+      }
+    },
+    "rights": [
+      {
+        "description": {
+          "en": "The Creative Commons Attribution license allows re-distribution and re-use of a licensed work on the condition that the creator is appropriately credited."
+        },
+        "icon": "cc-by-icon",
+        "id": "cc-by-4.0",
+        "props": {
+          "scheme": "spdx",
+          "url": "https://creativecommons.org/licenses/by/4.0/legalcode"
+        },
+        "title": {
+          "en": "Creative Commons Attribution 4.0 International"
+        }
+      }
+    ],
+    "subjects": [
+      {
+        "subject": "eQTL"
+      },
+      {
+        "subject": "brain"
+      },
+      {
+        "subject": "cell type"
+      }
+    ],
+    "title": "Summary statistics of cell-type specific cis-eQTLs in eight brain cell-types"
+  },
+  "parent": {
+    "access": {
+      "owned_by": {
+        "user": "252583"
+      }
+    },
+    "communities": {},
+    "id": "5543734",
+    "pids": {
+      "doi": {
+        "client": "datacite",
+        "identifier": "10.5281/zenodo.5543734",
+        "provider": "datacite"
+      }
+    }
+  },
+  "pids": {
+    "doi": {
+      "client": "datacite",
+      "identifier": "10.5281/zenodo.7276971",
+      "provider": "datacite"
+    },
+    "oai": {
+      "identifier": "oai:zenodo.org:7276971",
+      "provider": "oai"
+    }
+  },
+  "revision_id": 4,
+  "stats": {
+    "all_versions": {
+      "data_volume": 8385326809669.0,
+      "downloads": 328355,
+      "unique_downloads": 202919,
+      "unique_views": 8263,
+      "views": 9568
+    },
+    "this_version": {
+      "data_volume": 7465547494894.0,
+      "downloads": 289120,
+      "unique_downloads": 188301,
+      "unique_views": 5787,
+      "views": 6747
+    }
+  },
+  "status": "published",
+  "swh": {},
+  "updated": "2023-03-21T07:26:06.815448+00:00",
+  "versions": {
+    "index": 3,
+    "is_latest": true
+  }
+}
