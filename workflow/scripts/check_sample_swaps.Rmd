@@ -5,6 +5,10 @@ date: "`r Sys.Date()`"
 output: 
   html_document:
     theme: cerulean
+params:
+  in_dir: null
+  report_dir: null
+  bmark_dir: null
 ---
 
 ```{r setup, include=FALSE}
@@ -13,11 +17,14 @@ library(knitr)
 library(ggplot2)
 library(DT)
 library(viridis)
+library(cowplot)
 ```
 
 ***
 
 ## Sample swap check process {.tabset}
+
+***
 
 1. For each sublib, copy BAM file and cell whitelist from neurocluster, subset BAM by chr
 2. `cellsnp-lite` is run for each cell in the chr-specific BAM to generate per-cell allele 
@@ -35,16 +42,16 @@ cell / sample predictions match our sample assignments
 
 ```{r, helper_function, message=FALSE, echo=FALSE}
 process_vireo <- function(sublibrary, plate, chr,
-                          base_dir = "~/Desktop/eQTL_study_2025/") {
+                          base_dir = in_dir) {
   # Paths
   vireo_path <- file.path(
     base_dir,
-    "results/00CHECK_SMPL_CONTAMINATION/vireo",
+    "vireo",
     paste0(sublibrary, "_plate", plate, "_chr", chr, "_vireo/donor_ids.tsv")
   )
   whitelist_path <- file.path(
     base_dir,
-    "workflow/reports/00CHECK_SMPL_CONTAMINATION/whitelists",
+    "refs",
     paste0(sublibrary, "_plate", plate, "_cell_metadata.csv")
   )
   
@@ -121,7 +128,7 @@ inputs <- expand_grid(
 # Process all datasets
 all_results <- pmap(inputs, process_vireo)
 
-rm_smpl_tbl <- read_tsv("~/Desktop/eQTL_study_2025/workflow/reports/00SAMPLE-SURVEY/removed_samples.tsv")
+rm_smpl_tbl <- read_tsv(report_dir, "00SAMPLE-SURVEY/removed_samples.tsv")
 
 # Combine outputs
 all_summaries <- bind_rows(map(all_results, "summary_tbl"))
@@ -132,6 +139,7 @@ all_matched   <- bind_rows(map(all_results, "matched_tbl"))
 
 ### Summarise cell assignments
 
+***
 
 ```{r sum_tbl, echo=FALSE}
 datatable(
@@ -144,6 +152,8 @@ datatable(
 
 ### Predictions
 
+***
+
 ```{r, predictions, echo=FALSE, eval =F}
 datatable(
   all_matched,
@@ -151,6 +161,8 @@ datatable(
   options = list(pageLength = 25, autoWidth = TRUE)
 )
 ```
+
+***
 
 ### Plot (by donor)
 
@@ -203,7 +215,8 @@ global_summary <- all_matched %>%
   summarise(cell_count = n(),
             match_rate = mean(match, na.rm = TRUE),
             .groups = "drop") %>%
-  arrange(cell_count)
+  arrange(cell_count) |>
+  write_tsv(paste0(report_dir, "00CHECK_SMPL_CONTAMINATION/sample_swap_summary.tsv"))
 
 samples <- unique(unlist(strsplit(paste(rm_smpl_tbl$samples, collapse = ", "), ", ")))
 num_donors <- nrow(global_summary)
@@ -239,4 +252,190 @@ ggplot(global_summary,
     panel.grid.minor = element_blank()
   )
 
+
 ```
+
+***
+
+### Plot (only low counts)
+
+***
+
+```{r plot_log10, echo=FALSE, fig.dim=c(10,20), warning=FALSE}
+global_summary <- all_matched %>%
+  group_by(donor_id_wl) %>%
+  summarise(cell_count = n(),
+            match_rate = mean(match, na.rm = TRUE),
+            .groups = "drop") %>%
+  arrange(cell_count) |>
+  filter(cell_count <= 20)
+
+samples <- unique(unlist(strsplit(paste(rm_smpl_tbl$samples, collapse = ", "), ", ")))
+num_donors <- nrow(global_summary)
+y_axis_colors <- ifelse(global_summary$donor_id_wl %in% samples, "red", "black")
+
+ggplot(global_summary,
+       aes(x = reorder(donor_id_wl, cell_count),
+           y = cell_count,
+           fill = match_rate)) +
+  geom_col(width = 0.8, color = "black", linewidth = 0.2) +
+  geom_text(aes(label = cell_count), 
+            hjust = -0.1, size = 4) +  # Show counts to the right of bars
+  annotate("text", 
+           x = length(global_summary$donor_id_wl)/2, 
+           y = max(global_summary$cell_count) * 1.05, 
+           label = paste0("Donors: ", num_donors), 
+           hjust = 2, vjust = 0, size = 5, fontface = "bold") +
+  scale_fill_viridis(name = "Match rate", option = "C", direction = -1) +
+  labs(
+    title = "Combined Cell Counts per Expected Donor ID (all plates/chr)",
+    x = "Donor (expected annotation in cell whitelist)",
+    y = "Cell count"
+  ) +
+  coord_flip() +  # Horizontal bars
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 12),
+    axis.text.y = element_text(color = y_axis_colors),  # Color y-axis text
+    axis.title = element_text(size = 16),
+    legend.text = element_text(size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+# List all benchmark files for the pipeline
+files <- list.files(bmark_dir, pattern = "check_sample_contamination.*.benchmark\\.txt", full.names = TRUE)
+
+# Read and combine benchmark files
+benchmarks <- map_dfr(files, function(f) {
+  df <- read.table(f, header = TRUE, sep = "\t")
+  # Extract rule and optional chromosome from filename
+  parts <- strsplit(basename(f), "\\.")[[1]]
+  rule_name <- parts[1]  # e.g., "check_sample_contamination_cellsnp_lite"
+  
+  # Initialize base_rule and chr_part
+  base_rule <- rule_name
+  chr_part <- "single"
+  
+  # Check for chromosome in additional parts (e.g., "chr21")
+  for (i in 2:(length(parts) - 2)) {
+    p <- parts[i]
+    if (grepl("^chr[0-9XY]+$", p)) {
+      chr_part <- gsub("chr", "", p)
+      break  # Assume only one chr part
+    }
+  }
+  
+  # Also check if rule_name ends with "_chr[0-9XY]+"
+  chr_match <- str_match(rule_name, "^(.+)_chr([0-9XY]+)$")
+  if (!is.na(chr_match[1, 1])) {
+    base_rule <- chr_match[1, 2]
+    chr_part <- chr_match[1, 3]
+  }
+  
+  tibble(
+    file = f,
+    rule = base_rule,
+    chromosome = chr_part,     # Chromosome (e.g., "21", "X") or "single" for non-chromosome-specific
+    runtime_sec = df$s,        # Runtime in seconds
+    runtime_hms = df$h.m.s.,   # hh:mm:ss string
+    max_rss = df$max_rss       # Peak RAM in MB
+  )
+})
+
+# Summarize across rules, collapsing variations (e.g., chromosome-specific, plates, sublibs)
+summary <- benchmarks %>%
+  group_by(rule) %>%
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) %>%
+  # Replace NA in sd columns with 0 for single runs
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) %>%
+  # Round numeric columns
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  # Sort by rule for clarity
+  arrange(rule) |>
+  mutate(rule = str_remove(rule, 'check_sample_contamination_'))
+
+# Create a DT table
+datatable(
+  summary,
+  caption = 'Table 2. Rule Benchmarking. Sd is 0 when only one instance of a job is run.',
+  options = list(
+    pageLength = 25,
+    autoWidth = TRUE,
+    columnDefs = list(list(className = 'dt-center', targets = "_all"))
+  )
+)
+```
+
+***
+
+#### Plot
+
+***
+
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)", 
+       title = "Mean runtime per rule (± SD)") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)", 
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+
+# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
+```
+
+***
