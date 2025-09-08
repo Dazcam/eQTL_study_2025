@@ -1,0 +1,242 @@
+---
+title: "Sample swap check"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(ggplot2)
+library(DT)
+library(viridis)
+```
+
+***
+
+## Sample swap check process {.tabset}
+
+1. For each sublib, copy BAM file and cell whitelist from neurocluster, subset BAM by chr
+2. `cellsnp-lite` is run for each cell in the chr-specific BAM to generate per-cell allele 
+counts (pile-ups) at informative SNP positions. 
+    - SNP ref: TOPMed freeze 5, hg38, filtered for informative SNPs (MAF ≥ 0.1, depth ≥ 20) - 
+    to save running time / mem
+    - Parse cell whitelist is used to track cell / sample ids
+    - Need to vary the SNP filtering based on chromosome, running times etc. chr22 has to few SNPs 
+3. `vireo` is run to infer donor (per cell) by probabilistically matching each cell’s SNP profile 
+(from GeX data) to the reference donor genotypes.
+4. Finally, cross referenced vireo output with plate specific sample list, to see if vireo 
+cell / sample predictions match our sample assignments
+
+***
+
+```{r, helper_function, message=FALSE, echo=FALSE}
+process_vireo <- function(sublibrary, plate, chr,
+                          base_dir = "~/Desktop/eQTL_study_2025/") {
+  # Paths
+  vireo_path <- file.path(
+    base_dir,
+    "results/00CHECK_SMPL_CONTAMINATION/vireo",
+    paste0(sublibrary, "_plate", plate, "_chr", chr, "_vireo/donor_ids.tsv")
+  )
+  whitelist_path <- file.path(
+    base_dir,
+    "workflow/reports/00CHECK_SMPL_CONTAMINATION/whitelists",
+    paste0(sublibrary, "_plate", plate, "_cell_metadata.csv")
+  )
+  
+  # Load files
+  vireo_tbl <- read_tsv(vireo_path, show_col_types = FALSE) 
+  whitelist_tbl <- read_delim(whitelist_path,
+                              col_names = c("donor_id", "raw_sample_number"),
+                              show_col_types = FALSE) %>%
+      filter(!str_detect(raw_sample_number, "Thal|Hipp|WGE")) |>
+      filter(donor_id != 'bc_wells') |>
+      dplyr::select(cell = donor_id, donor_id_wl = raw_sample_number) |>
+      mutate(donor_id_wl = str_remove(donor_id_wl, '^sample_'))
+
+  # Summary
+  summary_tbl <- vireo_tbl %>%
+    summarise(
+      Assigned = sum(donor_id != "unassigned" & donor_id != "doublet"),
+      Unassigned = sum(donor_id == "unassigned"),
+      Doublet = sum(donor_id == "doublet"),
+      Total = n()
+    ) %>%
+    mutate(sublibrary = sublibrary, plate = plate, chr = chr,
+           Assigned_Pct = (Assigned / Total) * 100,
+           Unassigned_Pct = (Unassigned / Total) * 100,
+           Doublet_Pct = (Doublet / Total) * 100)
+  
+  # Assigned cells
+  assigned_cells <- vireo_tbl %>%
+    filter(donor_id != "unassigned" & donor_id != "doublet") %>%
+    mutate(donor_id = if_else( # Deal with double IDs
+      str_detect(donor_id, "_"),
+      if_else(
+        word(donor_id, 1, sep = "_") == word(donor_id, -1, sep = "_"),
+        word(donor_id, 1, sep = "_"),
+        donor_id
+      ),
+      donor_id
+    )) |>
+    dplyr::rename(donor_id_geno = donor_id)
+  
+  # Join with expected
+  matched_tbl <- assigned_cells |>
+    left_join(whitelist_tbl, by = "cell") |>
+    mutate(match = donor_id_geno == donor_id_wl) |>
+    dplyr::select(cell, donor_id_geno, donor_id_wl, match, prob_max, n_vars) |>
+    mutate(sublibrary = sublibrary, plate = plate, chr = chr)
+    
+  # # Quantify NAs
+  # na_tbl <- matched_tbl %>% filter(!complete.cases(.)) |> print(n=3)
+  # common_cells <- na_tbl$cell %in% whitelist_tbl$cell
+  # 
+  # # Summarize results
+  # if (any(common_cells)) {
+  #   cat("Cells found in both na_tbl and matched_tbl:\n")
+  #   print(na_tbl$cell[common_cells])
+  # } else {
+  #   cat("No cells from na_tbl are found in matched_tbl.\n")
+  # }
+  
+  matched_tbl <- matched_tbl %>% filter(complete.cases(.))
+    
+  list(summary_tbl = summary_tbl, matched_tbl = matched_tbl)
+}
+```
+
+```{r load data, message=FALSE, echo=FALSE, warning=FALSE}
+# Define combinations of sublibrary, plate, and chr
+inputs <- expand_grid(
+  sublibrary = c("3", "6", "10", "12", "15"),
+  plate = as.character(seq(1,3)),
+  chr = as.character(seq(1,22))
+)
+
+# Process all datasets
+all_results <- pmap(inputs, process_vireo)
+
+rm_smpl_tbl <- read_tsv("~/Desktop/eQTL_study_2025/workflow/reports/00SAMPLE-SURVEY/removed_samples.tsv")
+
+# Combine outputs
+all_summaries <- bind_rows(map(all_results, "summary_tbl"))
+all_matched   <- bind_rows(map(all_results, "matched_tbl"))
+```
+
+***
+
+### Summarise cell assignments
+
+
+```{r sum_tbl, echo=FALSE}
+datatable(
+  all_summaries,
+  caption = 'Table 1. Cell Assignment Summary per sublibrary, plate, and chromosome'
+)
+```
+
+***
+
+### Predictions
+
+```{r, predictions, echo=FALSE, eval =F}
+datatable(
+  all_matched,
+  caption = 'Table 2. Matched cells across all datasets',
+  options = list(pageLength = 25, autoWidth = TRUE)
+)
+```
+
+### Plot (by donor)
+
+***
+
+```{r, counts, echo=FALSE, fig.dim=c(20,30)}
+matched_summary <- all_matched %>%
+  group_by(sublibrary, plate, chr, donor_id_wl) %>%
+  summarise(cell_count = n(),
+            match_rate = mean(match, na.rm = TRUE),
+            .groups = "drop") %>%
+  arrange(desc(cell_count))
+
+ggplot(matched_summary,
+       aes(x = reorder(donor_id_wl, cell_count),  # reorder for horizontal bars
+           y = cell_count,
+           fill = match_rate)) +
+  geom_col(width = 0.8, color = "black", linewidth = 0.2) +
+  geom_text(aes(label = cell_count), 
+            hjust = -0.1, size = 3.5) +  # counts on bars
+  scale_fill_viridis(name = "Match rate", option = "C", direction = -1) +
+  labs(
+    title = "Cell counts per expected donor ID",
+    x = "Donor (annotation in sample list)",
+    y = "Cell count"
+  ) +
+  coord_flip() +  # horizontal bars
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 16),
+    legend.text = element_text(size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  ) +
+  facet_grid(sublibrary + plate ~ chr, scales = "free_y", space = "free_y")  # free_y for horizontal bars
+
+```
+
+***
+
+### Plot
+
+***
+
+```{r plot, echo=FALSE, fig.dim=c(10,20), warning=FALSE}
+global_summary <- all_matched %>%
+  group_by(donor_id_wl) %>%
+  summarise(cell_count = n(),
+            match_rate = mean(match, na.rm = TRUE),
+            .groups = "drop") %>%
+  arrange(cell_count)
+
+samples <- unique(unlist(strsplit(paste(rm_smpl_tbl$samples, collapse = ", "), ", ")))
+num_donors <- nrow(global_summary)
+y_axis_colors <- ifelse(global_summary$donor_id_wl %in% samples, "red", "black")
+
+ggplot(global_summary,
+       aes(x = reorder(donor_id_wl, cell_count),
+           y = cell_count,
+           fill = match_rate)) +
+  geom_col(width = 0.8, color = "black", linewidth = 0.2) +
+  geom_text(aes(label = cell_count), 
+            hjust = -0.1, size = 4) +  # Show counts to the right of bars
+  annotate("text", 
+           x = length(global_summary$donor_id_wl)/2, 
+           y = max(global_summary$cell_count) * 1.05, 
+           label = paste0("Donors: ", num_donors), 
+           hjust = 2, vjust = 0, size = 5, fontface = "bold") +
+  scale_fill_viridis(name = "Match rate", option = "C", direction = -1) +
+  labs(
+    title = "Combined Cell Counts per Expected Donor ID (all plates/chr)",
+    x = "Donor (expected annotation in cell whitelist)",
+    y = "Cell count"
+  ) +
+  coord_flip() +  # Horizontal bars
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 12),
+    axis.text.y = element_text(color = y_axis_colors),  # Color y-axis text
+    axis.title = element_text(size = 16),
+    legend.text = element_text(size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+```
