@@ -3,10 +3,11 @@ configfile: '../config/config.yaml'
 #include: 'rules/00check_fastqs.smk'
 #include: 'rules/00check_sample_contamination.smk'
 #include: 'rules/01parse.smk' 
-include: 'rules/02scanpy.smk'
+#include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute.smk'
 #include: 'rules/04genotypes_post_impute.smk'
 #include: 'rules/04pegasus.smk'
+include: 'rules/06qtl_replication.smk'
 #include: 'rules/05tensorQTL.smk'
 #include: 'rules/04genotypes.smk'
 #include: 'rules/05susie.smk'
@@ -76,7 +77,7 @@ rule all:
 #        "../resources/refs/ref.done",
 #        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
 #        "../results/01PARSE/combine_plate3/run.done"
-        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
+#        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
 #        "../results/02SCANPY/scanpy_clustering.html",
 #        "../results/02SCANPY/scanpy_annotation.html",
 #        "../results/02SCANPY/scanpy_extra.html",
@@ -93,6 +94,10 @@ rule all:
 #            exp_pc=config["tensorQTL"]["exp_pcs"]
 #        )
 #        expand("../results/05TENSORQTL/{cell_type}_covariates.bed", cell_type	= CELL_TYPES)
+        "../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz",
+        "../resources/public_datasets/bryois_2022/download_complete.touch" 
+
+
 #        expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
 #        qtl_files,
 #        qtl_plots,

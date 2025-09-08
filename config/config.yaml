@@ -19,6 +19,17 @@ cell_types:
   - "OPC" 
   - "MG"
 
+cell_types_bryois:
+  - "Astrocytes"
+  - "Excitatory neurons"
+  - "Inhibitory neurons" 
+  - "Oligodendrocytes"
+  - "OPCs"
+  - "Endothelial"
+  - "Pericytes"
+  - "Microglia"  
+  - "pb"
+
 eqtl_fdr: 0.05
 
 susie_window: 1000000
@@ -332,6 +343,22 @@ log_files:
   tensorqtl: ../results/00LOG/04TENSORQTL/{cell_type}_nom.log
   tensorqtl_perm: ../results/00LOG/04TENSORQTL/{cell_type}_perm.log
   tensorqtl_tss: ../results/00LOG/04TENSORQTL/tss.log   
+
+
+# --------  QTL REPLICATION  ----------
+
+qtl_rep:
+  dwnld_obrien:
+    output: ../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz
+    out_dir: ../resources/public_datasets/obrien_2018/
+    web_link: https://springernature.figshare.com/ndownloader/articles/6881825/versions/1
+    zip_out: ../resources/public_datasets/obrien_2018/output.zip
+    log: ../results/00LOG/06QTL-REPLICATION/dwnld_obrien.log
+  dwnld_bryois:
+    output: ../resources/public_datasets/bryois_2022/download_complete.touch
+    json: ../resources/public_datasets/bryois_2022/bryois_data_2022.json
+    out_dir: ../resources/public_datasets/bryois_2022/
+    log: ../results/00LOG/06QTL-REPLICATION/dwnld_bryois.log
 
 # ------------  SLDSR  ----------------
 

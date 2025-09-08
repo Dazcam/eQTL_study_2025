@@ -2,7 +2,7 @@ import json
 configfile: '../config/config.yaml'
 
 SUBLIBS = json.load(open(config['BAM_FILES']))
-CHROM = [1,2,3,4,5,6,22]  
+CHROM = list(range(1,23))  
 COMMON_VCF = "../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/imputation-sites/ALL.TOPMed_freeze5_hg38_dbSNP.vcf.gz"
 REF_VCF = "../results/03GENOTYPES-PRE/genotypes_for_TOPMED/eqtl_genotypes_hg38.gh.topmed.chr{chr}.vcf.gz"
 
@@ -15,23 +15,28 @@ BAM_DIR = "../results/00CHECK_SMPL_CONTAMINATION/bam_files"
 
 rule all:
     input:
-        expand("../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_chr{chr}_vireo/donor_ids.tsv", sublib=SUBLIBS.keys(), chr = CHROM)
+        expand(os.path.join(BAM_DIR, "{sublib}.bam"), sublib=SUBLIBS.keys())
+#        expand("../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_chr{chr}_vireo/donor_ids.tsv", sublib=SUBLIBS.keys(), chr = CHROM)
 
 # Copy BAMs from /nfs to local scratch
 rule copy_bam:
     input:  lambda wc: SUBLIBS[wc.sublib]
-    output: os.path.join(BAM_DIR, "{sublib}.bam")
+    output: temp(os.path.join(BAM_DIR, "{sublib}.bam"))
     benchmark: "reports/benchmarks/check_sample_contamination_copy_bam.{sublib}.benchmark.txt"
-    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/copy_{sublib}.log"
+    log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/copy_bam_{sublib}.log"
     shell:  "cp {input} {output} > {log} 2>&1"
 
 rule make_whitelist:
     input:  lambda wildcards: f"/nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{wildcards.sublib.split('_')[1]}/{wildcards.sublib}/all-sample/DGE_filtered/cell_metadata.csv"
     output: "../results/00CHECK_SMPL_CONTAMINATION/refs/{sublib}_whitelist.txt"
+    params: out_dir = "../results/00CHECK_SMPL_CONTAMINATION/refs/"
     shell:
+        """
+        cp {input} {params.out_dir}{wildcards.sublib}_cell_metadata.csv
+        
         # Extract first column (bc_wells), skip header
-        "cut -d',' -f1 {input} | tail -n +2 > {output}"
-
+        cut -d',' -f1 {input} | tail -n +2 > {output}
+        """
 
 rule subset_vcf:
     input: COMMON_VCF
@@ -49,7 +54,7 @@ rule subset_vcf:
 # Sort full BAMs with sambamba
 rule sort_bam:
     input:  os.path.join(BAM_DIR, "{sublib}.bam")
-    output: os.path.join(BAM_DIR, "{sublib}.sorted.bam")
+    output: temp(os.path.join(BAM_DIR, "{sublib}.sorted.bam"))
     conda: "../envs/cellsnp_lite.yml"
     resources: threads=16, mem_mb=80000, time="2-0:00:00"
     priority: 10
@@ -72,11 +77,11 @@ rule index_bam:
 rule extract_and_recode_chr:
     input:  bam=os.path.join(BAM_DIR, "{sublib}.sorted.bam"),
             bai=os.path.join(BAM_DIR, "{sublib}.sorted.bam.bai")
-    output: bam=os.path.join(BAM_DIR, "{sublib}.chr{chr}.filtered.bam"),
+    output: bam=temp(os.path.join(BAM_DIR, "{sublib}.chr{chr}.filtered.bam")),
             bai=os.path.join(BAM_DIR, "{sublib}.chr{chr}.filtered.bam.bai")
     conda:  "../envs/cellsnp_lite.yml"
     resources: threads=8, mem_mb=32000, time="2-0:00:00"
-    benchmark: "reports/benchmarks/extract_recode_chr{chr}.{sublib}.benchmark.txt"
+    benchmark: "reports/benchmarks/check_sample_contamination_extract_recode_chr{chr}.{sublib}.benchmark.txt"
     log:    "../results/00LOG/00CHECK_SMPL_CONTAMINATION/extract_recode_chr{chr}_{sublib}.log"
     shell:
         """
