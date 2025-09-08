@@ -9,3 +9,4 @@ workflow/reports/markdown/
 workflow/scripts/.ipynb_checkpoints/
 workflow/scripts/__pycache__/
 config/passwords/*
+workflow/reports/00CHECK_SMPL_CONTAMINATION/vireo/
