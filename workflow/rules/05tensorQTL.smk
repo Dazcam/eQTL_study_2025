@@ -8,11 +8,13 @@ rule prep_tensorQTL_input:
             exp_out = config["tensorQTL"]["prep_tensorQTL_input"]["exp_out"]
     params: pseudoblk_dir = config["tensorQTL"]["prep_tensorQTL_input"]["pseudoblk_dir"],
             report_dir = config["tensorQTL"]["prep_tensorQTL_input"]["report_dir"],
-            out_dir = config["tensorQTL"]["prep_tensorQTL_input"]["out_dir"]
+            out_dir = config["tensorQTL"]["prep_tensorQTL_input"]["out_dir"],
+            batch_var = config["tensorQTL"]["prep_tensorQTL_input"]["batch_var"],
+            norm_method = "{norm_method}"
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time="5:00:00"
-    message: "Prep pseudoblk GeX and covariate matricies for tensorQTL"
-    benchmark: "reports/benchmarks/05tensorQTL.prep_tensorQTL_input_{cell_type}.txt"
+    message: "Prep pseudoblk GeX and covariate matricies for tensorQTL with norm: {wildcards.norm_method}"
+    benchmark: "reports/benchmarks/05tensorQTL.prep_tensorQTL_input_{cell_type}_{norm_method}.txt"
     log:    config["tensorQTL"]["prep_tensorQTL_input"]["log"]
     script: "../scripts/prep_tensorQTL_input_files.R"
 
@@ -20,8 +22,8 @@ rule zip_pblk_cnts:
     input:   rules.prep_tensorQTL_input.output.exp_out
     output:  config["tensorQTL"]["zip_pblk_cnts"]["output"]
     singularity: config["containers"]["fastqtl"] # Use bgzip and tabix in container
-    message: "bgzip and index pseudoblk counts"
-    benchmark: "reports/benchmarks/05tensorQTL.zip_pbulk_cnts_{cell_type}.txt"
+    message: "bgzip and index pseudoblk counts for norm: {wildcards.norm_method}"
+    benchmark: "reports/benchmarks/05tensorQTL.zip_pbulk_cnts_{cell_type}_{norm_method}.txt"
     log:     config["tensorQTL"]["zip_pblk_cnts"]["log"]
     shell:
              """
@@ -43,8 +45,8 @@ rule split_covariates:
     output:  config["tensorQTL"]["split_covariates"]["output"],
     singularity: config["containers"]["R"]
     resources: threads = 1, mem_mb = 6000, time="5:00:00"
-    message: "Divide covariate file to test different PC thresholds in tensorQTL"
-    benchmark: "reports/benchmarks/05tensorQTL.split_covariates_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.txt"    
+    message: "Divide covariate file to test different PC thresholds in tensorQTL for norm: {wildcards.norm_method}"
+    benchmark: "reports/benchmarks/05tensorQTL.split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"   
     log:    config["tensorQTL"]["split_covariates"]["log"]
     script: "../scripts/split_covariates_for_tensorQTL.R"
 
@@ -58,8 +60,8 @@ rule tensorqtl_nom:
             window = config["tensorQTL"]["window"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
-    message: "Run tensoQTL nominal"
-    benchmark: "reports/benchmarks/05tensorQTL.nom_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    message: "Run tensorQTL nominal for norm: {wildcards.norm_method}"
+    benchmark: "reports/benchmarks/05tensorQTL.nom_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["tensorQTL"]["tensorqtl_nom"]["log"]
     shell:
             """
@@ -72,15 +74,15 @@ rule tensorqtl_nom:
 rule tensorqtl_perm:
     input:  genotypes = rules.convert_genotypes.output,
             counts = rules.zip_pblk_cnts.output,
-            covariates = rules.split_covariates.output  
+            covariates = rules.split_covariates.output
     output: config["tensorQTL"]["tensorqtl_perm"]["output"]
     params: prefix_in = config["tensorQTL"]["tensorqtl_perm"]["prefix_in"],
             prefix_out = config["tensorQTL"]["tensorqtl_perm"]["prefix_out"],
             window = config["tensorQTL"]["window"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
-    message: "Run tensoQTL nominal"
-    benchmark: "reports/benchmarks/05tensorQTL.perm_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    message: "Run tensorQTL permutation for norm: {wildcards.norm_method}"
+    benchmark: "reports/benchmarks/05tensorQTL.perm_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["tensorQTL"]["tensorqtl_perm"]["log"]
     shell:
             """

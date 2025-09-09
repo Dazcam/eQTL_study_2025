@@ -279,45 +279,46 @@ tensorQTL:
   out_prefix: ../results/04TENSORQTL/chrALL_final.filt
   window: 500000
   geno_pcs: 4
-  exp_pcs: [10,20,30,40,50] 
+  exp_pcs: [10,20,30,40,50]
+  norm_methods: ["bryois", "fujita", "quantile", "combat", "paper_opt11"]
 
   prep_tensorQTL_input:
     cov_file: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
     sex_file: reports/02SCANPY/02_metadata_per_sample.tsv
     gene_lookup: ../resources/sheets/gene_lookup_hg38.tsv
-    exp_out: ../results/05TENSORQTL/prep_input/{cell_type}_tmm.bed
-    cov_out: ../results/05TENSORQTL/prep_input/{cell_type}_base_covariates.txt
+    exp_out: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed
+    cov_out: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_base_covariates.txt
     pseudoblk_dir: ../results/02SCANPY/pseudobulk/
     out_dir: ../results/05TENSORQTL/prep_input/
     report_dir: reports/05TENSORQTL/
-    log: ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}.log
+    batch_var: "PCW"  # For ComBat; set to your batch column (e.g., "PCW", "sample")
+    log: ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
 
   zip_pblk_cnts:
-    output: ../results/05TENSORQTL/prep_input/{cell_type}_tmm.bed.gz
-    log: ../results/00LOG/05TENSORQTL/zip_pblk_cnts_{cell_type}.log
+    output: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed.gz
+    log: ../results/00LOG/05TENSORQTL/zip_pblk_cnts_{cell_type}_{norm_method}.log
 
   convert_genotypes:
     input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
-    output: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen    
-    prefix_out: ../results/05TENSORQTL/prep_input/chrALL_final.filt  
+    output: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen
+    prefix_out: ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log: ../results/00LOG/05TENSORQTL/convert_genotypes.log
 
   split_covariates:
-    output: ../results/05TENSORQTL/prep_input/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt
-    log: ../results/00LOG/05TENSORQTL/split_covariates_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}.log
+    output: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt
+    log: ../results/00LOG/05TENSORQTL/split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
 
   tensorqtl_nom:
-    output: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_nom.cis_qtl_pairs.4.parquet
-    prefix_out: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_nom
-    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt    
-    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_nom.log    
-
+    output: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet
+    prefix_out: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom
+    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.log
 
   tensorqtl_perm:
-    output: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_perm.cis_qtl.txt.gz
-    prefix_out: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_perm
+    output: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz
+    prefix_out: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm
     prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
+    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
 
 input_files:
   counts: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
@@ -573,3 +574,7 @@ smr:
     html: reports/07smr_report.html
     in_dir: ../../results/07SMR/smr # Rel to Rmd script
     log: ../results/00LOG/07SMR/smr_report.log
+
+# ---------  Smpl Swaps  ----------
+
+
