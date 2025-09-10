@@ -26,18 +26,28 @@ library(cowplot)
 
 ***
 
-1. For each sublibrary and plate combination, copy BAM file and full cell whitelist from neurocluster
+1. `copy_bam`: For each sublibrary and plate combination, copy BAM file from neurocluster to scratch:
     - BAM located here: `<src_dir>/plate3/1_plate3/process/barcode_headAligned_anno.bam`
-    - Whitelist located here: 
-2. `cellsnp-lite` is run for each cell in the chr-specific BAM to generate per-cell allele 
-counts (pile-ups) at informative SNP positions. 
+2. `make_whitelist`: Generated cell whitelist files from cell metadata for each sublibrary and plate.
+    - Whitelist located here: `<src_dir>/plate3/1_plate3/all-sample/DGE_filtered/cell_metadata.csv`
+3. `subset_vcf`: Subset TOPMed dbSNP VCF to chr-specific files
     - SNP ref: TOPMed freeze 5, hg38, filtered for informative SNPs (MAF ≥ 0.1, depth ≥ 20) - 
-    to save running time / mem
-    - Parse cell whitelist is used to track cell / sample ids
-    - Need to vary the SNP filtering based on chromosome, running times etc. chr22 has too few SNPs 
-3. `vireo` is run to infer donor (per cell) by probabilistically matching each cell’s SNP profile 
-(from GeX data) to the reference donor genotypes.
-4. Finally, cross referenced vireo output (i.e. predicted cell genotype) with plate specific sample list, to see if vireo cell / sample predictions match our sample assignments
+    to save running time / mem (same ref used for pre-imputation genotyping harmonisation)
+4. `sort_bam`: Sorted BAM files by coordinates for each sublibrary.
+5. `index_bam`: Indexed sorted BAM files
+6. `extract_and_recode_chr`: Extracted chr-specific reads from sorted BAMs
+    - Recoded headers to standardise chr names (e.g., hg38_chrX to chrX)
+7. `cellsnp-lite` generate per-cell allele counts (pile-ups) at informative SNP positions
+    - Quantifies SNP genotypes for each cell using chr-specific BAMs and filtered ref VCF
+    - [PMID:33963851](https://academic.oup.com/bioinformatics/article/37/23/4569/6272512?login=false)
+    - Cell / sample ids are tracked using Parse cell whitelist for each sublibrary, plate, chr combination
+    - Need to vary the SNP filtering based on chr, running times etc. chr22 has too few SNPs 
+8. `vireo`: infer donor identities by matching cell SNP profiles to actual donor genotypes
+    - Assigns cells to donors based on probabilistic SNP profile matching
+9. `process_vireo`: Compare predicted donor IDs with expected sample assignments from whitelist.
+    - Evaluates accuracy of donor assignments by cross-referencing with known cell metadata
+    - Run in this markdown file
+10. `smpl_swap_report`: Assess donor assignment accuracy and potential sample swaps.
 
 ***
 
