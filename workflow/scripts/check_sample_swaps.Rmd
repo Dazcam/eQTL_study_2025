@@ -147,7 +147,7 @@ inputs <- tibble(dir = dirs) %>%
 # Process all datasets
 all_results <- pmap(inputs, process_vireo)
 
-#rm_smpl_tbl <- read_tsv(paste0(report_dir, "00SAMPLE-SURVEY/removed_samples.tsv"))
+rm_smpl_tbl <- read_tsv(paste0(report_dir, "00SAMPLE-SURVEY/removed_samples.tsv"))
 
 # Combine outputs
 all_summaries <- bind_rows(map(all_results, "summary_tbl"))
