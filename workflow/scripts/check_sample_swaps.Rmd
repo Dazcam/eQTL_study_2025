@@ -156,6 +156,10 @@ all_matched   <- bind_rows(map(all_results, "matched_tbl"))
 
 ***
 
+#### Tables {.tabset}
+
+***
+
 ### Summarise cell assignments
 
 ***
@@ -173,7 +177,7 @@ datatable(
 
 ***
 
-```{r, summary_per_donor, echo=FALSE, eval =F}
+```{r, summary_per_donor, echo=FALSE}
 global_summary <- all_matched %>%
   group_by(donor_id_wl) %>%
   summarise(
@@ -204,7 +208,7 @@ datatable(
 
 ***
 
-```{r, plate_proportions, echo=FALSE, eval =F}
+```{r, plate_proportions, echo=FALSE}
 plate_proportions <- all_matched %>%
   group_by(donor_id_wl, plate) %>%
   summarise(cell_count_plate = n(), .groups = "drop_last") %>%
@@ -228,9 +232,84 @@ datatable(
 )
 ```
 
+### Low Coverage samples
+
 ***
 
-### Plot (by donor)
+```{r, low_cov_samps, echo=FALSE}
+low_coverage_samples <- global_summary %>%
+  filter(cell_count <= 20) %>%
+  pull(donor_id_wl)
+
+low_coverage_details <- all_matched %>%
+  filter(donor_id_wl %in% low_coverage_samples) %>%
+  arrange(donor_id_wl, sublibrary, plate, chr)
+
+datatable(
+  low_coverage_details,
+  caption = 'Table: Detailed Rows for Low Coverage Samples (cell_count <= 20)',
+  options = list(pageLength = 25, autoWidth = TRUE)
+)
+```
+
+***
+
+```{r, Per_chr_summary, echo=FALSE}
+# Additional suggestion: Per-chromosome stats per donor
+per_chr_summary <- all_matched %>%
+  group_by(donor_id_wl, chr) %>%
+  summarise(
+    cell_count_chr = n(),
+    mean_prob_max_chr = mean(prob_max, na.rm = TRUE),
+    mean_n_vars_chr = mean(n_vars, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(donor_id_wl, chr)
+
+datatable(
+  per_chr_summary,
+  caption = 'Table: Per-Chromosome Summary per Expected Donor ID',
+  options = list(pageLength = 25, autoWidth = TRUE)
+)
+
+```
+
+***
+
+#### Sample mappings for low match rate samps
+
+***
+
+```{r, low_match_samples}
+low_match_samples <- global_summary %>%
+  filter(match_rate < 0.5) %>%
+  pull(donor_id_wl)
+
+low_match_geno_proportions <- all_matched %>%
+  filter(donor_id_wl %in% low_match_samples) %>%
+  group_by(donor_id_wl, donor_id_geno) %>%
+  summarise(
+    cell_count_geno = n(),
+    .groups = "drop_last"
+  ) %>%
+  mutate(
+    proportion_geno = cell_count_geno / sum(cell_count_geno),
+    .groups = "drop"
+  ) %>%
+  arrange(donor_id_wl, desc(cell_count_geno))
+
+datatable(
+  low_match_geno_proportions,
+  caption = 'Table: Genotyped Donor ID Counts and Proportions for Samples with Match Rate < 0.5',
+  options = list(pageLength = 25, autoWidth = TRUE)
+)
+```
+
+### Plots {.tabset}
+
+***
+
+#### By donor
 
 ***
 
@@ -271,7 +350,7 @@ ggplot(matched_summary,
 
 ***
 
-### Plot
+#### All
 
 ***
 
@@ -323,7 +402,7 @@ ggplot(global_summary,
 
 ***
 
-### Plot (only low counts)
+#### Low counts
 
 ***
 
