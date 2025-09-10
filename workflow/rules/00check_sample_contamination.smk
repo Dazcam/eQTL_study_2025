@@ -15,7 +15,7 @@ BAM_DIR = "../results/00CHECK_SMPL_CONTAMINATION/bam_files"
 
 rule all:
     input:
-        expand(os.path.join(BAM_DIR, "{sublib}.bam"), sublib=SUBLIBS.keys())
+        "reports/00CHECK_SMPL_CONTAMINATION/check_sample_swaps.html"
 #        expand("../results/00CHECK_SMPL_CONTAMINATION/vireo/{sublib}_chr{chr}_vireo/donor_ids.tsv", sublib=SUBLIBS.keys(), chr = CHROM)
 
 # Copy BAMs from /nfs to local scratch
@@ -168,3 +168,22 @@ rule vireo:
               -o {params.outdir} 2>&1 | tee -a {log}
         """
 
+rule smpl_swap_report:
+    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
+    input:  vireo = expand(rules.vireo.output, sublib=SUBLIBS.keys(), chr = CHROM),
+            rmd_script = "scripts/check_sample_swaps.Rmd"
+    output: "reports/00CHECK_SMPL_CONTAMINATION/check_sample_swaps.html"
+    params: in_dir = "../../results/00CHECK_SMPL_CONTAMINATION/",
+            bmark_dir = "../reports/benchmarks/",
+            output_file = "../reports/00CHECK_SMPL_CONTAMINATION/check_sample_swaps.html",
+            report_dir = "../reports/"  
+    singularity: config["containers"]["R"]
+    message: "Generate sample swap report"
+    benchmark: "reports/benchmarks/check_sample_contamination_smpl_swap_report.benchmark.txt"
+    log:     "../results/00LOG/00CHECK_SMPL_CONTAMINATION/smpl_swap_report.log"
+    shell:
+        """
+        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+            output_file = '{params.output_file}', \
+            params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}', report_dir = '{params.report_dir}'))" > {log} 2>&1
+        """
