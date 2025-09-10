@@ -350,7 +350,8 @@ log_files:
 
 qtl_rep:
   dwnld_obrien:
-    output: ../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz
+    all_qtl: ../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz
+    top_qtl: ../resources/public_datasets/obrien_2018/top_eqtls_gene.txt.gz
     out_dir: ../resources/public_datasets/obrien_2018/
     web_link: https://springernature.figshare.com/ndownloader/articles/6881825/versions/1
     zip_out: ../resources/public_datasets/obrien_2018/output.zip
@@ -360,6 +361,16 @@ qtl_rep:
     json: ../resources/public_datasets/bryois_2022/bryois_data_2022.json
     out_dir: ../resources/public_datasets/bryois_2022/
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_bryois.log
+  dwnld_ziffra:
+    output: ../resources/public_datasets/ziffra_2021/Ziffra_2021_supp_tables_2_13.xlsx
+    web_link: https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-021-03209-8/MediaObjects/41586_2021_3209_MOESM4_ESM.xlsx
+    log: ../results/00LOG/06QTL-REPLICATION/dwnld_ziffra.log
+  dwnld_wen:
+    output: ../resources/public_datasets/wen_2024/download_complete.touch
+    json:  ../resources/public_datasets/wen_2024/wen_data_2024.json
+    out_dir: ../resources/public_datasets/wen_2024/
+    log: ../results/00LOG/06QTL-REPLICATION/dwnld_wen.log
+
 
 # ------------  SLDSR  ----------------
 
