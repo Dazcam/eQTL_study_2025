@@ -44,6 +44,7 @@ library(cowplot)
     - Need to vary the SNP filtering based on chr, running times etc. chr22 has too few SNPs 
 8. `vireo`: infer donor identities by matching cell SNP profiles to actual donor genotypes
     - Assigns cells to donors based on probabilistic SNP profile matching
+    - [PMID:31836005](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1865-2)
 9. `process_vireo`: Compare predicted donor IDs with expected sample assignments from whitelist.
     - Evaluates accuracy of donor assignments by cross-referencing with known cell metadata
     - Run in this markdown file
