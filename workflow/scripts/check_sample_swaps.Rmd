@@ -26,17 +26,18 @@ library(cowplot)
 
 ***
 
-1. For each sublib, copy BAM file and cell whitelist from neurocluster, subset BAM by chr
+1. For each sublibrary and plate combination, copy BAM file and full cell whitelist from neurocluster
+    - BAM located here: `<src_dir>/plate3/1_plate3/process/barcode_headAligned_anno.bam`
+    - Whitelist located here: 
 2. `cellsnp-lite` is run for each cell in the chr-specific BAM to generate per-cell allele 
 counts (pile-ups) at informative SNP positions. 
     - SNP ref: TOPMed freeze 5, hg38, filtered for informative SNPs (MAF ≥ 0.1, depth ≥ 20) - 
     to save running time / mem
     - Parse cell whitelist is used to track cell / sample ids
-    - Need to vary the SNP filtering based on chromosome, running times etc. chr22 has to few SNPs 
+    - Need to vary the SNP filtering based on chromosome, running times etc. chr22 has too few SNPs 
 3. `vireo` is run to infer donor (per cell) by probabilistically matching each cell’s SNP profile 
 (from GeX data) to the reference donor genotypes.
-4. Finally, cross referenced vireo output with plate specific sample list, to see if vireo 
-cell / sample predictions match our sample assignments
+4. Finally, cross referenced vireo output (i.e. predicted cell genotype) with plate specific sample list, to see if vireo cell / sample predictions match our sample assignments
 
 ***
 
@@ -118,12 +119,16 @@ process_vireo <- function(sublibrary, plate, chr,
 ```
 
 ```{r load data, message=FALSE, echo=FALSE, warning=FALSE}
-# Define combinations of sublibrary, plate, and chr
-inputs <- expand_grid(
-  sublibrary = c("3", "6", "10", "12", "15"),
-  plate = as.character(seq(1,3)),
-  chr = as.character(seq(1,22))
-)
+# Dynamically discover available inputs from directories
+vireo_dir <- file.path(in_dir, "vireo")
+dirs <- dir(vireo_dir, pattern = "_vireo$")
+
+inputs <- tibble(dir = dirs) %>%
+  mutate(name = str_remove(dir, "_vireo$")) %>%
+  separate(name, into = c("sublibrary", "plate_str", "chr_str"), sep = "_") %>%
+  mutate(plate = str_remove(plate_str, "plate"),
+         chr = str_remove(chr_str, "chr")) %>%
+  select(sublibrary, plate, chr)
 
 # Process all datasets
 all_results <- pmap(inputs, process_vireo)
