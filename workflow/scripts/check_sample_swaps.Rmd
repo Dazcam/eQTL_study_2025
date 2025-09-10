@@ -7,8 +7,8 @@ output:
     theme: cerulean
 params:
   in_dir: null
-  report_dir: null
   bmark_dir: null
+  report_dir: null
 ---
 
 ```{r setup, include=FALSE}
@@ -18,6 +18,9 @@ library(ggplot2)
 library(DT)
 library(viridis)
 library(cowplot)
+in_dir <- params$in_dir
+bmark_dir <- params$bmark_dir
+report_dir <- params$report_dir
 ```
 
 ***
