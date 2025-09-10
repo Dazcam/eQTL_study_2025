@@ -147,7 +147,7 @@ inputs <- tibble(dir = dirs) %>%
 # Process all datasets
 all_results <- pmap(inputs, process_vireo)
 
-rm_smpl_tbl <- read_tsv(paste0(report_dir, "00SAMPLE-SURVEY/removed_samples.tsv"))
+#rm_smpl_tbl <- read_tsv(paste0(report_dir, "00SAMPLE-SURVEY/removed_samples.tsv"))
 
 # Combine outputs
 all_summaries <- bind_rows(map(all_results, "summary_tbl"))
@@ -169,15 +169,62 @@ datatable(
 
 ***
 
-### Predictions
+### Summary per donor
 
 ***
 
-```{r, predictions, echo=FALSE, eval =F}
+```{r, summary_per_donor, echo=FALSE, eval =F}
+global_summary <- all_matched %>%
+  group_by(donor_id_wl) %>%
+  summarise(
+    cell_count = n(),
+    match_rate = mean(match, na.rm = TRUE),
+    mean_prob_max = mean(prob_max, na.rm = TRUE),
+    median_prob_max = median(prob_max, na.rm = TRUE),
+    mean_n_vars = mean(n_vars, na.rm = TRUE),
+    median_n_vars = median(n_vars, na.rm = TRUE),
+    num_plates = n_distinct(plate),
+    num_sublibs = n_distinct(sublibrary),
+    num_chrs = n_distinct(chr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(cell_count)) #%>%
+  #write_tsv(paste0(report_dir, "00CHECK_SMPL_CONTAMINATION/sample_swap_summary.tsv"))
+
 datatable(
-  all_matched,
-  caption = 'Table 2. Matched cells across all datasets',
+  global_summary,
+  caption = 'Table: Global Summary per Expected Donor ID',
   options = list(pageLength = 25, autoWidth = TRUE)
+)
+```
+
+***
+
+### Plate proportions
+
+***
+
+```{r, plate_proportions, echo=FALSE, eval =F}
+plate_proportions <- all_matched %>%
+  group_by(donor_id_wl, plate) %>%
+  summarise(cell_count_plate = n(), .groups = "drop_last") %>%
+  mutate(proportion = cell_count_plate / sum(cell_count_plate)) %>%
+  ungroup() %>%
+  pivot_wider(
+    names_from = plate,
+    values_from = proportion,
+    values_fill = 0,
+    names_prefix = "prop_plate_"
+  )
+
+# Join plate proportions to global summary
+global_summary_with_plates <- global_summary %>%
+  left_join(plate_proportions, by = "donor_id_wl")
+
+datatable(
+  global_summary_with_plates,
+  caption = 'Table: Global Summary per Expected Donor ID with Plate Proportions',
+  options = list(pageLength = 25, autoWidth = TRUE, scrollX = TRUE)
 )
 ```
 
@@ -287,7 +334,7 @@ global_summary <- all_matched %>%
             match_rate = mean(match, na.rm = TRUE),
             .groups = "drop") %>%
   arrange(cell_count) |>
-  filter(cell_count <= 20)
+  filter(cell_count <= 50)
 
 samples <- unique(unlist(strsplit(paste(rm_smpl_tbl$samples, collapse = ", "), ", ")))
 num_donors <- nrow(global_summary)
