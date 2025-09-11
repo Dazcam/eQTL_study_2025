@@ -90,7 +90,7 @@ def initialize_env(plate):
     parse_dir = results_dir + '01PARSE/'
     plate_dir = parse_dir + f'combine_{plate}/all-sample/DGE_filtered/'
     scanpy_dir = results_dir + '02SCANPY/'
-    report_dir = root_dir + 'workflow/reports/'
+    report_dir = root_dir + 'workflow/reports/02SCANPY/'
     sc.settings.figdir = root_dir + 'reports/figs/'
     sys.path.append(script_dir)
 
