@@ -48,17 +48,17 @@ norm_method <- snakemake@params[["norm_method"]]
 batch_var <- snakemake@params[["batch_var"]]
 
 # For testing
-cov_file <- "../results/04GENOTYPES-POST/covariates/pca.eigenvec"
-sex_file <- "reports/02SCANPY/02_metadata_per_sample.tsv"
-gene_lookup <- "../resources/sheets/gene_lookup_hg38.tsv"
-cell_type <- "RG"
-cov_out <- paste0("../05TENSORQTL/prep_input/", cell_type, "_base_covariates.txt")
-exp_out <- paste0("../05TENSORQTL/prep_input/", cell_type, "_tmm.bed")
-pseudoblk_dir <- "../results/03SCANPY/pseudobulk/"
-out_dir <- "../results/05TENSORQTL/prep_input/"
-report_dir <- "../workflow/reports/05TENSORQTL/"
-norm_method <- c('fujita')
-batch_var <- c('quantile')
+# cov_file <- "../results/04GENOTYPES-POST/covariates/pca.eigenvec"
+# sex_file <- "reports/02SCANPY/02_metadata_per_sample.tsv"
+# gene_lookup <- "../resources/sheets/gene_lookup_hg38.tsv"
+# cell_type <- "RG"
+# cov_out <- paste0("../05TENSORQTL/prep_input/", cell_type, "_base_covariates.txt")
+# exp_out <- paste0("../05TENSORQTL/prep_input/", cell_type, "_tmm.bed")
+# pseudoblk_dir <- "../results/03SCANPY/pseudobulk/"
+# out_dir <- "../results/05TENSORQTL/prep_input/"
+# report_dir <- "../workflow/reports/05TENSORQTL/"
+# norm_method <- c('fujita')
+# batch_var <- c('quantile')
 
 # Make a tibble showing what each variable is set to
 message("\nVariables")
@@ -251,7 +251,7 @@ rownames(cov_matrix) <- colnames(cov_full_tbl)[-1]  # Set covariate names as row
 cov_matrix[1:5, 1:5]
 
 # Write to file without column name for the index
-message('Writing ', cell_type, ' covariate matrix for ', norm_method, ' ...')
+message('\nWriting ', cell_type, ' covariate matrix for ', norm_method, ' ...')
 write.table(cov_matrix, 
             file = paste0(out_dir, cell_type, "_", norm_method, "_base_covariates.txt"), 
             sep = "\t", 
@@ -265,7 +265,7 @@ write.table(cov_matrix,
 
 # Gene expression data
 # Add Ensembl IDs using BiomaRt Gene lookup; some genes are symbol, so are emsembl ID
-message('Harmonising gene expression gene IDs to Ensembl ... ')
+message('\nHarmonising gene expression gene IDs to Ensembl ... ')
 message('Rows in pseudobulk before merging with gene lookup: ', nrow(normalised_cnts))
 pseudblk_ensembl_cnts <- normalised_cnts |>
   as_tibble(rownames = 'genes') |>
