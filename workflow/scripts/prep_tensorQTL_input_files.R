@@ -174,37 +174,43 @@ if (norm_method == "bryois") {
     message('Removed ', sum(low_expr_genes), ' genes with mean CPM < 1 for ', cell_type)
     normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
   }
+  print(normalised_cnts[1:5, 1:5])
 } else if (norm_method == "fujita") {
   # Fujita: log2(CPM +1), filter genes with log2 CPM < 2.0 in all samples; PMID:38514782
   normalised_cnts <- log2(normalised_cnts + 1)  # Add 1 to avoid log(0)
-  print(normalised_cnts[1:5, 1:5])
   low_expr_genes <- rowSums(normalised_cnts >= 2.0) == 0  # Genes with log2 CPM < 2.0 in all samples
   if (sum(low_expr_genes) > 0) {
     message('Removed ', sum(low_expr_genes), ' genes with log2 CPM < 2.0 in all samples for ', cell_type)
     normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
   }
+  print(normalised_cnts[1:5, 1:5])
 } else if (norm_method == "quantile") {
-  # Quantile normalization across samples with Bryois filter
-  normalised_cnts <- normalizeQuantiles(normalised_cnts)
-  mean_cpm <- rowMeans(normalised_cnts)
-  low_expr_genes <- mean_cpm < 1
+  # Quantile: Fujita steps + quantile normalization
+  normalised_cnts <- log2(normalised_cnts + 1)
+  low_expr_genes <- rowSums(normalised_cnts >= 2.0) == 0
   if (sum(low_expr_genes) > 0) {
-    message('Removed ', sum(low_expr_genes), ' genes with mean CPM < 1 post-quantile for ', cell_type)
+    message('Removed ', sum(low_expr_genes), ' genes with log2 CPM < 2.0 for ', cell_type)
     normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
   }
+  normalised_cnts <- normalizeQuantiles(normalised_cnts)
+  print(normalised_cnts[1:5, 1:5])
+  
 } else if (norm_method == "combat") {
-  # ComBat batch correction (using specified batch_var, e.g., PCW)
-  batch <- cov_tbl[[batch_var]][match(available_samples, cov_tbl$sample)]  # Align to samples
+  # ComBat: Quantile steps + batch correction (not tested)
+  normalised_cnts <- log2(normalised_cnts + 1)
+  low_expr_genes <- rowSums(normalised_cnts >= 2.0) == 0
+  if (sum(low_expr_genes) > 0) {
+    message('Removed ', sum(low_expr_genes), ' genes with log2 CPM < 2.0 for ', cell_type)
+    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
+  }
+  normalised_cnts <- normalizeQuantiles(normalised_cnts)
+  
+  batch <- cov_tbl[[batch_var]][match(available_samples, cov_tbl$sample)]
   if (any(is.na(batch))) stop("NA in batch variable; check cov_tbl")
   normalised_cnts <- ComBat(dat = normalised_cnts, batch = batch, mod = NULL, par.prior = TRUE)
-  # Optionally apply Bryois filter post-ComBat
-  mean_cpm <- rowMeans(normalised_cnts)
-  low_expr_genes <- mean_cpm < 1
-  if (sum(low_expr_genes) > 0) {
-    message('Removed ', sum(low_expr_genes), ' genes with mean CPM < 1 post-ComBat for ', cell_type)
-    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
-  }
-} else if (norm_method == "Xue_opt11") {
+  print(normalised_cnts[1:5, 1:5])
+  
+} else if (norm_method == "xue") {
   # Xue Option #11: QC (≥90% zeros), log1p, z-score (STD); PMID:36823676
   zero_prop <- rowMeans(normalised_cnts == 0)
   low_expr_genes <- zero_prop >= 0.9
@@ -214,6 +220,7 @@ if (norm_method == "bryois") {
   }
   normalised_cnts <- log(normalised_cnts + 1)  # log1p
   normalised_cnts <- t(scale(t(normalised_cnts)))  # Z-score per gene (mean 0, SD 1)
+  print(normalised_cnts[1:5, 1:5])
 } else {
   stop("Unknown norm_method: ", norm_method)
 }
