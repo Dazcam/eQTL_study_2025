@@ -4,10 +4,12 @@
 #
 #--------------------------------------------------------------------------------------
 
-# As output wildcards need to be standardised in smk, I run this twice each instance
-# tracking either the gene exp {cell_type}_tmm.bed files or the covariate
-# {cell_type}_genPC_{geno_pc}_expPC_{exp_pc}_tmm.bed files. Could separate the scripts
-# but I'd like to run the checks together.
+# Harmonises the pseudobulk and covariate data for each cell type into a TensorQTL 
+# - TMM normalises pseudobulk data
+# - Applies various additional normalisation options for eQTL sensitivity testing
+# - Runs PCA to calculate expression PCs to add as covariates
+# - Standardises gene IDs to Ensembl encoding
+# - Output: normalised pseudobulk GeX counts & combined covariate file per cell-type
 
 ## Info  ------------------------------------------------------------------------------
 
