@@ -71,7 +71,7 @@ enhancer_peaks <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx
   dplyr::select(peak_name) 
 lookup_peaks <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx'), sheet = 'ST3 MACSpeaks_byCelltype')
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
-ziffra_mapping <- list(
+ziffra_mapping_all <- list(
   "RG" = "RG_MACSpeaks",
   "ExN-UL" = "dlEN_MACSpeaks",
   "ExN-DL" = "dlEN_MACSpeaks",
@@ -80,6 +80,9 @@ ziffra_mapping <- list(
   "MG" = "Microglia_MACSpeaks",
   "OPC" = "AstroOligo_MACSpeaks"
 )
+
+# Only run relevant cell type mappings
+ziffra_mappaing <- ziffra_mapping_all[cell_type]
 
 # Load your SNP coordinates (assuming snp_lookup_hg38_filt is available from your script)
 # For simplicity, assume it's pre-loaded or regenerated as needed
