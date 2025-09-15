@@ -5,6 +5,7 @@
 #--------------------------------------------------------------------------------------
 
 # Cell types processed together here rather than independent jobs
+# Most fo this has moved to TensorQTL Rmd reprt file - consider removing script
 
 ## Load libraries and variables -------------------------------------------------------
 library(tidyverse)
