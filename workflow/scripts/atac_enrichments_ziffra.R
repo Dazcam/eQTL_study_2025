@@ -33,10 +33,11 @@ library(GenomeInfoDb)
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
 snp_file <- snakemake@input[["snp_file"]]
-out_file <- snakemake@output[["out_file"]]
+peaks <- snakemake@input[["peaks"]]
+out_file <- as.character(snakemake@output)
 peak_dir <- snakemake@params[["peak_dir"]]
 cell_type <- snakemake@wildcards[["cell_type"]]
-gen_pc <- snakemake@wildcards[["gen_pc"]]
+gen_pc <- snakemake@wildcards[["geno_pc"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
 
@@ -53,9 +54,9 @@ norm_method <- snakemake@wildcards[["norm_method"]]
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("qtl_perm", "snp_file", "out_file", "peak_dir", "cell_type", 
+  variable = c("qtl_perm", "snp_file", "out_file", "peaks", "peak_dir", "cell_type", 
                "gen_pc", "exp_pc", "norm_method"),
-  value    = c(qtl_perm, snp_file, out_file, peak_dir, cell_type, 
+  value    = c(qtl_perm, snp_file, out_file, peaks, peak_dir, cell_type, 
                gen_pc, exp_pc, norm_method)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
