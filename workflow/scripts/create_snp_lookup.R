@@ -31,7 +31,17 @@ library(GenomicRanges)
 
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
-out_file <- snakemake@output[["out_file"]]
+out_file <- snakemake@output
+
+# Make a tibble showing what each variable is set to
+message("\nVariables")
+cat("============================")
+tibble(
+  variable = c("qtl_perm", "out_file"),
+  value    = c(qtl_perm, out_file)) |> 
+  knitr::kable(format = "simple", align = "l") |>
+  print()
+message("\n============================\n")
 
 message("\n--- Generating SNP lookup file ---")
 message("\nProcessing: ", qtl_perm)
