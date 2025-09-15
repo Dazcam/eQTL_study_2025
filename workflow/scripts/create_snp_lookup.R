@@ -31,7 +31,7 @@ library(GenomicRanges)
 
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
-out_file <- snakemake@output
+out_file <- as.character(snakemake@output)
 
 # Make a tibble showing what each variable is set to
 message("\nVariables")
