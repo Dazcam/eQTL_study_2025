@@ -1,0 +1,656 @@
+---
+title: "TensorQTL report"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+params:
+  in_dir: null
+  bmark_dir: null
+---
+
+***
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(stringr)
+library(cowplot)
+library(DT)
+library(glue)
+library(gt)
+library(tidyverse)
+library(UpSetR)
+library(ggplot2)
+library(patchwork)
+library(ggrepel)
+library(cowplot)
+in_dir <- params$in_dir
+bmark_dir <- params$bmark_dir
+```
+
+### TensorQTL pipeline steps {.tabset}
+
+***
+
+We used [tensorQTL](https://github.com/broadinstitute/tensorqtl) to generate eQTL. 
+The citation for tensorQTL is [Taylor-Weiner et al. 2019 (DOI:10.1186/s13059-019-1836-7)](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1836-7).
+
+***
+
+1. `prep_tensorQTL_input`: Munge cell-specific pseudobulk gExp and covaraiate data into TensorQTL-ready format
+2. `zip_pblk_cnts`: bgzip and index pseudobulk gExp data
+3. `convert_genotypes`: Convert genotypes into into TensorQTL-ready plink 2 format 
+4. `split_covariates`: Generate covaraiate files for gene_pc and exp_pc combinations
+5. `tensorqtl_nom`: Run TensorQTL nominal
+6. `tensorqtl_perm`: Run TensorQTL perm
+
+Settings:
+
++ cis-window: $\pm$ 500kb
++ Expression PC covariates tested: 10, 20, 30, 40, 50
++ Meta data covariates: PCW, sex
++ Genotype PCs: 4 (see genotyping_post_impute_report.html)
++ Norm methods tested: bryois, fugita, quantile, xue
+
+***
+
+```{r, summary_table, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+#in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
+#bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
+exp_PCs <- c(10, 20, 30, 40, 50)
+gen_PCs <- 4
+norm_methods <- c('bryois', 'fujita', 'quantile', 'xue')
+
+summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs, 
+                           genPC = gen_PCs, norm_method = norm_methods) {
+  # Generate all combinations of cell types and expPC values
+  params_grid <- expand.grid(cell_type = cell_types, expPC = expPCs, norm_method = norm_methods,
+                             stringsAsFactors = FALSE)
+  
+  # Function to process a single log file
+  process_log <- function(cell_type, expPC, norm_method) {
+    message('Reading eQTL log file for: ', cell_type, ', ', norm_method , 
+            ', with genPC_', genPC, ' expPC_', expPC)
+    
+    # Construct the log file path
+    log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+    log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.tensorQTL.cis.log')
+
+    # Check if file exists
+    if (!file.exists(log_file)) {
+      message('Log file not found: ', log_file)
+      return(NULL)
+    }
+    
+    # Read and process the log file
+    lines <- readLines(log_file, warn = FALSE)
+    
+    gene_line <- str_subset(lines, 'phenotypes tested:')
+    sample_line <- str_subset(lines, 'samples')
+    covariate_line <- tail(str_subset(lines, 'covariates'), 1) # need to fix this
+    variants_line <- str_subset(lines, 'variants')
+    qtl_line <- str_subset(lines, 'QTL phenotypes @ FDR 0.05:')
+    window_line <- str_subset(lines, 'cis-window:')
+    run_line <- str_subset(lines, 'Time elapsed:')
+    beta_line <- str_subset(lines, 'Correlation between Beta-approximated and empirical p-values:')
+    min_p_line <- str_subset(lines, 'min p-value threshold @ FDR 0.05:')
+    prop_sig_line <- str_subset(lines, 'Proportion of significant phenotypes')
+    
+    # Extract numbers
+    num_genes <- as.integer(str_extract(gene_line, '\\d+$'))
+    num_samples <- as.integer(str_extract(sample_line, '\\d+'))
+    covariates <- as.integer(str_extract(covariate_line, '\\d+$'))
+    variants <- as.integer(str_extract(variants_line, '\\d+'))
+    num_qtls <- as.integer(str_extract(qtl_line, '\\d+$'))
+    cis_window <- as.integer(str_extract(window_line, '\\d+'))
+    run_time <- as.integer(str_extract(run_line, '\\d+'))
+    beta_cor <- as.numeric(str_extract(beta_line, '[0-9\\.eE-]+$'))
+    min_p <- as.numeric(str_extract(min_p_line, '[0-9\\.eE-]+$'))
+    prop_sig <- as.integer(str_extract(prop_sig_line, '\\d+$'))
+    
+    message('Collating sumstats for: ', cell_type, ' with genPC_', genPC, ' expPC_', expPC, ' ...')
+    
+    # Create tibble with all relevant fields
+    tibble(
+      cell_type = cell_type,
+      genPC = genPC,
+      expPC = expPC,
+      norm_methods = norm_method,
+      genes_tested = num_genes,
+      samples = num_samples,
+      covariates = covariates,
+      variants = variants,
+      qtl_fdr_0.05 = num_qtls,
+      cis_window_kb = cis_window,
+      beta_cor = beta_cor,
+      min_p = formatC(min_p, format = "e", digits = 2),
+      prop_sig = prop_sig,
+      run_time_min = run_time
+    )
+  }
+  
+  # Apply the processing function to all combinations
+  summary_list <- pmap(params_grid, function(cell_type, expPC, norm_method) {
+    process_log(cell_type, expPC, norm_method)
+  })
+  
+  # Identify which elements are non-null
+  valid_idx <- !sapply(summary_list, is.null)
+  table(valid_idx)  # how many TRUE vs FALSE
+  length(summary_list)
+  sum(valid_idx)
+
+  # Keep only valid entries
+  summary_list <- summary_list[valid_idx]
+
+  # Name the list elements for clarity
+  names(summary_list) <- paste0(
+    params_grid$cell_type, '_', 
+    params_grid$norm_method, '_genPC_', genPC, 
+    '_expPC_', params_grid$expPC
+    )[valid_idx]
+  
+  # Return the list of summary tibbles
+  return(summary_list)
+}
+
+summary_list <- summarise_logs(cell_types, in_dir)
+```
+
+***
+
+#### eQTL plot
+
+***
+
+```{r, eQTL_by_exp_PC_plot, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
+# Define custom color palette
+custom_palette <- c(
+  "RG" = "#FF5959",
+  "ExN-UL" = "#00B6EB",
+  "InN" = "#3CBB75FF",
+  "ExN-DL" = "#CEE5FD",
+  "Endo-Peri" = "#B200ED",
+  "MG" = "#F58231",
+  "OPC" = "#FDE725FF"
+)
+
+summary_tbl <- bind_rows(summary_list)
+
+# Function to make one plot per norm_method
+make_plot <- function(df, norm) {
+  ggplot(df %>% filter(norm_methods == norm),
+         aes(x = expPC, y = qtl_fdr_0.05, color = cell_type, group = cell_type)) +
+    geom_line(linewidth = 1) +
+    geom_point(size = 2) +
+    scale_color_manual(values = custom_palette) +
+    labs(
+      x = "Expression PCs",
+      y = "eGene count (FDR < 0.05)",
+      color = "Cell Type",
+      title = paste("Number of Significant QTL by Expression PCs\nNorm method:", norm)
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      axis.title = element_text(face = "bold"),
+      axis.text = element_text(color = "black"),
+      legend.position = "right",
+      legend.title = element_text(face = "bold"),
+      legend.text = element_text(size = 10),
+      panel.grid.major = element_line(color = "grey90"),
+      panel.grid.minor = element_line(color = "grey95"),
+      plot.margin = margin(10, 10, 10, 10)
+    ) + ylim(0, 2100)
+}
+
+# Generate one plot per norm method
+plots <- lapply(unique(summary_tbl$norm_methods), function(norm) {
+  make_plot(summary_tbl, norm)
+})
+
+# Arrange in 2x2 grid
+combined_plot <- plot_grid(plotlist = plots, ncol = 2)
+
+# Show the combined plot
+print(combined_plot)
+
+# Optionally save
+# ggsave("qtl_fdr_by_expPC_all_norms.png", combined_plot, width = 12, height = 10, dpi = 300)
+```
+
+***
+
+#### Density plot {.tabset}
+
+##### Individual
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, eQTL_density_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
+plt_list <- list()
+genPC <- 4
+expPC <- 40
+norm_method <- 'quantile'
+for (cell_type in cell_types) {
+  
+  message('Reading eQTL data for: ', cell_type)
+  log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+  log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
+  eqtl_tbl <- read_tsv(log_file) %>%
+    dplyr::filter(!is.na(start_distance)) %>%
+    mutate(distance_kb = start_distance / 1000) %>%
+    dplyr::filter(qval < 0.05)
+  
+  message('eQTL detected at FDR < 0.05: ', nrow(eqtl_tbl))
+  
+  if (nrow(eqtl_tbl) > 0) {
+    
+    message('Plotting ...')
+    
+    eqtl_count <- nrow(eqtl_tbl)
+    
+    eqtl_density_plt <- eqtl_tbl  %>%
+      ggplot(aes(x = distance_kb)) +
+      geom_density() +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+      annotate("text", x = 100, y = Inf, 
+               label = paste("eQTLs:", eqtl_count), 
+               hjust = 0, vjust = 1.5, size = 4, fontface = "bold") +
+      scale_x_continuous(limits = c(-600, 600), 
+                         breaks = seq(-600, 600, by = 200),
+                         labels = seq(-600, 600, by = 200)) +
+      labs(x = "Distance to TSS (kb)",
+           y = "Density",
+           title = cell_type) +
+      theme_minimal() +
+      theme(
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        plot.title = element_text(hjust = 0.5, face = "bold"),
+        axis.text = element_text(color = "black"),
+        axis.title = element_text(face = "bold")
+      )
+    
+    plt_list[[cell_type]] <- eqtl_density_plt
+    
+  } else {
+    
+    message('Skipped plotting.')
+    
+  }
+  
+}
+
+combined_plot <- cowplot::plot_grid(plotlist = plt_list)
+combined_plot
+```
+
+***
+
+##### Combined
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+```{r, denisty_combined, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+eqtl_list <- list()
+genPC <- 4
+expPC <- 40
+norm_method <- 'quantile'
+
+for (cell_type in cell_types) {
+  f <- file.path(
+    in_dir,
+    paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC),
+    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")  # adjust filename
+  )
+  
+  if (file.exists(f)) {
+    dat <- read_tsv(f, show_col_types = FALSE) %>%
+      filter(!is.na(start_distance)) %>%
+      mutate(distance_kb = start_distance / 1000) %>%
+      filter(qval < 0.05)   # significance cutoff
+    
+    if (nrow(dat) > 0) {
+      eqtl_list[[cell_type]] <- dat %>% mutate(cell_type = cell_type)
+    }
+  }
+}
+
+eqtls_all <- bind_rows(eqtl_list)
+
+ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
+  geom_density() +
+  geom_vline(xintercept = 0, linetype="dashed", color = "black") +
+  scale_color_manual(values=custom_palette) +
+  #scale_fill_manual(values=custom_palette) +
+  scale_x_continuous(limits=c(-600,600), breaks=seq(-600,600,200)) +
+  labs(x="Distance to TSS (kb)", y="Density") +
+  theme_minimal() +
+  theme(
+    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold")
+  )
+```
+
+***
+
+#### Pie Chart
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+```{r, pie_chart, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7.5,7.5) }
+gene_cell <- eqtls_all %>%
+  distinct(phenotype_id, cell_type)
+
+gene_counts <- gene_cell %>%
+  count(phenotype_id) %>%
+  count(n)  # number of cell types per gene
+
+pie_dat <- gene_counts %>%
+  mutate(
+    label = paste0(n, " cell type", ifelse(n > 1, "s", "")),
+    count = nn
+  ) %>%
+  arrange(desc(n)) %>%
+  mutate(
+    # Calculate cumulative fraction for positioning labels
+    fraction = count / sum(count),
+    ymax = cumsum(fraction),
+    ymin = c(0, head(ymax, n = -1)),
+    midpoint = (ymax + ymin) / 2
+  )
+
+ggplot(pie_dat, aes(ymax = ymax, ymin = ymin, xmax = 1, xmin = 0, fill = label)) +
+  geom_rect(color = "white") +
+  coord_polar(theta = "y") +
+  geom_text_repel(aes(
+    x = 1.1, 
+    y = midpoint, 
+    label = count
+  ),
+  nudge_x = 0.05,
+  segment.color = "grey50",
+  segment.size = 0.5,
+  show.legend = FALSE
+  ) +
+  labs(
+    fill = "Cell type sharing",
+    title = "Shared eGenes across cell types"
+  ) +
+  theme_void(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.position = "right"
+  )
+
+```
+
+***
+
+#### Counts
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, counts, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
+cell_counts <- tibble(
+  cell_type = c("ExN-UL","ExN-DL","RG","InN","Endo-Peri","OPC","MG"),
+  n_cells   = c(359823, 200545, 178642, 154155, 20160, 13797, 7406)
+)
+egene_per_cell <- gene_cell %>% count(cell_type)
+
+ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
+  geom_col() +
+  scale_fill_manual(values=custom_palette) +
+  labs(x="Cell type", y="Number of eGenes") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold")
+  ) +
+  theme(legend.position = "none")
+```
+
+***
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+#### Upset
+
+```{r, upset, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5) }
+gene_by_cell <- gene_cell %>%
+  pivot_wider(names_from = cell_type, values_from = cell_type,
+              values_fill = 0, values_fn = function(x) 1) %>%
+  column_to_rownames("phenotype_id")
+
+upset(gene_by_cell, nsets = length(cell_types), order.by = "freq")
+```
+
+***
+
+#### Scatter
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, scatter, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
+scatter_dat <- egene_per_cell %>%
+  left_join(cell_counts, by="cell_type")
+
+ggplot(scatter_dat, aes(x=log10(n_cells), y=n, label=cell_type, color=cell_type)) +
+  geom_point(size = 3) +
+  geom_text_repel(aes(label=cell_type, color=cell_type), 
+                  size=4, 
+                  show.legend=FALSE,
+                  max.overlaps=20, 
+                  force=2,      # pushes labels apart
+                  nudge_y=100,  # pushes labels up a bit
+  ) +
+  scale_color_manual(values=custom_palette)+
+  labs(x="log10(Cell count)", y="cis-eQTL (FDR < 0.05)") +
+  theme_minimal() +
+  theme(
+    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text = element_text(color = "black", size = 12),
+    axis.title = element_text(face = "bold", size =  14)
+  ) +
+  theme(legend.position = "none")
+```
+
+#### Settings
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, variables, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+# Select one row per cell type, keeping only cell_type, genes_tested, samples, and variants
+summary_table <- summary_tbl %>%
+  dplyr::select(cell_type, genes_tested, samples, variants) %>%
+  distinct(cell_type, .keep_all = TRUE) %>%
+  arrange(cell_type) # Sort alphabetically for consistency
+
+# Create the gt table
+table <- summary_table %>%
+  gt() %>%
+  tab_header(
+    title = "Table 1. TensorQTL, inputs per cell type"
+  ) %>%
+  cols_label(
+    cell_type = "Cell Type",
+    genes_tested = "Genes Tested",
+    samples = "Samples",
+    variants = "Variants"
+  ) %>%
+  fmt_number(
+    columns = c(genes_tested, samples, variants),
+    decimals = 0,
+    use_seps = TRUE
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(weight = "bold")
+    ),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.title.font.weight = "bold",
+    heading.subtitle.font.size = 14,
+    column_labels.border.top.color = "black",
+    column_labels.border.bottom.color = "black",
+    table.border.top.color = "black",
+    table.border.bottom.color = "transparent",
+    table_body.hlines.color = "grey80",
+    table_body.border.bottom.color = "black"
+  )
+
+# Save the table as a LaTeX file for publication
+#gtsave(table, filename = "summary_table.tex")
+
+# Optionally, display the table
+print(table)
+```
+
+***
+
+#### Benchmarking {.tabset}
+
+***
+
+##### Table
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+# List all benchmark files for the pipeline
+files <- list.files(bmark_dir, pattern = "05tensorQTL.*\\.txt", full.names = TRUE)
+
+benchmarks <- map_dfr(files, function(f) {
+  df <- read.table(f, header = TRUE, sep = "\t")
+  fname <- basename(f)
+  parts <- strsplit(fname, "\\.")[[1]]
+
+  # this field holds things like:
+  # "prep_tensorQTL_input_Endo-Peri", "split_covariates_Endo-Peri_genPC_4_expPC_10",
+  # "perm_ExN-2_genPC_4_expPC_50", "nom_ExN-2_genPC_4_expPC_50", "convert_genotypes"
+  rule_full <- parts[2]
+
+  # strip everything after the first "_" → leaves only the base rule
+  rule <- str_split(rule_full, "_")[[1]][1]
+
+  tibble(
+    file = f,
+    rule = rule,
+    runtime_sec = df$s,
+    runtime_hms = df$h.m.s.,
+    max_rss = df$max_rss
+  )
+})
+
+
+
+# Summarise by rule
+summary <- benchmarks %>%
+  group_by(rule) %>%
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  arrange(rule)
+
+# Table
+datatable(
+  summary,
+  caption = 'Table X. Rule benchmarking. Means and SD across replicates.',
+  options = list(
+    pageLength = 25,
+    autoWidth = TRUE,
+    columnDefs = list(list(className = 'dt-center', targets = "_all"))
+  )
+)
+
+```
+
+***
+
+##### Plot
+
+***
+
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)", 
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)", 
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+
+# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
+```
+
+
+
