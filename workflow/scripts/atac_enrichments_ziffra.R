@@ -85,7 +85,7 @@ ziffra_mapping_all <- list(
 )
 
 # Only run relevant cell type mappings
-ziffra_mappaing <- ziffra_mapping_all[cell_type]
+ziffra_mapping <- ziffra_mapping_all[cell_type]
 
 # Function for permutation test with ATAC-seq peaks
 perform_permutation_test <- function(sig_snps_gr, peaks_gr, n_perm = 1000) {
