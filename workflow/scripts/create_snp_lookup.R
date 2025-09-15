@@ -31,11 +31,10 @@ library(GenomicRanges)
 
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
-cell_type <- snakemake@wildcards[["cell_type"]]
 out_file <- snakemake@output[["out_file"]]
 
 message("\n--- Generating SNP lookup file ---")
-message("\nProcessing cell type: ", cell_type)
+message("\nProcessing: ", qtl_perm)
 
 # Load significant eQTL SNPs
 my_eqtl <- read_tsv(qtl_perm) %>%
@@ -48,6 +47,7 @@ if (nrow(my_eqtl) == 0) {
 }
 
 # Initialize Ensembl once
+biomartCacheClear() 
 ensembl <- useEnsembl("ENSEMBL_MART_SNP", dataset = "hsapiens_snp")
 
 # SNP lookup
@@ -69,6 +69,7 @@ snp_lookup_hg38_filt <- snp_lookup_hg38 %>%
 message(nrow(snp_lookup_hg38) - nrow(snp_lookup_hg38_filt), 
         ' eQTL removed due to non-standard chr annotation.')
 
+message("Number of SNPs retained: ", nrow(snp_lookup_hg38_filt))
 message("Writing SNP list ...")
 write_rds(snp_lookup_hg38_filt, out_file)
 message('Done.')

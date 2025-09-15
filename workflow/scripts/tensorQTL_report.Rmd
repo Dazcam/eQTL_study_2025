@@ -23,7 +23,6 @@ library(glue)
 library(gt)
 library(tidyverse)
 library(UpSetR)
-library(ggplot2)
 library(patchwork)
 library(ggrepel)
 library(cowplot)
@@ -431,9 +430,11 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 
 ***
 
+#### Upset
+
 + Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
 
-#### Upset
+***
 
 ```{r, upset, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5) }
 gene_by_cell <- gene_cell %>%
