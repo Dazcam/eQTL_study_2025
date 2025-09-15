@@ -47,8 +47,8 @@ if (nrow(my_eqtl) == 0) {
 }
 
 # Initialize Ensembl once
-biomartCacheClear() 
-ensembl <- useEnsembl("ENSEMBL_MART_SNP", dataset = "hsapiens_snp")
+biomartCacheClear() # As running on head node need to use temp cache
+ensembl <- useEnsembl("ENSEMBL_MART_SNP", dataset = "hsapiens_snp", cache = tempdir() )
 
 # SNP lookup
 message("Pulling out SNPs with BiomaRt ...")
