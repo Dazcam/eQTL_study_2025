@@ -29,6 +29,7 @@ library(qvalue)
 library(GenomicRanges)
 library(nullranges)
 library(GenomeInfoDb)
+library(readxl)
 
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
@@ -66,11 +67,12 @@ message("\n============================\n")
 # peak list = all peaks key; mac2 all peaks per cell type; specific; specific peaks per cell type
 cat('\nLoading Ziffra 2021 snATAC-seq fetal brain data ... \n')
 options(scipen = 999) # required to prevent peak coords. being abbr. in sci' notation
-peak_list <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx'), sheet = 'ST2 AllPrimaryPeaks') %>%
-  dplyr::select(seqnames, start, end, peak_name) 
-enhancer_peaks <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx'), sheet = 'ST5 EnhancerPeaks') %>%
-  dplyr::select(peak_name) 
-lookup_peaks <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx'), sheet = 'ST3 MACSpeaks_byCelltype')
+peak_list <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx"), sheet = "ST2 AllPrimaryPeaks") %>%
+  dplyr::select(seqnames, start, end, peak_name)
+#enhancer_peaks <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx"), sheet = "ST5 EnhancerPeaks") %>%
+#  dplyr::select(peak_name) # Might use these later
+lookup_peaks <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx"), sheet = "ST3 MACSpeaks_byCelltype")
+
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 ziffra_mapping_all <- list(
   "RG" = "RG_MACSpeaks",
@@ -84,9 +86,6 @@ ziffra_mapping_all <- list(
 
 # Only run relevant cell type mappings
 ziffra_mappaing <- ziffra_mapping_all[cell_type]
-
-# Load your SNP coordinates (assuming snp_lookup_hg38_filt is available from your script)
-# For simplicity, assume it's pre-loaded or regenerated as needed
 
 # Function for permutation test with ATAC-seq peaks
 perform_permutation_test <- function(sig_snps_gr, peaks_gr, n_perm = 1000) {
