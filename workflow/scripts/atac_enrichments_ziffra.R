@@ -24,15 +24,11 @@ message("\n\nRunning enrichment analysis for cell-specific sig. eQTL in Ziffra s
 
 # -------------------------------------------------------------------------------------
 
-library(dplyr)
-library(readr)
+library(tidyverse)
 library(qvalue)
-library(purrr)
-library(tidyr)
 library(GenomicRanges)
 library(nullranges)
 library(GenomeInfoDb)
-library(readxl)
 
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
@@ -45,13 +41,25 @@ exp_pc <- snakemake@wildcards[["exp_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
 
 # Define directories and cell types (from your script)
-# cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+#cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 # exp_pc <- 40
 # gen_pc <- 4
 # in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
 # public_dir <- "~/Desktop/eQTL_study_2025/resources/public_datasets/"
 # tensorqtl_dir <- paste0(in_dir, 'results/05TENSORQTL/')
 # in_dir <- paste0(public_dir, 'ziffra_2021/')
+
+# Make a tibble showing what each variable is set to
+message("\nVariables")
+cat("============================")
+tibble(
+  variable = c("qtl_perm", "snp_file", "out_file", "peak_dir", "cell_type", 
+               "gen_pc", "exp_pc", "norm_method"),
+  value    = c(qtl_perm, snp_file, out_file, peak_dir, cell_type, 
+               gen_pc, exp_pc, norm_method)) |> 
+  knitr::kable(format = "simple", align = "l") |>
+  print()
+message("\n============================\n")
 
 ##  Load Ziffra peaks  -----------------------------------------------------------------
 # peak list = all peaks key; mac2 all peaks per cell type; specific; specific peaks per cell type
@@ -62,11 +70,11 @@ peak_list <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx'), s
 enhancer_peaks <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx'), sheet = 'ST5 EnhancerPeaks') %>%
   dplyr::select(peak_name) 
 lookup_peaks <- read_excel(paste0(peak_dir, 'Ziffra_2021_supp_tables_2_13.xlsx'), sheet = 'ST3 MACSpeaks_byCelltype')
-
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 ziffra_mapping <- list(
   "RG" = "RG_MACSpeaks",
-  "ExN-UL" = c("dlEN_MACSpeaks", "earlyEN_MACSpeaks", "ulEN_MACSpeaks"),
-  "ExN-DL" = c("dlEN_MACSpeaks", "earlyEN_MACSpeaks", "ulEN_MACSpeaks"),
+  "ExN-UL" = "dlEN_MACSpeaks",
+  "ExN-DL" = "dlEN_MACSpeaks",
   "InN" = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
   "Endo-Peri" = "EndoMural_MACSpeaks",
   "MG" = "Microglia_MACSpeaks",
