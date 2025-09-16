@@ -375,8 +375,18 @@ qtl_rep:
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_cat_nom_qtl.log
 
   pi1_enrich_obrien:
-    output: ../results/06QTL-REPLICATION/obrien_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich.rds
+    enrich: ../results/06QTL-REPLICATION/obrien_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
+    pi1: ../results/06QTL-REPLICATION/obrien_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_results_tbl.rds
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_obrien.log
+
+  pi1_enrich_wen:
+    public_all: ../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz
+    public_top: ../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_permutation_50HCP_FDR_0.05.txt.gz
+#    public_all: ../resources/public_datasets/wen_2024/eur_nominal_eqtl_50HCP_all_assoc.txt.gz
+#    public_top: ../resources/public_datasets/wen_2024/eur_perm_eqtl_50HCP_all_assoc.txt.gz
+    enrich: ../results/06QTL-REPLICATION/wen_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
+    pi1: ../results/06QTL-REPLICATION/wen_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_results_tbl.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_wen.log  
 
 # ------------  SLDSR  ----------------
 
