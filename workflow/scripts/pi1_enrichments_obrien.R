@@ -43,19 +43,19 @@ qtl_all <- snakemake@input[['qtl_all']]
 qtl_top <- snakemake@input[['qtl_top']]
 cell_type <- snakemake@wildcards[["cell_type"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
-gen_pc <- snakemake@wildcards[["geno_pc"]]
+geno_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
 output_enrich <-  snakemake@output[["enrich"]]
-output_p1 <- snakemake@output[["p1"]]
+output_p1 <- snakemake@output[["pi1"]]
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
   variable = c("public_all_qtl", "public_top_qtl", "qtl_all", "qtl_top", "cell_type", 
-               "exp_pc", "gen_pc", "norm_method", "output_enrich", "output_p1"),
+               "exp_pc", "geno_pc", "norm_method", "output_enrich", "output_p1"),
   value    = c(public_all_qtl, public_top_qtl, qtl_all, qtl_top, cell_type, 
-               exp_pc, gen_pc, norm_method, output_enrich, output_p1)) |> 
+               exp_pc, geno_pc, norm_method, output_enrich, output_p1)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
