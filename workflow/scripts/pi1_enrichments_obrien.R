@@ -45,17 +45,18 @@ cell_type <- snakemake@wildcards[["cell_type"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 geno_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
-output_enrich <-  snakemake@output[["enrich"]]
-output_p1 <- snakemake@output[["pi1"]]
+output_enrich <- snakemake@output[["enrich"]]
+output_pi1 <- snakemake@output[["pi1"]]
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
   variable = c("public_all_qtl", "public_top_qtl", "qtl_all", "qtl_top", "cell_type", 
-               "exp_pc", "geno_pc", "norm_method", "output_enrich", "output_p1"),
+               "exp_pc", "geno_pc", "norm_method", "output_enrich", "output_pi1"),
   value    = c(public_all_qtl, public_top_qtl, qtl_all, qtl_top, cell_type, 
-               exp_pc, geno_pc, norm_method, output_enrich, output_p1)) |> 
+               exp_pc, geno_pc, norm_method, output_enrich, output_pi1)
+) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
@@ -191,7 +192,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   
   # Always write result (even if NA)
   write_rds(enrichment_results, output)
-  write_rds(pi1_results, output)
+  write_rds(pi1_result, output)
   message("\nResults written to: ", output)
 }
 #------------------------------------------
@@ -206,7 +207,7 @@ if (exists("snakemake")) {
     qtl_all         = snakemake@input[["qtl_all"]],
     qtl_top         = snakemake@input[["qtl_top"]],
     output_enrich   = snakemake@output[["enrich"]],
-    output_p1       = snakemake@output[["p1"]],
+    output_pi1      = snakemake@output[["pi1"]],
   )
 }
 #------------------------------------------
