@@ -127,12 +127,12 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                                qtl_all, qtl_top, output_enrich, output_pi1) {
   
   # Load datasets
-  message("Loading O'Brien all eQTL ...")
+  message("Loading public bulk all eQTL ...")
   public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
     select(variant_id, phenotype_id = gene_id,
            pval = pval_nominal, slope_ref = slope)
   
-  message("Loading O'Brien top eQTL (FDR < 0.05) ...")
+  message("Loading public bulk top eQTL (FDR < 0.05) ...")
   public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
     filter(qval < 0.05) %>%
     select(variant_id, phenotype_id = gene_id, slope_my = slope)
@@ -208,7 +208,7 @@ if (exists("snakemake")) {
     qtl_all         = snakemake@input[["qtl_all"]],
     qtl_top         = snakemake@input[["qtl_top"]],
     output_enrich   = snakemake@output[["enrich"]],
-    output_pi1      = snakemake@output[["pi1"]],
+    output_pi1      = snakemake@output[["pi1"]]
   )
 }
 #------------------------------------------
