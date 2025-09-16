@@ -48,6 +48,28 @@ norm_method <- snakemake@wildcards[["norm_method"]]
 output_enrich <- snakemake@output[["enrich"]]
 output_pi1 <- snakemake@output[["pi1"]]
 
+# Debug variable assignments
+message("Debugging variables:")
+vars <- list(
+  public_all_qtl = public_all_qtl,
+  public_top_qtl = public_top_qtl,
+  qtl_all = qtl_all,
+  qtl_top = qtl_top,
+  cell_type = cell_type,
+  exp_pc = exp_pc,
+  geno_pc = geno_pc,
+  norm_method = norm_method,
+  output_enrich = output_enrich,
+  output_pi1 = output_pi1
+)
+for (name in names(vars)) {
+  if (is.null(vars[[name]])) {
+    message("WARNING: ", name, " is NULL")
+  } else {
+    message(name, ": ", vars[[name]])
+  }
+}
+
 # Check variable assignment
 message("\nVariables")
 cat("============================")
