@@ -37,8 +37,11 @@ susie_batches: 25
 write_full_susie: TRUE
 
 gwas:
-  scz: https://figshare.com/ndownloader/files/34517828  # EUR only
-
+  scz: https://figshare.com/ndownloader/files/34517828  # PMID:35396580, EUR only
+  bpd: https://figshare.com/ndownloader/files/49760772  # PMID:39843750
+  mdd: https://figshare.com/ndownloader/files/51487022  # PMID:39814019
+  hgt: https://eur03.safelinks.protection.outlook.com/?url=https%3A%2F%2Fportals.broadinstitute.org%2Fcollaboration%2Fgiant%2Fimages%2Ff%2Ff7%2FGIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_EUR.gz&data=05%7C02%7CBaranY%40cardiff.ac.uk%7Cb4fbaa4e236042ccde8108dd6bbdb94f%7Cbdb74b3095684856bdbf06759778fcbc%7C1%7C0%7C638785184769053042%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=yNgCf5EVEHMayI6yj73W7V9p3cLgNez1kWNb5HLySQI%3D&reserved=0  #PMID:36224396  
+ 
 containers:
   fastqtl: ../resources/containers/gtex_eqtl.sif
   tensorqtl: ../resources/containers/tensorqtl.sif
@@ -279,8 +282,10 @@ tensorQTL:
   out_prefix: ../results/04TENSORQTL/chrALL_final.filt
   window: 500000
   geno_pcs: 4
-  exp_pcs: [10,20,30,40,50]
-  norm_methods: ["bryois", "fujita", "quantile", "combat", "paper_opt11"]
+  exp_pcs: [40]
+  norm_methods: ["quantile"]
+#  exp_pcs: [10,20,30,40,50]
+#  norm_methods: ["bryois", "fujita", "quantile", "xue"]
 
   prep_tensorQTL_input:
     cov_file: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
@@ -320,29 +325,9 @@ tensorQTL:
     prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
 
-input_files:
-  counts: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
-  genotypes: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
-  covariates: ../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt
-output_files:
-  counts_gz: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed.gz
-  genotypes_plink: ../results/04TENSORQTL/chrALL_final.filt.pgen 
-  fastqtl_output: ../results/04FASTQTL/{cell_type}_nom_{chunk}_txt.gz
-  fastqtl_perm_output: ../results/04FASTQTL/{cell_type}_perm_{chunk}_txt.gz
-  tensorqtl_out_prefix: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom
-  tensorqtl_output: ../results/04TENSORQTL/{cell_type}/{cell_type}_nom.cis_qtl_pairs.4.parquet
-  tensorqtl_perm_out_prefix: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm
-  tensorqtl_perm_output: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm.cis_qtl.txt.gz
-  tensorqtl_perm_log: ../results/04TENSORQTL/{cell_type}/{cell_type}_perm.tensorQTL.cis.log
   tensorqtl_tss_plt: ../results/figs/tss_density_plot_combined.png
   tensorqtl_tss_tbl: ../results/tables/tensorqtl_summary_table.tsv
 
-log_files:
-  fastqtl_zip: ../results/00LOG/04FASTQTL/{cell_type}_bgzip.log
-  fastqtl: ../results/00LOG/04FASTQTL/{cell_type}_nom_{chunk}.log
-  fastqtl_perm: ../results/00LOG/04FASTQTL/{cell_type}_perm_{chunk}.log
-  tensorqtl: ../results/00LOG/04TENSORQTL/{cell_type}_nom.log
-  tensorqtl_perm: ../results/00LOG/04TENSORQTL/{cell_type}_perm.log
   tensorqtl_tss: ../results/00LOG/04TENSORQTL/tss.log   
 
 
@@ -356,21 +341,42 @@ qtl_rep:
     web_link: https://springernature.figshare.com/ndownloader/articles/6881825/versions/1
     zip_out: ../resources/public_datasets/obrien_2018/output.zip
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_obrien.log
+ 
   dwnld_bryois:
     output: ../resources/public_datasets/bryois_2022/download_complete.touch
     json: ../resources/public_datasets/bryois_2022/bryois_data_2022.json
     out_dir: ../resources/public_datasets/bryois_2022/
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_bryois.log
+
   dwnld_ziffra:
     output: ../resources/public_datasets/ziffra_2021/Ziffra_2021_supp_tables_2_13.xlsx
     web_link: https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-021-03209-8/MediaObjects/41586_2021_3209_MOESM4_ESM.xlsx
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_ziffra.log
+
   dwnld_wen:
     output: ../resources/public_datasets/wen_2024/download_complete.touch
     json:  ../resources/public_datasets/wen_2024/wen_data_2024.json
     out_dir: ../resources/public_datasets/wen_2024/
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_wen.log
 
+  snp_lookup:
+    qtl_perm: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz    
+    out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup.log
+
+  atac_enrich:
+    peak_dir: ../resources/public_datasets/ziffra_2021/ 
+    out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds    
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich.log
+  
+  cat_nom_qtl:
+    parquet: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.{chr}.parquet
+    output: ../results/06QTL-REPLICATION/cat_nom_qtl/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz 
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_cat_nom_qtl.log
+
+  pi1_enrich_obrien:
+    output: ../results/06QTL-REPLICATION/obrien_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_obrien.log
 
 # ------------  SLDSR  ----------------
 
