@@ -92,6 +92,25 @@ rule tensorqtl_perm:
                --mode cis >> {log} 2>&1 
             """
 
+rule tensotqtl_report:
+    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
+    input:  qtl = expand(rules.tensorqtl_perm.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            rmd_script = "scripts/tensorQTL_report.Rmd"
+    output: "reports/05TENSORQTL/tensotqtl_report.html"
+    params: in_dir = "../../results/05TENSORQTL/tensorqtl_perm/",
+            bmark_dir = "../reports/benchmarks/",
+            output_file = "../reports/05TENSORQTL/tensotqtl_report.html",
+    singularity: config["containers"]["r_eqtl"]
+    message: "Generate tensorQTL report"
+    benchmark: "reports/benchmarks/05tensorQTL.tensorqtl_report.benchmark.txt"
+    log:     "../results/00LOG/05TENSORQTL/tensorqtl_report.log"
+    shell:
+        """
+        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+            output_file = '{params.output_file}', \
+            params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+        """
+
 #rule tensorqtl_tss_and_sumstats:
 #    input:  expand(config["output_files"]["tensorqtl_perm_log"], cell_type = config['cell_types'])
 #    output: config["output_files"]["tensorqtl_tss_plt"],

@@ -6,7 +6,7 @@ configfile: '../config/config.yaml'
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute.smk'
 #include: 'rules/04genotypes_post_impute.smk'
-include: 'rules/05tensorQTL.smk'
+#include: 'rules/05tensorQTL.smk'
 include: 'rules/06qtl_replication.smk'
 #include: 'rules/05susie.smk'
 #include: 'rules/06prep_gwas.smk'
@@ -74,7 +74,7 @@ rule all:
     input:
 #        qtl_files
 #         expand("../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"],
-        "reports/05TENSORQTL/tensotqtl_report.html",
+#        "reports/05TENSORQTL/tensotqtl_report.html",
 #        expand("/scratch/c.c1477909/fastqs/250716/{sample}_{lane}_R1_001.fastq.gz", sample=ALL_SAMPLES, lane=["L001", "L002", "L003", "L004"])
 #        "reports/read_counts/summary_read_counts.txt"
 #        "../resources/refs/ref.done",
@@ -90,7 +90,8 @@ rule all:
 #        expand("../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"]),
         expand(
             [
-                config["qtl_rep"]["pi1_enrich_obrien"]["output"]
+                config["qtl_rep"]["pi1_enrich_obrien"]["pi1"],
+                config["qtl_rep"]["pi1_enrich_wen"]["pi1"]
             ],
             cell_type=config["cell_types"],
             geno_pc=config["tensorQTL"]["geno_pcs"],

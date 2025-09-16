@@ -99,15 +99,30 @@ rule cat_nom_qtl:
 
 rule pi1_enrich_obrien:
     # Currenly running all cell types together at a specific exp_pc, gen_pc, norm_method (norm method stil to be added)
-    input:  obrien_all = rules.dwnld_obrien.output.all_qtl,
-            obrien_top = rules.dwnld_obrien.output.top_qtl,
+    input:  public_all = rules.dwnld_obrien.output.all_qtl,
+            public_top = rules.dwnld_obrien.output.top_qtl,
             qtl_all = rules.cat_nom_qtl.output,
             qtl_top = config["tensorQTL"]["tensorqtl_perm"]["output"]
-    output: config["qtl_rep"]["pi1_enrich_obrien"]["output"] 
+    output: enrich = config["qtl_rep"]["pi1_enrich_obrien"]["enrich"],
+            pi1 = config["qtl_rep"]["pi1_enrich_obrien"]["pi1"] 
     resources: threads = 4, mem_mb = 20000, time="1:00:00"
     message: "Calc pi1 enrichemnts between sn-eQTL and O'Brien 2018 bulk brain eQTL"
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_obrien_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_obrien"]["log"]    
-    script: "../scripts/pi1_enrichments_obrien.R"    
+    script: "../scripts/pi1_enrichments_bulk.R"    
 
+rule pi1_enrich_wen:
+    # Currenly running all cell types together at a specific exp_pc, gen_pc, norm_method (norm method stil to be added)
+    input:  public_all = config["qtl_rep"]["pi1_enrich_wen"]["public_all"],             
+            public_top = config["qtl_rep"]["pi1_enrich_wen"]["public_top"],
+            qtl_all = rules.cat_nom_qtl.output,
+            qtl_top = config["tensorQTL"]["tensorqtl_perm"]["output"]
+    output: enrich = config["qtl_rep"]["pi1_enrich_wen"]["enrich"],
+            pi1 = config["qtl_rep"]["pi1_enrich_wen"]["pi1"]
+    resources: threads = 4, mem_mb = 20000, time="1:00:00"
+    message: "Calc pi1 enrichemnts between sn-eQTL and Wen 2024 bulk brain eQTL"
+    singularity: config["containers"]["r_eqtl"]
+    benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_wen_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["qtl_rep"]["pi1_enrich_wen"]["log"]
+    script: "../scripts/pi1_enrichments_bulk.R"
