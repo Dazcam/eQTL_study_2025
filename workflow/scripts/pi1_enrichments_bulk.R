@@ -160,10 +160,13 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     overlap_count_cell_ref = NA_integer_
   )
   
+  # Initialize list to store both pi1 results
+  pi1_results <- list(forward = NULL, reverse = NULL)
+  
   # Forward: cell sig > O’Brien full
   if (nrow(query_eqtl) > 0) {
     message("\n--- Forward enrichment: cell sig → O'Brien full ---")
-    pi1_result <- compute_pi1(query_eqtl, public_full, "O'Brien")
+    pi1_results$forward <- compute_pi1(query_eqtl, public_full, "O'Brien")
     enrichment_results <- enrichment_results %>%
       mutate(
         pi1 = pi1_result$pi1,
@@ -178,7 +181,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   # Reverse: O’Brien sig > cell full
   if (nrow(full_cell) > 0) {
     message("\n--- Reverse enrichment: O'Brien sig → cell full ---")
-    pi1_result <- compute_pi1(public_top, full_cell, cell_type)
+    pi1_results$reverse <- compute_pi1(public_top, full_cell, cell_type)
     enrichment_results <- enrichment_results %>%
       mutate(
         pi1_cell_ref = pi1_result$pi1,
