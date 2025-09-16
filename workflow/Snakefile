@@ -89,7 +89,8 @@ rule all:
 #        "../results/04GENOTYPES-POST/TOPMED/covariates/pca.eigenvec",
 #        expand("../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"]),
         expand(
-            [
+            [   
+                config["qtl_rep"]["atac_enrich"]["out_file"],
                 config["qtl_rep"]["pi1_enrich_obrien"]["pi1"],
                 config["qtl_rep"]["pi1_enrich_wen"]["pi1"]
             ],
