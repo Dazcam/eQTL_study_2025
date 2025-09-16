@@ -41,21 +41,22 @@ public_all_qtl <- snakemake@input[['public_all']]
 public_top_qtl <- snakemake@input[['public_top']]
 qtl_all <- snakemake@input[['qtl_all']]
 qtl_top <- snakemake@input[['qtl_top']]
+output_enrich <- snakemake@output[["enrich"]]
+output_pi1 <- snakemake@output[["pi1"]]
 cell_type <- snakemake@wildcards[["cell_type"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 geno_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
-output_enrich <- snakemake@output[["enrich"]]
-output_pi1 <- snakemake@output[["pi1"]]
+ref_name <-str_split_i(output_pi1, 4)
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("public_all_qtl", "public_top_qtl", "qtl_all", "qtl_top", "cell_type", 
-               "exp_pc", "geno_pc", "norm_method", "output_enrich", "output_pi1"),
-  value    = c(public_all_qtl, public_top_qtl, qtl_all, qtl_top, cell_type, 
-               exp_pc, geno_pc, norm_method, output_enrich, output_pi1)
+  variable = c("public_all_qtl", "public_top_qtl", "qtl_all", "qtl_top", "output_enrich", 
+               "output_pi1", "cell_type", "exp_pc", "geno_pc", "norm_method", "ref_name"),
+  value    = c(public_all_qtl, public_top_qtl, qtl_all, qtl_top, output_enrich, 
+               output_pi1, cell_type, exp_pc, geno_pc, norm_method, ref_name)
 ) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
@@ -124,18 +125,33 @@ compute_pi1 <- function(query_eqtl, full_eqtl, ref_name, min_overlap = 50) {
 #------------------------------------------
 # Main function
 run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
-                               qtl_all, qtl_top, output_enrich, output_pi1) {
+                               qtl_all, qtl_top, output_enrich, output_pi1,
+                               ref_name) {
   
   # Load datasets
-  message("Loading public bulk all eQTL ...")
-  public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
-    select(variant_id, phenotype_id = gene_id,
-           pval = pval_nominal, slope_ref = slope)
+  if (str_detect(ref_name('obrien'))) {
+    message("Loading O'Brien bulk all eQTL ...")
+    public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
+      select(variant_id, phenotype_id = gene_id,
+             pval = pval_nominal, slope_ref = slope)
+    
+    message("Loading O'Brien bulk top eQTL (FDR < 0.05) ...")
+    public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
+      filter(qval < 0.05) %>%
+      select(variant_id, phenotype_id = gene_id, slope_my = slope)
+  }
   
-  message("Loading public bulk top eQTL (FDR < 0.05) ...")
-  public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
-    filter(qval < 0.05) %>%
-    select(variant_id, phenotype_id = gene_id, slope_my = slope)
+  if (str_detect(ref_name('wen'))) {
+    message("Loading Wen bulk all eQTL ...")
+    public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
+      select(variant_id = sid, phenotype_id = pid,
+             pval = npval, slope_ref = slope)
+    
+    message("Loading Wen bulk top eQTL (FDR < 0.05) ...")
+    public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
+      filter(qval < 0.05) %>%
+      select(variant_id = sid, phenotype_id = pid, slope_my = slope)
+  }
   
   message("Loading sig. eQTL: ", cell_type)
   query_eqtl <- read_tsv(qtl_top, show_col_types = FALSE) %>%
@@ -165,8 +181,8 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   
   # Forward: cell sig > O’Brien full
   if (nrow(query_eqtl) > 0) {
-    message("\n--- Forward enrichment: cell sig → O'Brien full ---")
-    pi1_result <- compute_pi1(query_eqtl, public_full, "O'Brien")
+    message("\n--- Forward enrichment: cell sig → ", ref_name, " full ---")
+    pi1_result <- compute_pi1(query_eqtl, public_full, ref_name)
     pi1_results$forward <-  pi1_result
     enrichment_results <- enrichment_results %>%
       mutate(
@@ -181,7 +197,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   
   # Reverse: O’Brien sig > cell full
   if (nrow(full_cell) > 0) {
-    message("\n--- Reverse enrichment: O'Brien sig → cell full ---")
+    message("\n--- Reverse enrichment: ", ref_name, " sig → cell full ---")
     pi1_result <- compute_pi1(public_top, full_cell, cell_type)
     pi1_results$reverse <-  pi1_result
     enrichment_results <- enrichment_results %>%
@@ -207,13 +223,14 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
 # Run with Snakemake params
 if (exists("snakemake")) {
   run_pi1_enrichment(
-    cell_type       = snakemake@wildcards[["cell_type"]],
-    public_all_qtl  = snakemake@input[["public_all"]],
-    public_top_qtl  = snakemake@input[["public_top"]],
-    qtl_all         = snakemake@input[["qtl_all"]],
-    qtl_top         = snakemake@input[["qtl_top"]],
-    output_enrich   = snakemake@output[["enrich"]],
-    output_pi1      = snakemake@output[["pi1"]]
+    cell_type       = cell_type,
+    public_all_qtl  = public_all_qtl,
+    public_top_qtl  = public_top_qtl,
+    qtl_all         = qtl_all,
+    qtl_top         = qtl_top,
+    output_enrich   = output_enrich,
+    output_pi1      = output_pi1,
+    ref_name        = ref_name
   )
 }
 #------------------------------------------
