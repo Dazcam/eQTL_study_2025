@@ -6,10 +6,8 @@ configfile: '../config/config.yaml'
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute.smk'
 #include: 'rules/04genotypes_post_impute.smk'
-#include: 'rules/04pegasus.smk'
+include: 'rules/05tensorQTL.smk'
 include: 'rules/06qtl_replication.smk'
-#include: 'rules/05tensorQTL.smk'
-#include: 'rules/04genotypes.smk'
 #include: 'rules/05susie.smk'
 #include: 'rules/06prep_gwas.smk'
 #include: 'rules/07sldsr.smk'
@@ -31,18 +29,19 @@ if QTL_TOOL == "fastqtl":
 elif QTL_TOOL == "tensorqtl":
     for cell_type in config["cell_types"]:
         for exp_pc in config["tensorQTL"]["exp_pcs"]:
-            qtl_files.append(config["tensorQTL"]["tensorqtl_nom"]["output"].format(
-                cell_type=cell_type,
-                geno_pc=config["tensorQTL"]["geno_pcs"],
-                exp_pc=exp_pc,
-                norm_method=config["tensorQTL"]["norm_methods"]
-            ))
-            qtl_files.append(config["tensorQTL"]["tensorqtl_perm"]["output"].format(
-                cell_type=cell_type,
-                geno_pc=config["tensorQTL"]["geno_pcs"],
-                exp_pc=exp_pc,
-       	       	norm_method=config["tensorQTL"]["norm_methods"]
-            ))
+            for norm_method in config["tensorQTL"]["norm_methods"]:    
+                qtl_files.append(config["tensorQTL"]["tensorqtl_nom"]["output"].format(
+                    cell_type=cell_type,
+                    geno_pc=config["tensorQTL"]["geno_pcs"],
+                    exp_pc=exp_pc,
+                    norm_method=norm_method
+                ))
+                qtl_files.append(config["tensorQTL"]["tensorqtl_perm"]["output"].format(
+                    cell_type=cell_type,
+                    geno_pc=config["tensorQTL"]["geno_pcs"],
+                    exp_pc=exp_pc,
+       	       	    norm_method=norm_method
+                ))
       #  qtl_files.append(config["output_files"]["tensorqtl_perm_log"].format(cell_type=cell_type))
 
 def get_all_genes_from_checkpoint(wildcards):
@@ -74,6 +73,8 @@ qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]
 rule all:
     input:
 #        qtl_files
+#         expand("../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"],
+        "reports/05TENSORQTL/tensotqtl_report.html",
 #        expand("/scratch/c.c1477909/fastqs/250716/{sample}_{lane}_R1_001.fastq.gz", sample=ALL_SAMPLES, lane=["L001", "L002", "L003", "L004"])
 #        "reports/read_counts/summary_read_counts.txt"
 #        "../resources/refs/ref.done",
@@ -86,20 +87,21 @@ rule all:
 #        "../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html",
 #        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html",
 #        "../results/04GENOTYPES-POST/TOPMED/covariates/pca.eigenvec",
-#        expand("../results/05TENSORQTL/prep_input/{cell_type}_tmm.bed", cell_type = CELL_TYPES),
-#       expand(
-#            [
-#                config["tensorQTL"]["tensorqtl"]["output"]
-#            ],
-#            cell_type=config["cell_types"],
-#            geno_pc=config["tensorQTL"]["geno_pcs"],
-#            exp_pc=config["tensorQTL"]["exp_pcs"]
-#        )
+#        expand("../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"]),
+        expand(
+            [
+                config["qtl_rep"]["pi1_enrich_obrien"]["output"]
+            ],
+            cell_type=config["cell_types"],
+            geno_pc=config["tensorQTL"]["geno_pcs"],
+            exp_pc=config["tensorQTL"]["exp_pcs"],
+            norm_method=config["tensorQTL"]["norm_methods"]
+        )
 #        expand("../results/05TENSORQTL/{cell_type}_covariates.bed", cell_type	= CELL_TYPES)
-        "../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz",
-        "../resources/public_datasets/bryois_2022/download_complete.touch",
-        "../resources/public_datasets/ziffra_2021/Ziffra_2021_supp_tables_2_13.xlsx",
-        "../resources/public_datasets/wen_2024/download_complete.touch"
+#        "../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz",
+#        "../resources/public_datasets/bryois_2022/download_complete.touch",
+#        "../resources/public_datasets/ziffra_2021/Ziffra_2021_supp_tables_2_13.xlsx",
+#        "../resources/public_datasets/wen_2024/download_complete.touch",
 #        expand("../results/04PEGASUS/pegasus_qc_{plate}.html", plate = config['plate']) 
 #        qtl_files,
 #        qtl_plots,
