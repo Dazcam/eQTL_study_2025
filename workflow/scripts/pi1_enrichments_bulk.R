@@ -47,7 +47,7 @@ cell_type <- snakemake@wildcards[["cell_type"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 geno_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
-ref_name <-str_split_i(output_pi1, 4)
+ref_name <- str_split_i(output_pi1, "/", 4)
 
 # Check variable assignment
 message("\nVariables")
