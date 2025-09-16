@@ -27,7 +27,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nCalculating pi1 enrichments: sig. sn-eQTL & O'brien 2018 bulk brain eQTL ...")
+message("\n\nCalculating pi1 enrichments: sig. sn-eQTL & public bulk brain eQTL ...")
 
 # -------------------------------------------------------------------------------------
 suppressPackageStartupMessages({
@@ -37,23 +37,25 @@ suppressPackageStartupMessages({
 })
 
 # Input and output paths
-obrien_all_qtl <- snakemake@input[['obrien_all']]
-obrien_top_qtl <- snakemake@input[['obrien_top']]
+public_all_qtl <- snakemake@input[['public_all']]
+public_top_qtl <- snakemake@input[['public_top']]
 qtl_all <- snakemake@input[['qtl_all']]
 qtl_top <- snakemake@input[['qtl_top']]
 cell_type <- snakemake@wildcards[["cell_type"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 gen_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
+output_enrich <-  snakemake@output[["enrich"]]
+output_p1 <- snakemake@output[["p1"]]
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("obrien_all_qtl", "obrien_top_qtl", "qtl_all", "qtl_top",
-               "cell_type", "exp_pc", "gen_pc", "norm_method"),
-  value    = c(obrien_all_qtl, obrien_top_qtl, qtl_all, qtl_top, 
-               cell_type, exp_pc, gen_pc, norm_method)) |> 
+  variable = c("public_all_qtl", "public_top_qtl", "qtl_all", "qtl_top",
+               "cell_type", "exp_pc", "gen_pc", "norm_method", "output_enrich", "output_p1"),
+  value    = c(public_all_qtl, public_top_qtl, qtl_all, qtl_top, 
+               cell_type, exp_pc, gen_pc, norm_method, output_enrich)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
@@ -120,17 +122,17 @@ compute_pi1 <- function(query_eqtl, full_eqtl, ref_name, min_overlap = 50) {
 
 #------------------------------------------
 # Main function
-run_pi1_enrichment <- function(cell_type, obrien_all_qtl, obrien_top_qtl,
+run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                                qtl_all, qtl_top, output) {
   
   # Load datasets
   message("Loading O'Brien all eQTL ...")
-  obrien_full <- read_tsv(obrien_all_qtl, show_col_types = FALSE) %>%
+  public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
     select(variant_id, phenotype_id = gene_id,
            pval = pval_nominal, slope_ref = slope)
   
   message("Loading O'Brien top eQTL (FDR < 0.05) ...")
-  obrien_top <- read_tsv(obrien_top_qtl, show_col_types = FALSE) %>%
+  public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
     filter(qval < 0.05) %>%
     select(variant_id, phenotype_id = gene_id, slope_my = slope)
   
@@ -147,10 +149,10 @@ run_pi1_enrichment <- function(cell_type, obrien_all_qtl, obrien_top_qtl,
   # Initialize results tibble
   enrichment_results <- tibble(
     cell_type = cell_type,
-    pi1_obrien = NA_real_,
-    prop_replicating_obrien = NA_real_,
-    prop_same_direction_obrien = NA_real_,
-    overlap_count_obrien = NA_integer_,
+    pi1 = NA_real_,
+    prop_replicating = NA_real_,
+    prop_same_direction = NA_real_,
+    overlap_count = NA_integer_,
     pi1_cell_ref = NA_real_,
     prop_replicating_cell_ref = NA_real_,
     prop_same_direction_cell_ref = NA_real_,
@@ -160,13 +162,13 @@ run_pi1_enrichment <- function(cell_type, obrien_all_qtl, obrien_top_qtl,
   # Forward: cell sig > O’Brien full
   if (nrow(query_eqtl) > 0) {
     message("\n--- Forward enrichment: cell sig → O'Brien full ---")
-    pi1_result <- compute_pi1(query_eqtl, obrien_full, "O'Brien")
+    pi1_result <- compute_pi1(query_eqtl, public_full, "O'Brien")
     enrichment_results <- enrichment_results %>%
       mutate(
-        pi1_obrien = pi1_result$pi1,
-        prop_replicating_obrien = pi1_result$prop_replicating,
-        prop_same_direction_obrien = pi1_result$prop_same_direction,
-        overlap_count_obrien = pi1_result$overlap_count
+        pi1 = pi1_result$pi1,
+        prop_replicating = pi1_result$prop_replicating,
+        prop_same_direction = pi1_result$prop_same_direction,
+        overlap_count = pi1_result$overlap_count
       )
   } else {
     message("No significant eQTLs found for ", cell_type, " (forward).")
@@ -175,7 +177,7 @@ run_pi1_enrichment <- function(cell_type, obrien_all_qtl, obrien_top_qtl,
   # Reverse: O’Brien sig > cell full
   if (nrow(full_cell) > 0) {
     message("\n--- Reverse enrichment: O'Brien sig → cell full ---")
-    pi1_result <- compute_pi1(obrien_top, full_cell, cell_type)
+    pi1_result <- compute_pi1(public_top, full_cell, cell_type)
     enrichment_results <- enrichment_results %>%
       mutate(
         pi1_cell_ref = pi1_result$pi1,
@@ -189,6 +191,7 @@ run_pi1_enrichment <- function(cell_type, obrien_all_qtl, obrien_top_qtl,
   
   # Always write result (even if NA)
   write_rds(enrichment_results, output)
+  write_rds(pi1_results, output)
   message("\nResults written to: ", output)
 }
 #------------------------------------------
@@ -198,11 +201,12 @@ run_pi1_enrichment <- function(cell_type, obrien_all_qtl, obrien_top_qtl,
 if (exists("snakemake")) {
   run_pi1_enrichment(
     cell_type       = snakemake@wildcards[["cell_type"]],
-    obrien_all_qtl  = snakemake@input[["obrien_all"]],
-    obrien_top_qtl  = snakemake@input[["obrien_top"]],
+    public_all_qtl  = snakemake@input[["public_all"]],
+    public_top_qtl  = snakemake@input[["public_top"]],
     qtl_all         = snakemake@input[["qtl_all"]],
     qtl_top         = snakemake@input[["qtl_top"]],
-    output          = snakemake@output[[1]]
+    output_enrich   = snakemake@output[["enrich"]],
+    output_p1       = snakemake@output[["p1"]],
   )
 }
 #------------------------------------------
@@ -211,12 +215,12 @@ if (exists("snakemake")) {
 
 # # Load O'Brien full eQTL results
 # message("Loading O'Brien all eQTL ...")
-# obrien_full <- read_tsv(obrien_all_qtl) %>%
+# public_full <- read_tsv(public_all_qtl) %>%
 #   dplyr::select(variant_id, phenotype_id = gene_id, pval = pval_nominal, slope_ref = slope)
 # 
 # # Load O'Brien top eQTL (FDR < 0.05)
 # message("Loading O'Brien top eQTL ...")
-# obrien_top <- read_tsv(obrien_top_qtl) %>%
+# public_top <- read_tsv(public_top_qtl) %>%
 #   filter(qval < 0.05) %>%
 #   select(variant_id, phenotype_id = gene_id, slope_my = slope)
 # 
@@ -291,48 +295,23 @@ if (exists("snakemake")) {
 #   next
 # }
 # 
-# pi1_result <- compute_pi1(query_eqtl, obrien_full, "O'Brien")
+# pi1_result <- compute_pi1(query_eqtl, public_full, "O'Brien")
 # 
 # enrichment_results <- bind_rows(enrichment_results, tibble(
 #   cell_type = cell_type,
-#   pi1_obrien = pi1_result$pi1,
-#   prop_replicating_obrien = pi1_result$prop_replicating,
-#   prop_same_direction_obrien = pi1_result$prop_same_direction,
-#   overlap_count_obrien = pi1_result$overlap_count
+#   pi1_public = pi1_result$pi1,
+#   prop_replicating_public = pi1_result$prop_replicating,
+#   prop_same_direction_public = pi1_result$prop_same_direction,
+#   overlap_count_public = pi1_result$overlap_count
 # ))
 # 
 # # Collect overlapping eQTLs
-# overlapping <- merge(query_eqtl, obrien_full, by = c("variant_id", "phenotype_id")) %>%
+# overlapping <- merge(query_eqtl, public_full, by = c("variant_id", "phenotype_id")) %>%
 #   mutate(cell_type = cell_type, ref_dataset = "O'Brien")
 # overlapping_eqtls <- bind_rows(overlapping_eqtls, overlapping)
 # 
 # # Generate plot if computation succeeded - Move to report file
-# # if (!is.na(pi1_result$pi1)) {
-# #   plot_data <- data.frame(pvalue = pi1_result$pvals)
-# #   max_density <- max(ggplot_build(ggplot(plot_data, aes(x = pvalue)) + geom_histogram(aes(y = ..density..), bins = 30))$data[[1]]$density)
-# #   p <- ggplot(plot_data, aes(x = pvalue)) +
-# #     geom_histogram(aes(y = ..density..), bins = 30, fill = custom_palette[cell_type], color = "black", alpha = 0.8) +
-# #     annotate("text", x = 0.15, y = 0.90 * max_density, label = paste(
-# #       "pi1 =", round(pi1_result$pi1, 2),
-# #       "\nProp. replicating at 5% FDR:", round(pi1_result$prop_replicating, 2),
-# #       "\nProp. same direction:", round(pi1_result$prop_same_direction, 2)
-# #     ), hjust = 0) +
-# #     labs(
-# #       title = cell_type,
-# #       x = "P-value",
-# #       y = "Density"
-# #     ) +
-# #     theme_minimal(base_size = 12) +
-# #     theme(
-# #       plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-# #       axis.title = element_text(face = "bold"),
-# #       axis.text = element_text(color = "black"),
-# #       panel.grid.minor = element_blank(),
-# #       panel.border = element_rect(color = "black", fill = NA, size = 0.5),
-# #       plot.caption = element_text(size = 10, hjust = 0)
-# #     )
-# #   plot_list[[cell_type]] <- p
-# # }
+
 # 
 # message("O'Brien enrichment completed for ", cell_type)
 # 
@@ -352,7 +331,7 @@ if (exists("snakemake")) {
 #   next
 # }
 # 
-# pi1_result <- compute_pi1(obrien_top, full_cell, cell_type)
+# pi1_result <- compute_pi1(public_top, full_cell, cell_type)
 # 
 # # Add reverse results to the enrichment table (update existing rows)
 # enrichment_results <- enrichment_results %>%
@@ -364,7 +343,7 @@ if (exists("snakemake")) {
 #   )
 # 
 # # Collect overlapping eQTLs for reverse
-# overlapping <- merge(obrien_top, full_cell, by = c("variant_id", "phenotype_id")) %>%
+# overlapping <- merge(public_top, full_cell, by = c("variant_id", "phenotype_id")) %>%
 #   mutate(cell_type = cell_type, ref_dataset = "Cell")
 # overlapping_eqtls_reverse <- bind_rows(overlapping_eqtls_reverse, overlapping)
 # 
@@ -405,8 +384,7 @@ if (exists("snakemake")) {
 # 
 # #### Plotting - move to report file
 # # Generate combined plot
-# # combined_plot <- plot_grid(plotlist = plot_list, ncol = 3)
-# # print(combined_plot)
+#combined_plot <- plot_grid(plotlist = plot_list, ncol = 3)
 # # 
 # # 
 # # # Generate combined plot for Bryois reverse
