@@ -166,8 +166,8 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   # Forward: cell sig > O’Brien full
   if (nrow(query_eqtl) > 0) {
     message("\n--- Forward enrichment: cell sig → O'Brien full ---")
-    pi1_results <- compute_pi1(query_eqtl, public_full, "O'Brien")
-    pi1_results$forward <-  pi1_results
+    pi1_result <- compute_pi1(query_eqtl, public_full, "O'Brien")
+    pi1_results$forward <-  pi1_result
     enrichment_results <- enrichment_results %>%
       mutate(
         pi1 = pi1_result$pi1,
@@ -182,8 +182,8 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   # Reverse: O’Brien sig > cell full
   if (nrow(full_cell) > 0) {
     message("\n--- Reverse enrichment: O'Brien sig → cell full ---")
-    pi1_results <- compute_pi1(public_top, full_cell, cell_type)
-    pi1_results$reverse <-  pi1_results
+    pi1_result <- compute_pi1(public_top, full_cell, cell_type)
+    pi1_results$reverse <-  pi1_result
     enrichment_results <- enrichment_results %>%
       mutate(
         pi1_cell_ref = pi1_result$pi1,
@@ -197,7 +197,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   
   # Always write result (even if NA)
   write_rds(enrichment_results, output_enrich)
-  write_rds(pi1_result, output_pi1)
+  write_rds(pi1_results, output_pi1)
   message("\nEnrichment tbl written to: ", output_enrich)
   message("\nPi1 results written to: ", output_pi1)
 }
