@@ -43,7 +43,7 @@ qtl_all <- snakemake@input[['qtl_all']]
 qtl_top <- snakemake@input[['qtl_top']]
 cell_type <- snakemake@wildcards[["cell_type"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
-gen_pc <- snakemake@wildcards[["gen_pc"]]
+gen_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
 
 # Check variable assignment
@@ -53,7 +53,7 @@ tibble(
   variable = c("obrien_all_qtl", "obrien_top_qtl", "qtl_all", "qtl_top",
                "cell_type", "exp_pc", "gen_pc", "norm_method"),
   value    = c(obrien_all_qtl, obrien_top_qtl, qtl_all, qtl_top, 
-               cell_type, exp_pc, gen_pc, norm_method )) |> 
+               cell_type, exp_pc, gen_pc, norm_method)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
