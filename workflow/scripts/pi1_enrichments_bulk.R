@@ -129,7 +129,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                                ref_name) {
   
   # Load datasets
-  if (str_detect(ref_name('obrien'))) {
+  if (str_detect(ref_name, 'obrien')) {
     message("Loading O'Brien bulk all eQTL ...")
     public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
       select(variant_id, phenotype_id = gene_id,
@@ -141,7 +141,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
       select(variant_id, phenotype_id = gene_id, slope_my = slope)
   }
   
-  if (str_detect(ref_name('wen'))) {
+  if (str_detect(ref_name, 'wen')) {
     message("Loading Wen bulk all eQTL ...")
     public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
       select(variant_id = sid, phenotype_id = pid,

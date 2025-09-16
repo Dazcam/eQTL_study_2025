@@ -314,7 +314,7 @@ combined_plot
 
 ***
 
-```{r, obrien_hist_forward, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, obrien_hist_reverse, echo = FALSE, message = FALSE, warning = FALSE}
 plot_list <- list()
 
 for (cell_type in cell_types) {
