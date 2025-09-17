@@ -53,7 +53,7 @@ rule dwnld_ziffra:
 rule dwnld_wen:
     output: touch(config["qtl_rep"]["dwnld_wen"]["output"])
     params: json = config["qtl_rep"]["dwnld_wen"]["json"],
-            out_dir = config["qtl_rep"]["dwnld_wen"]["out_dir"],
+            out_dir = config["qtl_rep"]["dwnld_wen"]["out_dir"]
     envmodules: "compiler/gnu/7/3.0", "jq"
     message: "Download bulk brain eQTL file from Wen 2018, PMID:38781368"
     benchmark: "reports/benchmarks/qtl_replication.dwnld_wen.txt"
@@ -143,3 +143,28 @@ rule pi1_enrich_bryois:
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_bryois_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_bryois"]["log"]
     script: "../scripts/pi1_enrichments_sc.R"
+
+rule pi1_enrichments_report:
+    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
+    input:  ziffra = expand(rules.atac_enrich.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            obrien = expand(rules.pi1_enrich_obrien.output.pi1, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            wen = expand(rules.pi1_enrich_wen.output.pi1, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            bryois = expand(rules.pi1_enrich_bryois.output.pi1, cell_type=config["cell_types"],ref_cell_type=config["cell_types_bryois"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            rmd_script = "scripts/pi1_enrichments_report.Rmd"
+    output: "reports/06QTL-REPLICATION/pi1_enrichments_report.html"
+    params: ziffra_dir = "../../results/06QTL-REPLICATION/atac_enrich/",
+            obrien_dir = "../../results/06QTL-REPLICATION/obrien_bulk/",
+            wen_dir = "../../results/06QTL-REPLICATION/wen_bulk/",
+            bryois_dir = "../../results/06QTL-REPLICATION/bryois/",
+            bmark_dir = "../reports/benchmarks/",
+            output_file = "../reports/06QTL-REPLICATION/pi1_enrichments_report.html"
+    singularity: config["containers"]["r_eqtl"]
+    message: "Generate pi1 enrichments report report"
+    benchmark: "reports/benchmarks/qtl_replication.pi1_enrichments_report.benchmark.txt"
+    log:     "../results/00LOG/06QTL-REPLICATION/pi1_enrichments_report.log"
+    shell:
+        """
+        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+            output_file = '{params.output_file}', \
+            params = list(ziffra_dir = '{params.ziffra_dir}', obrien_dir = '{params.obrien_dir}', wen_dir = '{params.wen_dir}', bryois_dir = '{params.bryois_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+        """
