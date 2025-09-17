@@ -19,7 +19,9 @@ rule dwnld_obrien:
 rule dwnld_bryois:
     output: touch(config["qtl_rep"]["dwnld_bryois"]["output"])
     params: json  = config["qtl_rep"]["dwnld_bryois"]["json"],
-            out_dir = config["qtl_rep"]["dwnld_bryois"]["out_dir"]
+            out_dir = config["qtl_rep"]["dwnld_bryois"]["out_dir"],
+            perm_file = config["qtl_rep"]["dwnld_bryois"]["perm_file"],
+            web_link = config["qtl_rep"]["dwnld_bryois"]["web_link"]
     envmodules: "compiler/gnu/7/3.0", "jq"
     message: "Download and cat single cell adult brain eQTL file from Bryois 2022, PMID:35915177"
     benchmark: "reports/benchmarks/qtl_replication.dwnld_bryois.txt"    
@@ -34,6 +36,7 @@ rule dwnld_bryois:
             rm -f {out_dir}temp_download_list.txt
         
             python scripts/concat_bryois.py {params.out_dir} 2>> {log}
+            wget -O {params.perm_file} {params.web_link} &>> {log} 
             touch {output}
             """        
 
@@ -106,7 +109,7 @@ rule pi1_enrich_obrien:
     output: enrich = config["qtl_rep"]["pi1_enrich_obrien"]["enrich"],
             pi1 = config["qtl_rep"]["pi1_enrich_obrien"]["pi1"] 
     resources: threads = 4, mem_mb = 20000, time="1:00:00"
-    message: "Calc pi1 enrichemnts between sn-eQTL and O'Brien 2018 bulk brain eQTL"
+    message: "Calc pi1 enrichments between sn-eQTL and O'Brien 2018 bulk brain eQTL"
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_obrien_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_obrien"]["log"]    
@@ -121,8 +124,22 @@ rule pi1_enrich_wen:
     output: enrich = config["qtl_rep"]["pi1_enrich_wen"]["enrich"],
             pi1 = config["qtl_rep"]["pi1_enrich_wen"]["pi1"]
     resources: threads = 4, mem_mb = 20000, time="1:00:00"
-    message: "Calc pi1 enrichemnts between sn-eQTL and Wen 2024 bulk brain eQTL"
+    message: "Calc pi1 enrichments between sn-eQTL and Wen 2024 bulk brain eQTL"
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_wen_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_wen"]["log"]
     script: "../scripts/pi1_enrichments_bulk.R"
+
+rule pi1_enrich_bryois:
+    input:  public_all = config["qtl_rep"]["pi1_enrich_bryois"]["public_all"],
+            public_top = config["qtl_rep"]["pi1_enrich_bryois"]["public_top"],
+            qtl_all = rules.cat_nom_qtl.output,
+            qtl_top = config["tensorQTL"]["tensorqtl_perm"]["output"]
+    output: enrich = config["qtl_rep"]["pi1_enrich_bryois"]["enrich"],
+            pi1    = config["qtl_rep"]["pi1_enrich_bryois"]["pi1"]
+    resources: threads = 4, mem_mb = 20000, time="1:00:00"
+    message: "Calc pi1 enrichments between sn-eQTL {wildcards.cell_type} and Bryois 2022 single-cell eQTL {wildcards.ref_cell_type}"
+    singularity: config["containers"]["r_eqtl"]
+    benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_bryois_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["qtl_rep"]["pi1_enrich_bryois"]["log"]
+    script: "../scripts/pi1_enrichments_sc.R"

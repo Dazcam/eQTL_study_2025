@@ -21,14 +21,14 @@ cell_types:
 
 cell_types_bryois:
   - "Astrocytes"
-  - "Excitatory neurons"
-  - "Inhibitory neurons" 
+  - "Excitatory_neurons"
+  - "Inhibitory_neurons" 
   - "Oligodendrocytes"
   - "OPCs"
-  - "Endothelial"
+  - "Endothelial_cells"
   - "Pericytes"
-  - "Microglia"  
-  - "pb"
+  - "Microglia"
+#  - "pb"
 
 eqtl_fdr: 0.05
 
@@ -346,6 +346,8 @@ qtl_rep:
     output: ../resources/public_datasets/bryois_2022/download_complete.touch
     json: ../resources/public_datasets/bryois_2022/bryois_data_2022.json
     out_dir: ../resources/public_datasets/bryois_2022/
+    perm_file: ../resources/public_datasets/bryois_2022/all_bryois_cells_perm.cis_qtl.xlsx
+    web_link: https://static-content.springer.com/esm/art%3A10.1038%2Fs41593-022-01128-z/MediaObjects/41593_2022_1128_MOESM3_ESM.xlsx
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_bryois.log
 
   dwnld_ziffra:
@@ -387,6 +389,13 @@ qtl_rep:
     enrich: ../results/06QTL-REPLICATION/wen_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
     pi1: ../results/06QTL-REPLICATION/wen_bulk/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_results_tbl.rds
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_wen.log  
+
+  pi1_enrich_bryois:
+    public_all: ../resources/public_datasets/bryois_2022/{ref_cell_type}_nom.cis_qtl.txt.gz
+    public_top: ../resources/public_datasets/bryois_2022/all_bryois_cells_perm.cis_qtl.xlsx 
+    enrich: ../results/06QTL-REPLICATION/bryois/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
+    pi1: ../results/06QTL-REPLICATION/bryois/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_results_tbl.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_bryois.log    
 
 # ------------  SLDSR  ----------------
 

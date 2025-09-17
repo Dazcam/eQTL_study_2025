@@ -98,6 +98,16 @@ rule all:
             geno_pc=config["tensorQTL"]["geno_pcs"],
             exp_pc=config["tensorQTL"]["exp_pcs"],
             norm_method=config["tensorQTL"]["norm_methods"]
+        ),
+        expand(
+            [
+                config["qtl_rep"]["pi1_enrich_bryois"]["pi1"]
+            ],
+            cell_type=config["cell_types"],
+            ref_cell_type=config["cell_types_bryois"],
+            geno_pc=config["tensorQTL"]["geno_pcs"],
+            exp_pc=config["tensorQTL"]["exp_pcs"],
+            norm_method=config["tensorQTL"]["norm_methods"]
         )
 #        expand("../results/05TENSORQTL/{cell_type}_covariates.bed", cell_type	= CELL_TYPES)
 #        "../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz",
