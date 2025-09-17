@@ -179,6 +179,9 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     }
     excel_cell_type <- bryois_cell_map[[ref_cell_type]]
     
+    message("Loading Bryois permutation / Table S2 (Excel) and extracting significant eQTLs for ref cell type: ", ref_cell_type)
+    public_table <- read_excel(public_top_qtl, sheet = "Table S2", skip = 3)  # header start on row 4
+    
     public_top <- public_table %>%
       filter(cell_type == excel_cell_type) %>%
       mutate(adj_p = suppressWarnings(as.numeric(adj_p))) %>%
