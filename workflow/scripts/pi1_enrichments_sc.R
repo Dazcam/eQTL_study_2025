@@ -44,6 +44,19 @@ geno_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
 ref_name <- str_split_i(output_pi1, "/", 4)
 
+# Map ref_cell_type to Excel cell_type column
+bryois_cell_map <- c(
+  "Astrocytes"          = "Astrocytes",
+  "Endothelial_cells"   = "Endothelial cells",
+  "Excitatory_neurons"  = "Excitatory neurons",
+  "Inhibitory_neurons"  = "Inhibitory neurons",
+  "Microglia"           = "Microglia",
+  "Oligodendrocytes"    = "Oligodendrocytes",
+  "OPCs"                = "OPCs / COPs",
+  "Pericytes"           = "Pericytes"
+)
+
+
 # Check variable assignment
 message("\nVariables")
 cat("============================")
@@ -159,21 +172,22 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                 pval = as.numeric(pval_nominal),
                 slope_ref = as.numeric(beta))
     
-    # Filter by requested ref_cell_type
-    if (is.na(ref_cell_type) || ref_cell_type == "") {
-      stop("ref_cell_type wildcard not provided for bryois reference. Snakemake must pass ref_cell_type.")
+    # Map ref_cell_type (from Snakemake wildcard) to Excel cell_type string
+    if (!(ref_cell_type %in% names(bryois_cell_map))) {
+      stop("ref_cell_type '", ref_cell_type, "' not recognized. Must be one of: ",
+           paste(names(bryois_cell_map), collapse = ", "))
     }
+    excel_cell_type <- bryois_cell_map[[ref_cell_type]]
     
     public_top <- public_table %>%
-      filter(cell_type == ref_cell_type) %>%
-      # ensure adj_p exists and is numeric; keep adj_p < 0.05 as FDR significant
+      filter(cell_type == excel_cell_type) %>%
       mutate(adj_p = suppressWarnings(as.numeric(adj_p))) %>%
       filter(!is.na(adj_p) & adj_p < 0.05) %>%
       transmute(variant_id = SNP,
                 phenotype_id = ensembl,
                 slope_my = as.numeric(beta))
     
-    message("Bryois: number of top (FDR<0.05) eQTL retained for ", ref_cell_type, ": ", nrow(public_top))
+    message("Bryois: number of top (FDR<0.05) eQTL retained for ", excel_cell_type, ": ", nrow(public_top))
   }
   
   # Load our dataset (query) -----------------------------------------------------
