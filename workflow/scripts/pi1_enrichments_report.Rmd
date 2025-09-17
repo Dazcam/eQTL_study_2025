@@ -809,7 +809,7 @@ pi1_enrich_tbl %>%
 
 ***
 
-```{r, bryois_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,10)}
+```{r, bryois_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
   file_path <- paste0(bryois_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_results_tbl.rds")
