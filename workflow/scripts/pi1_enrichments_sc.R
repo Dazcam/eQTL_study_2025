@@ -163,14 +163,14 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   
   if (str_detect(ref_name, 'bryois')) {
     message("Loading Bryois nominal all-eQTL (no header) ...")
-    # nominal file has no header, columns: gene_id, snp_id, dist_TSS, nominal_pval, beta
     public_nom <- read_tsv(public_all_qtl, col_names = FALSE, show_col_types = FALSE)
-    colnames(public_nom)[1:5] <- c("gene_id", "snp_id", "dist_TSS", "pval_nominal", "beta")
     public_full <- public_nom %>%
-      transmute(variant_id = snp_id,
-                phenotype_id = gene_id,
-                pval = as.numeric(pval_nominal),
-                slope_ref = as.numeric(beta))
+      select(variant_id, phenotype_id, pval = pval_nominal, slope_ref = slope) %>%
+      mutate(phenotype_id = str_extract(phenotype_id, "ENSG[0-9]+"))
+    
+    message("Bryois nominal all-eQTL dimensions:", dim(public_full))
+    message("Check that phenotype_ids are ENSG:\n")
+    public_full[1:5, 1:5]
     
     # Map ref_cell_type (from Snakemake wildcard) to Excel cell_type string
     if (!(ref_cell_type %in% names(bryois_cell_map))) {
@@ -179,7 +179,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     }
     excel_cell_type <- bryois_cell_map[[ref_cell_type]]
     
-    message("Loading Bryois permutation / Table S2 (Excel) and extracting significant eQTLs for ref cell type: ", ref_cell_type)
+    message("\nLoading Bryois permutation / Table S2 (Excel) and extracting significant eQTLs for ref cell type: ", ref_cell_type)
     public_table <- read_excel(public_top_qtl, sheet = "Table S2", skip = 3)  # header start on row 4
     
     public_top <- public_table %>%
