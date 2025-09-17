@@ -170,7 +170,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     
     message("Bryois nominal all-eQTL dimensions:", dim(public_full))
     message("Check that phenotype_ids are ENSG:\n")
-    public_full[1:5, 1:5]
+    public_full[1:5, 1:4]
     
     # Map ref_cell_type (from Snakemake wildcard) to Excel cell_type string
     if (!(ref_cell_type %in% names(bryois_cell_map))) {
