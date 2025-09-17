@@ -163,7 +163,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   
   if (str_detect(ref_name, 'bryois')) {
     message("Loading Bryois nominal all-eQTL (no header) ...")
-    public_nom <- read_tsv(public_all_qtl, col_names = FALSE, show_col_types = FALSE)
+    public_nom <- read_tsv(public_all_qtl, col_names = TRUE, show_col_types = FALSE)
     public_full <- public_nom %>%
       select(variant_id, phenotype_id, pval = pval_nominal, slope_ref = slope) %>%
       mutate(phenotype_id = str_extract(phenotype_id, "ENSG[0-9]+"))
