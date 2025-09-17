@@ -75,6 +75,7 @@ rule all:
 #        qtl_files
 #         expand("../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"],
 #        "reports/05TENSORQTL/tensotqtl_report.html",
+        "reports/06QTL-REPLICATION/pi1_enrichments_report.html"
 #        expand("/scratch/c.c1477909/fastqs/250716/{sample}_{lane}_R1_001.fastq.gz", sample=ALL_SAMPLES, lane=["L001", "L002", "L003", "L004"])
 #        "reports/read_counts/summary_read_counts.txt"
 #        "../resources/refs/ref.done",
@@ -88,27 +89,27 @@ rule all:
 #        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html",
 #        "../results/04GENOTYPES-POST/TOPMED/covariates/pca.eigenvec",
 #        expand("../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"]),
-        expand(
-            [   
-                config["qtl_rep"]["atac_enrich"]["out_file"],
-                config["qtl_rep"]["pi1_enrich_obrien"]["pi1"],
-                config["qtl_rep"]["pi1_enrich_wen"]["pi1"]
-            ],
-            cell_type=config["cell_types"],
-            geno_pc=config["tensorQTL"]["geno_pcs"],
-            exp_pc=config["tensorQTL"]["exp_pcs"],
-            norm_method=config["tensorQTL"]["norm_methods"]
-        ),
-        expand(
-            [
-                config["qtl_rep"]["pi1_enrich_bryois"]["pi1"]
-            ],
-            cell_type=config["cell_types"],
-            ref_cell_type=config["cell_types_bryois"],
-            geno_pc=config["tensorQTL"]["geno_pcs"],
-            exp_pc=config["tensorQTL"]["exp_pcs"],
-            norm_method=config["tensorQTL"]["norm_methods"]
-        )
+#        expand(
+#            [   
+#                config["qtl_rep"]["atac_enrich"]["out_file"],
+#                config["qtl_rep"]["pi1_enrich_obrien"]["pi1"],
+#                config["qtl_rep"]["pi1_enrich_wen"]["pi1"]
+#            ],
+#            cell_type=config["cell_types"],
+#            geno_pc=config["tensorQTL"]["geno_pcs"],
+#            exp_pc=config["tensorQTL"]["exp_pcs"],
+#            norm_method=config["tensorQTL"]["norm_methods"]
+#        ),
+#        expand(
+#            [
+#                config["qtl_rep"]["pi1_enrich_bryois"]["pi1"]
+#            ],
+#            cell_type=config["cell_types"],
+#            ref_cell_type=config["cell_types_bryois"],
+#            geno_pc=config["tensorQTL"]["geno_pcs"],
+#            exp_pc=config["tensorQTL"]["exp_pcs"],
+#            norm_method=config["tensorQTL"]["norm_methods"]
+#        )
 #        expand("../results/05TENSORQTL/{cell_type}_covariates.bed", cell_type	= CELL_TYPES)
 #        "../resources/public_datasets/obrien_2018/all_eqtls_gene.txt.gz",
 #        "../resources/public_datasets/bryois_2022/download_complete.touch",
