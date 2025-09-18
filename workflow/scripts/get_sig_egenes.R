@@ -21,6 +21,17 @@ message('\n\nExtracting table of sig. eGenes to use as input for run_susie.R ...
 eqtl_file <- snakemake@input[[1]]
 out_file <- snakemake@output[[1]]
 
+# Check variable assignment
+message("\nVariables")
+cat("============================")
+tibble(
+  variable = c("eqtl_file", "out_file"),
+  value    = c(eqtl_file, out_file)
+) |> 
+  knitr::kable(format = "simple", align = "l") |>
+  print()
+message("\n============================\n")
+
 # Load eQTL results from tensorQTL output
 message("Loading eQTL file ...")
 eqtl_data <- read_tsv(eqtl_file)
@@ -34,5 +45,6 @@ sig_genes_tbl <- eqtl_data %>%
   write_tsv(out_file)
 message(nrow(sig_genes_tbl), " genes written to file ...")
 message("All done.")
+
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
