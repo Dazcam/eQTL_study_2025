@@ -16,12 +16,24 @@ if (exists("snakemake")) {
 }
 log_smk()
 message('\n\nCreating the gene metadata file for all genes in GeX bed file  ...')
-gex_file <- snakemake@input[[1]]
-out_file <- snakemake@output[[1]]
 
 ## Load libraries and variables -------------------------------------------------------
 library(tidyverse)
 library(biomaRt)
+
+gex_file <- snakemake@input[[1]]
+out_file <- snakemake@output[[1]]
+
+# Check variable assignment
+message("\nVariables")
+cat("============================")
+tibble(
+  variable = c("gex_file", "out_file"),
+  value    = c(gex_file, out_file)
+) |> 
+  knitr::kable(format = "simple", align = "l") |>
+  print()
+message("\n============================\n")
 
 # Load gex results from cell-specific pseudobulk file
 message("Loading gene expression file ...\n")
