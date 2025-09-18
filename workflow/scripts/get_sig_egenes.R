@@ -20,13 +20,14 @@ log_smk()
 message('\n\nExtracting table of sig. eGenes to use as input for run_susie.R ...')
 eqtl_file <- snakemake@input[[1]]
 out_file <- snakemake@output[[1]]
+cell_type <- snakemake@wildcards[["cell_type"]]
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("eqtl_file", "out_file"),
-  value    = c(eqtl_file, out_file)
+  variable = c("eqtl_file", "out_file", "cell_type"),
+  value    = c(eqtl_file, out_file, cell_type)
 ) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
