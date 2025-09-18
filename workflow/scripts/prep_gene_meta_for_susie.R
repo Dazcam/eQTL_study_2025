@@ -23,13 +23,14 @@ library(biomaRt)
 
 gex_file <- snakemake@input[[1]]
 out_file <- snakemake@output[[1]]
+cell_type <- snakemake@wildcards[["cell_type"]]
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("gex_file", "out_file"),
-  value    = c(gex_file, out_file)
+  variable = c("gex_file", "out_file", "cell_type"),
+  value    = c(gex_file, out_file, cell_type)
 ) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
