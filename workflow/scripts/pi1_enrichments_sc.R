@@ -1,13 +1,21 @@
 #--------------------------------------------------------------------------------------
 #
-#    pi1 enrichments between sig. sn-eQTL & public single-cell (Bryois 2022) eQTL
+#    pi1 enrichments script
 #
 #--------------------------------------------------------------------------------------
 
-#  Supports other public datasets via existing branches (obrien, wen)
-#  Adds bryois branch: public_all is a nominal file WITHOUT header (cols = gene_id, snp_id, dist_TSS, nominal_pval, beta)
-#  and public_top is an Excel file (Table S2) where sheet has headers starting at row 4 (skip = 3).
-#  Table S2 contains ALL cell types; we filter by ref_cell_type and keep adj_p < 0.05 as significant.
+#  Built to handle 4 options
+#   - Our eQTL vs. O'Brien bulk eQTL 
+#   - Our eQTL vs. Wen bulk eQTL
+#   - Our eQTL vs. Bryois
+#   - Our eQTL vs. Our eQTL (internal comparison)
+#     - For latter R gens dummy file if cell_type == ref_cell_type for smk to track
+
+#   - Tests: 
+#     - Forward: pi1 enrichment of our sig. sn-eQTL in public nominal eQTL data
+#     - Revserse: pi1 of public sig. sn-eQTL in our nominal sn-eQTL data
+
+#--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -136,6 +144,31 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                                qtl_all, qtl_top, output_enrich, output_pi1,
                                ref_name, ref_cell_type = NA_character_) {
   
+  # Skip internal self-comparisons but still write dummy outputs 
+  if (!is.na(ref_cell_type) && cell_type == ref_cell_type) {
+    message("Skipping identical cell_type/ref_cell_type comparison: ", cell_type)
+    
+    enrichment_results <- tibble(
+      cell_type = cell_type,
+      ref_cell_type = ref_cell_type,
+      pi1 = NA_real_,
+      prop_replicating = NA_real_,
+      prop_same_direction = NA_real_,
+      overlap_count = NA_integer_,
+      pi1_cell_ref = NA_real_,
+      prop_replicating_cell_ref = NA_real_,
+      prop_same_direction_cell_ref = NA_real_,
+      overlap_count_cell_ref = NA_integer_
+    )
+    
+    pi1_results <- list(forward = NULL, reverse = NULL)
+    
+    write_rds(enrichment_results, output_enrich)
+    write_rds(pi1_results, output_pi1)
+    message("Wrote dummy outputs for skipped comparison.")
+    return(invisible(NULL))
+  }
+  
   # Load datasets ---------------------------------------------------------------
   if (str_detect(ref_name, 'obrien')) {
     message("Loading O'Brien bulk all eQTL ...")
@@ -192,6 +225,19 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                 slope_my = as.numeric(beta))
     
     message("Bryois: number of top (FDR<0.05) eQTL retained for ", excel_cell_type, ": ", nrow(public_top))
+  }
+  
+  if (!(str_detect(ref_name, "wen") | str_detect(ref_name, "obrien") | str_detect(ref_name, "bryois"))) {
+    message("Internal mode: comparing ", cell_type, " ↔ ", ref_cell_type)
+    
+    # Load ref cell type all-eQTL
+    public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
+      select(variant_id, phenotype_id, pval = pval_nominal, slope_ref = slope)
+    
+    # Load ref cell type top-eQTL
+    public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
+      filter(qval < 0.05) %>%
+      select(variant_id, phenotype_id, slope_my = slope)
   }
   
   # Load our dataset (query) -----------------------------------------------------
