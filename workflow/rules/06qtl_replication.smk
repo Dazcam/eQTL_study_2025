@@ -169,6 +169,7 @@ rule pi1_enrichments_report:
             obrien_dir = "../../results/06QTL-REPLICATION/obrien_bulk/",
             wen_dir = "../../results/06QTL-REPLICATION/wen_bulk/",
             bryois_dir = "../../results/06QTL-REPLICATION/bryois/",
+            internal_dir = "../../results/06QTL-REPLICATION/internal/",
             bmark_dir = "../reports/benchmarks/",
             output_file = "../reports/06QTL-REPLICATION/pi1_enrichments_report.html"
     singularity: config["containers"]["r_eqtl"]
@@ -179,5 +180,5 @@ rule pi1_enrichments_report:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(ziffra_dir = '{params.ziffra_dir}', obrien_dir = '{params.obrien_dir}', wen_dir = '{params.wen_dir}', bryois_dir = '{params.bryois_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+            params = list(ziffra_dir = '{params.ziffra_dir}', obrien_dir = '{params.obrien_dir}', wen_dir = '{params.wen_dir}', bryois_dir = '{params.bryois_dir}', internal_dir = '{params.internal_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
