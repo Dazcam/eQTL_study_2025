@@ -10,6 +10,7 @@ params:
   ziffra_dir: null
   wen_dir: null
   bryois_dir: null
+  internal_dir: null
   bmark_dir: null
 ---
 
@@ -31,6 +32,7 @@ ziffra_dir <- params$ziffra_dir
 bmark_dir <- params$bmark_dir
 wen_dir <- params$wen_dir
 bryois_dir <- params$bryois_dir
+internal_dir <- params$internal_dir
 
 custom_palette <- c(
   "RG" = "#FF5959",
@@ -722,7 +724,7 @@ combined_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = 3)
 combined_plot
 ```
 
-### Bryois {.tabset}
+### Internal {.tabset}
 
 ***
 
@@ -730,12 +732,7 @@ combined_plot
 
 ***
 
-```{r, bryois_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
-#bryois_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/06QTL-REPLICATION/bryois/'
-cell_types_bryois <- c("Astrocytes", "Excitatory_neurons", "Inhibitory_neurons",
-                       "Oligodendrocytes", "OPCs", "Microglia", 
-                       "Endothelial_cells", "Pericytes")
-
+```{r, Internal_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 read_enrich_tbl <- function(ct, ref_ct) {
   file_path <- paste0(bryois_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
@@ -749,7 +746,7 @@ read_enrich_tbl <- function(ct, ref_ct) {
 }
 
 # Generate all combinations
-combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types_bryois, stringsAsFactors = FALSE)
+combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, stringsAsFactors = FALSE)
 
 # Read all enrich tables
 pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
@@ -764,7 +761,7 @@ pi1_enrich_tbl %>%
   ) %>%
   gt() %>%
   tab_header(
-    title = "Table 4. Pi1 Enrichment Summary cell-specific eQTL with Bryois et al. (2022) sc-eQTL data"
+    title = "Table 4. internal Pi1 Enrichment Summary cell-specific eQTL"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -809,10 +806,10 @@ pi1_enrich_tbl %>%
 
 ***
 
-```{r, bryois_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
+```{r, interal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
-  file_path <- paste0(bryois_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_results_tbl.rds")
+  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_results_tbl.rds")
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
     
@@ -833,7 +830,7 @@ read_pi1_results <- function(ct, ref_ct) {
 }
 
 # Generate all combinations
-combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types_bryois, stringsAsFactors = FALSE)
+combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, stringsAsFactors = FALSE)
 
 # Read all enrich tables
 pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
@@ -867,7 +864,7 @@ plot_pi1_heatmap <- function(df, title) {
     na.value = "white"   # blanks appear white
   ) +
     coord_equal() +
-    labs(x = "Cell type", y = "Cell type (Bryois)", title = title) +
+    labs(x = "Cell type", y = "Cell type (Ref)", title = title) +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -970,8 +967,6 @@ summary %>%
     style = cell_text(weight = "bold"),
     locations = cells_column_labels(everything())
   )
-
-
 ```
 
 ***

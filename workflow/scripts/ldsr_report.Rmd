@@ -1,0 +1,156 @@
+---
+title: "SLDSR report"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:   
+  html_document:
+    df_print: paged
+params:
+  in_dir: null
+---
+
+***
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(gt)
+in_dir <- params$in_dir
+in_dir <- '~/Desktop/test/susie_test/'
+file_path <- paste0(in_dir, 'ldsr_strat_hg38_bl_v12.summary.tsv')
+```
+
+## SLDSR pipeline steps {.tabset}
+
+***
+
+1. `get_hg38_refs`: Download SLDSR hg38 reference files
+2. `get_hg19_refs`: Download SLDSR hg38 reference files
+3. `make_annot_maxCPP`: Make max CPP reference files from SuSiE output
+4. `lift_hapmap3_snps`: Lift Hapmap 3 reference SNPs to hg38
+5. `ldsr_ld_scores_hg38`: Generate LD score files for each cell type
+6. `ldsr_strat_hg38_bl_v12`: Run stratified LD score regression with baseline version 1.2
+7. `ldsr_report`: Summarise SLDSR score results per cell type
+
+***
+
+### Results {.tabset}
+
+***
+
+#### SCZ {.tabset}
+
+***
+
+##### Table
+
+***
+
+```{r, scz_table, sldsr_table, echo = FALSE, message=FALSE}
+# Generate table and plot
+ldsr_tbl <- read_tsv(file_path) |>
+  separate(Category, into = c("cell_type", "suffix"), sep = "_hg38", remove = FALSE) |>
+  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd"))) |>
+  select(-Category, -suffix) |>
+  relocate(cell_type, disorder) |>
+  mutate(ldsr = if_else(`Coefficient_z-score` > 0, -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) 
+
+ldsr_tbl %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 1. Schizophrenia S-LDSC Results",
+    subtitle = "eQTL Max CPP Used as Annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+##### Plot
+
+***
+
+```{r, echo=FALSE, fig.dim=c(10,5)}
+options(repr.plot.width = 8, repr.plot.height = 7)
+ldsr_scz_tbl <- ldsr_tbl |> filter(disorder == 'SCZ') 
+  
+ldsr_p_plt <- ggplot(ldsr_scz_tbl, aes(x = ldsr, y = cell_type)) +
+  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=16),
+        axis.text.y = element_text(size=16),
+        axis.title = element_text(size=18),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
+  xlab(expression(-log[10](P))) +
+  ggtitle("SCZ - P") +
+  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_scz_tbl)), linetype = "dashed", color = "black") +
+  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
+
+ldsr_enrich_plt <- ggplot(ldsr_scz_tbl, aes(x = Enrichment, y = cell_type)) +
+  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
+  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
+                    xmax = (Enrichment+Enrichment_std_error)), 
+                width = .2) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=16),
+        axis.text.y = element_text(size=16),
+        axis.title = element_text(size=18),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
+  xlab(expression(-log[10](P))) +
+  ggtitle("SCZ - Enrichment")
+
+cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
+```
+
+***
