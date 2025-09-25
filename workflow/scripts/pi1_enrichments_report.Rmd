@@ -733,6 +733,7 @@ combined_plot
 ***
 
 ```{r, Internal_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
+ref_cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 read_enrich_tbl <- function(ct, ref_ct) {
   file_path <- paste0(bryois_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
