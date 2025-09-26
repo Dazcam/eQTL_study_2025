@@ -54,7 +54,7 @@ def concat_tensorqtl_nom_snps(nom_dir, cell_type, concat_out, summary_out):
     logger = logging.getLogger(__name__)
     
     # List Parquet files for chromosomes 1-22
-    parquet_files = sorted(glob.glob(os.path.join(nom_dir, f"{cell_type}_nom.cis_qtl_pairs.[1-9]*.parquet")))
+    parquet_files = sorted(glob.glob(os.path.join(nom_dir, f"{cell_type}_quantile_nom.cis_qtl_pairs.[1-9]*.parquet")))
     logger.info(f"Found {len(parquet_files)} Parquet files for {cell_type}")
     
     if not parquet_files:
