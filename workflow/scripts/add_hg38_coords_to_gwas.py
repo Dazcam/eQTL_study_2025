@@ -47,12 +47,16 @@ merged = merged.drop(columns=['CHR_x', 'CHR_y', 'BP_x', 'BP_y'])
 
 # Step 5: Reorder columns
 print("Reordering columns...")
-expected_columns = ['SNP', 'CHR', 'BP', 'PVAL', 'A1', 'A2', 'BETA', 'SE', 'Z', 'N']
-missing_cols = [col for col in expected_columns if col not in merged.columns]
-if missing_cols:
-    raise ValueError(f"Missing expected columns in merged DataFrame: {missing_cols}")
+print("Reordering columns...")
+required_columns = ['SNP', 'CHR', 'BP', 'PVAL', 'A1', 'A2', 'Z', 'N']
+optional_columns = ['BETA', 'OR', 'SE', 'INFO', 'DIRECTION', 'NCAS', 'NCON', 'NCA', 'NCO']
+output_columns = required_columns + [col for col in optional_columns if col in merged.columns]
 
-merged = merged[expected_columns]
+missing_required = [col for col in required_columns if col not in merged.columns]
+if missing_required:
+    raise ValueError(f"Missing required columns in merged DataFrame: {missing_required}")
+
+merged = merged[output_columns]
 
 # Step 6: Write output
 print("Writing output file...")
