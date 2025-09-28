@@ -31,9 +31,17 @@ message("\nLoading data ...\n")
 message("GWAS loaded from: ", gwas_in)
 message("Allele freq file loaded from: ", frq_in)
 
-gwas_tbl <- read_tsv(gwas_in, col_types = cols(.default = "c", BP = "i", PVAL = "d", 
-                                      BETA = "d", SE = "d", Z = "d", N = "i")) |>
-  rename(b = BETA, se = SE, p = PVAL) |>
+gwas_tbl <- read_tsv(gwas_in, guess_max = 100000, col_types = cols(.default = "c")) %>%
+  mutate(
+    # Make sure numeric types
+    BP   = as.integer(BP),
+    PVAL = as.numeric(PVAL),
+    SE   = as.numeric(SE),
+    N    = as.integer(N),
+    OR   = suppressWarnings(as.numeric(OR)),
+    BETA = if ("BETA" %in% names(.)) as.numeric(BETA) else log(OR) # Need this to handle bpd OR
+  ) %>%
+  rename(b = BETA, se = SE, p = PVAL) %>%
   select(SNP, CHR, BP, A1, A2, b, se, p, N)
 
 frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i")) 
