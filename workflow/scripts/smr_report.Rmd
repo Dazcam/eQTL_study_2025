@@ -162,6 +162,7 @@ get_heidi <- function(cell_type, in_dir, disorder) {
 }
 
 # Get gene lookup file
+gene_lookup_hg38_tbl <- '../resources/sheets/gene_lookup_hg38.tsv'
 if (file.exists(gene_lookup_file)) {
   
   gene_lookup_hg38_tbl <- suppressMessages(read_tsv(gene_lookup_file))
@@ -348,4 +349,3 @@ datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ```
 
 ***
-
