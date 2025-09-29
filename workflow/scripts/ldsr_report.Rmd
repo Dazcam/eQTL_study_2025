@@ -6,7 +6,7 @@ output:
   html_document:
     df_print: paged
 params:
-  in_dir: null
+  input: null
 ---
 
 ***
@@ -14,9 +14,9 @@ params:
 ```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(gt)
-in_dir <- params$in_dir
-in_dir <- '~/Desktop/test/susie_test/'
-file_path <- paste0(in_dir, 'ldsr_strat_hg38_bl_v12.summary.tsv')
+file_path  <- params$input
+#in_dir <- '~/Desktop/test/susie_test/'
+#file_path <- paste0(in_dir, 'ldsr_strat_hg38_bl_v12.summary.tsv')
 ```
 
 ## SLDSR pipeline steps {.tabset}
@@ -37,6 +37,18 @@ file_path <- paste0(in_dir, 'ldsr_strat_hg38_bl_v12.summary.tsv')
 
 ***
 
+```{r, full_table, sldsr_table, echo = FALSE, message=FALSE}
+# Generate table and plot
+ldsr_tbl <- read_tsv(file_path) |>
+  separate(Category, into = c("cell_type", "suffix"), sep = "_hg38", remove = FALSE) |>
+  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd"))) |>
+  select(-Category, -suffix) |>
+  relocate(cell_type, disorder) |>
+  mutate(ldsr = if_else(`Coefficient_z-score` > 0, -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) 
+```
+
+***
+
 #### SCZ {.tabset}
 
 ***
@@ -46,15 +58,8 @@ file_path <- paste0(in_dir, 'ldsr_strat_hg38_bl_v12.summary.tsv')
 ***
 
 ```{r, scz_table, sldsr_table, echo = FALSE, message=FALSE}
-# Generate table and plot
-ldsr_tbl <- read_tsv(file_path) |>
-  separate(Category, into = c("cell_type", "suffix"), sep = "_hg38", remove = FALSE) |>
-  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd"))) |>
-  select(-Category, -suffix) |>
-  relocate(cell_type, disorder) |>
-  mutate(ldsr = if_else(`Coefficient_z-score` > 0, -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) 
-
 ldsr_tbl %>%
+  filter(disorder == 'SCZ') %>%
   # Round numeric columns to avoid excessive precision
   mutate(
     Prop._SNPs = signif(Prop._SNPs, 3),
@@ -113,6 +118,10 @@ ldsr_tbl %>%
 
 ***
 
+
+
+***
+
 ##### Plot
 
 ***
@@ -149,6 +158,236 @@ ldsr_enrich_plt <- ggplot(ldsr_scz_tbl, aes(x = Enrichment, y = cell_type)) +
         plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
   xlab(expression(-log[10](P))) +
   ggtitle("SCZ - Enrichment")
+
+cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
+```
+
+***
+
+#### BPD {.tabset}
+
+***
+
+##### Table
+
+***
+
+```{r, bpd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'BPD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 1. Bipolar Disorder S-LDSC Results",
+    subtitle = "eQTL Max CPP Used as Annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+
+
+***
+
+##### Plot
+
+***
+
+```{r, echo=FALSE, fig.dim=c(10,5)}
+options(repr.plot.width = 8, repr.plot.height = 7)
+ldsr_bpd_tbl <- ldsr_tbl |> filter(disorder == 'BPD') 
+  
+ldsr_p_plt <- ggplot(ldsr_bpd_tbl, aes(x = ldsr, y = cell_type)) +
+  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=16),
+        axis.text.y = element_text(size=16),
+        axis.title = element_text(size=18),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
+  xlab(expression(-log[10](P))) +
+  ggtitle("BPD - P") +
+  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_bpd_tbl)), linetype = "dashed", color = "black") +
+  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
+
+ldsr_enrich_plt <- ggplot(ldsr_bpd_tbl, aes(x = Enrichment, y = cell_type)) +
+  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
+  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
+                    xmax = (Enrichment+Enrichment_std_error)), 
+                width = .2) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=16),
+        axis.text.y = element_text(size=16),
+        axis.title = element_text(size=18),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
+  xlab(expression(-log[10](P))) +
+  ggtitle("BPD - Enrichment")
+
+cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
+```
+
+***
+
+#### MDD {.tabset}
+
+***
+
+##### Table
+
+***
+
+```{r, mdd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'MDD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 1. Major Depressive Disorder S-LDSC Results",
+    subtitle = "eQTL Max CPP Used as Annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+
+
+***
+
+##### Plot
+
+***
+
+```{r, echo=FALSE, fig.dim=c(10,5)}
+options(repr.plot.width = 8, repr.plot.height = 7)
+ldsr_mdd_tbl <- ldsr_tbl |> filter(disorder == 'MDD') 
+  
+ldsr_p_plt <- ggplot(ldsr_mdd_tbl, aes(x = ldsr, y = cell_type)) +
+  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=16),
+        axis.text.y = element_text(size=16),
+        axis.title = element_text(size=18),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
+  xlab(expression(-log[10](P))) +
+  ggtitle("MDD - P") +
+  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_mdd_tbl)), linetype = "dashed", color = "black") +
+  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
+
+ldsr_enrich_plt <- ggplot(ldsr_mdd_tbl, aes(x = Enrichment, y = cell_type)) +
+  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
+  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
+                    xmax = (Enrichment+Enrichment_std_error)), 
+                width = .2) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size=16),
+        axis.text.y = element_text(size=16),
+        axis.title = element_text(size=18),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
+  xlab(expression(-log[10](P))) +
+  ggtitle("MDD - Enrichment")
 
 cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
 ```
