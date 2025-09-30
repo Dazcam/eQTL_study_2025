@@ -17,6 +17,7 @@ library(gt)
 #cell_types <- c("Endo-Peri", "ExN-2", "InN", "OPC", "ExN-1", "InN", "MG", "RG")
 #in_dir <- '~/Desktop/test/susie_test/'
 in_dir <- params$in_dir
+cell_types <- params$cell_types
 ```
 
 ## SuSiE finemapping pipeline steps {.tabset}
