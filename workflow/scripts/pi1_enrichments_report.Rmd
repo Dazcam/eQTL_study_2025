@@ -724,6 +724,8 @@ combined_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = 3)
 combined_plot
 ```
 
+***
+
 ### Internal {.tabset}
 
 ***
@@ -733,9 +735,8 @@ combined_plot
 ***
 
 ```{r, Internal_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
-ref_cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 read_enrich_tbl <- function(ct, ref_ct) {
-  file_path <- paste0(bryois_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds")
+  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
     read_rds(file_path) %>%
       mutate(cell_type = ct,
@@ -753,9 +754,9 @@ combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, 
 pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
 pi1_enrich_tbl %>%
   mutate(
-    pi1_cell_ref = round(pi1_cell_ref, 2),
-    prop_replicating_cell_ref = round(prop_replicating_cell_ref, 2),
-    prop_same_direction_cell_ref = round(prop_same_direction_cell_ref, 2),
+    pi1_cell_ref = ifelse(is.na(pi1_cell_ref), NA, round(as.numeric(pi1_cell_ref), 2)),
+    prop_replicating_cell_ref = ifelse(is.na(prop_replicating_cell_ref), NA, round(as.numeric(prop_replicating_cell_ref), 2)),
+    prop_same_direction_cell_ref = ifelse(is.na(prop_same_direction_cell_ref), NA, round(as.numeric(prop_same_direction_cell_ref), 2)),
     pi1 = ifelse(is.na(pi1), NA, round(as.numeric(pi1), 2)),
     prop_replicating = ifelse(is.na(prop_replicating), NA, round(as.numeric(prop_replicating), 2)),
     prop_same_direction = ifelse(is.na(prop_same_direction), NA, round(as.numeric(prop_same_direction), 2))
