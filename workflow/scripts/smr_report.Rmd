@@ -9,6 +9,7 @@ params:
   cell_types: null
   in_dir: null
   p_smr: null
+  p_heidi: null
 ---
 
 ## SMR pipeline steps {.tabset}
@@ -41,7 +42,8 @@ library(DT)
 # Set variables from params
 cell_types <- params$cell_types
 in_dir <- params$in_dir
-p_smr <- as.numeric(params$in_dir)
+p_smr <- as.numeric(params$p_smr)
+p_heidi <- as.numeric(params$p_heidi)
 
 # Function to read and summarize SMR results
 summarize_smr <- function(cell_type, in_dir, disorder) {
@@ -50,7 +52,7 @@ summarize_smr <- function(cell_type, in_dir, disorder) {
     smr <- suppressMessages(read_tsv(file_path))
     n_probes <- nrow(smr)
     smr_sig <- smr |> filter(p_SMR < (p_smr / n_probes))
-    smr_sig_heidi <- smr_sig |> filter(p_HEIDI > 0.05)
+    smr_sig_heidi <- smr_sig |> filter(p_HEIDI > p_heidi)
     return(data.frame(
       Cell_Type = cell_type,
       Total_Probes = n_probes,
@@ -69,7 +71,7 @@ summarize_smr <- function(cell_type, in_dir, disorder) {
 }
 
 # Function to read and summarize SMR results
-log_dir <- "../results/00LOG/10SMR/"
+log_dir <- "../../results/00LOG/10SMR/"
 extract_smr_log_params <- function(log_dir, cell_types, disorder) {
   # Initialize parameters to extract
   params <- c(
@@ -156,7 +158,7 @@ get_heidi <- function(cell_type, in_dir, disorder) {
     n_probes <- nrow(smr)
     
     smr %>%
-      filter(p_SMR < (p_smr / n_probes), p_HEIDI > 0.05 & !is.na(p_HEIDI)) %>%
+      filter(p_SMR < (p_smr / n_probes), p_HEIDI > p_heidi & !is.na(p_HEIDI)) %>%
       mutate(Cell_Type = cell_type)
   } else {
     message("File not found for cell type / disorder: ", cell_type, " / ", disorder)
