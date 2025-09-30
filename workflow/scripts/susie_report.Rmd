@@ -41,7 +41,7 @@ in_dir <- params$in_dir
 ```{r susie_summary_tbl, echo = FALSE, message=FALSE}
 susie_summary_tbl <- map_dfr(cell_types, function(cell_type) {
   
-  file_path <- paste0(in_dir, cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
+  file_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
   susie_tbl <- read_tsv(file_path, show_col_types = FALSE)
   
   cs_tbl <- susie_tbl[!duplicated(susie_tbl$cs_id), ] |>
@@ -88,7 +88,7 @@ gt_tbl
 cs_size_plts <- list()
 
 for (cell_type in cell_types) {
-  file_path <- paste0('~/Desktop/test/susie_test/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
+  file_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
   susie_tbl <- read_tsv(file_path, show_col_types = FALSE)
 
   cs_tbl <- susie_tbl[!duplicated(susie_tbl$cs_id), ] |>
@@ -123,7 +123,7 @@ cowplot::plot_grid(plotlist = cs_size_plts)
 for (cell_type in cell_types) {
   cat('####', cell_type, '\n\n')
   
-  file_path <- paste0('~/Desktop/test/susie_test/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
+  file_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
   susie_tbl <- read_tsv(file_path, show_col_types = FALSE)
   
   cs_tbl <- susie_tbl[!duplicated(susie_tbl$cs_id), ] |>
