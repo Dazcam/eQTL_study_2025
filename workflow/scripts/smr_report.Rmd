@@ -14,7 +14,22 @@ params:
 
 ## SMR pipeline steps {.tabset}
 
+```{r set_up, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(stringr)
+library(DT)
+
+# Set variables from params
+cell_types <- params$cell_types
+in_dir <- params$in_dir
+p_smr <- as.numeric(params$p_smr)
+p_heidi <- as.numeric(params$p_heidi)
+```
+
 ***
+
 1. `get_smr_binary`: Download the SMR binary file
 2. `cat_refs`: Cat hg38 refs into a single file
 3. `cat_tensorqtl_nom_snps`: Cat TensorQTL parquet files into single file for SMR
@@ -27,24 +42,18 @@ params:
 
 ***
 
+Params:
+
+- SMR p: `r p_smr`
+- HEIDI p: `r p_heidi`
+
+***
 
 ### Results {.tabset}
 
 ***
 
-```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-library(tidyverse)
-library(knitr)
-library(kableExtra)
-library(stringr)
-library(DT)
-
-# Set variables from params
-cell_types <- params$cell_types
-in_dir <- params$in_dir
-p_smr <- as.numeric(params$p_smr)
-p_heidi <- as.numeric(params$p_heidi)
-
+```{r functions, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 # Function to read and summarize SMR results
 summarize_smr <- function(cell_type, in_dir, disorder) {
   file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_", disorder, ".smr"))
