@@ -45,6 +45,7 @@ p_heidi <- as.numeric(params$p_heidi)
 Params:
 
 - SMR p: `r p_smr`
+  - Applying a BF correction P / Total_probes per cell type
 - HEIDI p: `r p_heidi`
 
 ***
