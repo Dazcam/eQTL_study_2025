@@ -140,7 +140,7 @@ ldsr_p_plt <- ggplot(ldsr_scz_tbl, aes(x = ldsr, y = cell_type)) +
         legend.position = "none",
         plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
   xlab(expression(-log[10](P))) +
-  ggtitle("SCZ - P") +
+  ggtitle("SCZ") +
   geom_vline(xintercept=-log10(0.05 / nrow(ldsr_scz_tbl)), linetype = "dashed", color = "black") +
   geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
 
@@ -156,8 +156,8 @@ ldsr_enrich_plt <- ggplot(ldsr_scz_tbl, aes(x = Enrichment, y = cell_type)) +
         axis.title.y = element_blank(),
         legend.position = "none",
         plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
-  xlab(expression(-log[10](P))) +
-  ggtitle("SCZ - Enrichment")
+  xlab('Enrichment') +
+  ggtitle("SCZ")
 
 cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
 ```
@@ -255,7 +255,7 @@ ldsr_p_plt <- ggplot(ldsr_bpd_tbl, aes(x = ldsr, y = cell_type)) +
         legend.position = "none",
         plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
   xlab(expression(-log[10](P))) +
-  ggtitle("BPD - P") +
+  ggtitle("BPD") +
   geom_vline(xintercept=-log10(0.05 / nrow(ldsr_bpd_tbl)), linetype = "dashed", color = "black") +
   geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
 
@@ -271,8 +271,8 @@ ldsr_enrich_plt <- ggplot(ldsr_bpd_tbl, aes(x = Enrichment, y = cell_type)) +
         axis.title.y = element_blank(),
         legend.position = "none",
         plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
-  xlab(expression(-log[10](P))) +
-  ggtitle("BPD - Enrichment")
+  xlab('Enrichment') +
+  ggtitle("BPD")
 
 cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
 ```
@@ -370,7 +370,7 @@ ldsr_p_plt <- ggplot(ldsr_mdd_tbl, aes(x = ldsr, y = cell_type)) +
         legend.position = "none",
         plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
   xlab(expression(-log[10](P))) +
-  ggtitle("MDD - P") +
+  ggtitle("MDD") +
   geom_vline(xintercept=-log10(0.05 / nrow(ldsr_mdd_tbl)), linetype = "dashed", color = "black") +
   geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
 
@@ -386,8 +386,8 @@ ldsr_enrich_plt <- ggplot(ldsr_mdd_tbl, aes(x = Enrichment, y = cell_type)) +
         axis.title.y = element_blank(),
         legend.position = "none",
         plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
-  xlab(expression(-log[10](P))) +
-  ggtitle("MDD - Enrichment")
+  xlab('Enrichment') +
+  ggtitle("MDD")
 
 cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
 ```
