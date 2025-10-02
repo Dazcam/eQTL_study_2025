@@ -43,8 +43,11 @@ The citation for tensorQTL is [Taylor-Weiner et al. 2019 (DOI:10.1186/s13059-019
 2. `zip_pblk_cnts`: bgzip and index pseudobulk gExp data
 3. `convert_genotypes`: Convert genotypes into into TensorQTL-ready plink 2 format 
 4. `split_covariates`: Generate covaraiate files for gene_pc and exp_pc combinations
-5. `tensorqtl_nom`: Run TensorQTL nominal
-6. `tensorqtl_perm`: Run TensorQTL perm
+5. `tensorqtl_nom`: Run TensorQTL to detect cis-eQTL nominal p-values
+6. `tensorqtl_perm`: Run TensorQTL to detect cis-eQTL via permutations 
+7. `tensorqtl_independent`: Run TensorQTL to detect conditionally independent variants
+8. `tensorqtl_trans`: Run TensorQTL to detect trans-eQTL
+
 
 Settings:
 
@@ -58,8 +61,8 @@ Settings:
 
 ```{r, summary_table, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
-#in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
-#bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
+in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
+bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
 exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- c('bryois', 'fujita', 'quantile', 'xue')
@@ -538,6 +541,270 @@ print(table)
 
 ***
 
+#### Counts 2 {.tabset}
+
+***
+
+##### Cell Type
+
++ Showing counts for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, cnts_cell_tpe, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+# Build all file paths
+summary_tbl <- map_dfr(cell_types, function(ct) {
+  log_dir <- paste0(in_dir, ct, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+  log_file <- paste0(log_dir, ct, '_', norm_method, '_perm.cis_qtl.txt.gz')
+  
+  if (!file.exists(log_file)) {
+    message("File missing: ", log_file)
+    return(tibble(
+      cell_type = ct,
+      total_sig_eqtl = NA_integer_,
+      unique_eQTL = NA_integer_,
+      unique_eGenes = NA_integer_,
+      top_eQTL = NA_integer_
+    ))
+  }
+  
+  df <- read_tsv(log_file, show_col_types = FALSE) %>%
+    filter(qval < 0.05)
+  
+  # Total significant eQTLs
+  total_sig_eqtl <- nrow(df)
+  
+  # Unique variant-gene pairs
+  unique_eQTL <- df %>% distinct(variant_id, phenotype_id) %>% nrow()
+  
+  # Unique eGenes
+  unique_eGenes <- df %>% distinct(phenotype_id) %>% nrow()
+  
+  # Top eQTL per gene (smallest qval per phenotype_id)
+  top_eQTL <- df %>%
+    group_by(phenotype_id) %>%
+    slice_min(qval, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    nrow()
+  
+  tibble(
+    cell_type = ct,
+    total_sig_eqtl = total_sig_eqtl,
+    unique_eQTL = unique_eQTL,
+    unique_eGenes = unique_eGenes,
+    top_eQTL = top_eQTL
+  ) 
+})
+
+total_row <- tibble(
+  cell_type = "Total",
+  total_sig_eqtl = sum(summary_tbl$total_sig_eqtl),
+  unique_eQTL    = sum(summary_tbl$unique_eQTL),        # sum across cell types
+  unique_eGenes  = sum(summary_tbl$unique_eGenes),      # sum across cell types
+  top_eQTL       = sum(summary_tbl$top_eQTL)
+)
+
+# Bind to original table
+tbl_totals <- bind_rows(summary_tbl, total_row)
+tbl_totals
+
+```
+
+***
+
+##### All
+
++ Showing counts for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, cnts_total, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+# Build all file paths
+perm_files <- expand_grid(cell_type = cell_types,
+                          norm_method = norm_method,
+                          genPC = genPC,
+                          expPC = expPC) %>%
+  mutate(log_dir = paste0(in_dir, cell_type, "_", norm_method,
+                          "_genPC_", genPC, "_expPC_", expPC, "/"),
+         log_file = paste0(log_dir, cell_type, "_", norm_method,
+                           "_perm.cis_qtl.txt.gz"))
+
+# Read and combine all results
+perm_results <- perm_files %>%
+  mutate(data = map(log_file, ~ read_tsv(.x, show_col_types = FALSE) %>%
+                      mutate(cell_type = cur_data()$cell_type,
+                             norm_method = cur_data()$norm_method,
+                             genPC = cur_data()$genPC,
+                             expPC = cur_data()$expPC))) %>%
+  pull(data) %>%
+  bind_rows()
+
+# Filter significant results
+sig_eqtl <- perm_results %>% filter(qval < 0.05)
+
+# Filter significant results
+sig_eqtl <- perm_results %>% filter(qval < 0.05)
+
+# Summaries
+summary_tbl <- tibble(
+  total_sig_eqtl = nrow(sig_eqtl),
+  unique_eGenes  = n_distinct(sig_eqtl$phenotype_id),
+  unique_eQTL    = n_distinct(paste(sig_eqtl$phenotype_id, sig_eqtl$variant_id, sep = "_"))
+)
+
+summary_tbl
+```
+***
+
+#### Independent {.tabset}
+
+***
+
+##### Counts
+
+***
+
+```{r, eQTL_independent_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+plt_list <- list()
+genPC <- 4
+expPC <- 40
+norm_method <- 'quantile'
+ind_dir <- '../results/05TENSORQTL/tensorqtl_independent/'
+
+read_indep <- function(cell_type) {
+  log_dir <- paste0(ind_dir, cell_type, "_", norm_method,
+                    "_genPC_", genPC, "_expPC_", expPC, "/")
+  log_file <- paste0(log_dir, cell_type, "_", norm_method,
+                     "_independent.cis_independent_qtl.txt.gz")
+  
+  read_tsv(log_file, show_col_types = FALSE) %>%
+    mutate(cell_type = cell_type)
+}
+
+all_eqtls <- map_dfr(cell_types, read_indep)
+
+# A. Counts of primary/secondary/tertiary per cell type
+rank_counts <- all_eqtls %>%
+  count(cell_type, rank) %>%
+  pivot_wider(names_from = rank, values_from = n, values_fill = 0) %>%
+  rename(primary = `1`, secondary = `2`, tertiary = `3`) %>%
+  gt() %>%
+  tab_header(
+    title = "Table 2. Independent eQTL counts per cell type"
+  ) %>%
+  cols_label(
+    cell_type = "Cell Type",
+    primary   = "Primary eQTL",
+    secondary = "Secondary eQTL",
+    tertiary  = "Tertiary eQTL"
+  ) %>%
+  fmt_number(
+    columns = c(primary, secondary, tertiary),
+    decimals = 0,
+    use_seps = TRUE
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.title.font.weight = "bold",
+    column_labels.border.top.color = "black",
+    column_labels.border.bottom.color = "black",
+    table.border.top.color = "black",
+    table.border.bottom.color = "transparent",
+    table_body.hlines.color = "grey80",
+    table_body.border.bottom.color = "black"
+  )
+print(all_eqtls)
+```
+
+***
+
+##### SNPs
+
+***
+
+```{r, eQTL_independent_snps, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+# B. Genes with multiple independent signals
+multi_eqtls <- all_eqtls %>%
+  filter(rank <= 3) %>%   # only keep primary/secondary/tertiary
+  select(cell_type, gene = phenotype_id, variant_id, af, pval_perm, rank) %>%
+  pivot_wider(
+    names_from = rank,
+    values_from = c(variant_id, af, pval_perm),
+    names_glue = "{.value}_{rank}"
+  ) %>%
+  filter(!is.na(variant_id_2)) %>%  # keep only genes with >1 SNP
+  rename(primary_snp = variant_id_1,
+         second_snp  = variant_id_2,
+         third_snp   = variant_id_3,
+         af_primary = af_1,
+         af_second  = af_2,
+         af_third   = af_3,
+         pval_perm_primary = pval_perm_1,
+         pval_perm_second  = pval_perm_2,
+         pval_perm_third   = pval_perm_3) %>%
+  multi_eqtls_table <- multi_eqtls %>%
+  gt() %>%
+  tab_header(
+    title = "Table 2. Genes with multiple independent eQTL per cell type"
+  ) %>%
+  cols_label(
+    cell_type          = "Cell Type",
+    gene               = "Gene",
+    primary_snp        = "SNP",
+    second_snp         = "SNP",
+    third_snp          = "SNP",
+    af_primary         = "AF",
+    af_second          = "AF",
+    af_third           = "AF",
+    pval_perm_primary  = "Perm P",
+    pval_perm_second   = "Perm P",
+    pval_perm_third    = "Perm P"
+  ) %>%
+  tab_spanner(
+    label = "Primary",
+    columns = c(primary_snp, af_primary, pval_perm_primary)
+  ) %>%
+  tab_spanner(
+    label = "Secondary",
+    columns = c(second_snp, af_second, pval_perm_second)
+  ) %>%
+  tab_spanner(
+    label = "Tertiary",
+    columns = c(third_snp, af_third, pval_perm_third)
+  ) %>%
+  fmt_number(
+    columns = starts_with("af_"),
+    decimals = 3
+  ) %>%
+  fmt_scientific(
+    columns = starts_with("pval_perm"),
+    decimals = 2
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.title.font.weight = "bold",
+    column_labels.border.top.color = "black",
+    column_labels.border.bottom.color = "black",
+    table.border.top.color = "black",
+    table.border.bottom.color = "transparent",
+    table_body.hlines.color = "grey80",
+    table_body.border.bottom.color = "black"
+  )
+print(multi_eqtls)
+```
+
+***
+
 #### Benchmarking {.tabset}
 
 ***
@@ -652,6 +919,5 @@ plot_grid(runtime_plt, mem_plt)
 
 # ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
-
 
 
