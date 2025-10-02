@@ -733,7 +733,7 @@ print(all_eqtls)
 
 ```{r, eQTL_independent_snps, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 # B. Genes with multiple independent signals
-multi_eqtls <- all_eqtls %>%
+multi_eqtls_tbl <- all_eqtls %>%
   filter(rank <= 3) %>%   # only keep primary/secondary/tertiary
   select(cell_type, gene = phenotype_id, variant_id, af, pval_perm, rank) %>%
   pivot_wider(
@@ -750,8 +750,7 @@ multi_eqtls <- all_eqtls %>%
          af_third   = af_3,
          pval_perm_primary = pval_perm_1,
          pval_perm_second  = pval_perm_2,
-         pval_perm_third   = pval_perm_3) %>%
-  multi_eqtls_table <- multi_eqtls %>%
+         pval_perm_third   = pval_perm_3) 
   gt() %>%
   tab_header(
     title = "Table 3. Genes with multiple independent eQTL per cell type"
@@ -804,7 +803,7 @@ multi_eqtls <- all_eqtls %>%
     table_body.hlines.color = "grey80",
     table_body.border.bottom.color = "black"
   )
-print(multi_eqtls)
+print(multi_eqtls_tbl)
 ```
 
 ***
