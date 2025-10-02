@@ -751,7 +751,7 @@ multi_eqtls <- all_eqtls %>%
          pval_perm_second  = pval_perm_2,
          pval_perm_third   = pval_perm_3)
 
-multi_eqtls_tbe <- multi_eqtls %>%
+multi_eqtls_tbl <- multi_eqtls %>%
   gt() %>%
   tab_header(
     title = "Table 2. Genes with multiple independent eQTL per cell type"
