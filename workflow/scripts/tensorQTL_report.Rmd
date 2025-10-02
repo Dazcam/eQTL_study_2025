@@ -732,8 +732,7 @@ print(all_eqtls)
 ***
 
 ```{r, eQTL_independent_snps, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-# B. Genes with multiple independent signals
-multi_eqtls_tbl <- all_eqtls %>%
+multi_eqtls <- all_eqtls %>%
   filter(rank <= 3) %>%   # only keep primary/secondary/tertiary
   select(cell_type, gene = phenotype_id, variant_id, af, pval_perm, rank) %>%
   pivot_wider(
@@ -750,35 +749,25 @@ multi_eqtls_tbl <- all_eqtls %>%
          af_third   = af_3,
          pval_perm_primary = pval_perm_1,
          pval_perm_second  = pval_perm_2,
-         pval_perm_third   = pval_perm_3) 
+         pval_perm_third   = pval_perm_3)
+
+multi_eqtls_tbe <- multi_eqtls %>%
   gt() %>%
   tab_header(
-    title = "Table 3. Genes with multiple independent eQTL per cell type"
+    title = "Table 2. Genes with multiple independent eQTL per cell type"
   ) %>%
   cols_label(
     cell_type          = "Cell Type",
     gene               = "Gene",
-    primary_snp        = "SNP",
-    second_snp         = "SNP",
-    third_snp          = "SNP",
-    af_primary         = "AF",
-    af_second          = "AF",
-    af_third           = "AF",
-    pval_perm_primary  = "Perm P",
-    pval_perm_second   = "Perm P",
-    pval_perm_third    = "Perm P"
-  ) %>%
-  tab_spanner(
-    label = "Primary",
-    columns = c(primary_snp, af_primary, pval_perm_primary)
-  ) %>%
-  tab_spanner(
-    label = "Secondary",
-    columns = c(second_snp, af_second, pval_perm_second)
-  ) %>%
-  tab_spanner(
-    label = "Tertiary",
-    columns = c(third_snp, af_third, pval_perm_third)
+    primary_snp        = "Primary SNP",
+    second_snp         = "2nd SNP",
+    third_snp          = "3rd SNP",
+    af_primary         = "AF (Primary)",
+    af_second          = "AF (2nd)",
+    af_third           = "AF (3rd)",
+    pval_perm_primary  = "Perm P (Primary)",
+    pval_perm_second   = "Perm P (2nd)",
+    pval_perm_third    = "Perm P (3rd)"
   ) %>%
   fmt_number(
     columns = starts_with("af_"),
