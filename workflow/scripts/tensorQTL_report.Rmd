@@ -720,7 +720,7 @@ rank_counts <- all_eqtls %>%
     table_body.hlines.color = "grey80",
     table_body.border.bottom.color = "black"
   )
-print(all_eqtls)
+print(rank_counts)
 ```
 
 ***
@@ -754,7 +754,7 @@ multi_eqtls <- all_eqtls %>%
 multi_eqtls_tbl <- multi_eqtls %>%
   gt() %>%
   tab_header(
-    title = "Table 2. Genes with multiple independent eQTL per cell type"
+    title = "Table 3. Genes with multiple independent eQTL per cell type"
   ) %>%
   cols_label(
     cell_type          = "Cell Type",
