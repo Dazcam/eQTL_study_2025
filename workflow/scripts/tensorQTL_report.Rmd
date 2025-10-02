@@ -662,6 +662,8 @@ summary_tbl
 
 ##### Counts
 
++ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
 ***
 
 ```{r, eQTL_independent_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
@@ -669,7 +671,7 @@ plt_list <- list()
 genPC <- 4
 expPC <- 40
 norm_method <- 'quantile'
-ind_dir <- '../results/05TENSORQTL/tensorqtl_independent/'
+ind_dir <- '../../results/05TENSORQTL/tensorqtl_independent/'
 
 read_indep <- function(cell_type) {
   log_dir <- paste0(ind_dir, cell_type, "_", norm_method,
@@ -725,6 +727,8 @@ print(all_eqtls)
 
 ##### SNPs
 
++ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
 ***
 
 ```{r, eQTL_independent_snps, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
@@ -750,7 +754,7 @@ multi_eqtls <- all_eqtls %>%
   multi_eqtls_table <- multi_eqtls %>%
   gt() %>%
   tab_header(
-    title = "Table 2. Genes with multiple independent eQTL per cell type"
+    title = "Table 3. Genes with multiple independent eQTL per cell type"
   ) %>%
   cols_label(
     cell_type          = "Cell Type",
