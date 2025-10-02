@@ -61,8 +61,8 @@ Settings:
 
 ```{r, summary_table, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
-in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
-bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
+#in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
+#bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
 exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- c('bryois', 'fujita', 'quantile', 'xue')
