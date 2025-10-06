@@ -15,12 +15,19 @@ params:
 
 ## SMR pipeline steps {.tabset}
 
+***
+
+We used the the Yang Lab toll for [SMR](https://yanglab.westlake.edu.cn/software/smr/#Overview).The citation for SMR is [Nature Genetics, 48:481-487](https://www.nature.com/articles/ng.3538).
+
+***
+
 ```{r set_up, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(knitr)
 library(kableExtra)
 library(stringr)
 library(DT)
+library(gt)
 
 # Set variables from params
 cell_types <- params$cell_types
