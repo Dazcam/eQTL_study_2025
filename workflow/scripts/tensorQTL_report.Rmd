@@ -948,11 +948,36 @@ plot_grid(runtime_plt, mem_plt)
 
 ***
 
-```{r, eQTL_density_plt_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
+```{r, eQTL_density_plt_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(20,15)}
 cell_types <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
                 "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3", 
                 "InN-0", "InN-1", 
                 "RG-0", "RG-1", "RG-2", "RG-3")
+
+custom_palette <- c(
+  # RG — oranges to reds (warm)
+  "RG-0" = "#E66100",
+  "RG-1" = "#F4A582",
+  "RG-2" = "#B2182B",
+  "RG-3" = "#D6604D",
+
+  # ExN-UL — blue–cyan (cool, vivid)
+  "ExN-UL-0" = "#1F78B4",
+  "ExN-UL-1" = "#4DBBD5",
+  "ExN-UL-2" = "#9ECAE1",
+
+  # ExN-DL — purple–violet (cool, distinct from UL)
+  "ExN-DL-0" = "#7B3294",
+  "ExN-DL-1" = "#C2A5CF",
+  "ExN-DL-2" = "#9E0142",
+  "ExN-DL-3" = "#E7D4E8",
+
+  # InN — greens (contrasting well against others)
+  "InN-0" = "#1A9850",
+  "InN-1" = "#91CF60"
+)
+
+
 #in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
 #bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
 exp_PCs <- 40
