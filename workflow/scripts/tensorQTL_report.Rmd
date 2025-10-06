@@ -1133,7 +1133,7 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 
 ***
 
-```{r, eqtl_combined_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7,5)}
+```{r, eqtl_combined_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(6,4)}
 cell_types_L1 <- c("ExN-UL", "ExN-DL", "InN", "RG")
 cell_types_L2 <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
                    "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
@@ -1207,7 +1207,7 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
                                "unique_L2" = "Sub-cluster"),
                     breaks = c("unique_L1", "shared", "unique_L2")) +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
-  labs(x = "Proportion of eGenes found in cell types and subtypes",
+  labs(x = "Proportion of eGenes found in cell types and sub-clusters",
        y = NULL,
        fill = NULL) +
   theme_classic(base_size = 14) +
