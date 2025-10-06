@@ -1133,7 +1133,7 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 
 ***
 
-```{r, eqtl_combined_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3)}
+```{r, eqtl_combined_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7,5)}
 cell_types_L1 <- c("ExN-UL", "ExN-DL", "InN", "RG")
 cell_types_L2 <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
                    "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
@@ -1190,7 +1190,7 @@ comparison_long <- comparison_tbl %>%
              names_to = "category",
              values_to = "count") %>%
   mutate(category = factor(category, 
-                           levels = c("unique_L1", "shared", "unique_L2"))) %>%  # <-- set order
+                           levels = c("unique_L2", "shared", "unique_L1"))) %>%  # <-- set order
   group_by(cell_type) %>%
   mutate(prop = count / sum(count))
 
@@ -1205,7 +1205,7 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
                     labels = c("unique_L1" = "Cell type",
                                "shared"    = "Shared",
                                "unique_L2" = "Sub-cluster"),
-                    breaks = c("unique_L2", "shared", "unique_L1")) +
+                    breaks = c("unique_L1", "shared", "unique_L2")) +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
   labs(x = "Proportion of eGenes found in cell types and subtypes",
        y = NULL,
