@@ -18,11 +18,11 @@ if (exists("snakemake")) {
 }
 log_smk()
 
-message('\n\nExtracting table of sig. eGenes to use as input for run_susie.R ...')
+message('\n\nCreating SLDSR annotation files from susie output ...')
 input_cs <- snakemake@input[['cred_set']]
 input_bim <- snakemake@input[['bim']]
-out_maxcpp <- snakemake@output[['maxcpp_annot']]
-out_cs95 <- snakemake@output[['cs95_annot']]
+out_maxcpp <- snakemake@output[['maxcpp']]
+out_cs95 <- snakemake@output[['cs95']]
 
 cat("============================")
 tibble(
