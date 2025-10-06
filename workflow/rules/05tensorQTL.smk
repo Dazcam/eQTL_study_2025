@@ -92,14 +92,61 @@ rule tensorqtl_perm:
                --mode cis >> {log} 2>&1 
             """
 
-rule tensotqtl_report:
+rule tensorqtl_independent:
+    input:  genotypes = rules.convert_genotypes.output,
+            counts = rules.zip_pblk_cnts.output,
+            covariates = rules.split_covariates.output,
+            cis_perm = rules.tensorqtl_perm.output
+    output: config["tensorQTL"]["tensorqtl_independent"]["output"]
+    params: prefix_in = config["tensorQTL"]["tensorqtl_independent"]["prefix_in"],
+            prefix_out = config["tensorQTL"]["tensorqtl_independent"]["prefix_out"],
+            window = config["tensorQTL"]["window"]
+    singularity: config["containers"]["tensorqtl"]
+    resources: threads = 10, mem_mb = 100000, time="5:00:00"
+    message: "Run tensorQTL independent analysis for norm: {wildcards.norm_method}"
+    benchmark: "reports/benchmarks/05tensorQTL.independent_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["tensorQTL"]["tensorqtl_independent"]["log"]
+    shell:
+            """
+            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
+              --covariates {input.covariates} \
+              --window {params.window} \
+              --mode cis_independent \
+              --cis_output {input.cis_perm} >> {log} 2>&1
+            """
+
+rule tensorqtl_trans:
+    input:  genotypes = rules.convert_genotypes.output,
+            counts = rules.zip_pblk_cnts.output,
+            covariates = rules.split_covariates.output
+    output: config["tensorQTL"]["tensorqtl_trans"]["output"]
+    params: prefix_in = config["tensorQTL"]["tensorqtl_trans"]["prefix_in"],
+            prefix_out = config["tensorQTL"]["tensorqtl_trans"]["prefix_out"],
+            window = config["tensorQTL"]["window"]
+    singularity: config["containers"]["tensorqtl"]
+    resources: threads = 10, mem_mb = 100000, time="5:00:00"
+    message: "Run tensorQTL trans for norm: {wildcards.norm_method}"
+    benchmark: "reports/benchmarks/05tensorQTL.trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["tensorQTL"]["tensorqtl_trans"]["log"]
+    shell:
+            """
+            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
+              --covariates {input.covariates} \
+              --mode trans \
+              --output_text \
+              --window {params.window} >> {log} 2>&1
+            """
+
+rule tensorqtl_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
-    input:  qtl = expand(rules.tensorqtl_perm.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+    input:  perm  = expand(rules.tensorqtl_perm.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            indep = expand(rules.tensorqtl_independent.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]), 
+            trans = expand(rules.tensorqtl_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             rmd_script = "scripts/tensorQTL_report.Rmd"
-    output: "reports/05TENSORQTL/tensotqtl_report.html"
+    output: "reports/05TENSORQTL/tensorqtl_report.html"
     params: in_dir = "../../results/05TENSORQTL/tensorqtl_perm/",
             bmark_dir = "../reports/benchmarks/",
-            output_file = "../reports/05TENSORQTL/tensotqtl_report.html",
+            output_file = "../reports/05TENSORQTL/tensorqtl_report.html",
     singularity: config["containers"]["r_eqtl"]
     message: "Generate tensorQTL report"
     benchmark: "reports/benchmarks/05tensorQTL.tensorqtl_report.benchmark.txt"
