@@ -1070,7 +1070,7 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
 
 ***
 
-```{r, counts, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
+```{r, counts_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
 cell_counts <- tibble(
   cell_type = cell_types <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2", "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3", "InN-0", "InN-1", "RG-0", "RG-1", "RG-2", "RG-3"),
   n_cells   = c(142531, 125275, 92017, 71047, 52050, 50457, 26991, 67519, 61457, 81114, 40164, 33657, 23707)
