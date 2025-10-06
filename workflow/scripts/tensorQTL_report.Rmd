@@ -1204,8 +1204,8 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
                                "unique_L2" = "gray70"),
                     labels = c("unique_L1" = "Cell type",
                                "shared"    = "Shared",
-                               "unique_L2" = "Subtypes"),
-                    breaks = c("unique_L1", "shared", "unique_L2")) +
+                               "unique_L2" = "Sub-cluster"),
+                    breaks = c("unique_L2", "shared", "unique_L1")) +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
   labs(x = "Proportion of eGenes found in cell types and subtypes",
        y = NULL,
