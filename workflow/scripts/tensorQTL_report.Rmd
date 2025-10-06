@@ -1134,7 +1134,7 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 ***
 
 ```{r, eqtl_combined_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3)}
-cell_types_L1 <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+cell_types_L1 <- c("ExN-UL", "ExN-DL", "InN", "RG")
 cell_types_L2 <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
                    "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
                    "InN-0", "InN-1",
@@ -1165,7 +1165,7 @@ egenes_L2 <- eqtl_all %>% filter(cell_type %in% cell_types_L2)
 
 # Group L2 subtypes under their parent L1 type
 egenes_L2 <- egenes_L2 %>%
-  mutate(parent = str_extract(cell_type, "^[A-Za-z-]+"))
+  mutate(parent = sub("-[^-]+$", "", cell_type))
 
 # Compare sets per parent
 comparison_tbl <- map_dfr(cell_types_L1, function(ct) {
