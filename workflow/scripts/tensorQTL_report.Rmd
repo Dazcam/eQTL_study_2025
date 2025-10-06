@@ -1187,8 +1187,10 @@ comparison_tbl <- map_dfr(cell_types_L1, function(ct) {
 # Plot
 comparison_long <- comparison_tbl %>%
   pivot_longer(cols = c(unique_L1, shared, unique_L2),
-               names_to = "category",
-               values_to = "count") %>%
+             names_to = "category",
+             values_to = "count") %>%
+  mutate(category = factor(category, 
+                           levels = c("unique_L1", "shared", "unique_L2"))) %>%  # <-- set order
   group_by(cell_type) %>%
   mutate(prop = count / sum(count))
 
@@ -1202,7 +1204,8 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
                                "unique_L2" = "gray70"),
                     labels = c("unique_L1" = "Cell type",
                                "shared"    = "Shared",
-                               "unique_L2" = "Subtypes")) +
+                               "unique_L2" = "Subtypes"),
+                    breaks = c("unique_L1", "shared", "unique_L2")) +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
   labs(x = "Proportion of eGenes found in cell types and subtypes",
        y = NULL,
