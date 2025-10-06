@@ -1124,3 +1124,91 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 ```
 
 ***
+
+***
+
+### Combined {.tabset}
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, eqtl_combined_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3)}
+cell_types_L1 <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+cell_types_L2 <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
+                   "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
+                   "InN-0", "InN-1",
+                   "RG-0", "RG-1", "RG-2", "RG-3")
+
+# Function to extract eGenes for a cell type
+read_eGenes <- function(cell_type, in_dir, norm_method, genPC, expPC) {
+  log_dir  <- file.path(in_dir, paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC))
+  log_file <- file.path(log_dir, paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz"))
+  if (!file.exists(log_file)) return(tibble(cell_type = cell_type, eGene = character(0)))
+  
+  read_tsv(log_file, show_col_types = FALSE) %>%
+    filter(!is.na(qval) & qval < 0.05) %>%
+    distinct(phenotype_id) %>%
+    mutate(cell_type = cell_type)
+}
+
+eqtl_all <- map_dfr(c(cell_types_L1, cell_types_L2),
+                    read_eGenes,
+                    in_dir = in_dir,
+                    norm_method = norm_method,
+                    genPC = genPC,
+                    expPC = expPC)
+
+# Separate into lists
+egenes_L1 <- eqtl_all %>% filter(cell_type %in% cell_types_L1)
+egenes_L2 <- eqtl_all %>% filter(cell_type %in% cell_types_L2)
+
+# Group L2 subtypes under their parent L1 type
+egenes_L2 <- egenes_L2 %>%
+  mutate(parent = str_extract(cell_type, "^[A-Za-z-]+"))
+
+# Compare sets per parent
+comparison_tbl <- map_dfr(cell_types_L1, function(ct) {
+  egenes_ct_L1 <- egenes_L1 %>% filter(cell_type == ct) %>% pull(phenotype_id) %>% unique()
+  egenes_ct_L2 <- egenes_L2 %>% filter(parent == ct) %>% pull(phenotype_id) %>% unique()
+  
+  shared     <- intersect(egenes_ct_L1, egenes_ct_L2)
+  unique_L1  <- setdiff(egenes_ct_L1, egenes_ct_L2)
+  unique_L2  <- setdiff(egenes_ct_L2, egenes_ct_L1)
+  
+  tibble(
+    cell_type = ct,
+    unique_L1 = length(unique_L1),
+    shared    = length(shared),
+    unique_L2 = length(unique_L2)
+  )
+})
+
+# Plot
+comparison_long <- comparison_tbl %>%
+  pivot_longer(cols = c(unique_L1, shared, unique_L2),
+               names_to = "category",
+               values_to = "count") %>%
+  group_by(cell_type) %>%
+  mutate(prop = count / sum(count))
+
+ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) +
+  geom_col(position = "stack", color = "black", width = 0.7) +
+  geom_text(aes(label = count),
+            position = position_stack(vjust = 0.5),
+            size = 3.5, color = "black", fontface = "bold") +
+  scale_fill_manual(values = c("unique_L1" = "#66C2A5",
+                               "shared"    = "#B2DF8A",
+                               "unique_L2" = "gray70"),
+                    labels = c("unique_L1" = "Cell type",
+                               "shared"    = "Shared",
+                               "unique_L2" = "Subtypes")) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(x = "Proportion of eGenes found in cell types and subtypes",
+       y = NULL,
+       fill = NULL) +
+  theme_classic(base_size = 14) +
+  theme(legend.position = "top",
+        axis.text.y = element_text(face = "bold"),
+        axis.text.x = element_text(color = "black"))
+```
