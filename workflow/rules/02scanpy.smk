@@ -67,11 +67,29 @@ rule scanpy_extra:
              nb = config["scanpy"]["extra"]["input"]
     output:  config["scanpy"]["extra"]["output"]
     conda:   config["scanpy"]["env"]
-    resources: threads = 10, mem_mb = 100000, time="3-0:00:00"
+    resources: threads = 10, mem_mb = 200000, time="3-0:00:00"
     params:  nb_out = config["scanpy"]["extra"]["nb_out"],
              html_out = config["scanpy"]["extra"]["html_out"]
     message: "Running Scanpy extra in Jupyter notebook and producing HTML output"
     log:     config["scanpy"]["extra"]["log"]
     shell:   
              "papermill {input.nb} {params.nb_out} -p plate extra >> {log} 2>&1 && "
+             "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
+
+# Testing this - probs should incorporate into clustering script
+rule scanpy_subclustering:
+    # Note that plate is on requried to run initialize_env: need to add functionality to omit this here
+    input:   html = config["scanpy"]["clustering"]["output"],
+             nb = config["scanpy"]["subclustering"]["input"]
+    output:  config["scanpy"]["subclustering"]["output"]
+    conda:   config["scanpy"]["env"]
+    resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
+#    resources: threads = 10, mem_mb = 100000, time="0-3:00:00"
+    params:  nb_out = config["scanpy"]["subclustering"]["nb_out"],
+             html_out = config["scanpy"]["subclustering"]["html_out"]
+    benchmark: config["scanpy"]["subclustering"]["benchmark"]
+    message: "Running Scanpy subclustering in Jupyter notebook and producing HTML output"
+    log:     config["scanpy"]["subclustering"]["log"]
+    shell:
+             "papermill {input.nb} {params.nb_out} -p plate subclustering >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
