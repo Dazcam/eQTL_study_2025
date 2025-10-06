@@ -30,7 +30,7 @@ in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 ```
 
-### TensorQTL pipeline steps {.tabset}
+## TensorQTL pipeline steps {.tabset}
 
 ***
 
@@ -56,6 +56,10 @@ Settings:
 + Meta data covariates: PCW, sex
 + Genotype PCs: 4 (see genotyping_post_impute_report.html)
 + Norm methods tested: bryois, fugita, quantile, xue
+
+***
+
+### Level 1 {.tabset}
 
 ***
 
@@ -230,6 +234,8 @@ print(combined_plot)
 #### Density plot {.tabset}
 
 ##### Individual
+
+***
 
 + Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
 
@@ -759,15 +765,27 @@ multi_eqtls_tbl <- multi_eqtls %>%
   cols_label(
     cell_type          = "Cell Type",
     gene               = "Gene",
-    primary_snp        = "Primary SNP",
-    second_snp         = "2nd SNP",
-    third_snp          = "3rd SNP",
-    af_primary         = "AF (Primary)",
-    af_second          = "AF (2nd)",
-    af_third           = "AF (3rd)",
-    pval_perm_primary  = "Perm P (Primary)",
-    pval_perm_second   = "Perm P (2nd)",
-    pval_perm_third    = "Perm P (3rd)"
+    primary_snp        = "SNP",
+    second_snp         = "SNP",
+    third_snp          = "SNP",
+    af_primary         = "AF",
+    af_second          = "AF",
+    af_third           = "AF",
+    pval_perm_primary  = "Perm P",
+    pval_perm_second   = "Perm P",
+    pval_perm_third    = "Perm P"
+  ) %>%
+  tab_spanner(
+    label = "Primary",
+    columns = c(primary_snp, af_primary, pval_perm_primary)
+  ) %>%
+  tab_spanner(
+    label = "Secondary",
+    columns = c(second_snp, af_second, pval_perm_second)
+  ) %>%
+  tab_spanner(
+    label = "Tertiary",
+    columns = c(third_snp, af_third, pval_perm_third)
   ) %>%
   fmt_number(
     columns = starts_with("af_"),
@@ -796,6 +814,11 @@ print(multi_eqtls_tbl)
 ```
 
 ***
+
+#### Trans
+
+***
+
 
 #### Benchmarking {.tabset}
 
@@ -913,3 +936,166 @@ plot_grid(runtime_plt, mem_plt)
 ```
 
 
+### Level 2 {.tabset}
+
+#### Density plot {.tabset}
+
+##### Individual
+
+***
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, eQTL_density_plt_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
+cell_types <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
+                "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3", 
+                "InN-0", "InN-1", 
+                "RG-0", "RG-1", "RG-2", "RG-3")
+#in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
+#bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
+exp_PCs <- 40
+gen_PCs <- 4
+norm_methods <- 'quantile'
+for (cell_type in cell_types) {
+  
+  message('Reading eQTL data for: ', cell_type)
+  log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+  log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
+  eqtl_tbl <- read_tsv(log_file) %>%
+    dplyr::filter(!is.na(start_distance)) %>%
+    mutate(distance_kb = start_distance / 1000) %>%
+    dplyr::filter(qval < 0.05)
+  
+  message('eQTL detected at FDR < 0.05: ', nrow(eqtl_tbl))
+  
+  if (nrow(eqtl_tbl) > 0) {
+    
+    message('Plotting ...')
+    
+    eqtl_count <- nrow(eqtl_tbl)
+    
+    eqtl_density_plt <- eqtl_tbl  %>%
+      ggplot(aes(x = distance_kb)) +
+      geom_density() +
+      geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+      annotate("text", x = 100, y = Inf, 
+               label = paste("eQTLs:", eqtl_count), 
+               hjust = 0, vjust = 1.5, size = 4, fontface = "bold") +
+      scale_x_continuous(limits = c(-600, 600), 
+                         breaks = seq(-600, 600, by = 200),
+                         labels = seq(-600, 600, by = 200)) +
+      labs(x = "Distance to TSS (kb)",
+           y = "Density",
+           title = cell_type) +
+      theme_minimal() +
+      theme(
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(colour = "black", fill = NA),
+        plot.title = element_text(hjust = 0.5, face = "bold"),
+        axis.text = element_text(color = "black"),
+        axis.title = element_text(face = "bold")
+      )
+    
+    plt_list[[cell_type]] <- eqtl_density_plt
+    
+  } else {
+    
+    message('Skipped plotting.')
+    
+  }
+  
+}
+
+combined_plot <- cowplot::plot_grid(plotlist = plt_list)
+combined_plot
+```
+
+***
+
+##### Combined
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+```{r, denisty_combined_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+eqtl_list <- list()
+for (cell_type in cell_types) {
+  f <- file.path(
+    in_dir,
+    paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC),
+    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")  # adjust filename
+  )
+  
+  if (file.exists(f)) {
+    dat <- read_tsv(f, show_col_types = FALSE) %>%
+      filter(!is.na(start_distance)) %>%
+      mutate(distance_kb = start_distance / 1000) %>%
+      filter(qval < 0.05)   # significance cutoff
+    
+    if (nrow(dat) > 0) {
+      eqtl_list[[cell_type]] <- dat %>% mutate(cell_type = cell_type)
+    }
+  }
+}
+
+eqtls_all <- bind_rows(eqtl_list)
+
+ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
+  geom_density() +
+  geom_vline(xintercept = 0, linetype="dashed", color = "black") +
+  scale_color_manual(values=custom_palette) +
+  #scale_fill_manual(values=custom_palette) +
+  scale_x_continuous(limits=c(-600,600), breaks=seq(-600,600,200)) +
+  labs(x="Distance to TSS (kb)", y="Density") +
+  theme_minimal() +
+  theme(
+    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold")
+  )
+```
+
+***
+
+***
+
+#### Counts
+
++ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, counts, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
+cell_counts <- tibble(
+  cell_type = cell_types <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2", "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3", "InN-0", "InN-1", "RG-0", "RG-1", "RG-2", "RG-3"),
+  n_cells   = c(142531, 125275, 92017, 71047, 52050, 50457, 26991, 67519, 61457, 81114, 40164, 33657, 23707)
+)
+
+gene_cell <- eqtls_all %>%
+  distinct(phenotype_id, cell_type)
+
+egene_per_cell <- gene_cell %>% count(cell_type)
+
+ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
+  geom_col() +
+  scale_fill_manual(values=custom_palette) +
+  labs(x="Cell type", y="Number of eGenes") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(colour = "black", fill = NA),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text = element_text(color = "black"),
+    axis.title = element_text(face = "bold")
+  ) +
+  theme(legend.position = "none")
+```
+
+***
