@@ -28,6 +28,7 @@ library(kableExtra)
 library(stringr)
 library(DT)
 library(gt)
+library(cowplot)
 
 # Set variables from params
 cell_types <- params$cell_types
