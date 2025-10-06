@@ -10,6 +10,7 @@ params:
   in_dir: null
   p_smr: null
   p_heidi: null
+  bmark_dir: null
 ---
 
 ## SMR pipeline steps {.tabset}
@@ -26,6 +27,7 @@ cell_types <- params$cell_types
 in_dir <- params$in_dir
 p_smr <- as.numeric(params$p_smr)
 p_heidi <- as.numeric(params$p_heidi)
+bmark_dir <- params$bmark_dir
 ```
 
 ***
