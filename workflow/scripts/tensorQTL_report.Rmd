@@ -815,6 +815,57 @@ print(multi_eqtls_tbl)
 
 ***
 
+##### Distance from TSS
+
++ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+
+***
+
+```{r, eQTL_independent_distance_from_TSS, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+median_distances <- all_eqtls %>%
+  mutate(tss_distance = abs(start_distance)) %>% # Note that start distance is SNP distance from gene TSS. See here https://github.com/broadinstitute/tensorqtl/blob/master/docs/outputs.md
+  group_by(cell_type, rank) %>%
+  summarise(median_tss_distance = median(tss_distance, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = rank, values_from = median_tss_distance, values_fill = 0) %>%
+  rename(
+    primary = `1`,
+    secondary = `2`, 
+    tertiary = `3`
+  ) %>%
+  gt() %>%
+  tab_header(
+    title = "Table 4. Median TSS distances (bp) for independent eQTLs per cell type"
+  ) %>%
+  cols_label(
+    cell_type = "Cell Type",
+    primary = "Primary eQTL",
+    secondary = "Secondary eQTL",
+    tertiary = "Tertiary eQTL"
+  ) %>%
+  fmt_number(
+    columns = c(primary, secondary, tertiary),
+    decimals = 0,
+    use_seps = TRUE
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.title.font.weight = "bold",
+    column_labels.border.top.color = "black",
+    column_labels.border.bottom.color = "black",
+    table.border.top.color = "black",
+    table.border.bottom.color = "transparent",
+    table_body.hlines.color = "grey80",
+    table_body.border.bottom.color = "black"
+  )
+
+print(median_distances)
+```
+
 #### Trans
 
 ***
