@@ -51,7 +51,6 @@ ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.cs95.summary.tsv')) 
   relocate(cell_type, disorder) |>
   mutate(ldsr = if_else(`Coefficient_z-score` > 0,
                         -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
-  ldsr_tbl |>
   mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD")))
 
 # --- Custom colour palette
@@ -362,7 +361,6 @@ ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')
   relocate(cell_type, disorder) |>
   mutate(ldsr = if_else(`Coefficient_z-score` > 0,
                         -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
-  ldsr_tbl |>
   mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD")))
 
 # --- Custom colour palette
