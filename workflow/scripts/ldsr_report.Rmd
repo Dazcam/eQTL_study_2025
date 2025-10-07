@@ -41,7 +41,7 @@ in_dir  <- params$in_dir
 
 ***
 
-```{r, cs95_Plot, sldsr_table, echo = FALSE, message=FALSE}
+```{r, cs95_Plot, echo = FALSE, message=FALSE}
 # --- Read and prepare table
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.cs95.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
@@ -352,7 +352,7 @@ ldsr_tbl %>%
 
 ***
 
-```{r, maxCPP_Plot, sldsr_table, echo = FALSE, message=FALSE}
+```{r, maxCPP_Plot, echo = FALSE, message=FALSE}
 # --- Read and prepare table
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
