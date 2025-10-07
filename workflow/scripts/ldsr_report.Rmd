@@ -43,7 +43,7 @@ in_dir  <- params$in_dir
 
 ```{r, cs95_Plot, echo = FALSE, message=FALSE}
 # --- Read and prepare table
-ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.cs95.summary.tsv')) |>
+ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.CS95.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
   separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
   mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd"))) |>
