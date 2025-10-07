@@ -875,7 +875,11 @@ print(multi_eqtls_tbl)
 
 #### Gene {.tabset}
 
-```{r}
+***
+
+##### P-value table
+
+```{r, eQTL_gene_p_vals, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 read_perm_for_snp_gene <- function(cell_type) {
   log_dir <- paste0(in_dir, cell_type, "_", norm_method,
                     "_genPC_", genPC, "_expPC_", expPC, "/")
