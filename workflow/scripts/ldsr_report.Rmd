@@ -397,16 +397,39 @@ cell_order <- c(
 ) |> unique()
 
 ldsr_tbl <- ldsr_tbl |>
-  mutate(cell_type = factor(cell_type, levels = rev(cell_order)))  # reverse for top-down plotting
+  mutate(cell_type = factor(cell_type, levels = rev(cell_order))) |>
+  mutate(cluster_level = if_else(cell_type == main_type, "Main Cluster", "Subcluster"))
+
+vline_data <- tibble(
+  cluster_level = c("Main Cluster", "Subcluster"),
+  intercept = c(-log10(0.05 / 7), -log10(0.05 / 13))
+)
 
 # --- Plot
 ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
   geom_col(width = 0.7, colour = 'black') +
-  facet_wrap(~ disorder) +
+  facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
   theme_minimal(base_size = 12) +
-  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_mdd_tbl)), linetype = "dashed", color = "black") +
-  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") +
+
+  # facet-specific dashed/dotted thresholds
+  geom_vline(
+    data = vline_data,
+    aes(xintercept = intercept, linetype = cluster_level),
+    color = "black",
+    inherit.aes = FALSE
+  ) +
+  scale_linetype_manual(
+    values = c("Main Cluster" = "dashed", "Subcluster" = "dotted")
+  ) +
+
+  # global nominal threshold
+  geom_vline(
+    xintercept = -log10(0.05),
+    linetype = "dotted",
+    color = "black"
+  ) +
+
   theme(
     axis.text.y = element_text(size = 10),
     axis.text.x = element_text(size = 10),
@@ -418,8 +441,10 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     x = expression(-log[10](P)),
     y = "Cell Type",
     title = "Stratified LDSR P (maxCPP)",
-    fill = "Main Type"
-  ) + xlim(0,6)
+    fill = "Main Type",
+    linetype = "Cluster Level"
+  ) +
+  coord_cartesian(xlim = c(0, 6))
 ```
 
 ***
