@@ -729,6 +729,8 @@ rank_counts <- all_eqtls %>%
 print(rank_counts)
 ```
 
+***
+
 ##### Distance from TSS
 
 + Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
@@ -875,7 +877,7 @@ print(multi_eqtls_tbl)
 
 ```{r}
 read_perm_for_snp_gene <- function(cell_type) {
-  log_dir <- paste0(perm_dir, cell_type, "_", norm_method,
+  log_dir <- paste0(in_dir, cell_type, "_", norm_method,
                     "_genPC_", genPC, "_expPC_", expPC, "/")
   log_file <- paste0(log_dir, cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")
   
