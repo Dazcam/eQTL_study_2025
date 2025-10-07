@@ -813,7 +813,7 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
   theme_minimal(base_size = 12) +
   geom_vline(xintercept=-log10(0.05 / nrow(ldsr_mdd_tbl)), linetype = "dashed", color = "black") +
-  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
+  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") +
   theme(
     axis.text.y = element_text(size = 10),
     axis.text.x = element_text(size = 10),
