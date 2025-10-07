@@ -14,9 +14,7 @@ params:
 ```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(gt)
-file_path  <- params$in_dir
-#in_dir <- '~/Desktop/test/susie_test/'
-#file_path <- paste0(in_dir, 'ldsr_strat_hg38_bl_v12.summary.tsv')
+in_dir  <- params$in_dir
 ```
 
 ## SLDSR pipeline steps {.tabset}
