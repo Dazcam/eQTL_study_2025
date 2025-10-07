@@ -169,7 +169,7 @@ summary_list <- summarise_logs(cell_types, in_dir)
 
 ***
 
-#### eQTL plot
+#### Sensitivity plot
 
 ***
 
@@ -739,9 +739,9 @@ print(rank_counts)
 
 ```{r, eQTL_independent_distance_from_TSS, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 median_distances <- all_eqtls %>%
-  mutate(tss_distance = abs(start_distance)) %>% # Note that start distance is SNP distance from gene TSS. See here https://github.com/broadinstitute/tensorqtl/blob/master/docs/outputs.md
+  mutate(tss_distance = abs(start_distance)) %>%
   group_by(cell_type, rank) %>%
-  summarise(median_tss_distance = median(tss_distance, na.rm = TRUE), .groups = "drop") %>%
+  summarise(median_tss_distance = median(tss_distance, na.rm = TRUE) / 1000, .groups = "drop") %>%  # Divide by 1000 for kb
   pivot_wider(names_from = rank, values_from = median_tss_distance, values_fill = 0) %>%
   rename(
     primary = `1`,
@@ -750,17 +750,17 @@ median_distances <- all_eqtls %>%
   ) %>%
   gt() %>%
   tab_header(
-    title = "Table 4. Median (abs) TSS distances (bp) for independent eQTLs per cell type"
+    title = "Table 3. Median TSS distances (kb) for independent eQTLs per cell type"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
-    primary = "Primary eQTL (kb)",
-    secondary = "Secondary eQTL (kb)",
-    tertiary = "Tertiary eQTL (kb)"
+    primary = "Primary eQTL",
+    secondary = "Secondary eQTL",
+    tertiary = "Tertiary eQTL"
   ) %>%
   fmt_number(
     columns = c(primary, secondary, tertiary),
-    decimals = 0,
+    decimals = 0, 
     use_seps = TRUE
   ) %>%
   tab_style(
@@ -865,78 +865,6 @@ multi_eqtls_tbl <- multi_eqtls %>%
     table_body.border.bottom.color = "black"
   )
 print(multi_eqtls_tbl)
-```
-
-***
-
-#### Trans
-
-***
-
-#### Gene {.tabset}
-
-***
-
-##### P-value table
-
-```{r, eQTL_gene_p_vals, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-read_perm_for_snp_gene <- function(cell_type) {
-  log_dir <- paste0(in_dir, cell_type, "_", norm_method,
-                    "_genPC_", genPC, "_expPC_", expPC, "/")
-  log_file <- paste0(log_dir, cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")
-  
-  data <- read_tsv(log_file, show_col_types = FALSE)
-  snp_gene_data <- data %>%
-    filter(phenotype_id == "ENSG00000214435", variant_id == "rs11191424") %>%
-    select(pval_nominal, qval) %>%
-    mutate(cell_type = cell_type)
-  return(snp_gene_data)
-}
-
-snp_gene_perm <- map_dfr(cell_types, read_perm_for_snp_gene)
-
-all_cell <- tibble(cell_type = cell_types) %>%
-  left_join(snp_gene_perm, by = "cell_type") %>%
-  mutate(
-    pval_nominal = ifelse(is.na(pval_nominal), NA_real_, pval_nominal),
-    qval = ifelse(is.na(qval), NA_real_, qval)
-  )
-
-snp_gene_table <- all_cell %>%
-  gt() %>%
-  tab_header(
-    title = "Nominal p-value and q-value for rs11191424 ~ AS3MT (ENSG00000214435) per cell type"
-  ) %>%
-  cols_label(
-    cell_type = "Cell Type",
-    pval_nominal = "Nominal p-value",
-    qval = "q-value"
-  ) %>%
-  fmt_scientific(
-    columns = c(pval_nominal, qval),
-    decimals = 2
-  ) %>%
-  sub_missing(
-    columns = everything(),
-    missing_text = "-"
-  ) %>%
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels()
-  ) %>%
-  tab_options(
-    table.font.size = 14,
-    heading.title.font.size = 16,
-    heading.title.font.weight = "bold",
-    column_labels.border.top.color = "black",
-    column_labels.border.bottom.color = "black",
-    table.border.top.color = "black",
-    table.border.bottom.color = "transparent",
-    table_body.hlines.color = "grey80",
-    table_body.border.bottom.color = "black"
-  )
-
-print(snp_gene_table)
 ```
 
 ***
