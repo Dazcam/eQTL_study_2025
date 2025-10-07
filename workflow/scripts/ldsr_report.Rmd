@@ -757,7 +757,7 @@ cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
 
 ***
 
-### test plot
+### P-value plot
 
 ```{r}
 # --- Read and prepare table
@@ -808,10 +808,12 @@ ldsr_tbl <- ldsr_tbl |>
 
 # --- Plot
 ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
-  geom_col(width = 0.7) +
-  facet_wrap(~ disorder, scales = "free_x") +
+  geom_col(width = 0.7, colour = 'black') +
+  facet_wrap(~ disorder) +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
   theme_minimal(base_size = 12) +
+  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_mdd_tbl)), linetype = "dashed", color = "black") +
+  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
   theme(
     axis.text.y = element_text(size = 10),
     axis.text.x = element_text(size = 10),
@@ -820,9 +822,36 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     strip.text = element_text(face = "bold")
   ) +
   labs(
-    x = expression(-log[10](p)),
+    x = expression(-log[10](P)),
     y = "Cell Type",
-    title = "Stratified LDSC Enrichment (maxCPP)",
+    title = "Stratified LDSR P (maxCPP)",
+    fill = "Main Type"
+  ) + xlim(0,5)
+```
+
+### Enrichment
+
+```{r}
+
+ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
+  geom_col(width = 0.7, colour = 'black') +
+  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
+                    xmax = (Enrichment+Enrichment_std_error)), 
+                width = .2) +
+  facet_wrap(~ disorder, scales = "free_x") +
+  scale_fill_manual(values = custom_palette, name = "Cell Type") +
+  theme_minimal(base_size = 12) 
+  theme(
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold")
+  ) +
+  labs(
+    x = expression(-log[10](P)),
+    y = "Cell Type",
+    title = "Stratified LDSR Enrichment (maxCPP)",
     fill = "Main Type"
   )
 ```
