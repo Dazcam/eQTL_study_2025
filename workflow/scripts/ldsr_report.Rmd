@@ -397,26 +397,116 @@ cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
 
 ### MaxCPP {.tabset}
 
+#### P-value
+
 ***
 
-```{r, maxCPP_full_table, sldsr_table, echo = FALSE, message=FALSE}
-# Generate table and plot
+```{r, maxCPP_Plot, sldsr_table, echo = FALSE, message=FALSE}
+# --- Read and prepare table
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
   separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
   mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd"))) |>
   select(-Category, -suffix) |>
   relocate(cell_type, disorder) |>
-  mutate(ldsr = if_else(`Coefficient_z-score` > 0, -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) 
+  mutate(ldsr = if_else(`Coefficient_z-score` > 0,
+                        -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
+  ldsr_tbl |>
+  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD")))
+
+# --- Custom colour palette
+custom_palette <- c(
+  "RG" = "#FF5959",
+  "ExN-UL" = "#00B6EB",
+  "InN" = "#3CBB75FF",
+  "ExN-DL" = "#CEE5FD",
+  "Endo-Peri" = "#B200ED",
+  "MG" = "#F58231",
+  "OPC" = "#FDE725FF"
+)
+
+# --- Assign main cluster to subclusters
+ldsr_tbl <- ldsr_tbl |>
+  mutate(main_type = case_when(
+    str_detect(cell_type, "ExN-UL") ~ "ExN-UL",
+    str_detect(cell_type, "ExN-DL") ~ "ExN-DL",
+    str_detect(cell_type, "InN") ~ "InN",
+    str_detect(cell_type, "RG") ~ "RG",
+    str_detect(cell_type, "OPC") ~ "OPC",
+    str_detect(cell_type, "MG") ~ "MG",
+    str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
+    TRUE ~ cell_type
+  ))
+
+# --- Specify y-axis order
+cell_order <- c(
+  "ExN-UL", grep("^ExN-UL", ldsr_tbl$cell_type, value = TRUE),
+  "ExN-DL", grep("^ExN-DL", ldsr_tbl$cell_type, value = TRUE),
+  "InN", grep("^InN", ldsr_tbl$cell_type, value = TRUE),
+  "RG", grep("^RG", ldsr_tbl$cell_type, value = TRUE),
+  "OPC", "MG", "Endo-Peri"
+) |> unique()
+
+ldsr_tbl <- ldsr_tbl |>
+  mutate(cell_type = factor(cell_type, levels = rev(cell_order)))  # reverse for top-down plotting
+
+# --- Plot
+ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
+  geom_col(width = 0.7, colour = 'black') +
+  facet_wrap(~ disorder) +
+  scale_fill_manual(values = custom_palette, name = "Cell Type") +
+  theme_minimal(base_size = 12) +
+  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_mdd_tbl)), linetype = "dashed", color = "black") +
+  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") +
+  theme(
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold")
+  ) +
+  labs(
+    x = expression(-log[10](P)),
+    y = "Cell Type",
+    title = "Stratified LDSR P (maxCPP)",
+    fill = "Main Type"
+  ) + xlim(0,6)
+```
+
+#### Enrichment
+
+```{r, echo = FALSE, message=FALSE}
+
+ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
+  geom_col(width = 0.7, colour = 'black') +
+  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
+                    xmax = (Enrichment+Enrichment_std_error)), 
+                width = .2) +
+  facet_wrap(~ disorder, scales = "free_x") +
+  scale_fill_manual(values = custom_palette, name = "Cell Type") +
+  theme_minimal(base_size = 12) 
+  theme(
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold")
+  ) +
+  labs(
+    x = expression(-log[10](P)),
+    y = "Cell Type",
+    title = "Stratified LDSR Enrichment (maxCPP)",
+    fill = "Main Type"
+  )
 ```
 
 ***
 
-#### SCZ {.tabset}
+#### Table {.tabset}
 
 ***
 
-##### Table
+##### SCZ
 
 ***
 
@@ -481,57 +571,7 @@ ldsr_tbl %>%
 
 ***
 
-
-
-***
-
-##### Plot
-
-***
-
-```{r, maxCPP_scz_plot, echo=FALSE, fig.dim=c(10,5)}
-options(repr.plot.width = 8, repr.plot.height = 7)
-ldsr_scz_tbl <- ldsr_tbl |> filter(disorder == 'SCZ') 
-  
-ldsr_p_plt <- ggplot(ldsr_scz_tbl, aes(x = ldsr, y = cell_type)) +
-  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
-  theme_classic() +
-  theme(axis.text.x = element_text(size=16),
-        axis.text.y = element_text(size=16),
-        axis.title = element_text(size=18),
-        axis.title.y = element_blank(),
-        legend.position = "none",
-        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
-  xlab(expression(-log[10](P))) +
-  ggtitle("SCZ") +
-  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_scz_tbl)), linetype = "dashed", color = "black") +
-  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
-
-ldsr_enrich_plt <- ggplot(ldsr_scz_tbl, aes(x = Enrichment, y = cell_type)) +
-  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
-  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
-                    xmax = (Enrichment+Enrichment_std_error)), 
-                width = .2) +
-  theme_classic() +
-  theme(axis.text.x = element_text(size=16),
-        axis.text.y = element_text(size=16),
-        axis.title = element_text(size=18),
-        axis.title.y = element_blank(),
-        legend.position = "none",
-        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
-  xlab('Enrichment') +
-  ggtitle("SCZ")
-
-cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
-```
-
-***
-
-#### BPD {.tabset}
-
-***
-
-##### Table
+##### BPD 
 
 ***
 
@@ -596,57 +636,7 @@ ldsr_tbl %>%
 
 ***
 
-
-
-***
-
-##### Plot
-
-***
-
-```{r, maxCPP_bpd_plot, echo=FALSE, fig.dim=c(10,5)}
-options(repr.plot.width = 8, repr.plot.height = 7)
-ldsr_bpd_tbl <- ldsr_tbl |> filter(disorder == 'BPD') 
-  
-ldsr_p_plt <- ggplot(ldsr_bpd_tbl, aes(x = ldsr, y = cell_type)) +
-  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
-  theme_classic() +
-  theme(axis.text.x = element_text(size=16),
-        axis.text.y = element_text(size=16),
-        axis.title = element_text(size=18),
-        axis.title.y = element_blank(),
-        legend.position = "none",
-        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
-  xlab(expression(-log[10](P))) +
-  ggtitle("BPD") +
-  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_bpd_tbl)), linetype = "dashed", color = "black") +
-  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") 
-
-ldsr_enrich_plt <- ggplot(ldsr_bpd_tbl, aes(x = Enrichment, y = cell_type)) +
-  geom_bar(stat = "identity", width = .9, fill = "#648FFF", colour = 'black') +
-  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
-                    xmax = (Enrichment+Enrichment_std_error)), 
-                width = .2) +
-  theme_classic() +
-  theme(axis.text.x = element_text(size=16),
-        axis.text.y = element_text(size=16),
-        axis.title = element_text(size=18),
-        axis.title.y = element_blank(),
-        legend.position = "none",
-        plot.title = element_text(size=18, face="bold", hjust = 0.5)) +
-  xlab('Enrichment') +
-  ggtitle("BPD")
-
-cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
-```
-
-***
-
-#### MDD {.tabset}
-
-***
-
-##### Table
+##### MDD {.tabset}
 
 ***
 
@@ -756,102 +746,3 @@ cowplot::plot_grid(ldsr_p_plt, ldsr_enrich_plt)
 ```
 
 ***
-
-### P-value plot
-
-```{r}
-# --- Read and prepare table
-ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')) |>
-  separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
-  separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
-  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd"))) |>
-  select(-Category, -suffix) |>
-  relocate(cell_type, disorder) |>
-  mutate(ldsr = if_else(`Coefficient_z-score` > 0,
-                        -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0))
-
-# --- Custom colour palette
-custom_palette <- c(
-  "RG" = "#FF5959",
-  "ExN-UL" = "#00B6EB",
-  "InN" = "#3CBB75FF",
-  "ExN-DL" = "#CEE5FD",
-  "Endo-Peri" = "#B200ED",
-  "MG" = "#F58231",
-  "OPC" = "#FDE725FF"
-)
-
-# --- Assign main cluster to subclusters
-ldsr_tbl <- ldsr_tbl |>
-  mutate(main_type = case_when(
-    str_detect(cell_type, "ExN-UL") ~ "ExN-UL",
-    str_detect(cell_type, "ExN-DL") ~ "ExN-DL",
-    str_detect(cell_type, "InN") ~ "InN",
-    str_detect(cell_type, "RG") ~ "RG",
-    str_detect(cell_type, "OPC") ~ "OPC",
-    str_detect(cell_type, "MG") ~ "MG",
-    str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
-    TRUE ~ cell_type
-  ))
-
-# --- Specify y-axis order
-cell_order <- c(
-  "ExN-UL", grep("^ExN-UL", ldsr_tbl$cell_type, value = TRUE),
-  "ExN-DL", grep("^ExN-DL", ldsr_tbl$cell_type, value = TRUE),
-  "InN", grep("^InN", ldsr_tbl$cell_type, value = TRUE),
-  "RG", grep("^RG", ldsr_tbl$cell_type, value = TRUE),
-  "OPC", "MG", "Endo-Peri"
-) |> unique()
-
-ldsr_tbl <- ldsr_tbl |>
-  mutate(cell_type = factor(cell_type, levels = rev(cell_order)))  # reverse for top-down plotting
-
-# --- Plot
-ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
-  geom_col(width = 0.7, colour = 'black') +
-  facet_wrap(~ disorder) +
-  scale_fill_manual(values = custom_palette, name = "Cell Type") +
-  theme_minimal(base_size = 12) +
-  geom_vline(xintercept=-log10(0.05 / nrow(ldsr_mdd_tbl)), linetype = "dashed", color = "black") +
-  geom_vline(xintercept=-log10(0.05), linetype = "dotted", color = "black") +
-  theme(
-    axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(size = 10),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold")
-  ) +
-  labs(
-    x = expression(-log[10](P)),
-    y = "Cell Type",
-    title = "Stratified LDSR P (maxCPP)",
-    fill = "Main Type"
-  ) + xlim(0,5)
-```
-
-### Enrichment
-
-```{r}
-
-ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
-  geom_col(width = 0.7, colour = 'black') +
-  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
-                    xmax = (Enrichment+Enrichment_std_error)), 
-                width = .2) +
-  facet_wrap(~ disorder, scales = "free_x") +
-  scale_fill_manual(values = custom_palette, name = "Cell Type") +
-  theme_minimal(base_size = 12) 
-  theme(
-    axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(size = 10),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold")
-  ) +
-  labs(
-    x = expression(-log[10](P)),
-    y = "Cell Type",
-    title = "Stratified LDSR Enrichment (maxCPP)",
-    fill = "Main Type"
-  )
-```
