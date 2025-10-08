@@ -22,38 +22,30 @@ log_smk()
 message('\n\nCreating SLDSR annotation files from susie output ...')
 
 
-exp_dir <- "../results/05TENSORQTL/prep_input/"
-pval_dir <- "../results/10SMR/smr_input/"
-gen_prefix <- "../results/05TENSORQTL/prep_input/chrALL_final.filt"
-gene_id <- "ENSG00000214435"
-snp_id <- "rs11191424"  # Can be rsID; code handles rsID lookup via pvar
+#exp_dir <- "../results/05TENSORQTL/prep_input/"
+#pval_dir <- "../results/10SMR/smr_input/"
+#gene_id <- "ENSG00000214435"
+#gen_prefix <- "../results/05TENSORQTL/prep_input/chrALL_final.filt"
+#snp_id <- "rs11191424"  # Can be rsID; code handles rsID lookup via pvar
 
-gene_id <- snakemake@input[['exp_dir']]
-pval_dir <- snakemake@input[['pval_dir']]
-gen_prefix <- snakemake@input[['gen_prefix']]
-gene_id <- snakemake@input[['gene_id']]
-snp_id <- snakemake@input[['snp_id']]
-output <- snakemake@output[['output']]
+exp_dir <- as.character(snakemake@params[['exp_dir']])
+pval_dir <- as.character(snakemake@params[['pval_dir']])
+geno_prefix <- as.character(snakemake@params[['geno_prefix']])
+gene_id <- as.character(snakemake@params[['gene_id']])
+snp_id <- as.character(snakemake@params[['snp_id']])
+output <- as.character(snakemake@output[['output']])
 
 
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 
 cat("============================")
 tibble(
-  variable = c("gene_id", "pval_dir", "gen_prefix", "gene_id", "snp_id", "output"),
-  value    = c(gene_id, pval_dir, gen_prefix, gene_id, snp_id, output)) |> 
+  variable = c("exp_dir", "pval_dir", "geno_prefix", "gene_id", "snp_id", "output"),
+  value    = c(exp_dir, pval_dir, geno_prefix, gene_id, snp_id, output)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
-
-# User inputs
-# cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
-# exp_dir <- "../results/05TENSORQTL/prep_input/"
-# pval_dir <- "../results/10SMR/smr_input/"
-# gen_prefix <- "../results/05TENSORQTL/prep_input/chrALL_final.filt"
-# gene_id <- "ENSG00000214435"
-# snp_id <- "rs11191424"  # Can be rsID; code handles rsID lookup via pvar
-
+  
 # Load pvar to find SNP details (assumes standard PLINK2 pvar format)
 pvar_file <- paste0(gen_prefix, ".pvar")
 pvar <- read_tsv(pvar_file, comment = "", col_names = TRUE, col_types = cols(
