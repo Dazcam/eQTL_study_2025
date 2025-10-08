@@ -41,7 +41,7 @@ in_dir  <- params$in_dir
 
 ***
 
-```{r, cs95_Plot, echo = FALSE, message=FALSE}
+```{r, cs95_p-val_plot, echo = FALSE, message=FALSE}
 # --- Read and prepare table
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.CS95.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
@@ -110,7 +110,7 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     inherit.aes = FALSE
   ) +
   scale_linetype_manual(
-    values = c("Main Cluster" = "dashed", "Subcluster" = "dotted")
+    values = c("Main Cluster" = "dashed", "Subcluster" = "dashed")
   ) +
 
   # global nominal threshold
@@ -125,12 +125,14 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     axis.text.x = element_text(size = 10),
     panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold")
+    strip.text = element_text(face = "bold"),
+    legend.position = "none"
+                           
   ) +
   labs(
     x = expression(-log[10](P)),
     y = "Cell Type",
-    title = "Stratified LDSR P (maxCPP)",
+    title = "Stratified LDSR P (95% CS)",
     fill = "Main Type",
     linetype = "Cluster Level"
   ) +
@@ -143,26 +145,24 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
 
 ***
 
-```{r, echo = FALSE, message=FALSE}
+```{r, cs95_enrich_plot, echo = FALSE, message=FALSE}
 ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
   geom_col(width = 0.7, colour = 'black') +
-  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
-                    xmax = (Enrichment+Enrichment_std_error)), 
-                width = .2) +
-  facet_wrap(~ disorder, scales = "free_x") +
+  facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
-  theme_minimal(base_size = 12) 
+  theme_minimal(base_size = 12) +
   theme(
     axis.text.y = element_text(size = 10),
     axis.text.x = element_text(size = 10),
     panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold")
+    strip.text = element_text(face = "bold"),
+    legend.position = "none"
   ) +
   labs(
     x = expression(-log[10](P)),
     y = "Cell Type",
-    title = "Stratified LDSR Enrichment (maxCPP)",
+    title = "Stratified LDSR Enrichment (95% CS)",
     fill = "Main Type"
   )
 ```
@@ -193,11 +193,12 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
+  select(-main_type, -cluster_level) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 1. Schizophrenia S-LDSC Results",
+    title = "Table 1. Schizophrenia S-LDSC Results (95% CS)",
     subtitle = "eQTL Max CPP Used as Annotation"
   ) %>%
   # Rename columns for display
@@ -258,11 +259,12 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
+  select(-main_type, -cluster_level) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 1. Bipolar Disorder S-LDSC Results",
+    title = "Table 2. Bipolar Disorder S-LDSC Results (95% CS)",
     subtitle = "eQTL Max CPP Used as Annotation"
   ) %>%
   # Rename columns for display
@@ -323,11 +325,12 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
+  select(-main_type, -cluster_level) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 1. Major Depressive Disorder S-LDSC Results",
+    title = "Table 3. Major Depressive Disorder S-LDSC Results (95% CS)",
     subtitle = "eQTL Max CPP Used as Annotation"
   ) %>%
   # Rename columns for display
@@ -376,7 +379,7 @@ ldsr_tbl %>%
 
 ***
 
-```{r, maxCPP_Plot, echo = FALSE, message=FALSE}
+```{r, maxCPP_p_val_plot, echo = FALSE, message=FALSE}
 # --- Read and prepare table
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
@@ -445,7 +448,7 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     inherit.aes = FALSE
   ) +
   scale_linetype_manual(
-    values = c("Main Cluster" = "dashed", "Subcluster" = "dotted")
+    values = c("Main Cluster" = "dashed", "Subcluster" = "dashed")
   ) +
 
   # global nominal threshold
@@ -460,7 +463,9 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     axis.text.x = element_text(size = 10),
     panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold")
+    strip.text = element_text(face = "bold"),
+    legend.position = "none"
+                           
   ) +
   labs(
     x = expression(-log[10](P)),
@@ -478,22 +483,20 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
 
 ***
 
-```{r, echo = FALSE, message=FALSE}
+```{r, maxCPP_enrich_plot, echo = FALSE, message=FALSE}
 
 ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
   geom_col(width = 0.7, colour = 'black') +
-  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
-                    xmax = (Enrichment+Enrichment_std_error)), 
-                width = .2) +
-  facet_wrap(~ disorder, scales = "free_x") +
+  facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
-  theme_minimal(base_size = 12) 
+  theme_minimal(base_size = 12) +
   theme(
     axis.text.y = element_text(size = 10),
     axis.text.x = element_text(size = 10),
     panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold")
+    strip.text = element_text(face = "bold"),
+    legend.position = "none"
   ) +
   labs(
     x = expression(-log[10](P)),
@@ -529,11 +532,12 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
+  select(-main_type, -cluster_level) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 1. Schizophrenia S-LDSC Results",
+    title = "Table 4. Schizophrenia S-LDSC Results (MaxCPP)",
     subtitle = "eQTL Max CPP Used as Annotation"
   ) %>%
   # Rename columns for display
@@ -594,11 +598,12 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
+    select(-main_type, -cluster_level) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 1. Bipolar Disorder S-LDSC Results",
+    title = "Table 5. Bipolar Disorder S-LDSC Results (MaxCPP)",
     subtitle = "eQTL Max CPP Used as Annotation"
   ) %>%
   # Rename columns for display
@@ -659,11 +664,12 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
+    select(-main_type, -cluster_level) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 1. Major Depressive Disorder S-LDSC Results",
+    title = "Table 6. Major Depressive Disorder S-LDSC Results (MaxCPP)",
     subtitle = "eQTL Max CPP Used as Annotation"
   ) %>%
   # Rename columns for display
