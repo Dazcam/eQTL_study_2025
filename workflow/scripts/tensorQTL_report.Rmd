@@ -812,6 +812,10 @@ multi_eqtls <- all_eqtls %>%
          pval_perm_third   = pval_perm_3)
 
 multi_eqtls_tbl <- multi_eqtls %>%
+  # Some weird unicode issues here
+    mutate(across(starts_with("pval_perm"), ~ .x %>%
+    gsub("<U\\+00D7>", "×", ., perl = TRUE) %>%
+    gsub("<U\\+2212>", "−", ., perl = TRUE))) %>%
   gt() %>%
   tab_header(
     title = "Table 3. Genes with multiple independent eQTL per cell type"
