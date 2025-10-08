@@ -33,8 +33,7 @@ pval_dir <- as.character(snakemake@params[['pval_dir']])
 geno_prefix <- as.character(snakemake@params[['geno_prefix']])
 gene_id <- as.character(snakemake@params[['gene_id']])
 snp_id <- as.character(snakemake@params[['snp_id']])
-output <- as.character(snakemake@output[['output']])
-
+output <- as.character(snakemake@output[[1]])
 
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 
