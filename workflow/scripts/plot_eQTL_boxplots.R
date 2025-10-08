@@ -46,10 +46,12 @@ tibble(
 message("\n============================\n")
 
 # Check if plink2 is available
-if (system("which plink2 >/dev/null 2>&1") != 0) {
-  stop("plink2 not found in PATH. Please load the module (e.g., via envmodules in snakemake).")
+cat("Current PATH:\n", Sys.getenv("PATH"), "\n")
+plink_which <- system("which plink2", intern = TRUE)
+cat("which plink2 output:\n", paste(plink_which, collapse = "\n"), "\n")
+if (length(plink_which) == 0) {
+  stop("plink2 not found in PATH. Ensure module is loaded in snakemake env. PATH: ", Sys.getenv("PATH"))
 }
-  
 # Load pvar to find SNP details
 message('Looding pvar file to get SNP info ...')
 pvar_file <- paste0(geno_prefix, ".pvar")
