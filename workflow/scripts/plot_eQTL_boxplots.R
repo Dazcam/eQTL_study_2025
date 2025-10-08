@@ -46,7 +46,8 @@ tibble(
   print()
 message("\n============================\n")
   
-# Load pvar to find SNP details (assumes standard PLINK2 pvar format)
+# Load pvar to find SNP details
+message('Looding pvar file to get SNP info ...')
 pvar_file <- paste0(gen_prefix, ".pvar")
 pvar <- read_tsv(pvar_file, comment = "", col_names = TRUE, col_types = cols(
   `#CHROM` = col_character(),
@@ -68,7 +69,8 @@ ref <- snp_row$REF[1]
 alt <- snp_row$ALT[1]
 variant_id <- paste0(chrom, "_", pos, "_", ref, "_", alt)
 
-# Extract genotype dosages using PLINK2 (assumes plink2 is in PATH)
+# Extract genotype dosages using PLINK2
+message('Using Plink 2 to pull out genotype dosages ...')
 temp_rs <- tempfile(fileext = ".txt")
 write_lines(snp_id, temp_rs)
 temp_out <- tempfile()
@@ -81,11 +83,13 @@ system2("plink2", args = c(
 dosage_file <- paste0(temp_out, ".A-transpose")
 
 # Read the exported dosages (no header: FID IID dosage)
+message('Read exported dosages ...') # why export these???
 geno_df <- read_tsv(dosage_file, col_names = c("FID", "IID", "genotype_dosage")) %>%
   select(IID, genotype_dosage) %>%
   rename(sample_id = IID)
 
 # Load p-values for this gene-SNP pair across cell types
+message('Loading p-values for SNP / Gene pair for TensorQTL norminal file ...') 
 pval_map <- tibble(cell_type = character(), pval_nominal = double())
 for (ct in cell_types) {
   pval_file <- paste0(pval_dir, ct, "/", ct, "_nom.cis_qtl_pairs.tsv")
@@ -109,6 +113,7 @@ pval_map <- pval_map %>% mutate(pval_str = sprintf("P=%.2g", pval_nominal))
 # Generate plots per cell type
 plots <- list()
 for (ct in cell_types) {
+  message('Generating plot for ', ct, '...') 
   expr_file <- paste0(exp_dir, ct, "_quantile.bed")
   if (!file.exists(expr_file)) next
   
@@ -182,6 +187,7 @@ for (ct in cell_types) {
 
 # Combine plots
 if (length(plots) > 0) {
+  messgae('Saving combined plot ...')
   combined_plot <- plot_grid(plotlist = plots, ncol = 4)
   saveRDS(combined_plot, output)
   
@@ -190,3 +196,4 @@ if (length(plots) > 0) {
 } else {
   cat("No data available for plotting.\n")
 }
+messgae('All done.')
