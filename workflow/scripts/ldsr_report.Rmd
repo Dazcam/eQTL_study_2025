@@ -172,7 +172,7 @@ ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
 
 ***
 
-#### Tables {.tabset}
+#### Table {.tabset}
 
 ***
 
