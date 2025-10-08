@@ -48,7 +48,7 @@ message("\n============================\n")
 # Load pvar to find SNP details
 message('Looding pvar file to get SNP info ...')
 pvar_file <- paste0(geno_prefix, ".pvar")
-pvar <- read_tsv(pvar_file, comment = "", col_names = TRUE, col_types = cols(
+pvar <- read_tsv(pvar_file, comment = "##", col_names = TRUE, col_types = cols(
   `#CHROM` = col_character(),
   POS = col_integer(),
   ID = col_character(),
