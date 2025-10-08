@@ -61,12 +61,12 @@ message(nrow(biomart_tbl), " distinct genes remain after running BiomaRt ...")
 # Write tsvs
 message("Writing ensembl id tsv file ...")
 ensembl_tbl <- biomart_tbl |>
-  select(chromosome_name, start_position, end_position, ensembl_gene_id, strand) |>
+  dplyr::select(chromosome_name, start_position, end_position, ensembl_gene_id, strand) |>
   write_tsv(ensembl_out_file, col_names = FALSE)
 
 message("Writing symbol id tsv file ...")
 symbol_tbl <- biomart_tbl |>
-  select(chromosome_name, start_position, end_position, external_gene_name, strand) |>
+  dplyr::select(chromosome_name, start_position, end_position, external_gene_name, strand) |>
   write_tsv(symbol_out_file, col_names = FALSE)
 
 
