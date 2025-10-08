@@ -44,6 +44,11 @@ tibble(
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
+
+# Check if plink2 is available
+if (system("which plink2 >/dev/null 2>&1") != 0) {
+  stop("plink2 not found in PATH. Please load the module (e.g., via envmodules in snakemake).")
+}
   
 # Load pvar to find SNP details
 message('Looding pvar file to get SNP info ...')
@@ -68,18 +73,31 @@ ref <- snp_row$REF[1]
 alt <- snp_row$ALT[1]
 variant_id <- paste0(chrom, "_", pos, "_", ref, "_", alt)
 
-# Extract genotype dosages using PLINK2
-message('Using Plink 2 to pull out genotype dosages ...')
+# Extract genotype dosages using PLINK2 (with debugging)
 temp_rs <- tempfile(fileext = ".txt")
 write_lines(snp_id, temp_rs)
 temp_out <- tempfile()
-system2("plink2", args = c(
-  "--pfile", geno_prefix,
+cmd_args <- c(
+  "--pfile", gen_prefix,
   "--extract", temp_rs,
   "--export", "A-transpose",
   "--out", temp_out
-))
+)
+cat("Running PLINK2 with args:", paste(cmd_args, collapse = " "), "\n")
+plink_out <- system2("plink2", args = cmd_args, stdout = TRUE, stderr = TRUE)
+if (length(plink_out) > 0) {
+  cat("PLINK2 output:\n")
+  cat(plink_out, sep = "\n")
+}
 dosage_file <- paste0(temp_out, ".A-transpose")
+if (!file.exists(dosage_file)) {
+  stop(paste("PLINK2 export failed. Dosage file not created:", dosage_file, "\nCheck PLINK2 output above for errors (e.g., SNP not found, file paths)."))
+}
+
+# Read the exported dosages (no header: FID IID dosage)
+geno_df <- read_tsv(dosage_file, col_names = c("FID", "IID", "genotype_dosage")) %>%
+  select(IID, genotype_dosage) %>%
+  rename(sample_id = IID)
 
 # Read the exported dosages (no header: FID IID dosage)
 message('Read exported dosages ...') # why export these???
