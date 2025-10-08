@@ -163,7 +163,7 @@ ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
     legend.position = "none"
   ) +
   labs(
-    x = expression(-log[10](P)),
+    x = 'Enrichment',
     y = "Cell Type",
     title = "Stratified LDSR Enrichment (95% CS)",
     fill = "Main Type"
@@ -505,7 +505,7 @@ ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
     legend.position = "none"
   ) +
   labs(
-    x = expression(-log[10](P)),
+    x = 'Enrichment',
     y = "Cell Type",
     title = "Stratified LDSR Enrichment (maxCPP)",
     fill = "Main Type"
