@@ -45,13 +45,17 @@ tibble(
   print()
 message("\n============================\n")
 
-# Check if plink2 is available
-cat("Current PATH:\n", Sys.getenv("PATH"), "\n")
-plink_which <- system("which plink2", intern = TRUE)
-cat("which plink2 output:\n", paste(plink_which, collapse = "\n"), "\n")
-if (length(plink_which) == 0) {
-  stop("plink2 not found in PATH. Ensure module is loaded in snakemake env. PATH: ", Sys.getenv("PATH"))
+# PLINK2 full path (from your which output; adjust if needed)
+plink2_path <- "/apps/genomics/plink/2.0/el7/AVX512/intel-2018/serial/plink-2.0/build_dynamic/plink2"
+
+# Debug: Check if plink2 path exists inside container
+if (!file.exists(plink2_path)) {
+  stop(paste("plink2 not found at:", plink2_path, "\nThis suggests the /apps path is not mounted in the singularity container. Check snakemake singularity bind paths or extract genotypes outside the script."))
 }
+
+# Debug: Print PATH for confirmation
+message("Current PATH:\n", Sys.getenv("PATH"), "\n")
+
 # Load pvar to find SNP details
 message('Looding pvar file to get SNP info ...')
 pvar_file <- paste0(geno_prefix, ".pvar")
