@@ -53,7 +53,7 @@ biomart_tbl <- getBM(
   values = gene_list,
   mart = mart) |>
   as_tibble() |>
-  mutate(strand = ifelse(strand == 1, "+", "-"))
+  mutate(strand = ifelse(strand == 1, "+", "-")) |>
   distinct()
 
 message(nrow(biomart_tbl), " distinct genes remain after running BiomaRt ...")
