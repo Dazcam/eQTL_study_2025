@@ -92,7 +92,7 @@ if (length(plink_out) > 0) {
   cat("PLINK2 output:\n")
   cat(plink_out, sep = "\n")
 }
-dosage_file <- paste0(temp_out, ".A-transpose")
+dosage_file <- paste0(temp_out, ".traw")
 if (!file.exists(dosage_file)) {
   stop(paste("PLINK2 export failed. Dosage file not created:", dosage_file, "\nCheck PLINK2 output above for errors (e.g., SNP not found, file paths)."))
 }
