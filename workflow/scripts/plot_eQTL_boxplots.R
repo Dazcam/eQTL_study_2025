@@ -19,7 +19,7 @@ if (exists("snakemake")) {
 }
 log_smk()
 
-message('\n\nCreating SLDSR annotation files from susie output ...')
+message('\n\nCreating eQTL boxplots for L1 cell types ...')
 
 
 exp_dir <- "../results/05TENSORQTL/prep_input/"
@@ -97,10 +97,17 @@ if (!file.exists(dosage_file)) {
   stop(paste("PLINK2 export failed. Dosage file not created:", dosage_file, "\nCheck PLINK2 output above for errors (e.g., SNP not found, file paths)."))
 }
 
-# Read the exported dosages (no header: FID IID dosage)
-geno_df <- read_tsv(dosage_file, col_names = c("FID", "IID", "genotype_dosage")) %>%
-  select(IID, genotype_dosage) %>%
-  rename(sample_id = IID)
+# Read the .traw file (header present, one row for the single variant)
+traw <- read_tsv(dosage_file, col_names = TRUE, show_col_types = FALSE)
+if (nrow(traw) != 1) {
+  stop("Unexpected number of rows in .traw file (expected 1 for single SNP).")
+}
+dosages <- as.numeric(traw[1, 7:ncol(traw)])
+geno_df <- tibble(
+  sample_id = psam$IID,
+  genotype_dosage = dosages
+) %>%
+  filter(!is.na(genotype_dosage))
 
 # Read the exported dosages (no header: FID IID dosage)
 message('Read exported dosages ...') # why export these???
