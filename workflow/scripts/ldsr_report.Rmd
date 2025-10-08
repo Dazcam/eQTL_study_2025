@@ -201,8 +201,8 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 1. Schizophrenia S-LDSC Results (95% CS)",
-    subtitle = "eQTL Max CPP Used as Annotation"
+    title = "Table 1. Schizophrenia S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
   ) %>%
   # Rename columns for display
   cols_label(
@@ -267,8 +267,8 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 2. Bipolar Disorder S-LDSC Results (95% CS)",
-    subtitle = "eQTL Max CPP Used as Annotation"
+    title = "Table 2. Bipolar Disorder S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
   ) %>%
   # Rename columns for display
   cols_label(
@@ -333,8 +333,8 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 3. Major Depressive Disorder S-LDSC Results (95% CS)",
-    subtitle = "eQTL Max CPP Used as Annotation"
+    title = "Table 3. Major Depressive Disorder S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
   ) %>%
   # Rename columns for display
   cols_label(
@@ -543,8 +543,8 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 4. Schizophrenia S-LDSC Results (MaxCPP)",
-    subtitle = "eQTL Max CPP Used as Annotation"
+    title = "Table 4. Schizophrenia S-LDSC Results",
+    subtitle = "Max CPP eQTL used as annotation"
   ) %>%
   # Rename columns for display
   cols_label(
@@ -609,8 +609,8 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 5. Bipolar Disorder S-LDSC Results (MaxCPP)",
-    subtitle = "eQTL Max CPP Used as Annotation"
+    title = "Table 5. Bipolar Disorder S-LDSC Results",
+    subtitle = "Max CPP eQTL used as annotation"
   ) %>%
   # Rename columns for display
   cols_label(
@@ -675,8 +675,8 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 6. Major Depressive Disorder S-LDSC Results (MaxCPP)",
-    subtitle = "eQTL Max CPP Used as Annotation"
+    title = "Table 6. Major Depressive Disorder S-LDSC Results",
+    subtitle = "Max CPP eQTL used as annotation"
   ) %>%
   # Rename columns for display
   cols_label(
