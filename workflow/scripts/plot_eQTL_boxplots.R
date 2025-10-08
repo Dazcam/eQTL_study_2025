@@ -22,11 +22,11 @@ log_smk()
 message('\n\nCreating SLDSR annotation files from susie output ...')
 
 
-#exp_dir <- "../results/05TENSORQTL/prep_input/"
-#pval_dir <- "../results/10SMR/smr_input/"
-#gene_id <- "ENSG00000214435"
-#geno_prefix <- "../results/05TENSORQTL/prep_input/chrALL_final.filt"
-#snp_id <- "rs11191424"  # Can be rsID; code handles rsID lookup via pvar
+exp_dir <- "../results/05TENSORQTL/prep_input/"
+pval_dir <- "../results/10SMR/smr_input/"
+gene_id <- "ENSG00000214435"
+geno_prefix <- "../results/05TENSORQTL/prep_input/chrALL_final.filt"
+snp_id <- "rs11191424"  # Can be rsID; code handles rsID lookup via pvar
 
 exp_dir <- as.character(snakemake@params[['exp_dir']])
 pval_dir <- as.character(snakemake@params[['pval_dir']])
@@ -52,9 +52,6 @@ plink2_path <- "/apps/genomics/plink/2.0/el7/AVX512/intel-2018/serial/plink-2.0/
 if (!file.exists(plink2_path)) {
   stop(paste("plink2 not found at:", plink2_path, "\nThis suggests the /apps path is not mounted in the singularity container. Check snakemake singularity bind paths or extract genotypes outside the script."))
 }
-
-# Debug: Print PATH for confirmation
-message("Current PATH:\n", Sys.getenv("PATH"), "\n")
 
 # Load pvar to find SNP details
 message('Looding pvar file to get SNP info ...')
@@ -90,7 +87,7 @@ cmd_args <- c(
   "--out", temp_out
 )
 cat("Running PLINK2 with args:", paste(cmd_args, collapse = " "), "\n")
-plink_out <- system2("plink2", args = cmd_args, stdout = TRUE, stderr = TRUE)
+plink_out <- system2(plink2_path, args = cmd_args, stdout = TRUE, stderr = TRUE)
 if (length(plink_out) > 0) {
   cat("PLINK2 output:\n")
   cat(plink_out, sep = "\n")
