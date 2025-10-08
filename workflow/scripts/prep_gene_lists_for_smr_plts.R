@@ -30,8 +30,8 @@ cell_type <- snakemake@wildcards[["cell_type"]]
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("gene_list_file", "out_file", "cell_type"),
-  value    = c(gene_list_file, out_file, cell_type)
+  variable = c("gene_list_file", "ensembl_out_file", "symbol_out_file", "cell_type"),
+  value    = c(gene_list_file, ensembl_out_file, symbol_out_file, cell_type)
 ) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
