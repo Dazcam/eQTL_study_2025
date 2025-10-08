@@ -148,6 +148,9 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
 ```{r, cs95_enrich_plot, echo = FALSE, message=FALSE}
 ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
   geom_col(width = 0.7, colour = 'black') +
+   geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
+                    xmax = (Enrichment+Enrichment_std_error)), 
+                 width = .2) +
   facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
   theme_minimal(base_size = 12) +
@@ -487,6 +490,9 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
 
 ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
   geom_col(width = 0.7, colour = 'black') +
+  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
+                    xmax = (Enrichment+Enrichment_std_error)), 
+                 width = .2) +
   facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
   theme_minimal(base_size = 12) +
