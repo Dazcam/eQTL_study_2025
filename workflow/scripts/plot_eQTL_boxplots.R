@@ -54,7 +54,7 @@ if (!file.exists(plink2_path)) {
 }
 
 # Load pvar to find SNP details
-message('Looding pvar file to get SNP info ...')
+message('Loading pvar file to get SNP info ...')
 pvar_file <- paste0(geno_prefix, ".pvar")
 pvar <- read_tsv(pvar_file, comment = "##", col_names = TRUE, col_types = cols(
   `#CHROM` = col_character(),
@@ -81,7 +81,7 @@ temp_rs <- tempfile(fileext = ".txt")
 write_lines(snp_id, temp_rs)
 temp_out <- tempfile()
 cmd_args <- c(
-  "--pfile", gen_prefix,
+  "--pfile", geno_prefix,
   "--extract", temp_rs,
   "--export", "A-transpose",
   "--out", temp_out
