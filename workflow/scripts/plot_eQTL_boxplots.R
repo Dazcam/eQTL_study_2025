@@ -19,22 +19,6 @@ if (exists("snakemake")) {
 }
 log_smk()
 
-message('\n\nCreating eQTL boxplots for L1 cell types ...')
-
-
-exp_dir <- "../results/05TENSORQTL/prep_input/"
-pval_dir <- "../results/10SMR/smr_input/"
-gene_id <- "ENSG00000214435"
-geno_prefix <- "../results/05TENSORQTL/prep_input/chrALL_final.filt"
-snp_id <- "rs11191424"  # Can be rsID; code handles rsID lookup via pvar
-
-exp_dir <- as.character(snakemake@params[['exp_dir']])
-pval_dir <- as.character(snakemake@params[['pval_dir']])
-geno_prefix <- as.character(snakemake@params[['geno_prefix']])
-gene_id <- as.character(snakemake@params[['gene_id']])
-snp_id <- as.character(snakemake@params[['snp_id']])
-output <- as.character(snakemake@output[[1]])
-
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 
 cat("============================")
@@ -53,10 +37,19 @@ if (!file.exists(plink2_path)) {
   stop(paste("plink2 not found at:", plink2_path, "\nThis suggests the /apps path is not mounted in the singularity container. Check snakemake singularity bind paths or extract genotypes outside the script."))
 }
 
-# Load pvar to find SNP details
+# Set output directory for non-temp files
+output_dir <- dirname(output)
+
+# Load pvar to find SNP details (handle VCF-like header with multiple ## lines)
 message('Loading pvar file to get SNP info ...')
 pvar_file <- paste0(geno_prefix, ".pvar")
-pvar <- read_tsv(pvar_file, comment = "##", col_names = TRUE, col_types = cols(
+pvar_lines <- read_lines(pvar_file)
+header_idx <- which(str_starts(pvar_lines, "#CHROM"))
+if (length(header_idx) == 0) {
+  stop("Could not find #CHROM header line in pvar file.")
+}
+skip_lines <- header_idx - 1
+pvar <- read_tsv(pvar_file, skip = skip_lines, col_names = TRUE, col_types = cols(
   `#CHROM` = col_character(),
   POS = col_integer(),
   ID = col_character(),
@@ -76,15 +69,19 @@ ref <- snp_row$REF[1]
 alt <- snp_row$ALT[1]
 variant_id <- paste0(chrom, "_", pos, "_", ref, "_", alt)
 
-# Extract genotype dosages using PLINK2 (with debugging)
-temp_rs <- tempfile(fileext = ".txt")
-write_lines(snp_id, temp_rs)
-temp_out <- tempfile()
+# Load psam for sample IDs
+psam_file <- paste0(geno_prefix, ".psam")
+psam <- read_tsv(psam_file, col_names = TRUE, show_col_types = FALSE)
+
+# Extract genotype dosages using PLINK2 (write extract file to output_dir)
+extract_file <- file.path(output_dir, paste0(snp_id, "_extract.txt"))
+write_lines(snp_id, extract_file)
+out_prefix <- file.path(output_dir, "plink_out")
 cmd_args <- c(
   "--pfile", geno_prefix,
-  "--extract", temp_rs,
+  "--extract", extract_file,
   "--export", "A-transpose",
-  "--out", temp_out
+  "--out", out_prefix
 )
 cat("Running PLINK2 with args:", paste(cmd_args, collapse = " "), "\n")
 plink_out <- system2(plink2_path, args = cmd_args, stdout = TRUE, stderr = TRUE)
@@ -92,7 +89,7 @@ if (length(plink_out) > 0) {
   cat("PLINK2 output:\n")
   cat(plink_out, sep = "\n")
 }
-dosage_file <- paste0(temp_out, ".traw")
+dosage_file <- paste0(out_prefix, ".traw")
 if (!file.exists(dosage_file)) {
   stop(paste("PLINK2 export failed. Dosage file not created:", dosage_file, "\nCheck PLINK2 output above for errors (e.g., SNP not found, file paths)."))
 }
@@ -109,14 +106,10 @@ geno_df <- tibble(
 ) %>%
   filter(!is.na(genotype_dosage))
 
-# Read the exported dosages (no header: FID IID dosage)
-message('Read exported dosages ...') # why export these???
-geno_df <- read_tsv(dosage_file, col_names = c("FID", "IID", "genotype_dosage")) %>%
-  select(IID, genotype_dosage) %>%
-  rename(sample_id = IID)
+message('Read exported dosages ...')
 
 # Load p-values for this gene-SNP pair across cell types
-message('Loading p-values for SNP / Gene pair for TensorQTL norminal file ...') 
+message('Loading p-values for SNP / Gene pair for TensorQTL nominal file ...') 
 pval_map <- tibble(cell_type = character(), pval_nominal = double())
 for (ct in cell_types) {
   pval_file <- paste0(pval_dir, ct, "/", ct, "_nom.cis_qtl_pairs.tsv")
@@ -144,18 +137,17 @@ for (ct in cell_types) {
   expr_file <- paste0(exp_dir, ct, "_quantile.bed")
   if (!file.exists(expr_file)) next
   
-  # Read expression BED file (header starts with #Chr)
+  # Read expression BED file (handle #Chr header)
   expr_bed <- read_tsv(expr_file, comment = "", col_names = TRUE)
   colnames(expr_bed)[1] <- "Chr"  # Clean up #Chr column name
   
   # Find gene row
   gene_idx <- which(expr_bed$TargetID == gene_id)
   if (length(gene_idx) == 0) next
-  gene_row <- expr_bed[gene_idx, ]
   
   # Extract sample names and expression values (columns 5+ are samples)
-  sample_names <- colnames(gene_row)[5:ncol(gene_row)]
-  expression <- as.numeric(gene_row[1, 5:ncol(gene_row)])
+  sample_names <- colnames(expr_bed)[5:ncol(expr_bed)]
+  expression <- as.numeric(expr_bed[gene_idx, 5:ncol(expr_bed)])
   
   # Build plot data for this cell type
   plot_data_ct <- tibble(
@@ -214,7 +206,7 @@ for (ct in cell_types) {
 
 # Combine plots
 if (length(plots) > 0) {
-  messgae('Saving combined plot ...')
+  message('Saving combined plot ...')
   combined_plot <- plot_grid(plotlist = plots, ncol = 4)
   saveRDS(combined_plot, output)
   
@@ -223,4 +215,4 @@ if (length(plots) > 0) {
 } else {
   cat("No data available for plotting.\n")
 }
-messgae('All done.')
+message('All done.')
