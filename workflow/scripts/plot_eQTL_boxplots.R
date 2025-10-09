@@ -19,6 +19,22 @@ if (exists("snakemake")) {
 }
 log_smk()
 
+message('\n\nCreating eQTL boxplots for L1 cell types ...')
+
+
+# exp_dir <- "../results/05TENSORQTL/prep_input/"
+# pval_dir <- "../results/10SMR/smr_input/"
+# gene_id <- "ENSG00000214435"
+# geno_prefix <- "../results/05TENSORQTL/prep_input/chrALL_final.filt"
+# snp_id <- "rs11191424"  # Can be rsID; code handles rsID lookup via pvar
+
+exp_dir <- as.character(snakemake@params[['exp_dir']])
+pval_dir <- as.character(snakemake@params[['pval_dir']])
+geno_prefix <- as.character(snakemake@params[['geno_prefix']])
+gene_id <- as.character(snakemake@params[['gene_id']])
+snp_id <- as.character(snakemake@params[['snp_id']])
+output <- as.character(snakemake@output[[1]])
+
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 
 cat("============================")
