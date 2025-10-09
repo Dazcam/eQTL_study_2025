@@ -140,10 +140,10 @@ rule pi1_enrich_bryois:
     resources: threads = 4, mem_mb = 20000, time="1:00:00"
     
 rule pi1_enrich_internal:
-    input:  public_all = rules.cat_nom_qtl.output,,
-            public_top = config["tensorQTL"]["tensorqtl_perm"]["output"],
-            qtl_all = rules.cat_nom_qtl.output,
-            qtl_top = config["tensorQTL"]["tensorqtl_perm"]["output"]
+    input:      public_all = "../results/06QTL-REPLICATION/cat_nom_qtl/{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz",
+                public_top = "../results/05TENSORQTL/tensorqtl_perm/{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{ref_cell_type}_{norm_method}_perm.cis_qtl.txt.gz",
+                qtl_all    = "../results/06QTL-REPLICATION/cat_nom_qtl/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz",
+                qtl_top    = "../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz"
     output: enrich = config["qtl_rep"]["pi1_enrich_internal"]["enrich"],
             pi1    = config["qtl_rep"]["pi1_enrich_internal"]["pi1"]
     resources: threads = 4, mem_mb = 20000, time="1:00:00"
@@ -151,10 +151,7 @@ rule pi1_enrich_internal:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_internal"]["log"]
-    script: "../scripts/pi1_enrichments_sc.R"    singularity: config["containers"]["r_eqtl"]
-    benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_bryois_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
-    log:    config["qtl_rep"]["pi1_enrich_bryois"]["log"]
-    script: "../scripts/pi1_enrichments_sc.R"
+    script: "../scripts/pi1_enrichments_sc.R"    
 
 rule pi1_enrichments_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
@@ -162,7 +159,7 @@ rule pi1_enrichments_report:
             obrien = expand(rules.pi1_enrich_obrien.output.pi1, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             wen = expand(rules.pi1_enrich_wen.output.pi1, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             bryois = expand(rules.pi1_enrich_bryois.output.pi1, cell_type=config["cell_types"],ref_cell_type=config["cell_types_bryois"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
-            internal = expand(rules.pi1_enrich_bryois_internal.output.pi1, cell_type=config["cell_types"],ref_cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"])
+            internal = expand(rules.pi1_enrich_internal.output.pi1, cell_type=config["cell_types"],ref_cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             rmd_script = "scripts/pi1_enrichments_report.Rmd"
     output: "reports/06QTL-REPLICATION/pi1_enrichments_report.html"
     params: ziffra_dir = "../../results/06QTL-REPLICATION/atac_enrich/",
