@@ -54,7 +54,7 @@ def merge_data(genotypes_df, expression_data):
     return merged_df
 
 
-def plot_eqtl(merged_df, snp_id, gene_symbol, output_file):
+def plot_eqtl(merged_df, cell_type, snp_id, gene_symbol, output_file):
     """Generate a publication-quality eQTL plot."""
     sns.set(style="white")
     plt.figure(figsize=(8, 6))
@@ -91,7 +91,7 @@ def plot_eqtl(merged_df, snp_id, gene_symbol, output_file):
     
     plt.xlabel("Genotype", labelpad=15)
     plt.ylabel(f"{gene_symbol} Expression", labelpad=15)
-    plt.title(f"eQTL Plot: {snp_id} vs {gene_symbol}", fontsize=18, pad=20)
+    plt.title(f"{cell_type}: {snp_id} vs. {gene_symbol}", fontsize=18, pad=20)
     
     for spine in plt.gca().spines.values():
         spine.set_edgecolor('black')
@@ -130,7 +130,7 @@ def main():
         gene_symbol = row.get('symbol', gene_ensembl) if pd.notna(row.get('symbol')) else gene_ensembl
         
         # Construct expression file path using cell_type and expression_dir
-        expression_file = os.path.join(args.expression_dir, f"{cell_type}_tmm.bed")
+        expression_file = os.path.join(args.expression_dir, f"{cell_type}_quantile.bed")
         
         # Extract and process data
         genotypes_df = extract_genotypes(args.genotype_file, snp_id)
@@ -152,7 +152,7 @@ def main():
 
         # Generate plot with cell_type in filename
         output_file = os.path.join(args.output_dir, f"eqtl_plot_{cell_type}_{snp_id}_{gene_symbol}_categorical.png")
-        plot_eqtl(merged_df, snp_id, gene_symbol, output_file)
+        plot_eqtl(merged_df, cell_type, snp_id, gene_symbol, output_file)
         print(f"Generated plot: {output_file}")
 
     # Create empty done file for Snakemake
