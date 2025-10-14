@@ -7,12 +7,14 @@ configfile: '../config/config.yaml'
 #include: 'rules/03genotypes_pre_impute.smk'
 #include: 'rules/04genotypes_post_impute.smk'
 #include: 'rules/05tensorQTL.smk'
-include: 'rules/06qtl_replication.smk'
-#include: 'rules/05susie.smk'
-#include: 'rules/06prep_gwas.smk'
-#include: 'rules/07sldsr.smk'
-#include: 'rules/08twas.smk'
+#include: 'rules/06qtl_replication.smk'
+#include: 'rules/07prep_gwas.smk'
+#include: 'rules/08susie.smk'
+#include: 'rules/09sldsr.smk'
 #include: 'rules/10smr.smk'
+#include: 'rules/10twas.smk'
+#include: 'rules/11plotting.smk'
+include: 'rules/12jobs.smk'
 
 # Set QTL tool
 QTL_TOOL = config["tensorQTL"]["tool"]
@@ -68,25 +70,35 @@ def aggregate_input(wildcards):
     )
 
 # Rule all with optional plot_qtl inclusion
-qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]["run"] else []
+#qtl_plots = ["../results/04TENSORQTL/plots/plot_qtl.done"] if config["plot_qtl"]["run"] else []
 
 rule all:
     input:
+#        "reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds",
+#        "reports/11PLOTTING/boxplots_py/plot_qtl.done"
+        "../results/12JOBS/jobs_pval_fdr_genomewide.tsv.gz"
+#         expand(config["sldsr"]["ldsr_strat_summary"]["output"], annot_type = config["annot_types"])
+#        "../results/02SCANPY/scanpy_subclustering.html",
+#        "../results/02SCANPY/scanpy_clustering.html",
+#        "../results/02SCANPY/scanpy_annotation.html",
+#        "../results/02SCANPY/scanpy_extra.html",
+#        "../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html",
+#        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html",
 #        qtl_files
-#         expand("../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"],
-#        "reports/05TENSORQTL/tensotqtl_report.html",
-        "reports/06QTL-REPLICATION/pi1_enrichments_report.html"
+#        "reports/05TENSORQTL/tensorqtl_report.html",
+#        "reports/06QTL-REPLICATION/pi1_enrichments_report.html",
+#        expand(config["susie"]["sort_susie"]["output"], cell_type=config["cell_types"])
+#        expand(config["prep_gwas"]["munge_sumstats"]["output"], gwas = config['gwas']),
+#        "reports/08SUSIE/08susie_report.html",
+#        "reports/09SLDSR/09ldsr_report.html",
+#        "reports/10SMR/10smr_report.html",
+#        "reports/11PLOTTING/eqtl_boxplots.rds"
 #        expand("/scratch/c.c1477909/fastqs/250716/{sample}_{lane}_R1_001.fastq.gz", sample=ALL_SAMPLES, lane=["L001", "L002", "L003", "L004"])
 #        "reports/read_counts/summary_read_counts.txt"
 #        "../resources/refs/ref.done",
 #        expand("../results/01PARSE/{sample}/run.done", sample = ALL_SAMPLES)
 #        "../results/01PARSE/combine_plate3/run.done"
 #        expand("../results/02SCANPY/scanpy_qc_{plate}.html", plate = config['plate']),
-#        "../results/02SCANPY/scanpy_clustering.html",
-#        "../results/02SCANPY/scanpy_annotation.html",
-#        "../results/02SCANPY/scanpy_extra.html",
-#        "../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html",
-#        "reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html",
 #        "../results/04GENOTYPES-POST/TOPMED/covariates/pca.eigenvec",
 #        expand("../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed", cell_type = CELL_TYPES, norm_method = config["tensorQTL"]["norm_methods"]),
 #        expand(
@@ -130,6 +142,8 @@ rule all:
 #        expand("../results/05SLDSR/susie_input/{cell_type}_samp_lst_susie_ready.txt", cell_type = config["cell_types"]),
 #        expand(
 #            [
+#                config["susie"]["get_sig_eGenes"]["output"],
+#                config["susie"]["prep_susie_gene_meta"]["output"],
 #                config["slsdr"]["run_susie"]["cs_hp_out"],
 #                config["slsdr"]["run_susie"]["cs_out"],
 #                config["slsdr"]["run_susie"]["snp_out"]
@@ -139,7 +153,7 @@ rule all:
 #            susie_batches=[config["susie_batches"]]
 #        ), 
 #        expand(config["slsdr"]["merge_susie"]["output"], cell_type=config["cell_types"], susie_suffix=["cred.hp.txt", "cred.txt", "snp.txt"]),
-#        expand(config["slsdr"]["sort_susie"]["output"], cell_type=config["cell_types"]),
+#        expand(config["susie"]["sort_susie"]["output"], cell_type=config["cell_types"]),
 #        expand(config["slsdr"]["get_hg38_refs"]["baseline"], chr=range(1, 23)),
 #        expand(config["slsdr"]["get_hg38_refs"]["weights"], chr=range(1, 23)),
 #        expand(config["slsdr"]["get_hg38_refs"]["frq"], chr=range(1, 23)),
