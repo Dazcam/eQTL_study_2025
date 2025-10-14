@@ -18,6 +18,19 @@ cell_types:
   - "Endo-Peri"
   - "OPC" 
   - "MG"
+  - "ExN-UL-0"
+  - "ExN-UL-1"
+  - "ExN-UL-2"
+  - "ExN-DL-0"
+  - "ExN-DL-1"
+  - "ExN-DL-2"
+  - "ExN-DL-3"
+  - "InN-0"
+  - "InN-1"
+  - "RG-0"
+  - "RG-1"
+  - "RG-2"
+  - "RG-3"
 
 cell_types_bryois:
   - "Astrocytes"
@@ -36,10 +49,19 @@ susie_window: 1000000
 susie_batches: 25
 write_full_susie: TRUE
 
+annot_types:
+  - maxCPP
+  - CS95
+
+p_smr: 0.05
+p_heidi: 0.01
+smr_window: 500
+smr_gene: 'ENSG00000214435' # is 'AS3MT'
+
 gwas:
   scz: https://figshare.com/ndownloader/files/34517828  # PMID:35396580, EUR only
-#  bpd: https://figshare.com/ndownloader/files/49760772  # PMID:39843750
-#  mdd: https://figshare.com/ndownloader/files/51487022  # PMID:39814019
+  bpd: https://figshare.com/ndownloader/files/49760772  # PMID:39843750
+  mdd: https://figshare.com/ndownloader/files/51487022  # PMID:39814019
 #  hgt: https://giant-consortium.web.broadinstitute.org/images/f/f7/GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_EUR.gz
 
 #https://eur03.safelinks.protection.outlook.com/?url=https%3A%2F%2Fportals.broadinstitute.org%2Fcollaboration%2Fgiant%2Fimages%2Ff%2Ff7%2FGIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_EUR.gz&data=05%7C02%7CBaranY%40cardiff.ac.uk%7Cb4fbaa4e236042ccde8108dd6bbdb94f%7Cbdb74b3095684856bdbf06759778fcbc%7C1%7C0%7C638785184769053042%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=yNgCf5EVEHMayI6yj73W7V9p3cLgNez1kWNb5HLySQI%3D&reserved=0  #PMID:36224396  
@@ -122,6 +144,14 @@ scanpy:
     nb_out: ../results/02SCANPY/scanpy_extra_pm.ipynb
     html_out: scanpy_extra.html
     log: ../results/00LOG/02SCANPY/scanpy_extra.log
+
+  subclustering:
+    input: scripts/scanpy_subclustering.ipynb
+    output: ../results/02SCANPY/scanpy_subclustering.html
+    nb_out: ../results/02SCANPY/scanpy_subclustering_pm.ipynb
+    html_out: scanpy_subclustering.html
+    benchmark: reports/benchmarks/scanpy_subclustering.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
   env: "../envs/eqtl_study.yml"
 
@@ -327,6 +357,18 @@ tensorQTL:
     prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
 
+  tensorqtl_independent:
+    output: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent.cis_independent_qtl.txt.gz
+    prefix_out: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent
+    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log   
+
+  tensorqtl_trans:
+    output: ../results/05TENSORQTL/tensorqtl_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}.trans_qtl_pairs.txt.gz
+    prefix_out: ../results/05TENSORQTL/tensorqtl_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}
+    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_trans.log
+
   tensorqtl_tss_plt: ../results/figs/tss_density_plot_combined.png
   tensorqtl_tss_tbl: ../results/tables/tensorqtl_summary_table.tsv
 
@@ -439,8 +481,7 @@ prep_gwas:
     log: ../results/00LOG/07PREP-GWAS/add_hg38_coords_to_gwas_{gwas}.log
 
   munge_sumstats:
-    output: ../results/05SLDSR/gwas/scz_hg38_ldsr_ready.sumstats.gz
-#../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz # Chnage back to this for run over weekend
+    output: ../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz # Chnage back to this for run over weekend
     prefix: ../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready
     log: ../results/00LOG/07PREP-GWAS/munge_sumstats_{gwas}.log
 
@@ -484,6 +525,11 @@ susie:
     output: ../results/08SUSIE/susie/{cell_type}/{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz
     log: ../results/00LOG/08SUSIE/sort_susie_{cell_type}.log
 
+  susie_report:
+    html: reports/08SUSIE/08susie_report.html
+    in_dir: ../../results/08SUSIE/susie/
+    log: ../results/00LOG/08SUSIE/08susie_report.log
+  
 # ------------  SLDSR  ----------------
 sldsr:  
   get_hg38_refs:
@@ -493,7 +539,7 @@ sldsr:
     bim: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
 #    snps: ../resources/ldsr_hg38_refs/hm3_no_MHC.list.txt  # Can't have this in same rule as out files with {chr}
     params: ../resources/ldsr/ldsr_hg38_refs/
-    log: ../results/00LOG/09SLDSR/get_hg38_refs.{chr}.log
+    log: ../results/00LOG/09SLDSR/get_hg38_refs.log
 
   get_hg19_refs:
     # Note that we're not tracking the SNPs file in snakemake, but it is needed, may need seprate rule
@@ -502,30 +548,40 @@ sldsr:
     frq: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.frq
     bim: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.bim
     params: ../resources/ldsr_hg19_refs/
-    log: ../results/00LOG/09SLDSR/get_hg19_refs.{chr}.log
+    log: ../results/00LOG/09SLDSR/get_hg19_refs.log
 
-  make_annot_maxCPP:
-    output: ../results/09SLDSR/sldsr/annot/{cell_type}/{cell_type}.{chr}.annot.gz
-    log: ../results/00LOG/09SLDSR/make_annot_maxCPP_{cell_type}.{chr}.log 
+  make_annot:
+    maxcpp: ../results/09SLDSR/annot/{cell_type}/{cell_type}.maxCPP.{chr}.annot.gz
+    cs95: ../results/09SLDSR/annot/{cell_type}/{cell_type}.CS95.{chr}.annot.gz
+    log: ../results/00LOG/09SLDSR/make_annot_{cell_type}.{chr}.log
 
   lift_hapmap3_snps:
-    output: ../results/09SLDSR/sldsr/liftover/hm3_hg38_no_MHC.list.txt
+    output: ../results/09SLDSR/liftover/hm3_hg38_no_MHC.list.txt
     log: ../results/00LOG/09SLDSR/lift_hapmap3_snps.log
 
   ldsr_ld_scores_hg38:
-    output: ../results/09SLDSR/sldsr/annot/{cell_type}/{cell_type}.{chr}.l2.ldscore.gz
+    output: ../results/09SLDSR/annot/{cell_type}/{cell_type}.{annot_type}.{chr}.l2.ldscore.gz
     bfile: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}
-    ldscores: ../results/09SLDSR/sldsr/annot/{cell_type}/{cell_type}.{chr}
-    log: ../results/00LOG/09SLDSR/ldsr_ld_scores_hg38_{cell_type}_{chr}.log
+    ldscores: ../results/09SLDSR/annot/{cell_type}/{cell_type}.{annot_type}.{chr}
+    log: ../results/00LOG/09SLDSR/ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.log
 
   ldsr_strat_hg38_bl_v12:
-    output:  ../results/09SLDSR/sldsr/strat_bl_v12/{cell_type}/{cell_type}_hg38_bl.v1.2_{gwas}.results
-    out_prefix: ../results/09SLDSR/sldsr/strat_bl_v12/{cell_type}/{cell_type}_hg38_bl.v1.2_{gwas}
+    output:  ../results/09SLDSR/strat_bl_v12/{cell_type}/{annot_type}/{cell_type}_hg38_bl.v1.2_{gwas}.results
+    out_prefix: ../results/09SLDSR/strat_bl_v12/{cell_type}/{annot_type}/{cell_type}_hg38_bl.v1.2_{gwas}
     weights: ../resources/ldsr/ldsr_hg38_refs/weights/weights.hm3_noMHC.
     baseline: ../resources/ldsr/ldsr_hg38_refs/baseline_v1.2/baseline.
     frq: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.
-    ldscores: ../results/09SLDSR/sldsr/annot/{cell_type}/{cell_type}.
-    log: ../results/00LOG/09SLDSR/strat_hg38_bl_v12_{cell_type}_{gwas}.log 
+    ldscores: ../results/09SLDSR/annot/{cell_type}/{cell_type}.{annot_type}.
+    log: ../results/00LOG/09SLDSR/strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.log 
+
+  ldsr_strat_summary:
+    output: ../results/09SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.{annot_type}.summary.tsv
+    log: ../results/00LOG/09SLDSR/ldsr_strat_summary.{annot_type}.log    
+
+  ldsr_report:
+    html: reports/09SLDSR/09ldsr_report.html
+    in_dir: ../../results/09SLDSR/strat_bl_v12/
+    log: ../results/00LOG/09SLDSR/ldsr_report.log
 
 # ---------  TWAS  ----------
 
@@ -567,23 +623,28 @@ smr:
   get_smr_binary:
     smr: ../resources/smr/smr
     prefix: ../resources/smr
+
   get_snp_positions:
     snp_pos: ../results/10SMR/smr_input/snp_positions.txt
     log: ../results/00LOG/10SMR/get_snp_positions.log
+
   cat_tensorqtl_nom_snps:
     cat_snps: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
     summary: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
     dir: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_quantile_genPC_4_expPC_40/ # Need to fix this
     log: ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
+
   create_query:
     r_script: scripts/prep_eQTL_for_smr.R
     query: ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
     gene_lst: ../results/10SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
     log: ../results/00LOG/10SMR/create_query_{cell_type}.log
+
   create_besd:
     besd: ../results/10SMR/smr_input/{cell_type}/{cell_type}.besd
     prefix: ../results/10SMR/smr_input/{cell_type}/{cell_type}
     log: ../results/00LOG/10SMR/create_besd_{cell_type}.log
+
   cat_refs:
     frq_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
     bed_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bed
@@ -594,6 +655,7 @@ smr:
     cat_bim: ../results/10SMR/smr_input/1000G.EUR.hg38.bim
     cat_fam: ../results/10SMR/smr_input/1000G.EUR.hg38.fam
     log: ../results/00LOG/10SMR/cat_refs.log
+
   generate_topmed_freq:
     bed: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bed
     bim: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bim
@@ -601,20 +663,62 @@ smr:
     out: ../results/10SMR/smr_input/chrALL_final.filt.frq
     prefix_in: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt
     prefix_out: ../results/10SMR/smr_input/chrALL_final.filt   
+
   format_gwas:
-    gwas: ../results/05SLDSR/gwas/{gwas}_hg38.tsv # Change this for final run
+    gwas: ../results/07PREP-GWAS/{gwas}_hg38.tsv
     ma: ../results/10SMR/smr_input/gwas/{gwas}_hg38.ma
     prefix: ../results/10SMR/smr_input/gwas/{gwas}_hg38
     log: ../results/00LOG/10SMR/format_gwas_{gwas}.log
+
   smr:
     geno_prefix: ../results/10SMR/smr_input/1000G.EUR.hg38
     smr: ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr
     smr_prefix: ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}
     log: ../results/00LOG/10SMR/smr_{cell_type}_{gwas}.log 
+  
+  prep_gene_lists:
+    ensembl: ../results/10SMR/plot/{cell_type}/{cell_type}_ensembl_genes.tsv
+    symbol: ../results/10SMR/plot/{cell_type}/{cell_type}_symbol_genes.tsv
+    log: ../results/00LOG/10SMR/prep_gene_lists_{cell_type}.log
+
+  smr_plot:
+    output: ../results/10SMR/plot/{cell_type}/{cell_type}_{gwas}_{smr_gene}_smr.txt
+    out_prefix: ../results/10SMR/plot/{cell_type}/{cell_type}_{gwas}_{smr_gene}_smr 
+    log: ../results/00LOG/10SMR/smr_plot_{cell_type}_{gwas}_{smr_gene}.log 
+   
   smr_report:
-    html: reports/10smr_report.html
+    html: reports/10SMR/10smr_report.html
     in_dir: ../../results/10SMR/smr # Rel to Rmd script
-    log: ../results/00LOG/10SMR/smr_report.log
+    log: ../results/00LOG/10SMR/smr_report.log  
+
+# ---------  Plotting  ------------
+
+plotting:
+  eqtl_boxplots:
+    exp_dir: ../results/05TENSORQTL/prep_input/
+    pval_dir: ../results/10SMR/smr_input/
+    geno_prefix: ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    gene_id: ENSG00000214435
+    snp_id: rs11191424
+    output: reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds
+    log: ../results/00LOG/11PLOTTING/eqtl_boxplots_r.log
+
+  eqtl_boxplots_py:
+    pairs_csv: ../resources/sheets/pairs.csv
+    exp_dir: ../results/05TENSORQTL/prep_input/
+    out_dir: reports/11PLOTTING/boxplots_py/
+    output: reports/11PLOTTING/boxplots_py/plot_qtl.done
+    log: ../results/00LOG/11PLOTTING/eqtl_boxplots_py.log
+
+# -----------  JOBS  --------------
+
+jobs:
+  run_jobs:
+    bulk_file: ../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz
+    output: "../results/12JOBS/jobs_pval_fdr_genomewide.tsv.gz"
+    sc_dir: ../results/10SMR/smr_input/
+    out_dir: ../results/12JOBS/
+    log: ../results/00LOG/12JOBS/run_jobs.log
 
 # ---------  Smpl Swaps  ----------
 
