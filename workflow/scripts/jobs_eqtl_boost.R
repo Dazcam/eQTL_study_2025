@@ -25,22 +25,13 @@ library(JOBS)
 library(data.table)
 library(dplyr)
 
-gene_list_file <- snakemake@input[[1]]
-ensembl_out_file <- snakemake@output[['ensembl']]
-symbol_out_file <- snakemake@output[['symbol']]
-cell_type <- snakemake@wildcards[["cell_type"]]
-
-
-
-# Define paths and cell types
-bulk_file <- "../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz"
-sc_dir <- "../results/10SMR/smr_input/"
+bulk_file <- snakemake@input[[1]]
+sc_dir <- snakemake@params[['sc_dir']]
+out_dir <- snakemake@params[['out_dir']]
 cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG")
-out_dir <- "jobs_output/"
-dir.create(out_dir, recursive = TRUE)
 
 # Load full bulk, add SE and ID
-message("Loading bulk data...")
+message("Loading bulk data and adding SEs ...")
 bulk <- fread(bulk_file, header = TRUE, colClasses = c(npval = "numeric", slope = "numeric"))
 bulk[, se := abs(slope) / qnorm(pmax(1e-10, 1 - npval / 2))]  # Avoid p=1 issues
 bulk[, ID := paste(pid, sid, sep = "-")]
@@ -130,9 +121,9 @@ for (cell in avail_cells) {
 }
 
 # Export
-fwrite(ref_beta, paste0(out_dir, "ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
-fwrite(ref_se, paste0(out_dir, "ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
-fwrite(pval_dt, paste0(out_dir, "pval_fdr_genomewide.tsv.gz"), sep = "\t", na = "NA")
+fwrite(ref_beta, paste0(out_dir, "jobs_ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
+fwrite(ref_se, paste0(out_dir, "jobs_ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
+fwrite(pval_dt, paste0(out_dir, "jobs_pval_fdr_genomewide.tsv.gz"), sep = "\t", na = "NA")
 
 message("Done! Check outputs in", out_dir)
 message("For significant hits: e.g., sig_hits <- pval_dt[fdr < 0.05]")
