@@ -1,0 +1,141 @@
+#--------------------------------------------------------------------------------------
+#
+#    Running JOBS to boost sc-eQTL signal
+#
+#--------------------------------------------------------------------------------------
+
+# Paper: https://www.cell.com/cell-genomics/fulltext/S2666-979X(25)00076-X
+# GitHub: https://github.com/LidaWangPSU/JOBS
+
+## Set up logging for smk  ------------------------------------------------------------
+if (exists("snakemake")) {
+  log_smk <- function() {
+    if (exists("snakemake") & length(snakemake@log) != 0) {
+      log <- file(snakemake@log[1][[1]], open = "wt")
+      sink(log, append = TRUE)
+      sink(log, append = TRUE, type = "message")
+    }
+  }
+}
+log_smk()
+message('\n\nRunning JOBS to boost sc-eQTL signal  ...')
+
+## Load libraries and variables -------------------------------------------------------
+library(JOBS)
+library(data.table)
+library(dplyr)
+
+gene_list_file <- snakemake@input[[1]]
+ensembl_out_file <- snakemake@output[['ensembl']]
+symbol_out_file <- snakemake@output[['symbol']]
+cell_type <- snakemake@wildcards[["cell_type"]]
+
+
+
+# Define paths and cell types
+bulk_file <- "../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz"
+sc_dir <- "../results/10SMR/smr_input/"
+cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG")
+out_dir <- "jobs_output/"
+dir.create(out_dir, recursive = TRUE)
+
+# Load full bulk, add SE and ID
+message("Loading bulk data...")
+bulk <- fread(bulk_file, header = TRUE, colClasses = c(npval = "numeric", slope = "numeric"))
+bulk[, se := abs(slope) / qnorm(pmax(1e-10, 1 - npval / 2))]  # Avoid p=1 issues
+bulk[, ID := paste(pid, sid, sep = "-")]
+
+# Prepare wide sc beta/se by stepwise outer merge (memory-efficient)
+message("Merging sc data wide...")
+sc_beta_wide <- data.table(ID = character(0))  # Start with empty
+sc_se_wide <- data.table(ID = character(0))
+
+for (cell in cell_types) {
+  
+  message("Loading sc data for ", cell ," ...")
+  sc_file <- paste0(sc_dir, cell, "/", cell, "_nom.cis_qtl_pairs.tsv")
+  
+  if (!file.exists(sc_file)) { 
+    warning(paste("Missing file:", sc_file)); next 
+  }
+  
+  message("Creating unique eQTL IDs and pulling out betas and SEs for ", cell ," ...")
+  sc <- fread(sc_file, header = TRUE, 
+              colClasses = c(slope = "numeric", slope_se = "numeric"))
+  sc[, ID := paste(phenotype_id, variant_id, sep = "-")]
+  sc_beta_cell <- sc[, .(ID, beta = slope)]
+  sc_se_cell <- sc[, .(ID, se = slope_se)]
+  
+  # Outer merge to growing wide
+  sc_beta_wide <- merge(sc_beta_wide, sc_beta_cell, by = "ID", all = TRUE)
+  sc_se_wide <- merge(sc_se_wide, sc_se_cell, by = "ID", all = TRUE)
+  colnames(sc_beta_wide)[ncol(sc_beta_wide)] <- cell
+  colnames(sc_se_wide)[ncol(sc_se_wide)] <- cell
+  
+  message(paste("Merged", cell, "- rows:", nrow(sc_beta_wide)))
+  rm(sc, sc_beta_cell, sc_se_cell); gc()  # Cleanup per cell
+}
+
+# Add bulk: outer merge
+message("Merging with bulk...")
+beta_all <- merge(bulk[, .(ID, bulk = slope)], sc_beta_wide, by = "ID", all = TRUE)
+se_all <- merge(bulk[, .(ID, bulk = se)], sc_se_wide, by = "ID", all = TRUE)
+
+# Reorder: ID, bulk, cells (drop cols for missing cells if any)
+avail_cells <- setdiff(cell_types, c("bulk"))  # Assume all loaded
+beta_all <- beta_all[, c("ID", "bulk", avail_cells), with = FALSE]
+se_all <- se_all[, c("ID", "bulk", avail_cells), with = FALSE]
+
+# Drop pairs with all sc NA (JOBs skips them anyway, but reduces size)
+sc_mask <- rowSums(is.na(beta_all[, avail_cells, with = FALSE])) < length(avail_cells)
+beta_all <- beta_all[sc_mask]
+se_all <- se_all[sc_mask]
+message(paste("Final pairs after cleaning:", nrow(beta_all)))
+
+if (nrow(beta_all) == 0) stop("No overlapping data!")
+
+# Estimate weights with optional subsampling (recommended for large data)
+subsample_n <- 0  # Adjust: 0 for full (risky), 50000-200000 stable
+message(paste("Estimating weights (subsample:", ifelse(subsample_n > 0, subsample_n, "full"), ")..."))
+if (subsample_n > 0 && nrow(beta_all) > subsample_n) {
+  sub_idx <- sample(nrow(beta_all), subsample_n)
+  sub_beta <- beta_all[sub_idx]
+  sub_se <- se_all[sub_idx]
+} else {
+  sub_beta <- beta_all
+  sub_se <- se_all
+}
+weight <- jobs.nnls.weights(sub_beta, sub_se)
+message(paste("Weights:", paste(round(weight, 3), collapse = ", ")))
+
+# Refine eQTLs on full data
+message("Refining eQTLs...")
+jobs_out <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
+ref_beta <- jobs_out$jobs_beta  # Refined sc betas
+ref_se <- jobs_out$jobs_se      # Refined sc SEs
+
+# Compute nominal p-values and per-gene FDR
+ref_beta[, gene := sub("-.*", "", ID)]
+pval_dt <- data.table()
+for (cell in avail_cells) {
+  cell_beta_col <- cell
+  cell_se_col <- cell
+  p_nom <- 2 * pnorm(-abs(ref_beta[[cell_beta_col]] / ref_se[[cell_se_col]]))
+  ref_beta[, (paste0(cell, "_p")) := p_nom]
+  
+  # FDR per gene (across SNPs for that gene-cell)
+  fdr_per_gene <- ref_beta[, .(fdr = p.adjust(get(paste0(cell, "_p")), method = "BH")), by = gene]
+  fdr_dt <- data.table(ID = ref_beta$ID, gene = ref_beta$gene, cell = cell, fdr = fdr_per_gene$fdr)
+  pval_dt <- rbind(pval_dt, fdr_dt, fill = TRUE)
+}
+
+# Export
+fwrite(ref_beta, paste0(out_dir, "ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
+fwrite(ref_se, paste0(out_dir, "ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
+fwrite(pval_dt, paste0(out_dir, "pval_fdr_genomewide.tsv.gz"), sep = "\t", na = "NA")
+
+message("Done! Check outputs in", out_dir)
+message("For significant hits: e.g., sig_hits <- pval_dt[fdr < 0.05]")
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
