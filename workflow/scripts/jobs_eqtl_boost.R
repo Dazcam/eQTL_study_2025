@@ -140,16 +140,25 @@ jobs_out <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
 ref_beta <- jobs_out$jobs_beta
 ref_se <- jobs_out$jobs_se
 
-# Convert to data.table and fix types
-setDT(ref_beta)
-setDT(ref_se)
-ref_beta[, ID := as.character(ID)] 
-ref_se[, ID := as.character(ID)]
+#mConvert to data.frame for dplyr 
+ref_beta <- as.data.frame(ref_beta)
+ref_se <- as.data.frame(ref_se)
 
-# Compute nominal p-values and per-gene FDR
+# Check structure
+message("Structure of ref_beta:")
+print(str(ref_beta))
+if (!"ID" %in% colnames(ref_beta)) stop("ID column missing in ref_beta - check JOBs output")
+
+# Ensure ID is character
+ref_beta$ID <- as.character(ref_beta$ID)
+ref_se$ID <- as.character(ref_se$ID)
+
+# Compute nominal p-values and per-gene FDR with dplyr (cleaner)
 message("\nComputing p-values and per-gene FDR ...")
-ref_beta[, gene := sub("-.*", "", ID)] 
-pval_dt <- data.table()
+# Add gene column once
+ref_beta$gene <- sub("-.*", "", ref_beta$ID)
+
+pval_dt <- data.frame()  # Start empty
 n_cells <- length(avail_cells)
 for (i in seq_along(avail_cells)) {
   cell <- avail_cells[i]
@@ -160,10 +169,10 @@ for (i in seq_along(avail_cells)) {
     next 
   }
   
-  cell_beta_col <- cell
-  cell_se_col <- cell
-  p_nom <- 2 * pnorm(-abs(ref_beta[[cell_beta_col]] / ref_se[[cell_se_col]]))
-  ref_beta[, (paste0(cell, "_p")) := p_nom]
+  # Compute p_nom
+  beta_col <- ref_beta[[cell]]
+  se_col <- ref_se[[cell]]
+  p_nom <- 2 * pnorm(-abs(beta_col / se_col))
   
   # Skip if all NA
   if (all(is.na(p_nom))) {
@@ -171,18 +180,29 @@ for (i in seq_along(avail_cells)) {
     next
   }
   
-  # FDR per gene
-  fdr_per_gene <- ref_beta[, .(fdr = p.adjust(get(paste0(cell, "_p")), method = "BH")), by = gene]
-  pairs_subset <- ref_beta[, .(ID, gene)]
-  fdr_dt <- merge(pairs_subset, fdr_per_gene, by = "gene")
-  fdr_dt[, cell := cell]
-  pval_dt <- rbind(pval_dt, fdr_dt, fill = TRUE)
+  # Add p to ref_beta (mutate style)
+  ref_beta[[paste0(cell, "_p")]] <- p_nom
   
-  # Optional: Warn on p.adjust issues (e.g., tiny genes)
-  if (any(is.na(fdr_per_gene$fdr))) {
+  # FDR per gene: group and adjust
+  ref_beta_temp <- ref_beta %>%
+    group_by(gene) %>%
+    mutate(fdr = p.adjust(.data[[paste0(cell, "_p")]], method = "BH")) %>%
+    ungroup() %>%
+    select(ID, gene, fdr)
+  
+  # Add cell label and bind
+  fdr_dt <- ref_beta_temp
+  fdr_dt$cell <- cell
+  pval_dt <- rbind(pval_dt, fdr_dt)
+  
+  # Warn on NAs
+  if (any(is.na(fdr_dt$fdr))) {
     message(paste("Warning: NAs in FDR for", cell, "- check small gene groups"))
   }
 }
+
+# Convert pval_dt back to data.table for fwrite
+setDT(pval_dt)
 
 # Export
 message("\nSaving JOBS output files ...")
