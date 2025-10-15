@@ -30,7 +30,7 @@ sc_dir <- snakemake@params[['sc_dir']]
 out_dir <- snakemake@params[['out_dir']]
 cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG")
 dups_dir <- paste0(out_dir, "duplicates/")  
-dir.create(debug_dir, recursive = TRUE)
+dir.create(dups_dir, recursive = TRUE)
 
 # Load full bulk, add SE and ID
 message("Loading bulk data and adding SEs ...")
