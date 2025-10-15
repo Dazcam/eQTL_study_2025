@@ -36,6 +36,14 @@ bulk <- fread(bulk_file, header = TRUE, colClasses = c(npval = "numeric", slope 
 bulk[, se := abs(slope) / qnorm(pmax(1e-10, 1 - npval / 2))]  # Avoid p=1 issues
 bulk[, ID := paste(pid, sid, sep = "-")]
 
+# Dedup bulk 
+n_dups_bulk <- anyDuplicated(bulk, by = "ID")
+if (n_dups_bulk > 0) {
+  message(paste("Found", n_dups_bulk, "duplicates in bulk, deduping..."))
+  bulk <- unique(bulk, by = "ID")
+}
+message(paste("Bulk loaded:", nrow(bulk), "unique pairs"))
+
 # Prepare wide sc beta/se by stepwise outer merge (memory-efficient)
 message("Merging sc data wide...")
 sc_beta_wide <- data.table(ID = character(0))  # Start with empty
@@ -54,6 +62,14 @@ for (cell in cell_types) {
   sc <- fread(sc_file, header = TRUE, 
               colClasses = c(slope = "numeric", slope_se = "numeric"))
   sc[, ID := paste(phenotype_id, variant_id, sep = "-")]
+  
+  # Dedup sc data (to avoid merge errors)
+  n_dups_sc <- anyDuplicated(sc, by = "ID")
+  if (n_dups_sc > 0) {
+    message(paste("Found", n_dups_sc, "duplicates in", cell, "- deduping to", nrow(unique(sc, by = "ID")), "rows"))
+    sc <- unique(sc, by = "ID")  # Keeps first occurrence
+  }
+  
   sc_beta_cell <- sc[, .(ID, beta = slope)]
   sc_se_cell <- sc[, .(ID, se = slope_se)]
   
@@ -62,6 +78,14 @@ for (cell in cell_types) {
   sc_se_wide <- merge(sc_se_wide, sc_se_cell, by = "ID", all = TRUE)
   colnames(sc_beta_wide)[ncol(sc_beta_wide)] <- cell
   colnames(sc_se_wide)[ncol(sc_se_wide)] <- cell
+  
+  # Post-merge dedup (double-check)
+  n_dups_wide <- anyDuplicated(sc_beta_wide, by = "ID")
+  if (n_dups_wide > 0) {
+    message(paste("Post-merge dups in wide for", cell, "- deduping"))
+    sc_beta_wide <- unique(sc_beta_wide, by = "ID")
+    sc_se_wide <- unique(sc_se_wide, by = "ID")
+  }
   
   message(paste("Merged", cell, "- rows:", nrow(sc_beta_wide)))
   rm(sc, sc_beta_cell, sc_se_cell); gc()  # Cleanup per cell
