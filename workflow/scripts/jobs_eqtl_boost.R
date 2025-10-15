@@ -139,29 +139,49 @@ message("\nRefining eQTLs...")
 jobs_out <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
 ref_beta <- jobs_out$jobs_beta  # Refined sc betas
 ref_se <- jobs_out$jobs_se      # Refined sc SEs
+
+# Convert to data.table and fix types
 setDT(ref_beta)
 setDT(ref_se)
+ref_beta[, ID := as.character(ID)] 
+ref_se[, ID := as.character(ID)]
 
 # Compute nominal p-values and per-gene FDR
 message("\nComputing p-values and per-gene FDR ...")
-ref_beta[, gene := sub("-.*", "", ID)]
+ref_beta[, gene := sub("-.*", "", ID)]  # Now safe
 pval_dt <- data.table()
-for (cell in avail_cells) {
+n_cells <- length(avail_cells)
+for (i in seq_along(avail_cells)) {
+  cell <- avail_cells[i]
+  message(paste("Processing cell", i, "/", n_cells, ":", cell))
+  
+  if (!cell %in% colnames(ref_beta)) { 
+    message(paste("Skipping", cell, "- col missing"))
+    next 
+  }
+  
   cell_beta_col <- cell
   cell_se_col <- cell
   p_nom <- 2 * pnorm(-abs(ref_beta[[cell_beta_col]] / ref_se[[cell_se_col]]))
   ref_beta[, (paste0(cell, "_p")) := p_nom]
   
-  # FDR per gene (across SNPs for that gene-cell); skip if all NA
+  # Skip if all NA
   if (all(is.na(p_nom))) {
     message(paste("Skipping FDR for", cell, "- all pvals NA"))
     next
   }
   
-  # FDR per gene (across SNPs for that gene-cell)
+  # FDR per gene
   fdr_per_gene <- ref_beta[, .(fdr = p.adjust(get(paste0(cell, "_p")), method = "BH")), by = gene]
-  fdr_dt <- data.table(ID = ref_beta$ID, gene = ref_beta$gene, cell = cell, fdr = fdr_per_gene$fdr)
+  pairs_subset <- ref_beta[, .(ID, gene)]
+  fdr_dt <- merge(pairs_subset, fdr_per_gene, by = "gene")
+  fdr_dt[, cell := cell]
   pval_dt <- rbind(pval_dt, fdr_dt, fill = TRUE)
+  
+  # Optional: Warn on p.adjust issues (e.g., tiny genes)
+  if (any(is.na(fdr_per_gene$fdr))) {
+    message(paste("Warning: NAs in FDR for", cell, "- check small gene groups"))
+  }
 }
 
 # Export
