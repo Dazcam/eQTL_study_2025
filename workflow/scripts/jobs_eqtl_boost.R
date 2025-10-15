@@ -137,8 +137,8 @@ message(paste("Weights:", paste(round(weight, 3), collapse = ", ")))
 # Refine eQTLs on full data
 message("\nRefining eQTLs...")
 jobs_out <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
-ref_beta <- jobs_out$jobs_beta  # Refined sc betas
-ref_se <- jobs_out$jobs_se      # Refined sc SEs
+ref_beta <- jobs_out$jobs_beta
+ref_se <- jobs_out$jobs_se
 
 # Convert to data.table and fix types
 setDT(ref_beta)
@@ -148,7 +148,7 @@ ref_se[, ID := as.character(ID)]
 
 # Compute nominal p-values and per-gene FDR
 message("\nComputing p-values and per-gene FDR ...")
-ref_beta[, gene := sub("-.*", "", ID)]  # Now safe
+ref_beta[, gene := sub("-.*", "", ID)] 
 pval_dt <- data.table()
 n_cells <- length(avail_cells)
 for (i in seq_along(avail_cells)) {
