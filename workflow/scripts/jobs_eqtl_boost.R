@@ -29,6 +29,8 @@ bulk_file <- snakemake@input[[1]]
 sc_dir <- snakemake@params[['sc_dir']]
 out_dir <- snakemake@params[['out_dir']]
 cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG")
+dups_dir <- paste0(out_dir, "duplicates/")  
+dir.create(debug_dir, recursive = TRUE)
 
 # Load full bulk, add SE and ID
 message("Loading bulk data and adding SEs ...")
@@ -45,13 +47,13 @@ if (n_dups_bulk > 0) {
 message(paste("Bulk loaded:", nrow(bulk), "unique pairs"))
 
 # Prepare wide sc beta/se by stepwise outer merge (memory-efficient)
-message("Merging sc data wide...")
+message("\nMerging sc data wide...")
 sc_beta_wide <- data.table(ID = character(0))  # Start with empty
 sc_se_wide <- data.table(ID = character(0))
 
 for (cell in cell_types) {
   
-  message("Loading sc data for ", cell ," ...")
+  message("\nLoading sc data for ", cell ," ...")
   sc_file <- paste0(sc_dir, cell, "/", cell, "_nom.cis_qtl_pairs.tsv")
   
   if (!file.exists(sc_file)) { 
@@ -67,6 +69,15 @@ for (cell in cell_types) {
   n_dups_sc <- anyDuplicated(sc, by = "ID")
   if (n_dups_sc > 0) {
     message(paste("Found", n_dups_sc, "duplicates in", cell, "- deduping to", nrow(unique(sc, by = "ID")), "rows"))
+    
+    # Write dups table to check  
+    dups <- sc[duplicated(sc, by = "ID"), ]
+    fwrite(dups, paste0(dups_dir, cell, "_dups.tsv.gz"), sep = "\t", na = "NA")
+    message(paste("Exported", nrow(dups), "dup rows to", dups_dir, cell, "_dups.tsv.gz"))
+    
+    # Peek at first 10 dup IDs
+    message(paste("Sample dup IDs:", paste(head(dups$ID, 10), collapse = ", ")))
+
     sc <- unique(sc, by = "ID")  # Keeps first occurrence
   }
   
@@ -92,7 +103,7 @@ for (cell in cell_types) {
 }
 
 # Add bulk: outer merge
-message("Merging with bulk...")
+message("\nMerging with bulk...")
 beta_all <- merge(bulk[, .(ID, bulk = slope)], sc_beta_wide, by = "ID", all = TRUE)
 se_all <- merge(bulk[, .(ID, bulk = se)], sc_se_wide, by = "ID", all = TRUE)
 
@@ -111,7 +122,7 @@ if (nrow(beta_all) == 0) stop("No overlapping data!")
 
 # Estimate weights with optional subsampling (recommended for large data)
 subsample_n <- 0  # Adjust: 0 for full (risky), 50000-200000 stable
-message(paste("Estimating weights (subsample:", ifelse(subsample_n > 0, subsample_n, "full"), ")..."))
+message(paste("\nEstimating weights (subsample:", ifelse(subsample_n > 0, subsample_n, "full"), ")..."))
 if (subsample_n > 0 && nrow(beta_all) > subsample_n) {
   sub_idx <- sample(nrow(beta_all), subsample_n)
   sub_beta <- beta_all[sub_idx]
@@ -124,12 +135,15 @@ weight <- jobs.nnls.weights(sub_beta, sub_se)
 message(paste("Weights:", paste(round(weight, 3), collapse = ", ")))
 
 # Refine eQTLs on full data
-message("Refining eQTLs...")
+message("\nRefining eQTLs...")
 jobs_out <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
 ref_beta <- jobs_out$jobs_beta  # Refined sc betas
 ref_se <- jobs_out$jobs_se      # Refined sc SEs
+setDT(ref_beta)
+setDT(ref_se)
 
 # Compute nominal p-values and per-gene FDR
+message("\nComputing p-values and per-gene FDR ...")
 ref_beta[, gene := sub("-.*", "", ID)]
 pval_dt <- data.table()
 for (cell in avail_cells) {
@@ -138,6 +152,12 @@ for (cell in avail_cells) {
   p_nom <- 2 * pnorm(-abs(ref_beta[[cell_beta_col]] / ref_se[[cell_se_col]]))
   ref_beta[, (paste0(cell, "_p")) := p_nom]
   
+  # FDR per gene (across SNPs for that gene-cell); skip if all NA
+  if (all(is.na(p_nom))) {
+    message(paste("Skipping FDR for", cell, "- all pvals NA"))
+    next
+  }
+  
   # FDR per gene (across SNPs for that gene-cell)
   fdr_per_gene <- ref_beta[, .(fdr = p.adjust(get(paste0(cell, "_p")), method = "BH")), by = gene]
   fdr_dt <- data.table(ID = ref_beta$ID, gene = ref_beta$gene, cell = cell, fdr = fdr_per_gene$fdr)
@@ -145,6 +165,7 @@ for (cell in avail_cells) {
 }
 
 # Export
+message("\nSaving JOBS output files ...")
 fwrite(ref_beta, paste0(out_dir, "jobs_ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
 fwrite(ref_se, paste0(out_dir, "jobs_ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
 fwrite(pval_dt, paste0(out_dir, "jobs_pval_fdr_genomewide.tsv.gz"), sep = "\t", na = "NA")
