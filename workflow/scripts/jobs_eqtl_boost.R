@@ -23,7 +23,7 @@ message('\n\nRunning JOBS to boost sc-eQTL signal  ...')
 ## Load libraries and variables -------------------------------------------------------
 library(JOBS)
 library(data.table)
-library(dplyr)
+library(tidyverse)
 
 bulk_file <- snakemake@input[[1]]
 sc_dir <- snakemake@params[['sc_dir']]
@@ -136,22 +136,18 @@ message(paste("Weights:", paste(round(weight, 3), collapse = ", ")))
 
 # Refine eQTLs on full data
 message("\nRefining eQTLs...")
-jobs_out <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
-ref_beta <- jobs_out$jobs_beta
-ref_se <- jobs_out$jobs_se
+jobs_eqtls <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
+ref_beta <- jobs_eqtls$eqtls_new
+ref_se <- jobs_eqtls$eqtls_se_new
 
-head(jobs_out$jobs_beta)
-head(jobs_out$jobs_se)
+head(jobs_eqtls$eqtls_new)
+head(jobs_eqtls$eqtls_se_new)
 
 # Write uncorrected output files
 message("\nSaving JOBS output uncorrected files ...")
-write_rds(jobs_out, paste0(out_dir, "jobs_output.rds"))
+write_rds(jobs_eqtls, paste0(out_dir, "jobs_eqtlsput.rds"))
 fwrite(ref_beta, paste0(out_dir, "jobs_ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
 fwrite(ref_se, paste0(out_dir, "jobs_ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
-
-#Convert to data.frame for dplyr 
-ref_beta <- as.data.frame(ref_beta)
-ref_se <- as.data.frame(ref_se)
 
 # Check structure
 message("Structure of ref_beta:")
