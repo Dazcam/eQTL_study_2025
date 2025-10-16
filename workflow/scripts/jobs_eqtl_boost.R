@@ -140,7 +140,16 @@ jobs_out <- jobs.eqtls(beta_all, se_all, weight, COR = FALSE)
 ref_beta <- jobs_out$jobs_beta
 ref_se <- jobs_out$jobs_se
 
-#mConvert to data.frame for dplyr 
+head(jobs_out$jobs_beta)
+head(jobs_out$jobs_se)
+
+# Write uncorrected output files
+message("\nSaving JOBS output uncorrected files ...")
+write_rds(jobs_out, paste0(out_dir, "jobs_output.rds"))
+fwrite(ref_beta, paste0(out_dir, "jobs_ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
+fwrite(ref_se, paste0(out_dir, "jobs_ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
+
+#Convert to data.frame for dplyr 
 ref_beta <- as.data.frame(ref_beta)
 ref_se <- as.data.frame(ref_se)
 
@@ -205,9 +214,7 @@ for (i in seq_along(avail_cells)) {
 setDT(pval_dt)
 
 # Export
-message("\nSaving JOBS output files ...")
-fwrite(ref_beta, paste0(out_dir, "jobs_ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
-fwrite(ref_se, paste0(out_dir, "jobs_ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
+message("\nSaving JOBS FDR corrected output files ...")
 fwrite(pval_dt, paste0(out_dir, "jobs_pval_fdr_genomewide.tsv.gz"), sep = "\t", na = "NA")
 
 message("Done! Check outputs in", out_dir)
