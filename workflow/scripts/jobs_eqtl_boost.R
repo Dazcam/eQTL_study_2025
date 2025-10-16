@@ -149,14 +149,20 @@ write_rds(jobs_eqtls, paste0(out_dir, "jobs_eqtlsput.rds"))
 fwrite(ref_beta, paste0(out_dir, "jobs_ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
 fwrite(ref_se, paste0(out_dir, "jobs_ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
 
-# Check structure
-message("Structure of ref_beta:")
-print(str(ref_beta))
-if (!"ID" %in% colnames(ref_beta)) stop("ID column missing in ref_beta - check JOBs output")
 
 # Ensure ID is character
 ref_beta$ID <- as.character(ref_beta$ID)
 ref_se$ID <- as.character(ref_se$ID)
+
+# Coerce all cell columns to numeric
+numeric_cols <- c("bulk", avail_cells)
+ref_beta[numeric_cols] <- lapply(ref_beta[numeric_cols], as.numeric)
+ref_se[numeric_cols] <- lapply(ref_se[numeric_cols], as.numeric)
+
+# Check structure
+message("Structure of ref_beta:")
+print(str(ref_beta))
+if (!"ID" %in% colnames(ref_beta)) stop("ID column missing in ref_beta - check JOBs output")
 
 # Compute nominal p-values and per-gene FDR with dplyr (cleaner)
 message("\nComputing p-values and per-gene FDR ...")
