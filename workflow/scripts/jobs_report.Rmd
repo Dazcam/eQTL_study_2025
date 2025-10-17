@@ -1,0 +1,202 @@
+---
+title: "JOBS report"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+params:
+  in_dir: null
+  bmark_dir: null
+---
+
+***
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(stringr)
+library(cowplot)
+library(DT)
+library(glue)
+library(gt)
+library(tidyverse)
+library(UpSetR)
+library(patchwork)
+library(ggrepel)
+library(cowplot)
+in_dir <- params$in_dir
+bmark_dir <- params$bmark_dir
+```
+
+## JOBS pipeline steps {.tabset}
+
+***
+
+We used [JOBS](https://github.com/LidaWangPSU/JOBS) to generate integrate our sc-eQTL TensorQTL nominial data with
+publically available data [Wen et al 2024]() to boost our eQTL discovery power. 
+The citation for JOBS is [Wang et al. (2025), DOI: 10.1016/j.xgen.2025.100820](https://www.cell.com/cell-genomics/fulltext/S2666-979X(25)00076-X).
+
+***
+
+1. `run_jobs`: Run Jobs script on TensorQTL nominial eQTL data and public bulk dataset
+2. `jobs_report`: Calculate per gene FDR (per cell type) and report sig eGenes (i.e. top eSNP per eGene)
+
+Settings:
+
++ Run on L1 cell type eQTL only
++ Wen input file: `devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz`
+
+***
+
+### Level 1 {.tabset}
+
+***
+
+```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+
+# Load beta and SE files
+ref_beta <- read_tsv(paste0(in_dir, "jobs_ref_beta_genomewide.tsv.gz"))
+ref_se <- read_tsv(paste0(in_dir, "jobs_ref_se_genomewide.tsv.gz"))
+
+# Add gene column if missing (extract from ID)
+if (!"gene" %in% colnames(ref_beta)) {
+  ref_beta <- ref_beta %>%
+    mutate(gene = str_remove(ID, "-.*"))
+}
+
+# Initialize lists for results
+sig_esnps_list <- list()  # For all sig eSNPs (FDR < 0.05) per cell
+sig_egenes_list <- list()  # For top eSNP per sig eGene per cell
+
+# Loop over cell types
+for (cell in cell_types) {
+  message(paste("Processing cell:", cell))
+  
+  if (!cell %in% colnames(ref_beta)) {
+    message(paste("Skipping", cell, "- column missing"))
+    next
+  }
+  
+  # Compute nominal p-values
+  beta_col <- ref_beta[[cell]]
+  se_col <- ref_se[[cell]]
+  p_nom <- 2 * pnorm(-abs(beta_col / se_col))
+  
+  # Skip if all NA
+  if (all(is.na(p_nom))) {
+    message(paste("Skipping", cell, "- all p-values NA"))
+    next
+  }
+  
+  # Add p-value column to ref_beta
+  ref_beta_temp <- ref_beta %>%
+    mutate(!!paste0(cell, "_p") := p_nom)
+  
+  # Compute per-gene FDR
+  fdr_temp <- ref_beta_temp %>%
+    group_by(gene) %>%
+    mutate(fdr = p.adjust(.data[[paste0(cell, "_p")]], method = "BH")) %>%
+    ungroup() %>%
+    select(ID, gene, !!paste0(cell, "_p") := .data[[paste0(cell, "_p")]], fdr) %>%
+    mutate(cell = cell)
+  
+  # Sig eSNPs: All FDR < 0.05 for this cell
+  sig_esnps_cell <- fdr_temp %>%
+    filter(fdr < 0.05 & !is.na(fdr))
+  sig_esnps_list[[cell]] <- sig_esnps_cell
+  
+  # Sig eGenes: Top eSNP (min FDR) per gene for this cell, if any FDR < 0.05
+  sig_egenes_cell <- fdr_temp %>%
+    filter(fdr < 0.05 & !is.na(fdr)) %>%
+    group_by(gene) %>%
+    slice_min(fdr, n = 1) %>%  # Top (lowest FDR) eSNP per gene
+    ungroup()
+  sig_egenes_list[[cell]] <- sig_egenes_cell
+  
+  # Warn on NAs in FDR
+  if (any(is.na(fdr_temp$fdr))) {
+    message(paste("Warning: NAs in FDR for", cell, "- check small gene groups"))
+  }
+}
+
+# Combine into data frames
+sig_esnps <- bind_rows(sig_esnps_list)
+sig_egenes <- bind_rows(sig_egenes_list)
+```
+
+***
+
+### eGenes
+
+```{r, eGenes, echo = FALSE, message = FALSE, warning = FALSE}
+sig_egenes_summary <- sig_egenes %>%
+  group_by(cell) %>%
+  summarise(
+    n_egenes = n(),
+    .groups = "drop"
+  )
+
+egenes_table <- sig_egenes_summary %>%
+  gt() %>%
+  tab_header(
+    title = "Table 1. Significant eGenes per Cell Type (Top eSNP, FDR < 0.05)"
+  ) %>%
+  cols_label(
+    cell = "Cell Type",
+    n_egenes = "Number of eGenes"
+  ) %>%
+  fmt_number(
+    columns = n_egenes,
+    decimals = 0
+  ) %>%
+  tab_style(
+    style = cell_fill(color = "#f8f9fa"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = px(14)
+  )
+
+egenes_table
+#write_tsv(sig_egenes, paste0(in_dir, "sig_egenes_top_fdr05.tsv.gz"))
+```
+
+***
+
+### eSNPs
+
+```{r, eSNPs, echo = FALSE, message = FALSE, warning = FALSE}
+sig_esnps_summary <- sig_esnps %>%
+  group_by(cell) %>%
+  summarise(
+    n_esnps = n(),
+    .groups = "drop"
+  )
+
+esnps_table <- sig_esnps_summary %>%
+  gt() %>%
+  tab_header(
+    title = "Significant eSNPs per Cell Type (FDR < 0.05)"
+  ) %>%
+  cols_label(
+    cell = "Cell Type",
+    n_esnps = "Number of eSNPs"
+  ) %>%
+  fmt_number(
+    columns = n_esnps,
+    decimals = 0
+  ) %>%
+  tab_style(
+    style = cell_fill(color = "#f8f9fa"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = px(14)
+    )
+
+esnps_table 
+#write_tsv(sig_esnps, paste0(in_dir, "sig_esnps_fdr05.tsv.gz"))summary.csv"))
+```
