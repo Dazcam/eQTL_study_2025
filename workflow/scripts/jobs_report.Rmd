@@ -51,7 +51,7 @@ Settings:
 ***
 
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-in_dir <- '~/Desktop/test/jobs/'
+#in_dir <- '~/Desktop/test/jobs/'
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 
 # Load beta and SE files
