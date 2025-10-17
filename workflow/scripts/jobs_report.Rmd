@@ -67,7 +67,7 @@ if (!"gene" %in% colnames(ref_beta)) {
 # Initialize lists for results
 sig_esnps_list <- list()  # For all sig eSNPs (FDR < 0.05) per cell
 sig_egenes_list <- list()  # For top eSNP per sig eGene per cell (keep FDR ties)
-sig_egenes_list_top <- list()  # For top eSNP per sig eGene per cell (only retains 1 top SNP)
+sig_egenes_top_list <- list()  # For top eSNP per sig eGene per cell (only retains 1 top SNP)
 
 # Loop over cell types
 for (cell in cell_types) {
