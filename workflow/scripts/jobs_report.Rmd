@@ -8,6 +8,7 @@ output:
 params:
   in_dir: null
   bmark_dir: null
+  tensor_dir: null
 ---
 
 ***
@@ -28,6 +29,9 @@ library(ggrepel)
 library(cowplot)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
+tensor_dir <- params$tensor_dir 
+
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 ```
 
 ## JOBS pipeline steps {.tabset}
@@ -51,10 +55,11 @@ Settings:
 ***
 
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-#in_dir <- '~/Desktop/test/jobs/'
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+in_dir <- '~/Desktop/test/jobs/'
+tensor_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/'
+bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
 
-# Load beta and SE files
+# Load beta and SE files once
 ref_beta <- read_tsv(paste0(in_dir, "jobs_ref_beta_genomewide.tsv.gz"))
 ref_se <- read_tsv(paste0(in_dir, "jobs_ref_se_genomewide.tsv.gz"))
 
@@ -65,35 +70,32 @@ if (!"gene" %in% colnames(ref_beta)) {
 }
 
 # Initialize lists for results
-sig_esnps_list <- list()  # For all sig eSNPs (FDR < 0.05) per cell
-sig_egenes_list <- list()  # For top eSNP per sig eGene per cell (keep FDR ties)
-sig_egenes_top_list <- list()  # For top eSNP per sig eGene per cell (only retains 1 top SNP)
+sig_esnps_list <- list()
+sig_egenes_list <- list()
+sig_egenes_top_list <- list()
+pval_comparisons <- list()
+egenes_results <- data.frame()
 
-# Loop over cell types
+# Loop over cell types: Compute JOBS p-values/FDRs, sig eSNPs/eGenes, and TensorQTL comparisons
 for (cell in cell_types) {
   message(paste("Processing cell:", cell))
   
+  # Skip if column missing
   if (!cell %in% colnames(ref_beta)) {
     message(paste("Skipping", cell, "- column missing"))
     next
   }
   
-  # Compute nominal p-values
+  # Compute nominal p-values once per cell
   beta_col <- ref_beta[[cell]]
   se_col <- ref_se[[cell]]
   p_nom <- 2 * pnorm(-abs(beta_col / se_col))
   
-  # Skip if all NA
-  if (all(is.na(p_nom))) {
-    message(paste("Skipping", cell, "- all p-values NA"))
-    next
-  }
-  
-  # Add p-value column to ref_beta
+  # Add p-value column to ref_beta (temporary for this cell)
   ref_beta_temp <- ref_beta %>%
     mutate(!!paste0(cell, "_p") := p_nom)
   
-  # Compute per-gene FDR
+  # Compute per-gene FDR once per cell
   fdr_temp <- ref_beta_temp %>%
     group_by(gene) %>%
     mutate(fdr = p.adjust(.data[[paste0(cell, "_p")]], method = "BH")) %>%
@@ -106,29 +108,71 @@ for (cell in cell_types) {
     filter(fdr < 0.05 & !is.na(fdr))
   sig_esnps_list[[cell]] <- sig_esnps_cell
   
-  # Sig eGenes: Top eSNP (min FDR) per gene for this cell, if any FDR < 0.05
+  # Sig eGenes: Top eSNP (min FDR) per gene for this cell, if any FDR < 0.05 (retains ties via slice_min)
   sig_egenes_cell <- fdr_temp %>%
     filter(fdr < 0.05 & !is.na(fdr)) %>%
     group_by(gene) %>%
-    slice_min(fdr, n = 1) %>%  # Top (lowest FDR) eSNP per gene
+    slice_min(fdr, n = 1, with_ties = TRUE) %>%  # Retains ties explicitly
     ungroup() |>
     arrange(fdr)
   sig_egenes_list[[cell]] <- sig_egenes_cell
   
-  # Sig eGenes: Top eSNP (min FDR) per gene for this cell, if any FDR < 0.05
-  # Sort by fdr and take exactly 1 per gene to handle FDR ties
+  # Sig eGenes top: Exactly 1 top eSNP per gene (handles ties by sorting and slicing first)
   sig_egenes_cell_top <- fdr_temp %>%
     filter(fdr < 0.05 & !is.na(fdr)) %>%
-    arrange(fdr) %>%  # Sort ascending FDR
+    arrange(fdr) %>%
     group_by(gene) %>%
-    slice_head(n = 1) %>%  # Take first (lowest FDR) row per gene
-    arrange(fdr) %>%  # Sort ascending FDR
-    ungroup()
+    slice_head(n = 1) %>%
+    ungroup() %>%
+    arrange(fdr)
   sig_egenes_top_list[[cell]] <- sig_egenes_cell_top
   
-  # Warn on NAs in FDR
-  if (any(is.na(fdr_temp$fdr))) {
-    message(paste("Warning: NAs in FDR for", cell, "- check small gene groups"))
+  # TensorQTL comparison (load and match once per cell)
+  tensor_file <- paste0(tensor_dir, cell, "_quantile_genPC_4_expPC_40/", cell, "_quantile_perm.cis_qtl.txt.gz")
+  if (file.exists(tensor_file)) {
+    tensor_data <- read_tsv(tensor_file, show_col_types = FALSE) %>%
+      filter(qval < 0.05) %>%
+      select(gene = phenotype_id, snp = variant_id, tensor_p = pval_nominal) %>%
+      mutate(ID = paste(gene, snp, sep = "-"))
+    
+    # Match: Inner join on ID (only pairs in both)
+    comparison_cell <- tensor_data %>%
+      inner_join(ref_beta_temp %>% select(ID, !!paste0(cell, "_p")), by = "ID") %>%
+      rename(jobs_p = !!paste0(cell, "_p")) %>%
+      select(gene, snp, tensor_p, jobs_p)
+    
+    # Save per-cell tibble
+    pval_comparisons[[cell]] <- comparison_cell
+    
+    # TensorQTL sig eGenes: unique genes
+    tensor_genes_cell <- unique(comparison_cell$gene)
+    
+    # JOBS sig eGenes: unique genes with FDR < 0.05
+    jobs_genes_cell <- unique(sig_egenes_cell$gene)
+    
+    # Compute sets
+    set_overlap <- intersect(tensor_genes_cell, jobs_genes_cell)
+    set_tensor_only <- setdiff(tensor_genes_cell, jobs_genes_cell)
+    set_jobs_only <- setdiff(jobs_genes_cell, tensor_genes_cell)
+    
+    # Counts
+    pre_eqtl <- length(tensor_genes_cell)  # Fixed: use unique genes, not nrow (which counts eSNPs)
+    post_eqtl <- length(set_overlap) + length(set_tensor_only) + length(set_jobs_only)
+    percent_increase <- ifelse(pre_eqtl > 0, round((post_eqtl - pre_eqtl) / pre_eqtl * 100, 1), NA)
+    
+    # Add to results
+    egenes_results <- rbind(egenes_results, data.frame(
+      cell = cell,
+      eqtl_pre_jobs = pre_eqtl,
+      intersection = length(set_overlap),
+      tensor_only_na_jobs = length(set_tensor_only),
+      jobs_only_not_tensor = length(set_jobs_only),
+      eqtl_post_jobs = post_eqtl,  # Added missing column
+      percent_increase = percent_increase,
+      stringsAsFactors = FALSE
+    ))
+  } else {
+    message(paste("TensorQTL file missing for", cell))
   }
 }
 
@@ -136,70 +180,102 @@ for (cell in cell_types) {
 sig_esnps <- bind_rows(sig_esnps_list)
 sig_egenes <- bind_rows(sig_egenes_list)
 sig_egenes_top <- bind_rows(sig_egenes_top_list)
+
+# Combine all p-values for plots/tables
+pval_all <- bind_rows(pval_comparisons, .id = "cell") %>%
+  mutate(
+    log_tensor_p = -log10(pmax(tensor_p, 1e-300)),  # For plot (avoid inf)
+    log_jobs_p = -log10(pmax(jobs_p, 1e-300))
+  )
+
+# Comparison summary (moved here to avoid re-computation)
+comparison_summary <- pval_all %>%
+  group_by(cell) %>%
+  summarise(
+    tot_eQTL_pre_jobs = n(),
+    non_na_pairs = sum(!is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
+    na_jobs = sum(is.na(jobs_p)),
+    stronger_tensor = sum(tensor_p < jobs_p & !is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
+    equal = sum(abs(jobs_p - tensor_p) < 1e-10 & !is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
+    stronger_jobs = sum(jobs_p < tensor_p & !is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
+    fdr_sig_jobs = sum(jobs_p < 0.05, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  select(cell, tot_eQTL_pre_jobs, non_na_pairs, na_jobs, stronger_tensor, equal, stronger_jobs, fdr_sig_jobs)
+
+# NA summary (moved here)
+na_summary <- imap_dfr(pval_comparisons, ~ tibble(cell = .y, na_rate = mean(is.na(.x$jobs_p))))
 ```
 
 ***
 
 ### eGenes
 
+***
+
 ```{r, eGenes, echo = FALSE, message = FALSE, warning = FALSE}
-sig_egenes_summary <- sig_egenes_top %>%
-  group_by(cell) %>%
-  summarise(
-    n_egenes = n(),
-    .groups = "drop"
-  )
-
-# Original TensorQTL eGenes (from previous analysis)
-tensorqtl_egenes <- tibble(
-  cell = c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri"),
-  tensorqtl_egenes = c(2027, 2048, 937, 1860, 51, 117, 90)
-)
-
-# Join and compute percentage increase
-egenes_comparison <- sig_egenes_summary %>%
-  left_join(tensorqtl_egenes, by = "cell") %>%
-  mutate(
-    percentage_increase = ((n_egenes - tensorqtl_egenes) / tensorqtl_egenes) * 100
-  ) %>%
-  select(cell, tensorqtl_egenes, n_egenes, percentage_increase) %>%
-  rename(
-    `Cell Type` = cell,
-    `TensorQTL eGenes` = tensorqtl_egenes,
-    `JOBs eGenes` = n_egenes,
-    `Percentage Increase (%)` = percentage_increase
-  )
-
-egenes_table <- egenes_comparison %>%
+# Display per-cell eGenes summary as GT table (fixed labels and computations)
+egenes_table <- egenes_results %>%
   gt() %>%
   tab_header(
-    title = "Comparison of Significant eGenes per Cell Type (FDR < 0.05)"
+    title = "eGene Counts per Cell Type: TensorQTL vs. JOBS Categories"
   ) %>%
   cols_label(
-    `Cell Type` = "Cell Type",
-    `TensorQTL eGenes` = "TensorQTL eGenes",
-    `JOBs eGenes` = "JOBs eGenes",
-    `Percentage Increase (%)` = "Percentage Increase (%)"
+    cell = "Cell Type",
+    eqtl_pre_jobs = "eQTLs pre-JOBS (TensorQTL)",
+    intersection = "Shared eGenes",
+    tensor_only_na_jobs = "TensorQTL-only eGenes",
+    jobs_only_not_tensor = "JOBS-only eGenes",
+    eqtl_post_jobs = "eQTLs post-JOBS",
+    percent_increase = "% Increase"
   ) %>%
   fmt_number(
-    columns = c(`TensorQTL eGenes`, `JOBs eGenes`),
+    columns = -cell,
     decimals = 0
-  ) %>%
-  fmt_number(
-    columns = `Percentage Increase (%)`,
-    decimals = 1,
-    scale_by = -1  # For percentages
   ) %>%
   tab_style(
     style = cell_fill(color = "#f8f9fa"),
     locations = cells_column_labels()
   ) %>%
-  tab_options(
-    table.font.size = px(14)
-  )
+  tab_options(table.font.size = px(12))
 
 egenes_table
-write_tsv(sig_egenes_top, paste0(in_dir, "sig_egenes_top_fdr05.tsv.gz"))
+
+# Optional: Save results
+# write_csv(egenes_results, paste0(tensor_dir, "../eGene_category_counts_per_cell.csv"))
+```
+
+***
+
+### Totals
+
+***
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Totals counts across all cell types 
+grand_egenes <- data.frame(
+  category = c("Intersect", "TensorQTL Only (NA in JOBS)", "JOBS Only (Not in TensorQTL)", "Total eGenes"),
+  count = c(
+    sum(egenes_results$intersection, na.rm = TRUE),
+    sum(egenes_results$tensor_only_na_jobs, na.rm = TRUE),
+    sum(egenes_results$jobs_only_not_tensor, na.rm = TRUE),
+    sum(egenes_results$eqtl_post_jobs, na.rm = TRUE)  # Fixed: use eqtl_post_jobs
+  )
+)
+
+# Display grand totals
+grand_egenes %>%
+  gt() %>%
+  tab_header(title = "Grand Total eGenes Across All Cell Types") %>%
+  cols_label(category = "Category", count = "Count") %>%
+  fmt_number(columns = count, decimals = 0) %>%
+  tab_style(
+    style = cell_fill(color = "#f8f9fa"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(table.font.size = px(12))
+
+# write_csv(grand_egenes, paste0(tensor_dir, "../eGene_category_grand_totals.csv"))
 ```
 
 ***
@@ -209,22 +285,27 @@ write_tsv(sig_egenes_top, paste0(in_dir, "sig_egenes_top_fdr05.tsv.gz"))
 ***
 
 ```{r, eGenes_plt, echo = FALSE, message = FALSE, warning = FALSE}
-plot_data <- egenes_comparison %>%
+# Prepare data for stacked bar plot (fixed column references: use intersection for "Both")
+plot_data_stacked <- egenes_results %>%
+  select(cell, `TensorQTL Only` = tensor_only_na_jobs, `Both` = intersection, `JOBS Only` = jobs_only_not_tensor) %>%
   pivot_longer(
-    cols = c(`TensorQTL eGenes`, `JOBs eGenes`),
-    names_to = "method",
+    cols = -cell,
+    names_to = "category",
     values_to = "count"
   ) %>%
-  mutate(method = factor(method, levels = c("TensorQTL eGenes", "JOBs eGenes")))
+  mutate(category = factor(category, levels = c("TensorQTL Only", "Both", "JOBS Only")))
 
-p <- ggplot(plot_data, aes(x = `Cell Type`, y = count, fill = method)) +
-  geom_col(position = "dodge", alpha = 0.8, width = 0.7) +
-  scale_fill_manual(values = c("TensorQTL eGenes" = "#1f77b4", "JOBs eGenes" = "#ff7f0e")) +
+# Create stacked bar plot
+p_stacked <- ggplot(plot_data_stacked, aes(x = cell, y = count, fill = category)) +
+  geom_col(alpha = 0.8, width = 0.7) +
+  scale_fill_manual(
+    values = c("TensorQTL Only" = "#1f77b4", "Both" = "#2ca02c", "JOBS Only" = "#ff7f0e")
+  ) +
   labs(
-    title = "eGenes per Cell Type: TensorQTL vs. JOBs (FDR < 0.05)",
+    title = "eGenes per Cell Type: TensorQTL vs. JOBS Categories (FDR < 0.05)",
     x = "Cell Type",
     y = "Number of eGenes",
-    fill = "Method"
+    fill = "Category"
   ) +
   theme_classic(base_size = 14) +
   theme(
@@ -235,7 +316,7 @@ p <- ggplot(plot_data, aes(x = `Cell Type`, y = count, fill = method)) +
   ) +
   scale_y_continuous(expand = c(0, 0), labels = scales::comma)
 
-p
+p_stacked
 ```
 ***
 
@@ -251,45 +332,19 @@ sig_egenes_summary <- sig_egenes %>%
     .groups = "drop"
   )
 
-# Original TensorQTL eGenes (from previous analysis)
-tensorqtl_egenes <- tibble(
-  cell = c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri"),
-  tensorqtl_egenes = c(2027, 2048, 937, 1860, 51, 117, 90)
-)
-
-# Join and compute percentage increase
-egenes_comparison <- sig_egenes_summary %>%
-  left_join(tensorqtl_egenes, by = "cell") %>%
-  mutate(
-    percentage_increase = ((n_egenes - tensorqtl_egenes) / tensorqtl_egenes) * 100
-  ) %>%
-  select(cell, tensorqtl_egenes, n_egenes, percentage_increase) %>%
-  rename(
-    `Cell Type` = cell,
-    `TensorQTL eGenes` = tensorqtl_egenes,
-    `JOBs eGenes` = n_egenes,
-    `Percentage Increase (%)` = percentage_increase
-  )
-
-egenes_table <- egenes_comparison %>%
+egenes_table <- sig_egenes_summary %>%
   gt() %>%
   tab_header(
-    title = "Comparison of Significant eGenes per Cell Type (FDR < 0.05)"
+    title = "Table 2. Significant eGenes per Cell Type (FDR < 0.05)",
+    subtitle = "eGenes with ≥1 sig eSNP. Retains ties for the lowest eSNP/gene FDR."
   ) %>%
   cols_label(
-    `Cell Type` = "Cell Type",
-    `TensorQTL eGenes` = "TensorQTL eGenes",
-    `JOBs eGenes` = "JOBs eGenes",
-    `Percentage Increase (%)` = "Percentage Increase (%)"
+    cell = "Cell Type",
+    n_egenes = "Number of eGenes"
   ) %>%
   fmt_number(
-    columns = c(`TensorQTL eGenes`, `JOBs eGenes`),
+    columns = n_egenes,
     decimals = 0
-  ) %>%
-  fmt_number(
-    columns = `Percentage Increase (%)`,
-    decimals = 1,
-    scale_by = -1  # For percentages
   ) %>%
   tab_style(
     style = cell_fill(color = "#f8f9fa"),
@@ -297,11 +352,13 @@ egenes_table <- egenes_comparison %>%
   ) %>%
   tab_options(
     table.font.size = px(14)
-  )
+    )
 
 egenes_table
-write_tsv(sig_egenes, paste0(in_dir, "sig_egenes_top_fdr05_with_ties.tsv.gz"))
+#write_tsv(sig_egenes, paste0(in_dir, "sig_egenes_top_fdr05_with_ties.tsv.gz"))
 ```
+
+***
 
 ### eSNPs
 
@@ -318,7 +375,8 @@ sig_esnps_summary <- sig_esnps %>%
 esnps_table <- sig_esnps_summary %>%
   gt() %>%
   tab_header(
-    title = "Significant eSNPs per Cell Type (FDR < 0.05)"
+    title = "Table 3. Significant eSNPs per Cell Type (FDR < 0.05)",
+    subtitle = "All eSNPs (variants) per gene that pass FDR < 0.05, across all genes/cell's"
   ) %>%
   cols_label(
     cell = "Cell Type",
@@ -337,10 +395,102 @@ esnps_table <- sig_esnps_summary %>%
     )
 
 esnps_table 
-write_tsv(sig_esnps, paste0(in_dir, "sig_esnps_fdr05.tsv.gz"))
+#write_tsv(sig_esnps, paste0(in_dir, "sig_esnps_fdr05.tsv.gz"))
 ```
 
 ***
+
+### Stats
+
+```{r}
+# GT table
+comparison_table <- comparison_summary %>%
+  gt() %>%
+  tab_header(
+    title = "P-Value Strength Comparison: TensorQTL vs. JOBS per Cell Type"
+  ) %>%
+  cols_label(
+    cell = "Cell Type",
+    tot_eQTL_pre_jobs = "Total eQTL (pre-JOBS)",
+    non_na_pairs = "Intersection",
+    na_jobs = "NA in JOBS",
+    stronger_tensor = "P stronger in TensorQTL",
+    equal = "Equal P",
+    stronger_jobs = "P Stronger in JOBS",
+    fdr_sig_jobs = "FDR sig in JOBS"
+  ) %>%
+  fmt_number(
+    columns = -cell,
+    decimals = 0
+  ) %>%
+  tab_style(
+    style = cell_fill(color = "#f8f9fa"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(table.font.size = px(12))
+
+# Display fixed table
+comparison_table
+```
+
+***
+
+### Pval dist {.tabset}
+
+***
+
+#### tQTL vs. Jobs
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# A: Faceted plot of p-value distributions (-log10 for scale)
+p_plot <- pval_all |>
+  filter(!is.na(jobs_p)) |>
+  ggplot(aes(x = log_tensor_p, fill = "TensorQTL")) +
+  geom_density(alpha = 0.5, color = NA) +
+  geom_density(aes(x = log_jobs_p, fill = "JOBs"), alpha = 0.5, color = NA) +
+  facet_wrap(~ cell, scales = "free_y", ncol = 4) +
+  scale_fill_manual(values = c("TensorQTL" = "#1f77b4", "JOBs" = "#ff7f0e")) +
+  labs(
+    title = "Nominal P-Value Distributions: TensorQTL vs. JOBs",
+    x = "-log10(P-value)",
+    y = "Density",
+    fill = "Method"
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    strip.text = element_text(size = 10),
+    legend.position = "bottom"
+  )
+p_plot
+```
+***
+
+#### NAs {.tabset}
+
+***
+
+##### Summary
+
+***
+
+```{r, }
+na_summary <- imap_dfr(pval_comparisons, ~ tibble(cell = .y, na_rate = mean(is.na(.x$jobs_p))))
+na_summary
+```
+
+***
+
+##### Plot
+
+```{r}
+pval_all %>% 
+    mutate(na_jobs = is.na(jobs_p)) %>% 
+    ggplot(aes(x = -log10(tensor_p), fill = na_jobs)) + 
+    geom_density(alpha = 0.7) + 
+    facet_wrap(~ cell) + 
+    labs(title = "TensorQTL Sig Pairs: NA in JOBs?") 
+```
 
 ### Benchmarking {.tabset}
 
