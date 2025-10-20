@@ -55,9 +55,9 @@ Settings:
 ***
 
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-in_dir <- '~/Desktop/test/jobs/'
-tensor_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/'
-bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
+#in_dir <- '~/Desktop/test/jobs/'
+#tensor_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/'
+#bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
 
 # Load beta and SE files once
 ref_beta <- read_tsv(paste0(in_dir, "jobs_ref_beta_genomewide.tsv.gz"))
