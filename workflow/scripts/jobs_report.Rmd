@@ -39,6 +39,8 @@ if (local == TRUE) {
   tensor_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/'
   bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
 }
+
+options(encoding = "UTF-8") # For consistent UTF-8 handling remotely
 ```
 
 ## JOBS pipeline steps {.tabset}
@@ -221,7 +223,7 @@ na_summary <- imap_dfr(pval_comparisons, ~ tibble(cell = .y, na_rate = mean(is.n
 egenes_table <- egenes_results %>%
   gt() %>%
   tab_header(
-    title = "eGene Counts per Cell Type: TensorQTL vs. JOBS Categories"
+    title = "Table 1. eGene Counts per Cell Type: TensorQTL vs. JOBS Categories"
   ) %>%
   cols_label(
     cell = "Cell Type",
@@ -269,7 +271,7 @@ grand_egenes <- data.frame(
 # Display grand totals
 grand_egenes %>%
   gt() %>%
-  tab_header(title = "Grand Total eGenes Across All Cell Types") %>%
+  tab_header(title = "Table 2. Total eGenes Across All Cell Types") %>%
   cols_label(category = "Category", count = "Count") %>%
   fmt_number(columns = count, decimals = 0) %>%
   tab_style(
@@ -305,7 +307,7 @@ p_stacked <- ggplot(plot_data_stacked, aes(x = cell, y = count, fill = category)
     values = c("TensorQTL Only" = "#1f77b4", "Both" = "#2ca02c", "JOBS Only" = "#ff7f0e")
   ) +
   labs(
-    title = "eGenes per Cell Type: TensorQTL vs. JOBS Categories (FDR < 0.05)",
+    title = "eGenes per Cell Type (FDR < 0.05)",
     x = "Cell Type",
     y = "Number of eGenes",
     fill = "Category"
@@ -338,7 +340,7 @@ sig_egenes_summary <- sig_egenes %>%
 egenes_table <- sig_egenes_summary %>%
   gt() %>%
   tab_header(
-    title = "Table 2. Significant eGenes per Cell Type (FDR < 0.05)",
+    title = "Table 3. Significant eGenes per Cell Type (FDR < 0.05)",
     subtitle = "eGenes with ≥1 sig eSNP. Retains ties for the lowest eSNP/gene FDR."
   ) %>%
   cols_label(
@@ -378,7 +380,7 @@ sig_esnps_summary <- sig_esnps %>%
 esnps_table <- sig_esnps_summary %>%
   gt() %>%
   tab_header(
-    title = "Table 3. Significant eSNPs per Cell Type (FDR < 0.05)",
+    title = "Table 4. Significant eSNPs per Cell Type (FDR < 0.05)",
     subtitle = "All eSNPs (variants) per gene that pass FDR < 0.05, across all genes/cell's"
   ) %>%
   cols_label(
@@ -403,14 +405,18 @@ esnps_table
 
 ***
 
-### Stats
+### P-values {.tabset}
 
-```{r}
+***
+
+#### Table
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # GT table
 comparison_table <- comparison_summary %>%
   gt() %>%
   tab_header(
-    title = "P-Value Strength Comparison: TensorQTL vs. JOBS per Cell Type"
+    title = "Table 5. P-Value Strength Comparison: TensorQTL vs. JOBS per Cell Type"
   ) %>%
   cols_label(
     cell = "Cell Type",
@@ -438,11 +444,9 @@ comparison_table
 
 ***
 
-### Pval dist {.tabset}
+#### Plot
 
 ***
-
-#### tQTL vs. Jobs
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
 # A: Faceted plot of p-value distributions (-log10 for scale)
@@ -469,11 +473,11 @@ p_plot
 ```
 ***
 
-#### NAs {.tabset}
+### NAs {.tabset}
 
 ***
 
-##### Summary
+#### Table
 
 ***
 
@@ -484,7 +488,7 @@ na_summary
 
 ***
 
-##### Plot
+#### Plot
 
 ```{r}
 pval_all %>% 
@@ -494,6 +498,7 @@ pval_all %>%
     facet_wrap(~ cell) + 
     labs(title = "TensorQTL Sig Pairs: NA in JOBs?") 
 ```
+***
 
 ### Benchmarking {.tabset}
 
