@@ -33,8 +33,8 @@ tensor_dir <- params$tensor_dir
 
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 
-local = FALSE
-if (local = TRUE) {
+local <- FALSE
+if (local == TRUE) {
   in_dir <- '~/Desktop/test/jobs/'
   tensor_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/'
   bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
