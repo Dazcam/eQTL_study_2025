@@ -41,6 +41,7 @@ if (local == TRUE) {
 }
 
 options(encoding = "UTF-8") # For consistent UTF-8 handling remotely
+Sys.setenv(R_GSCMD = "gs")
 ```
 
 ## JOBS pipeline steps {.tabset}
@@ -481,7 +482,7 @@ p_plot
 
 ***
 
-```{r, }
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 na_summary <- imap_dfr(pval_comparisons, ~ tibble(cell = .y, na_rate = mean(is.na(.x$jobs_p))))
 na_summary
 ```
@@ -490,7 +491,7 @@ na_summary
 
 #### Plot
 
-```{r}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 pval_all %>% 
     mutate(na_jobs = is.na(jobs_p)) %>% 
     ggplot(aes(x = -log10(tensor_p), fill = na_jobs)) + 
