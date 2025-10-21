@@ -145,10 +145,9 @@ head(jobs_eqtls$eqtls_se_new)
 
 # Write uncorrected output files
 message("\nSaving JOBS output uncorrected files ...")
-write_rds(jobs_eqtls, paste0(out_dir, "jobs_eqtlsput.rds"))
-fwrite(ref_beta, paste0(out_dir, "jobs_ref_beta_genomewide.tsv.gz"), sep = "\t", na = "NA")
-fwrite(ref_se, paste0(out_dir, "jobs_ref_se_genomewide.tsv.gz"), sep = "\t", na = "NA")
-
+write_rds(jobs_eqtls, paste0(out_dir, "jobs_output.rds"))
+fwrite(ref_beta, paste0(out_dir, "jobs_beta.tsv.gz"), sep = "\t", na = "NA", quote = FALSE)
+fwrite(ref_se, paste0(out_dir, "jobs_se.tsv.gz"), sep = "\t", na = "NA", quote = FALSE)
 
 # Ensure ID is character
 ref_beta$ID <- as.character(ref_beta$ID)
@@ -162,14 +161,12 @@ ref_se[numeric_cols] <- lapply(ref_se[numeric_cols], as.numeric)
 # Check structure
 message("Structure of ref_beta:")
 print(str(ref_beta))
-if (!"ID" %in% colnames(ref_beta)) stop("ID column missing in ref_beta - check JOBs output")
+message("Structure of ref_sea:")
+print(str(ref_se))
 
-# Compute nominal p-values and per-gene FDR with dplyr (cleaner)
-message("\nComputing p-values and per-gene FDR ...")
-# Add gene column once
-ref_beta$gene <- sub("-.*", "", ref_beta$ID)
-
-pval_dt <- data.frame()  # Start empty
+# Compute nominal p-values and per-gene FDR with data.table (per-cell filtering for non-NA beta/se)
+message("\nComputing p-values and per-gene FDR (filtering non-NA beta/se) ...")
+combined_dt <- data.table()  # Initialize for combined output
 n_cells <- length(avail_cells)
 for (i in seq_along(avail_cells)) {
   cell <- avail_cells[i]
@@ -180,47 +177,64 @@ for (i in seq_along(avail_cells)) {
     next 
   }
   
-  # Compute p_nom
+  # Pull beta and se for this cell
   beta_col <- ref_beta[[cell]]
   se_col <- ref_se[[cell]]
-  p_nom <- 2 * pnorm(-abs(beta_col / se_col))
   
-  # Skip if all NA
-  if (all(is.na(p_nom))) {
-    message(paste("Skipping FDR for", cell, "- all pvals NA"))
+  # Compute z and p_nom (handle div by zero/NA)
+  z_scores <- beta_col / se_col
+  p_nom <- 2 * pnorm(-abs(z_scores))
+  
+  # Filter to valid (non-NA beta, se, p_nom)
+  valid_mask <- !is.na(beta_col) & !is.na(se_col) & !is.na(p_nom)
+  n_valid <- sum(valid_mask)
+  if (n_valid == 0) {
+    message(paste("Skipping", cell, "- no valid pairs"))
     next
   }
+  message(paste("  Valid pairs for", cell, ":", n_valid))
   
-  # Add p to ref_beta (mutate style)
-  ref_beta[[paste0(cell, "_p")]] <- p_nom
+  # Create per-cell data.table
+  temp_dt <- data.table(
+    ID = ref_beta$ID[valid_mask],
+    gene = sub("-.*", "", ref_beta$ID[valid_mask]),
+    snp = sub(".*?-", "", ref_beta$ID[valid_mask]),
+    beta = beta_col[valid_mask],
+    se = se_col[valid_mask],
+    pval_nominal = p_nom[valid_mask]
+  )
   
-  # FDR per gene: group and adjust
-  ref_beta_temp <- ref_beta %>%
-    group_by(gene) %>%
-    mutate(fdr = p.adjust(.data[[paste0(cell, "_p")]], method = "BH")) %>%
-    ungroup() %>%
-    select(ID, gene, fdr)
+  # Compute FDR per gene
+  temp_dt[, fdr := p.adjust(pval_nominal, method = "BH"), by = gene]
   
-  # Add cell label and bind
-  fdr_dt <- ref_beta_temp
-  fdr_dt$cell <- cell
-  pval_dt <- rbind(pval_dt, fdr_dt)
+  # Add cell label
+  temp_dt[, cell := cell]
   
-  # Warn on NAs
-  if (any(is.na(fdr_dt$fdr))) {
-    message(paste("Warning: NAs in FDR for", cell, "- check small gene groups"))
+  # Warn on NAs in FDR
+  if (any(is.na(temp_dt$fdr))) {
+    message(paste("  Warning: NAs in FDR for", cell, "- check small gene groups"))
   }
+  
+  # Write cell-specific file
+  cell_file <- paste0(out_dir, "jobs_", cell, "_beta_se_p_fdr.tsv.gz")
+  fwrite(temp_dt, cell_file, sep = "\t", na = "NA", quote = FALSE)
+  message(paste("  Wrote cell-specific:", cell_file))
+  
+  # Bind to combined
+  combined_dt <- rbind(combined_dt, temp_dt)
 }
 
-# Convert pval_dt back to data.table for fwrite
-setDT(pval_dt)
-
-# Export
-message("\nSaving JOBS FDR corrected output files ...")
-fwrite(pval_dt, paste0(out_dir, "jobs_pval_fdr_genomewide.tsv.gz"), sep = "\t", na = "NA")
+# Write combined file (long format across cells)
+if (nrow(combined_dt) > 0) {
+  combined_file <- paste0(out_dir, "jobs_combined_beta_se_p_fdr_genomewide.tsv.gz")
+  fwrite(combined_dt, combined_file, sep = "\t", na = "NA", quote = FALSE)
+  message(paste("\nWrote combined:", combined_file, "- total rows:", nrow(combined_dt)))
+} else {
+  message("\nNo valid data for combined file")
+}
 
 message("Done! Check outputs in", out_dir)
-message("For significant hits: e.g., sig_hits <- pval_dt[fdr < 0.05]")
+message("For significant hits: e.g., sig_hits <- combined_dt[fdr < 0.05]")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
