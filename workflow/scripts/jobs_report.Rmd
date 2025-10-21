@@ -48,8 +48,8 @@ Sys.setenv(R_GSCMD = "gs")
 
 ***
 
-We used [JOBS](https://github.com/LidaWangPSU/JOBS) to generate integrate our sc-eQTL TensorQTL nominial data with
-publically available data [Wen et al 2024]() to boost our eQTL discovery power. 
+We used [JOBS](https://github.com/LidaWangPSU/JOBS) to integrate our sc-eQTL TensorQTL nominal data with
+publicly available data [Wen et al 2024]() to boost our eQTL discovery power. 
 The citation for JOBS is [Wang et al. (2025), DOI: 10.1016/j.xgen.2025.100820](https://www.cell.com/cell-genomics/fulltext/S2666-979X(25)00076-X).
 
 ***
@@ -66,8 +66,8 @@ Settings:
 
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 # Load beta and SE files once
-ref_beta <- read_tsv(paste0(in_dir, "jobs_ref_beta_genomewide.tsv.gz"))
-ref_se <- read_tsv(paste0(in_dir, "jobs_ref_se_genomewide.tsv.gz"))
+ref_beta <- read_tsv(paste0(in_dir, "jobs_beta.tsv.gz"))
+ref_se <- read_tsv(paste0(in_dir, "jobs_se.tsv.gz"))
 
 # Add gene column if missing (extract from ID)
 if (!"gene" %in% colnames(ref_beta)) {
