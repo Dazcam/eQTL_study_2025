@@ -32,6 +32,13 @@ bmark_dir <- params$bmark_dir
 tensor_dir <- params$tensor_dir 
 
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+
+local = FALSE
+if (local = TRUE) {
+  in_dir <- '~/Desktop/test/jobs/'
+  tensor_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/'
+  bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
+}
 ```
 
 ## JOBS pipeline steps {.tabset}
@@ -55,10 +62,6 @@ Settings:
 ***
 
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-#in_dir <- '~/Desktop/test/jobs/'
-#tensor_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/'
-#bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
-
 # Load beta and SE files once
 ref_beta <- read_tsv(paste0(in_dir, "jobs_ref_beta_genomewide.tsv.gz"))
 ref_se <- read_tsv(paste0(in_dir, "jobs_ref_se_genomewide.tsv.gz"))
@@ -127,7 +130,7 @@ for (cell in cell_types) {
     arrange(fdr)
   sig_egenes_top_list[[cell]] <- sig_egenes_cell_top
   
-  # TensorQTL comparison (load and match once per cell)
+  # TensorQTL comparison 
   tensor_file <- paste0(tensor_dir, cell, "_quantile_genPC_4_expPC_40/", cell, "_quantile_perm.cis_qtl.txt.gz")
   if (file.exists(tensor_file)) {
     tensor_data <- read_tsv(tensor_file, show_col_types = FALSE) %>%
