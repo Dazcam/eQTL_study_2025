@@ -226,7 +226,7 @@ for (i in seq_along(avail_cells)) {
 
 # Write combined file (long format across cells)
 if (nrow(combined_dt) > 0) {
-  combined_file <- paste0(out_dir, "jobs_combined_beta_se_p_fdr_genomewide.tsv.gz")
+  combined_file <- paste0(out_dir, "jobs_with_se_p_fdr.tsv.gz")
   fwrite(combined_dt, combined_file, sep = "\t", na = "NA", quote = FALSE)
   message(paste("\nWrote combined:", combined_file, "- total rows:", nrow(combined_dt)))
 } else {
