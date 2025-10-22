@@ -44,6 +44,11 @@ tensor <- fread(tensor_file, header = TRUE,
                 colClasses = c(slope = "numeric", slope_se = "numeric", pval_nominal = "numeric", af = "numeric"))
 message(paste("Tensor loaded:", nrow(tensor), "rows"))
 
+# QC: Count zeros in key columns (may rm later)
+message(paste("Zeros in slope (beta):", sum(tensor$slope == 0, na.rm = TRUE)))
+message(paste("Zeros in slope_se (SE):", sum(tensor$slope_se == 0, na.rm = TRUE)))
+message(paste("Zeros in pval_nominal:", sum(tensor$pval_nominal == 0, na.rm = TRUE)))
+
 # Create ID for merging
 tensor[, ID := paste(phenotype_id, variant_id, sep = "-")]
 
