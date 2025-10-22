@@ -24,14 +24,14 @@ library(data.table)
 library(tidyverse)
 
 # Inputs via snakemake
-# Note: tensor_file is the jobs all file for smk rule order, need to change here for
+# Note: jobs_file is the jobs all file for smk rule order, need to change here for
 # cell type specific data or you will get dups in ouput
 tensor_file <- snakemake@input[['tensor']] 
 jobs_file <- snakemake@input[['jobs']]
 out_file <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[['cell_type']] 
-tensor_dir <- dirname(tensor_file)
-tensor_file <- paste0(tensor_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
+jobs_dir <- dirname(jobs_file)
+jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
 
 message(paste("Processing cell:", cell_type))
 message(paste("Tensor file:", tensor_file))
@@ -42,12 +42,10 @@ message(paste("Output:", out_file))
 message("Loading TensorQTL data ...")
 tensor <- fread(tensor_file, header = TRUE, 
                 colClasses = c(slope = "numeric", slope_se = "numeric", pval_nominal = "numeric", af = "numeric"))
-message(paste("Tensor loaded:", nrow(tensor), "rows"))
-
-# QC: Count zeros in key columns (may rm later)
-message(paste("Zeros in slope (beta):", sum(tensor$slope == 0, na.rm = TRUE)))
-message(paste("Zeros in slope_se (SE):", sum(tensor$slope_se == 0, na.rm = TRUE)))
-message(paste("Zeros in pval_nominal:", sum(tensor$pval_nominal == 0, na.rm = TRUE)))
+message("Tensor loaded:", nrow(tensor), "rows")
+message("Zeros in slope (beta): ", sum(tensor$slope == 0, na.rm = TRUE))
+message("Zeros in slope_se (SE): ", sum(tensor$slope_se == 0, na.rm = TRUE))
+message("Zeros in pval_nominal: ", sum(tensor$pval_nominal == 0, na.rm = TRUE))
 
 # Create ID for merging
 tensor[, ID := paste(phenotype_id, variant_id, sep = "-")]
@@ -56,7 +54,10 @@ tensor[, ID := paste(phenotype_id, variant_id, sep = "-")]
 message("Loading JOBS data ...")
 jobs <- fread(jobs_file, header = TRUE,
               colClasses = c(beta = "numeric", se = "numeric", pval_nominal = "numeric", fdr = "numeric"))
-message(paste("JOBS loaded:", nrow(jobs), "rows"))
+message("JOBS loaded:", nrow(jobs), "rows")
+message("Zeros in slope (beta): ", sum(jobs$beta == 0, na.rm = TRUE))
+message("Zeros in slope_se (SE): ", sum(jobs$se == 0, na.rm = TRUE))
+message("Zeros in pval_nominal: ", sum(jobs$pval_nominal == 0, na.rm = TRUE))
 
 # Ensure ID in jobs (fallback to gene-snp if needed)
 if (!"ID" %in% names(jobs)) {
@@ -79,8 +80,13 @@ merged[, pval_nominal := ifelse(!is.na(jobs_pval), jobs_pval, pval_nominal)]
 # Drop temp columns
 merged[, c("ID", "jobs_beta", "jobs_se", "jobs_pval", "fdr") := NULL]
 
-# Reorder columns to match original + fdr at end
+# Reorder columns to match original
 setcolorder(merged, c("phenotype_id", "variant_id", "slope", "slope_se", "pval_nominal", "af"))
+
+message(paste("Merged has:", nrow(merged), "rows"))
+message("Zeros in slope (beta): ", sum(merged$slope == 0, na.rm = TRUE))
+message("Zeros in slope_se (SE): ", sum(merged$slope_se == 0, na.rm = TRUE))
+message("Zeros in pval_nominal: ", sum(merged$pval_nominal == 0, na.rm = TRUE))
 
 # Write output
 message("Writing hybrid output ...")
