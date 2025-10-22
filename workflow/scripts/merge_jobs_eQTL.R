@@ -39,10 +39,10 @@ message(paste("JOBS file:", jobs_file))
 message(paste("Output:", out_file))
 
 # Load TensorQTL nominals
-message("Loading TensorQTL data ...")
+message("Loading TensorQTL data for ", cell_type, "...")
 tensor <- fread(tensor_file, header = TRUE, 
                 colClasses = c(slope = "numeric", slope_se = "numeric", pval_nominal = "numeric", af = "numeric"))
-message("Tensor loaded:", nrow(tensor), "rows")
+message("Tensor loaded:", nrow(tensor), " rows")
 message("Zeros in slope (beta): ", sum(tensor$slope == 0, na.rm = TRUE))
 message("Zeros in slope_se (SE): ", sum(tensor$slope_se == 0, na.rm = TRUE))
 message("Zeros in pval_nominal: ", sum(tensor$pval_nominal == 0, na.rm = TRUE))
@@ -51,10 +51,10 @@ message("Zeros in pval_nominal: ", sum(tensor$pval_nominal == 0, na.rm = TRUE))
 tensor[, ID := paste(phenotype_id, variant_id, sep = "-")]
 
 # Load JOBS cell-specific
-message("Loading JOBS data ...")
+message("\nLoading JOBS for ", cell_type, "...")
 jobs <- fread(jobs_file, header = TRUE,
               colClasses = c(beta = "numeric", se = "numeric", pval_nominal = "numeric", fdr = "numeric"))
-message("JOBS loaded:", nrow(jobs), "rows")
+message("JOBS loaded:", nrow(jobs), " rows")
 message("Zeros in slope (beta): ", sum(jobs$beta == 0, na.rm = TRUE))
 message("Zeros in slope_se (SE): ", sum(jobs$se == 0, na.rm = TRUE))
 message("Zeros in pval_nominal: ", sum(jobs$pval_nominal == 0, na.rm = TRUE))
@@ -83,21 +83,17 @@ merged[, c("ID", "jobs_beta", "jobs_se", "jobs_pval", "fdr") := NULL]
 # Reorder columns to match original
 setcolorder(merged, c("phenotype_id", "variant_id", "slope", "slope_se", "pval_nominal", "af"))
 
-message(paste("Merged has:", nrow(merged), "rows"))
+message(paste("\nMerged has:", nrow(merged), "rows"))
 message("Zeros in slope (beta): ", sum(merged$slope == 0, na.rm = TRUE))
 message("Zeros in slope_se (SE): ", sum(merged$slope_se == 0, na.rm = TRUE))
 message("Zeros in pval_nominal: ", sum(merged$pval_nominal == 0, na.rm = TRUE))
 
 # Write output
-message("Writing hybrid output ...")
+message("\nWriting hybrid output ...")
 fwrite(merged, out_file, sep = "\t", na = "NA", quote = FALSE, row.names = FALSE)
 message(paste("Wrote", nrow(merged), "rows to", out_file))
 
-# Quick QC
-n_boosted <- sum(!is.na(merged$beta))
-message(paste("Pairs with JOBS boost:", n_boosted, "(", round(100 * n_boosted / nrow(merged), 1), "%)"))
-
-message("Done!")
+message("All Done!")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
