@@ -24,10 +24,14 @@ library(data.table)
 library(tidyverse)
 
 # Inputs via snakemake
-tensor_file <- snakemake@input[['tensor']]
+# Note: tensor_file is the jobs all file for smk rule order, need to change here for
+# cell type specific data or you will get dups in ouput
+tensor_file <- snakemake@input[['tensor']] 
 jobs_file <- snakemake@input[['jobs']]
 out_file <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[['cell_type']] 
+tensor_dir <- dirname(tensor_file)
+tensor_file <- paste0(tensor_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
 
 message(paste("Processing cell:", cell_type))
 message(paste("Tensor file:", tensor_file))
@@ -83,3 +87,6 @@ n_boosted <- sum(!is.na(merged$beta))
 message(paste("Pairs with JOBS boost:", n_boosted, "(", round(100 * n_boosted / nrow(merged), 1), "%)"))
 
 message("Done!")
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
