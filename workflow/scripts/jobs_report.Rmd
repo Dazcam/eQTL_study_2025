@@ -8,6 +8,8 @@ output:
 params:
   in_dir: null
   bmark_dir: null
+  p_smr: null
+  p_heidi: null
   tensor_dir: null
 ---
 
@@ -30,8 +32,12 @@ library(cowplot)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 tensor_dir <- params$tensor_dir 
+p_smr <- as.numeric(params$p_smr)
+p_heidi <- as.numeric(params$p_heidi)
 
+smr_dir <- paste0(in_dir, 'smr/')
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+
 
 local <- FALSE
 if (local == TRUE) {
@@ -499,6 +505,314 @@ pval_all %>%
     facet_wrap(~ cell) + 
     labs(title = "TensorQTL Sig Pairs: NA in JOBs?") 
 ```
+***
+
+### SMR {.tabset}
+
+***
+
+```{r smr_results, echo = FALSE, message = FALSE, warning = FALSE}
+# Function to read and summarize SMR results
+summarize_smr <- function(cell_type, smr_dir, disorder) {
+  file_path <- file.path(smr_dir, cell_type, paste0(cell_type, "_", disorder, ".smr"))
+  if (file.exists(file_path)) {
+    smr <- suppressMessages(read_tsv(file_path))
+    n_probes <- nrow(smr)
+    smr_sig <- smr |> filter(p_SMR < (p_smr / n_probes))
+    smr_sig_heidi <- smr_sig |> filter(p_HEIDI > p_heidi)
+    return(data.frame(
+      Cell_Type = cell_type,
+      Total_Probes = n_probes,
+      Significant_SMR = nrow(smr_sig),
+      Significant_SMR_HEIDI = nrow(smr_sig_heidi)
+    ))
+  } else {
+    message("File not found for cell type / disorder: ", cell_type, " / ", disorder)
+    return(data.frame(
+      Cell_Type = cell_type,
+      Total_Probes = 0,
+      Significant_SMR = 0,
+      Significant_SMR_HEIDI = 0
+    ))
+  }
+}
+
+# Function to read and summarize SMR results
+log_dir <- "../../results/00LOG/12SMR/"
+extract_smr_log_params <- function(log_dir, cell_types, disorder) {
+  # Initialize parameters to extract
+  params <- c(
+    "GWAS SNPs Included",
+    "eQTL SNPs Included",
+    "Individuals in LD Reference",
+    "SNPs After Allele Check",
+    "SNPs Excluded for Frequency",
+    "Probes Analyzed"
+  )
+  
+  # Initialize result data frame
+  result <- data.frame(Parameter = params, stringsAsFactors = FALSE)
+  
+  # Process each cell type
+  for (cell_type in cell_types) {
+    log_file <- file.path(log_dir, paste0("smr_", cell_type, "_", disorder, ".log"))
+    
+    # Initialize default values
+    values <- rep("Unknown", length(params))
+    
+    if (file.exists(log_file)) {
+      log_content <- read_lines(log_file)
+      
+      # Extract parameters using regular expressions
+      # GWAS SNPs Included
+      gwas_snps <- str_extract(log_content, "GWAS summary data of (\\d+) SNPs to be included")
+      gwas_snps <- gwas_snps[!is.na(gwas_snps)]
+      if (length(gwas_snps) > 0) {
+        values[1] <- str_extract(gwas_snps[1], "\\d+")
+      }
+      
+      # eQTL SNPs Included
+      eqtl_snps <- str_extract(log_content, "(\\d+) SNPs to be included from \\[.*\\.esi\\]")
+      eqtl_snps <- eqtl_snps[!is.na(eqtl_snps)]
+      if (length(eqtl_snps) > 0) {
+        values[2] <- str_extract(eqtl_snps[1], "\\d+")
+      }
+      
+      # Individuals in LD Reference
+      individuals <- str_extract(log_content, "(\\d+) individuals to be included from \\[.*\\.fam\\]")
+      individuals <- individuals[!is.na(individuals)]
+      if (length(individuals) > 0) {
+        values[3] <- str_extract(individuals[1], "\\d+")
+      }
+      
+      # SNPs After Allele Check
+      allele_check <- str_extract(log_content, "(\\d+) SNPs are included after allele checking")
+      allele_check <- allele_check[!is.na(allele_check)]
+      if (length(allele_check) > 0) {
+        values[4] <- str_extract(allele_check[1], "\\d+")
+      }
+      
+      # SNPs Excluded for Frequency
+      freq_excluded <- str_extract(log_content, "(\\d+) SNPs.*with allele frequency differences > 0.20")
+      freq_excluded <- freq_excluded[!is.na(freq_excluded)]
+      if (length(freq_excluded) > 0) {
+        values[5] <- str_extract(freq_excluded[1], "\\d+")
+      }
+      
+      # Probes Analyzed
+      probes <- str_extract(log_content, "SMR analysis \\(SMR and HEIDI tests\\) for (\\d+) probes")
+      probes <- probes[!is.na(probes)]
+      if (length(probes) > 0) {
+        values[6] <- str_extract(probes[1], "\\d+")
+      }
+      
+    } else {
+      message("Log file not found for cell type: ", cell_type)
+    }
+    
+    # Add values to result data frame
+    result[[cell_type]] <- values
+  }
+  
+  return(result)
+}
+
+get_heidi <- function(cell_type, smr_dir, disorder) {
+  file_path <- file.path(smr_dir, cell_type, paste0(cell_type, "_", disorder, ".smr"))
+  
+  if (file.exists(file_path)) {
+    smr <- suppressMessages(readr::read_tsv(file_path, show_col_types = FALSE))
+    n_probes <- nrow(smr)
+    
+    smr %>%
+      filter(p_SMR < (p_smr / n_probes), p_HEIDI > p_heidi & !is.na(p_HEIDI)) %>%
+      mutate(Cell_Type = cell_type)
+  } else {
+    message("File not found for cell type / disorder: ", cell_type, " / ", disorder)
+    return(NULL)
+  }
+}
+
+# Get gene lookup file
+gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv' # Relative to Rmd file
+if (file.exists(gene_lookup_file)) {
+  
+  gene_lookup_hg38_tbl <- suppressMessages(read_tsv(gene_lookup_file))
+  
+} else {
+  
+  library(biomaRt)
+  
+  ## Create lookup table 
+  mart <- useMart('ENSEMBL_MART_ENSEMBL')
+  mart <- useDataset('hsapiens_gene_ensembl', mart)
+  
+  gene_lookup_hg38_tbl <- getBM(
+    mart = mart,
+    attributes = c("ensembl_gene_id", "chromosome_name", "start_position", "end_position", 
+                   "hgnc_symbol", "external_gene_name", "strand", "gene_biotype"),
+    uniqueRows = TRUE)
+  
+  write_tsv(gene_lookup_hg38_tbl, gene_lookup_file)
+  
+}
+```
+
+***
+
+#### SCZ {.tabset}
+
+***
+
+##### SMR summary
+
+***
+
+```{r smr_summary_scz, results='asis', echo=FALSE}
+disorder <- 'scz'
+summary_data <- bind_rows(
+  lapply(cell_types, function(ct) summarize_smr(ct, smr_dir, disorder))
+)
+datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
+```
+
+***
+
+##### SMR and HEIDI sig (full)
+
+```{r smr_heidi_sig_scz, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(
+  lapply(cell_types, function(ct) get_heidi(ct, smr_dir, disorder))
+)
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
+```
+
+***
+
+##### SMR and HEIDI sig (abbr. w. symbols)
+
+```{r smr_heidi_symbol_scz, echo=FALSE}
+gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv'
+
+sig_tbl <- all_sig_results |>
+  left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
+  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+```
+
+
+***
+
+##### SMR logs
+
+```{r logs_scz, echo=FALSE}
+log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+```
+
+***
+
+#### BPD {.tabset}
+
+***
+
+##### SMR summary
+
+***
+
+```{r smr_summary_bpd, results='asis', echo=FALSE}
+disorder <- 'bpd'
+summary_data <- bind_rows(
+  lapply(cell_types, function(ct) summarize_smr(ct, smr_dir, disorder))
+)
+datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
+```
+
+***
+
+##### SMR and HEIDI sig (full)
+
+```{r smr_heidi_sig_bpd, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(
+  lapply(cell_types, function(ct) get_heidi(ct, smr_dir, disorder))
+)
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
+```
+
+***
+
+##### SMR and HEIDI sig (abbr. w. symbols)
+
+```{r smr_heidi_symbol_bpd, echo=FALSE}
+sig_tbl <- all_sig_results |>
+  left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
+  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+```
+
+
+***
+
+##### SMR logs
+
+```{r logs_bpd, echo=FALSE}
+log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+```
+
+***
+
+#### MDD{.tabset}
+
+***
+
+##### SMR summary
+
+***
+
+```{r smr_summary_mdd, results='asis', echo=FALSE}
+disorder <- 'mdd'
+summary_data <- bind_rows(
+  lapply(cell_types, function(ct) summarize_smr(ct, smr_dir, disorder))
+)
+datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
+```
+
+***
+
+##### SMR and HEIDI sig (full)
+
+```{r smr_heidi_sig_mdd, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(
+  lapply(cell_types, function(ct) get_heidi(ct, smr_dir, disorder))
+)
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
+```
+
+***
+
+##### SMR and HEIDI sig (abbr. w. symbols)
+
+```{r smr_heidi_symbol_mdd, echo=FALSE}
+sig_tbl <- all_sig_results |>
+  left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
+  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+```
+
+
+***
+
+##### SMR logs
+
+```{r logs_mdd, echo=FALSE}
+log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+```
+
 ***
 
 ### Benchmarking {.tabset}
