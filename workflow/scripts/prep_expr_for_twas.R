@@ -31,7 +31,7 @@ run_test <- TRUE # Add this to snakerule later to set dynamically
 
 # Read expression file
 message('Reading expression file ...')
-expr_tbl <- read_csv(expr_in, col_types=cols())
+expr_tbl <- read_tsv(expr_in, col_types=cols())
 
 if (run_test) {
   message('Running with only a subset of genes for testing ...')
