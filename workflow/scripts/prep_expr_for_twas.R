@@ -30,7 +30,7 @@ coord_out <- snakemake@output[['coord']]
 run_test <- as.logical(snakemake@params[['run_test']]) # Option to run on 50 genes for testing
 
 # Read in data
-message("\nVaraibles are ...\n")
+message("\nVariables are ...\n")
 message("GeX file input: ", expr_in)
 message("GeX file output: ", expr_out)
 message("Gene coords file output: ", coord_out)
