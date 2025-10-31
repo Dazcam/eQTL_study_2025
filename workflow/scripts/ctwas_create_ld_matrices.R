@@ -30,10 +30,10 @@ out_dir <- snakemake@params[['out_dir']]
 out_name <- "1000G_EUR_Phase3_hg38"
 
 # Reference genotype files in PLINK binary genotype format (.bed)
-genotype_files <- file.path(ldref_dir, paste0("1000G.EUR.hg38.", 1:22, ".bed"))
+genotype_files <- file.path(ld_ref_dir, paste0("1000G.EUR.hg38.", 1:22, ".bed"))
 
 # Reference variant information files in PLINK .bim format. 
-varinfo_files <- file.path(ldref_dir, paste0("1000G.EUR.hg38.", 1:22,".bim"))
+varinfo_files <- file.path(ld_ref_dir, paste0("1000G.EUR.hg38.", 1:22,".bim"))
 
 # Prepare a data frame region_info for LD regions with columns "chr", "start", and "stop"
 # The positions should match those in varinfo_files
