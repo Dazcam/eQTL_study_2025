@@ -24,7 +24,7 @@ log_smk()
 message('\n\nRunning causal TWAS ...')
 
 # Load packages
-#library(tidyverse)
+library(tidyverse)
 #remotes::install_github("xinhe-lab/ctwas",ref = "main")
 #BiocManager::install("VariantAnnotation")
 #remotes::install_github("mrcieu/gwasvcf")
