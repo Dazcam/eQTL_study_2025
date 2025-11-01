@@ -86,7 +86,7 @@ region_metatable$SNP_file <- file.path(ld_dir, paste0(LD_filestem, ".Rvar"))
 
 # Generate snp_map and LD_map
 message('Generating snp_map and LD_map for cTWAS ...')
-res <- create_snp_LD_map(region_metatable, ncore = 4)
+res <- create_snp_LD_map(region_metatable)
 snp_map <- res$snp_map
 LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas() later
 
