@@ -35,8 +35,8 @@ library(ctwas)
 
 # Input and output paths
 gwas <- snakemake@input[['gwas']] # From 07prep_gwas.smk
-weights_dir <- snakemake@input[['weights_dir']] # Folder containing .wgt.RDat files
-ld_dir <- snakemake@input[['ld_dir']]
+weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat files
+ld_dir <- snakemake@params[['ld_dir']]
 #snp_info <- snakemake@input[['snp_info']]
 cell_type <- snakemake@wildcards[['cell_type']]
 output <- snakemake@output
@@ -55,9 +55,10 @@ message("Output will be saved to: ", output)
 
 # Prep GWAS
 message('Loading GWAS ...')
-z_snp <- read.table(gwas, sep = "\t", header = TRUE, stringsAsFactors = FALSE) |>
+z_snp_raw <- read_tsv(gwas) 
+z_snp <- z_snp_raw |>
   select(id = SNP, A1, A2, z = Z)
-gwas_n <- as.numeric(names(sort(table(z_snp$N), decreasing = TRUE)[1]))
+gwas_n <- as.numeric(names(sort(table(z_snp_raw$N), decreasing = TRUE)[1]))
 
 # Region info: included with package
 # local - ctwas_0.1.38
@@ -138,8 +139,8 @@ str(ctwas_res)
 
 # Output: Save ctwas_res$region_pip (gene PIPs per region)
 message('Write cTWAS pip output ...')
-write.table(ctwas_res$region_pip, output, 
-            sep = "\t", quote = FALSE, row.names = FALSE)
+write_tsv(ctwas_res$region_pip, output)
+
 message('All Done.')
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
