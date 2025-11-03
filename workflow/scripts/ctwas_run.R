@@ -57,8 +57,16 @@ message("Output will be saved to: ", output)
 message('Loading GWAS ...')
 z_snp_raw <- read_tsv(gwas) 
 z_snp <- z_snp_raw |>
-  select(id = SNP, A1, A2, z = Z)
+  select(id = SNP, A1, A2, z = Z) |>
+  filter(if_all(everything(), ~ !is.na(.) & . != ""))
 gwas_n <- as.numeric(names(sort(table(z_snp_raw$N), decreasing = TRUE)[1]))
+
+# Check for any remaining missing or blank values
+if (any(is.na(z_snp)) || any(z_snp == "", na.rm = TRUE)) {
+  stop("Missing values found in GWAS data.")
+} else {
+  message("No missing values in GWAS data ...")
+}
 
 # Region info: included with package
 # local - ctwas_0.1.38
@@ -66,7 +74,7 @@ gwas_n <- as.numeric(names(sort(table(z_snp_raw$N), decreasing = TRUE)[1]))
 #region_info <- read_tsv(region_file)
 
 # remote - ctwas_0.5.34
-message('Loading region info from extdata ...')
+message('\nLoading region info from extdata ...')
 region_file <- system.file("extdata/ldetect", "EUR.b38.ldetect.regions.RDS", package = "ctwas")
 region_info <- readRDS(region_file)
 
@@ -95,6 +103,19 @@ LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas()
 # z_snp <- preprocess_z_snp(z_snp, snp_map, 
 #                           drop_multiallelic = TRUE, 
 #                           drop_strand_ambig = TRUE)  # Converts to chr:pos_ref_alt
+
+# Converter function to help with error
+varID_converter_fun <- function(varID, snp_map) {
+  # varID = rsid from weight
+  # Find in snp_map
+  snp_info <- do.call(rbind, snp_map)
+  idx <- match(varID, snp_info$id)
+  missing <- is.na(idx)
+  if (any(missing)) {
+    message("Missing ", sum(missing), " rsids in reference: ", paste(head(varID[missing]), collapse = " "))
+  }
+  snp_info$id[idx]
+}
 
 # FUSION weights
 message('Preprocessing FUSION weights for cTWAS ...')
