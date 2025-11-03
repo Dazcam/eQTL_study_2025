@@ -39,7 +39,7 @@ weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat f
 ld_dir <- snakemake@params[['ld_dir']]
 #snp_info <- snakemake@input[['snp_info']]
 cell_type <- snakemake@wildcards[['cell_type']]
-output <- snakemake@output
+output <- as.character(snakemake@output[[1]])
 
 # Read in data
 message("\nLoading data ...\n")
