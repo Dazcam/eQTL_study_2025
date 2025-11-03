@@ -160,7 +160,7 @@ str(ctwas_res)
 
 # Output: Save ctwas_res$region_pip (gene PIPs per region)
 message('Write cTWAS pip output ...')
-write_tsv(ctwas_res$region_pip, output)
+write_rds(ctwas_res, output)
 
 message('All Done.')
 #--------------------------------------------------------------------------------------
