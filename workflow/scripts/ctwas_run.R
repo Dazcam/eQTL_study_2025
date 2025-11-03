@@ -39,7 +39,9 @@ weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat f
 ld_dir <- snakemake@params[['ld_dir']]
 #snp_info <- snakemake@input[['snp_info']]
 cell_type <- snakemake@wildcards[['cell_type']]
+gwas <- snakemake@wildcards[['gwas']]
 output <- as.character(snakemake@output[[1]])
+out_dir <- dirname(output)
 
 # Read in data
 message("\nLoading data ...\n")
@@ -152,7 +154,7 @@ ctwas_res <- ctwas_sumstats(z_snp,
                             ncore = 6, 
                             ncore_LD = 4,
                             save_cor = TRUE,
-                            cor_dir = "./cor_matrix",
+                            cor_dir = paste0(out_dir, "cor_matrix_", gwas, '_', cell_type),
                             force_compute_cor = FALSE)
 
 message('Structure of cTWAS res ...')
