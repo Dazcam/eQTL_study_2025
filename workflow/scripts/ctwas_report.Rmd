@@ -26,6 +26,7 @@ library(tidyverse)
 library(patchwork)
 library(ggrepel)
 library(cowplot)
+library(ctwas)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 lookup_dir <- params$lookup_dir 
