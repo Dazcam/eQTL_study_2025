@@ -17,6 +17,7 @@ params:
 library(gt)
 library(tidyverse)
 library(ctwas)
+library(ens_db)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 lookup_dir <- params$lookup_dir 
@@ -28,6 +29,8 @@ gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
 gwas_n <- 126849 # scz approx - need to pull from ctwas_run
+
+ens_db <- EnsDb.Hsapiens.v86
 ```
 
 ***
