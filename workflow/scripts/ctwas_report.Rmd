@@ -1,0 +1,251 @@
+---
+title: "cTWAS report"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+params:
+  in_dir: null
+  bmark_dir: null
+  lookup_dir: null
+---
+
+***
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(stringr)
+library(cowplot)
+library(DT)
+library(glue)
+library(gt)
+library(tidyverse)
+library(patchwork)
+library(ggrepel)
+library(cowplot)
+in_dir <- params$in_dir
+bmark_dir <- params$bmark_dir
+lookup_dir <- params$lookup_dir 
+
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+
+ctwas_res <- read_rds(paste0(in_dir, "ctwas_ExN-UL_scz_ctwas.rds"))
+gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
+  dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
+         gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
+gwas_n <- 126849 # scz approx - need to pull from ctwas_run
+```
+
+***
+
+## cTWAS pipeline steps {.tabset}
+
+***
+
+We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to integrate our sc-eQTL data with neuropsychiatric GWAS data to identify putative candidate genes associated with these conditions.   [Wen et al 2024]() to boost our eQTL discovery power. 
+The citation for cTWAS is [Zhao et al. (2025), DOI: 10.1038/s41588-023-01648-9](https://www.nature.com/articles/s41588-023-01648-9).
+
+***
+
+1. `create_ld_matrices`: Create (1000G hg38)LD matrices and variant info files for causal TWAS dataset
+2. `copy_fusion_weights`: Copy genuine FUSION weight files (cTWAS chokes if any empty files are in weight dir)
+3. `run_ctwas`: Run cTWAS on sc-eQTL and GWAS data
+4. `ctwas_report`: Generate cTWAS report
+
+TODO: 
+
+1. Rpt configured for 1 cell type and scz atm, need to rejig to handle all
+2. Need option to alter gene / region for plot(s) in smk call
+
+***
+
+### Z-scores
+
+```{r, cTWAS_z_score_tbl, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+z_gene <- as_tibble(ctwas_res$z_gene) |>
+  separate(id, into = c('gene', 'id'), sep = "\\|") |>
+  separate(id, into = c('cell_type', 'id'), sep = "_") |>
+  left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+  mutate(pval = 2 * pnorm(-abs(z)),
+         fdr = p.adjust(pval, method = "BH")) |>
+  dplyr::filter(fdr < 0.05) |>
+  arrange(fdr) |>
+  dplyr::select(cell_type, gene, symbol, z, pval, fdr, gene_biotype, chr, start, end) |>
+  distinct() |>
+  print(n = Inf)
+
+# Table
+z_gene %>%
+  dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) %>%
+  gt() %>%
+  tab_header("Table 1. cTWAS significant genes (FDR < 0.05)") %>%
+  fmt_scientific(columns = c(pval, fdr), decimals = 2) %>%
+  cols_label(
+    cell_type = "Cell Type",
+    symbol = "Gene",
+    z = "Z-score",
+    pval = "P-value",
+    fdr = "FDR",
+    gene_biotype = "Type"
+  )
+```
+
+***
+
+### Fine-mapping
+
+***
+
+```{r ctwas_fine_mapping_tbl, echo = FALSE, message = FALSE, warning = FALSE}
+finemap_res <- as_tibble(ctwas_res$finemap_res) |>
+  dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
+  separate(id, into = c('gene', 'id'), sep = "\\|") |>
+  separate(id, into = c('cell_type', 'id'), sep = "_") |>
+  left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+  arrange(desc(susie_pip))
+susie_alpha_res <- ctwas_res$susie_alpha_res
+region_data <- ctwas_res$region_data
+screen_res <- ctwas_res$screen_res
+
+finemap_res %>%
+  dplyr::filter(susie_pip > 0.8) %>%
+  dplyr::select(symbol, cell_type, susie_pip, cs) %>%
+  gt() %>%
+  tab_header("Table 2. Fine-mapped causal genes (SuSiE PIP > 0.8)")
+```
+
+***
+
+### Plot
+
+***
+
+```{r, ctwas_plot, echo = FALSE, message = FALSE, warning = FALSE}
+make_locusplot(finemap_res,
+               region_id = "22_40149793_42294812",
+               ens_db = ens_db,
+               weights = weights,
+               highlight_pip = 0.8,
+               filter_protein_coding_genes = TRUE,
+               filter_cs = TRUE,
+               color_pval_by = "cs",
+               color_pip_by = "cs")
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+# List all benchmark files for the pipeline
+files <- list.files(bmark_dir, pattern = "12ctwas.*\\.txt", full.names = TRUE)
+
+benchmarks <- map_dfr(files, function(f) {
+  df <- read.table(f, header = TRUE, sep = "\t")
+  fname <- basename(f)
+  parts <- strsplit(fname, "\\.")[[1]]
+
+  # this field holds things like:
+  # "prep_tensorQTL_input_Endo-Peri", "split_covariates_Endo-Peri_genPC_4_expPC_10",
+  # "perm_ExN-2_genPC_4_expPC_50", "nom_ExN-2_genPC_4_expPC_50", "convert_genotypes"
+  rule_full <- parts[2]
+
+  # strip everything after the first "_" → leaves only the base rule
+  rule <- str_split(rule_full, "_")[[1]][1]
+
+  tibble(
+    file = f,
+    rule = rule,
+    runtime_sec = df$s,
+    runtime_hms = df$h.m.s.,
+    max_rss = df$max_rss
+  )
+})
+
+# Summarise by rule
+summary <- benchmarks %>%
+  group_by(rule) %>%
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  arrange(rule)
+
+# Table
+datatable(
+  summary,
+  caption = 'Table 3. Rule benchmarking. Means and SD across replicates.',
+  options = list(
+    pageLength = 25,
+    autoWidth = TRUE,
+    columnDefs = list(list(className = 'dt-center', targets = "_all"))
+  )
+)
+
+```
+
+***
+
+#### Plot
+
+***
+
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)", 
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)", 
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+
+# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
+```
