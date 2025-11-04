@@ -19,8 +19,6 @@ library(knitr)
 library(kableExtra)
 library(stringr)
 library(cowplot)
-library(DT)
-library(glue)
 library(gt)
 library(tidyverse)
 library(patchwork)
@@ -60,6 +58,7 @@ TODO:
 
 1. Rpt configured for 1 cell type and scz atm, need to rejig to handle all
 2. Need option to alter gene / region for plot(s) in smk call
+3. GT and cTWAS are in separate containers, so can tables and plots together, need to consolidate
 
 ***
 
@@ -78,20 +77,22 @@ z_gene <- as_tibble(ctwas_res$z_gene) |>
   distinct() |>
   print(n = Inf)
 
+# Need to add gt to container
 # Table
-z_gene %>%
-  dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) %>%
-  gt() %>%
-  tab_header("Table 1. cTWAS significant genes (FDR < 0.05)") %>%
-  fmt_scientific(columns = c(pval, fdr), decimals = 2) %>%
-  cols_label(
-    cell_type = "Cell Type",
-    symbol = "Gene",
-    z = "Z-score",
-    pval = "P-value",
-    fdr = "FDR",
-    gene_biotype = "Type"
-  )
+# z_gene %>%
+#   dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) %>%
+#   gt() %>%
+#   tab_header("Table 1. cTWAS significant genes (FDR < 0.05)") %>%
+#   fmt_scientific(columns = c(pval, fdr), decimals = 2) %>%
+#   cols_label(
+#     cell_type = "Cell Type",
+#     symbol = "Gene",
+#     z = "Z-score",
+#     pval = "P-value",
+#     fdr = "FDR",
+#     gene_biotype = "Type"
+#   )
+z_gene
 ```
 
 ***
@@ -111,11 +112,13 @@ susie_alpha_res <- ctwas_res$susie_alpha_res
 region_data <- ctwas_res$region_data
 screen_res <- ctwas_res$screen_res
 
-finemap_res %>%
-  dplyr::filter(susie_pip > 0.8) %>%
-  dplyr::select(symbol, cell_type, susie_pip, cs) %>%
-  gt() %>%
-  tab_header("Table 2. Fine-mapped causal genes (SuSiE PIP > 0.8)")
+# Need to add gt to container
+# finemap_res %>%
+#   dplyr::filter(susie_pip > 0.8) %>%
+#   dplyr::select(symbol, cell_type, susie_pip, cs) %>%
+#   gt() %>%
+#   tab_header("Table 2. Fine-mapped causal genes (SuSiE PIP > 0.8)")
+finemap_res
 ```
 
 ***
