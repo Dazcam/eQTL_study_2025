@@ -34,7 +34,7 @@ if (exists("snakemake")) {
   }
 }
 log_smk()
-message('\n\nMerging JOBS with TensorQTL nominals ...')
+message('\n\nMerging JOBS boosted eQTL with TensorQTL nominal results ...')
 
 ## Load libraries --------------------------------------------------------------------
 library(data.table)
