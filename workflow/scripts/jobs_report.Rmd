@@ -61,7 +61,10 @@ The citation for JOBS is [Wang et al. (2025), DOI: 10.1016/j.xgen.2025.100820](h
 ***
 
 1. `run_jobs`: Run Jobs script on TensorQTL nominial eQTL data and public bulk dataset
-2. `jobs_report`: Calculate per gene FDR (per cell type) and report sig eGenes (i.e. top eSNP per eGene)
+2. `merge_jobs`: Merge JOBS boosted sc-eQTL signal with original TensorQTL nominal output
+  + Addresses JOBS SE = 0 artifact via gene-specific mean SE imputation (excluding zeros in mean calc)
+  + Recalculates nominal p-values and per-gene FDR after imputation
+3. `jobs_report`: Calculate per gene FDR (per cell type) and report sig eGenes (i.e. top eSNP per eGene)
 
 Settings:
 
