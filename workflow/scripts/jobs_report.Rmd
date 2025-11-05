@@ -33,7 +33,7 @@ library(cowplot)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 tensor_dir <- params$tensor_dir 
-log_dir params$log_dir
+log_dir <- params$log_dir
 p_smr <- as.numeric(params$p_smr)
 p_heidi <- as.numeric(params$p_heidi)
 
