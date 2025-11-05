@@ -154,7 +154,7 @@ merged[, gene := sub("^(ENSG[0-9]+).*", "\\1", phenotype_id)]
 merged[, fdr := p.adjust(pval_nominal, method = "BH"), by = gene]
 
 # Write FDR-augmented version
-fdr_file <- sub("\\.tsv\\.gz$", "_fdr.tsv.gz", out_file)
+fdr_file <- sub("\\.tsv$", "_fdr.tsv", out_file)
 fwrite(merged, fdr_file, sep = "\t", na = "NA", quote = FALSE, row.names = FALSE)
 message(paste("Wrote FDR-augmented file:", fdr_file))
 message(paste("  → Significant eQTLs (FDR < 0.05):", sum(merged$fdr < 0.05, na.rm = TRUE)))
