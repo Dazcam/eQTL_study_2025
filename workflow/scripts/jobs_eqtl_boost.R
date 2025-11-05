@@ -134,8 +134,8 @@ message(paste("Final pairs after cleaning:", nrow(beta_all)))
 
 if (nrow(beta_all) == 0) stop("No overlapping data!")
 
-# Didn't use this in the edn
-# Estimate weights with optional subsampling (recommended for large data)
+
+# # Estimate weights with optional subsampling (didn't need to subsample)
 # subsample_n <- 0  # Adjust: 0 for full (risky), 50000-200000 stable
 # message(paste("\nEstimating weights (subsample:", ifelse(subsample_n > 0, subsample_n, "full"), ")..."))
 # if (subsample_n > 0 && nrow(beta_all) > subsample_n) {
@@ -147,7 +147,7 @@ if (nrow(beta_all) == 0) stop("No overlapping data!")
 #   sub_se <- se_all
 # }
 
-weight <- jobs.nnls.weights(sub_beta, sub_se)
+weight <- jobs.nnls.weights(beta_all, se_all)
 message(paste("Weights:", paste(round(weight, 3), collapse = ", ")))
 
 # Refine eQTLs on full data
