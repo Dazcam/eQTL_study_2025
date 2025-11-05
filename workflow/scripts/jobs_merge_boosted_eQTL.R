@@ -10,8 +10,9 @@
 # 2. Retain all TensorQTL associations (left join)
 # 3. Replace beta, SE, and p-value with JOBS values where available
 # 4. Fixes JOBS SE = 0 artifact via gene-specific mean SE imputation (excluding zeros in calc)
-# 5. Recalculates nominal p-values and per-gene FDR after imputation
-# 6. Output hybrid table with consistent, non-zero SEs and finite p-values
+# 5. Recalculates ominal P values from β/SE
+# 6. Compute final per-gene FDR across *all* hybrid associations
+# 6. Output clean hybrid table (no FDR) + separate FDR-augmented file
 #
 #
 # INPUTS (via Snakemake):
@@ -33,7 +34,7 @@ if (exists("snakemake")) {
     }
   }
 }
-log_smk()
+log_smk()ls
 message('\n\nMerging JOBS boosted eQTL with TensorQTL nominal results ...')
 
 ## Load libraries --------------------------------------------------------------------
@@ -45,7 +46,7 @@ tensor_file <- snakemake@input[['tensor']]
 jobs_dir <- snakemake@params[['jobs_dir']]
 out_file <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[['cell_type']] 
-jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
+jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p.tsv.gz")
 
 
 message(paste("\nProcessing cell:", cell_type))
@@ -116,22 +117,13 @@ jobs[, pval_nominal := 2 * pnorm(-abs(beta / se))]
 # Handle any remaining Inf/-Inf or NA p-values (e.g., beta=0, se=0 still)
 jobs[is.infinite(pval_nominal) | is.na(pval_nominal), pval_nominal := 1]
 
-# Recalculate FDR *per gene* using BH
-message(" Recalculating per-gene FDR...")
-jobs[, fdr := p.adjust(pval_nominal, method = "BH"), by = gene]
-
-# Warn if any NA in FDR (shouldn't happen now)
-if (any(is.na(jobs$fdr))) {
-  message(" Warning: NAs remain in FDR after imputation — check genes with all zero/non-finite p-values")
-}
-
 message(paste(" After imputation: Zeros in SE =", sum(jobs$se == 0, na.rm = TRUE)))
 message(paste(" Min SE =", round(min(jobs$se[jobs$se > 0], na.rm = TRUE), 6)))
 message(paste(" Max pval_nominal =", round(max(jobs$pval_nominal, na.rm = TRUE), 6)))
 
 # Left merge: tensor + jobs on ID
 message("\nMerging on ID ...")
-merged <- merge(tensor, jobs[, .(ID, jobs_beta = beta, jobs_se = se, jobs_pval = pval_nominal, fdr)], 
+merged <- merge(tensor, jobs[, .(ID, jobs_beta = beta, jobs_se = se, jobs_pval = pval_nominal)], 
                 by = "ID", all.x = TRUE)
 message(paste("Merged:", nrow(merged), "rows"))
 
@@ -156,6 +148,21 @@ message("Zeros in pval_nominal: ", sum(merged$pval_nominal == 0, na.rm = TRUE))
 message("\nWriting hybrid output ...")
 fwrite(merged, out_file, sep = "\t", na = "NA", quote = FALSE, row.names = FALSE)
 message(paste("Wrote", nrow(merged), "rows to", out_file))
+
+message("Computing per-gene FDR across all hybrid eQTLs...")
+merged[, gene := sub("^(ENSG[0-9]+).*", "\\1", phenotype_id)]
+merged[, fdr := p.adjust(pval_nominal, method = "BH"), by = gene]
+
+# Write FDR-augmented version
+fdr_file <- sub("\\.tsv\\.gz$", "_fdr.tsv.gz", out_file)
+fwrite(merged, fdr_file, sep = "\t", na = "NA", quote = FALSE, row.names = FALSE)
+message(paste("Wrote FDR-augmented file:", fdr_file))
+message(paste("  → Significant eQTLs (FDR < 0.05):", sum(merged$fdr < 0.05, na.rm = TRUE)))
+
+# Clean up temporary column
+merged[, gene := NULL]
+
+message("All Done!")
 
 message("All Done!")
 

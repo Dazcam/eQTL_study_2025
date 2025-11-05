@@ -1,11 +1,25 @@
 #--------------------------------------------------------------------------------------
 #
-#    Running JOBS to boost sc-eQTL signal
+#    Run JOBS To Boost sc-eQTL signal using bulk priors
 #
 #--------------------------------------------------------------------------------------
 
 # Paper: https://www.cell.com/cell-genomics/fulltext/S2666-979X(25)00076-X
 # GitHub: https://github.com/LidaWangPSU/JOBS
+
+# - Apply JOBS (Joint Optimization of Boosting and Shrinkage) to enhance sc-eQTL detection
+# - Use bulk eQTLs as informative priors to boost weak or sparse single-cell signals
+
+# - Rm duplicates in  bulk and sc-eQTL inputs
+# - Merge cell-specific sc-eQTL into a single 'bulk' file
+# - Run cell-specific weight estimation in single cell 'bulk' file
+# - Run JOBS - non-negative least squares (NNLS) weight optimization across cell types
+# - Calc per-cell p-value computation: p = 2 * pnorm(-|beta / se|)
+#   - Note p-value may be overwritten in merge script due to SE=0 artefacts
+# - Output refined beta and SE estimates per cell type, with p-values and per-gene FDR
+# - Generate cell-specific and combined long-format results for downstream merging
+#
+#--------------------------------------------------------------------------------------
 
 ## Set up logging for smk  ------------------------------------------------------------
 if (exists("snakemake")) {
@@ -120,17 +134,19 @@ message(paste("Final pairs after cleaning:", nrow(beta_all)))
 
 if (nrow(beta_all) == 0) stop("No overlapping data!")
 
+# Didn't use this in the edn
 # Estimate weights with optional subsampling (recommended for large data)
-subsample_n <- 0  # Adjust: 0 for full (risky), 50000-200000 stable
-message(paste("\nEstimating weights (subsample:", ifelse(subsample_n > 0, subsample_n, "full"), ")..."))
-if (subsample_n > 0 && nrow(beta_all) > subsample_n) {
-  sub_idx <- sample(nrow(beta_all), subsample_n)
-  sub_beta <- beta_all[sub_idx]
-  sub_se <- se_all[sub_idx]
-} else {
-  sub_beta <- beta_all
-  sub_se <- se_all
-}
+# subsample_n <- 0  # Adjust: 0 for full (risky), 50000-200000 stable
+# message(paste("\nEstimating weights (subsample:", ifelse(subsample_n > 0, subsample_n, "full"), ")..."))
+# if (subsample_n > 0 && nrow(beta_all) > subsample_n) {
+#   sub_idx <- sample(nrow(beta_all), subsample_n)
+#   sub_beta <- beta_all[sub_idx]
+#   sub_se <- se_all[sub_idx]
+# } else {
+#   sub_beta <- beta_all
+#   sub_se <- se_all
+# }
+
 weight <- jobs.nnls.weights(sub_beta, sub_se)
 message(paste("Weights:", paste(round(weight, 3), collapse = ", ")))
 
@@ -164,8 +180,8 @@ print(str(ref_beta))
 message("Structure of ref_sea:")
 print(str(ref_se))
 
-# Compute nominal p-values and per-gene FDR with data.table (per-cell filtering for non-NA beta/se)
-message("\nComputing p-values and per-gene FDR (filtering non-NA beta/se) ...")
+# Compute nominal p-values with data.table (per-cell filtering for non-NA beta/se)
+message("\nComputing p-values(filtering non-NA beta/se) ...")
 combined_dt <- data.table()  # Initialize for combined output
 n_cells <- length(avail_cells)
 for (i in seq_along(avail_cells)) {
@@ -184,6 +200,9 @@ for (i in seq_along(avail_cells)) {
   # Compute z and p_nom (handle div by zero/NA)
   z_scores <- beta_col / se_col
   p_nom <- 2 * pnorm(-abs(z_scores))
+  
+  # Avoid NaN/Inf p-values from beta/se = 0/0
+  p_nom[is.infinite(z_scores) | is.nan(z_scores) | is.na(z_scores)] <- 1
   
   # Filter to valid (non-NA beta, se, p_nom)
   valid_mask <- !is.na(beta_col) & !is.na(se_col) & !is.na(p_nom)
@@ -204,19 +223,11 @@ for (i in seq_along(avail_cells)) {
     pval_nominal = p_nom[valid_mask]
   )
   
-  # Compute FDR per gene
-  temp_dt[, fdr := p.adjust(pval_nominal, method = "BH"), by = gene]
-  
   # Add cell label
   temp_dt[, cell := cell]
   
-  # Warn on NAs in FDR
-  if (any(is.na(temp_dt$fdr))) {
-    message(paste("  Warning: NAs in FDR for", cell, "- check small gene groups"))
-  }
-  
   # Write cell-specific file
-  cell_file <- paste0(out_dir, "jobs_", cell, "_beta_se_p_fdr.tsv.gz")
+  cell_file <- paste0(out_dir, "jobs_", cell, "_beta_se_p.tsv.gz")
   fwrite(temp_dt, cell_file, sep = "\t", na = "NA", quote = FALSE)
   message(paste("  Wrote cell-specific:", cell_file))
   
@@ -226,7 +237,7 @@ for (i in seq_along(avail_cells)) {
 
 # Write combined file (long format across cells)
 if (nrow(combined_dt) > 0) {
-  combined_file <- paste0(out_dir, "jobs_with_se_p_fdr.tsv.gz")
+  combined_file <- paste0(out_dir, "jobs_with_se_p.tsv.gz")
   fwrite(combined_dt, combined_file, sep = "\t", na = "NA", quote = FALSE)
   message(paste("\nWrote combined:", combined_file, "- total rows:", nrow(combined_dt)))
 } else {
@@ -234,7 +245,6 @@ if (nrow(combined_dt) > 0) {
 }
 
 message("Done! Check outputs in", out_dir)
-message("For significant hits: e.g., sig_hits <- combined_dt[fdr < 0.05]")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
