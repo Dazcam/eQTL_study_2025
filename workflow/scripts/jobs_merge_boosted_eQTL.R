@@ -43,9 +43,9 @@ library(tidyverse)
 # Inputs via snakemake
 tensor_file <- snakemake@input[['tensor']] 
 jobs_dir <- snakemake@params[['jobs_dir']]
-jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
 out_file <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[['cell_type']] 
+jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
 
 
 message(paste("\nProcessing cell:", cell_type))
