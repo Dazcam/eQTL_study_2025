@@ -41,14 +41,12 @@ library(data.table)
 library(tidyverse)
 
 # Inputs via snakemake
-# Note: The first jobs_file is the smk rule only to maintain rule order. n
-# Need to ensure we use cell type specific jobs_file data or you will get dups in output
 tensor_file <- snakemake@input[['tensor']] 
-# jobs_file <- snakemake@input[['jobs']]
+jobs_dir <- snakemake@params[['jobs_dir']]
+jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
 out_file <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[['cell_type']] 
-jobs_dir <- dirname(jobs_file)
-jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
+
 
 message(paste("\nProcessing cell:", cell_type))
 message(paste("Tensor file:", tensor_file))
