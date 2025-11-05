@@ -8,6 +8,7 @@ output:
 params:
   in_dir: null
   bmark_dir: null
+  log_dir: null
   p_smr: null
   p_heidi: null
   tensor_dir: null
@@ -32,6 +33,7 @@ library(cowplot)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 tensor_dir <- params$tensor_dir 
+log_dir params$log_dir
 p_smr <- as.numeric(params$p_smr)
 p_heidi <- as.numeric(params$p_heidi)
 
@@ -541,7 +543,6 @@ summarize_smr <- function(cell_type, smr_dir, disorder) {
 }
 
 # Function to read and summarize SMR results
-log_dir <- "../../results/00LOG/12SMR/"
 extract_smr_log_params <- function(log_dir, cell_types, disorder) {
   # Initialize parameters to extract
   params <- c(
