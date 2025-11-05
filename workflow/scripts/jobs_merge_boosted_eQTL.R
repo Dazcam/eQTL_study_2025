@@ -1,10 +1,27 @@
 #--------------------------------------------------------------------------------------
 #
-#    Merge JOBS-boosted eQTL with original TensorQTL nom ouput per cell type
+#    MERGE JOBS-BOOSTED eQTLs WITH TENSORQTL NOMINAL RESULTS (PER CELL TYPE)
 #
 #--------------------------------------------------------------------------------------
 
-# - 
+#--------------------------------------------------------------------------------------
+#
+# 1. Combine original TensorQTL nominal eQTLs with JOBS-boosted effect estimates
+# 2. Retain all TensorQTL associations (left join)
+# 3. Replace beta, SE, and p-value with JOBS values where available
+# 4. Fixes JOBS SE = 0 artifact via gene-specific mean SE imputation (excluding zeros in calc)
+# 5. Recalculates nominal p-values and per-gene FDR after imputation
+# 6. Output hybrid table with consistent, non-zero SEs and finite p-values
+#
+#
+# INPUTS (via Snakemake):
+# - tensor_file:  TensorQTL nominal output
+# - jobs_file:    JOBS output: jobs_{cell_type}_beta_se_p_fdr.tsv.gz
+#
+# OUTPUT:
+# - Hybrid eQTL table: original + JOBS boosted, with fixed SEs and recalculated p-values
+#
+#--------------------------------------------------------------------------------------
 
 ## Set up logging for smk  ------------------------------------------------------------
 if (exists("snakemake")) {
