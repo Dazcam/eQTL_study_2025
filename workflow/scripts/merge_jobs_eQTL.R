@@ -24,22 +24,22 @@ library(data.table)
 library(tidyverse)
 
 # Inputs via snakemake
-# Note: jobs_file is the jobs all file for smk rule order, need to change here for
-# cell type specific data or you will get dups in ouput
+# Note: The first jobs_file is the smk rule only to maintain rule order. n
+# Need to ensure we use cell type specific jobs_file data or you will get dups in output
 tensor_file <- snakemake@input[['tensor']] 
-jobs_file <- snakemake@input[['jobs']]
+# jobs_file <- snakemake@input[['jobs']]
 out_file <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[['cell_type']] 
 jobs_dir <- dirname(jobs_file)
 jobs_file <- paste0(jobs_dir, "/jobs_", cell_type, "_beta_se_p_fdr.tsv.gz")
 
-message(paste("Processing cell:", cell_type))
+message(paste("\nProcessing cell:", cell_type))
 message(paste("Tensor file:", tensor_file))
 message(paste("JOBS file:", jobs_file))
 message(paste("Output:", out_file))
 
 # Load TensorQTL nominals
-message("Loading TensorQTL data for ", cell_type, "...")
+message("\nLoading TensorQTL data for ", cell_type, "...")
 tensor <- fread(tensor_file, header = TRUE, 
                 colClasses = c(slope = "numeric", slope_se = "numeric", pval_nominal = "numeric", af = "numeric"))
 message("Tensor loaded:", nrow(tensor), " rows")
@@ -65,8 +65,57 @@ if (!"ID" %in% names(jobs)) {
 }
 message("Unique JOBS IDs:", uniqueN(jobs$ID))
 
+## Impute SEs for genes with SE values of zero in JOBS --------------------------------
+message("Imputing SE = 0 with gene-specific mean SE and recalculating pval/FDR...")
+
+# Compute mean SE *per gene* (excluding zeros and NAs)
+gene_mean_se <- jobs[se > 0 & !is.na(se), .(mean_se = mean(se, na.rm = TRUE)), by = gene]
+
+# Identify rows where se == 0
+zero_se_mask <- jobs$se == 0 | is.na(jobs$se)
+
+if (any(zero_se_mask)) {
+  n_zero <- sum(zero_se_mask)
+  message(paste(" Found", n_zero, "rows with SE == 0 or NA. Imputing with gene mean SE..."))
+  
+  # Merge mean SE back
+  jobs_imputed <- merge(jobs, gene_mean_se, by = "gene", all.x = TRUE)
+  
+  # Replace se == 0 or NA with mean_se (only where applicable)
+  jobs_imputed[zero_se_mask, se := ifelse(is.na(mean_se), se, mean_se)]
+  
+  # Clean up
+  jobs_imputed[, mean_se := NULL]
+  
+  # Overwrite jobs
+  jobs <- jobs_imputed
+  rm(jobs_imputed, gene_mean_se)
+} else {
+  message(" No SE == 0 found. Skipping imputation.")
+}
+
+# Recalculate pval_nominal from beta / se
+message(" Recalculating pval_nominal from beta / se ...")
+jobs[, pval_nominal := 2 * pnorm(-abs(beta / se))]
+
+# Handle any remaining Inf/-Inf or NA p-values (e.g., beta=0, se=0 still)
+jobs[is.infinite(pval_nominal) | is.na(pval_nominal), pval_nominal := 1]
+
+# Recalculate FDR *per gene* using BH
+message(" Recalculating per-gene FDR...")
+jobs[, fdr := p.adjust(pval_nominal, method = "BH"), by = gene]
+
+# Warn if any NA in FDR (shouldn't happen now)
+if (any(is.na(jobs$fdr))) {
+  message(" Warning: NAs remain in FDR after imputation — check genes with all zero/non-finite p-values")
+}
+
+message(paste(" After imputation: Zeros in SE =", sum(jobs$se == 0, na.rm = TRUE)))
+message(paste(" Min SE =", round(min(jobs$se[jobs$se > 0], na.rm = TRUE), 6)))
+message(paste(" Max pval_nominal =", round(max(jobs$pval_nominal, na.rm = TRUE), 6)))
+
 # Left merge: tensor + jobs on ID
-message("Merging on ID ...")
+message("\nMerging on ID ...")
 merged <- merge(tensor, jobs[, .(ID, jobs_beta = beta, jobs_se = se, jobs_pval = pval_nominal, fdr)], 
                 by = "ID", all.x = TRUE)
 message(paste("Merged:", nrow(merged), "rows"))
