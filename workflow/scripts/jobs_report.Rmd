@@ -9,7 +9,7 @@ params:
   in_dir: null
   bmark_dir: null
   log_dir: null
-  smr_dir: null
+  smr_dir:null
   p_smr: null
   p_heidi: null
   tensor_dir: null
@@ -748,11 +748,11 @@ datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ***
 
 ```{r smr_summary_bpd, results='asis', echo=FALSE}
-disorder <- 'bpd'
-summary_data <- bind_rows(
-  lapply(cell_types, function(ct) summarize_smr(ct, smr_dir, disorder))
-)
-datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
+# disorder <- 'bpd'
+# summary_data <- bind_rows(
+#   lapply(cell_types, function(ct) summarize_smr(ct, smr_dir, disorder))
+# )
+# datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
 ```
 
 ***
@@ -760,10 +760,10 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 ##### SMR and HEIDI sig (full)
 
 ```{r smr_heidi_sig_bpd, results='asis', echo=FALSE}
-all_sig_results <- bind_rows(
-  lapply(cell_types, function(ct) get_heidi(ct, smr_dir, disorder))
-)
-datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
+# all_sig_results <- bind_rows(
+#   lapply(cell_types, function(ct) get_heidi(ct, smr_dir, disorder))
+# )
+# datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
 ```
 
 ***
@@ -771,11 +771,11 @@ datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI r
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
 ```{r smr_heidi_symbol_bpd, echo=FALSE}
-sig_tbl <- all_sig_results |>
-  left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
-
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+# sig_tbl <- all_sig_results |>
+#   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
+#   select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+# 
+# datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
 
 
@@ -784,8 +784,8 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 ##### SMR logs
 
 ```{r logs_bpd, echo=FALSE}
-log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
-datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+# log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
+# datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
 ```
 
 ***
@@ -799,11 +799,11 @@ datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ***
 
 ```{r smr_summary_mdd, results='asis', echo=FALSE}
-disorder <- 'mdd'
-summary_data <- bind_rows(
-  lapply(cell_types, function(ct) summarize_smr(ct, smr_dir, disorder))
-)
-datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
+# disorder <- 'mdd'
+# summary_data <- bind_rows(
+#   lapply(cell_types, function(ct) summarize_smr(ct, smr_dir, disorder))
+# )
+# datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
 ```
 
 ***
@@ -811,10 +811,10 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 ##### SMR and HEIDI sig (full)
 
 ```{r smr_heidi_sig_mdd, results='asis', echo=FALSE}
-all_sig_results <- bind_rows(
-  lapply(cell_types, function(ct) get_heidi(ct, smr_dir, disorder))
-)
-datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
+# all_sig_results <- bind_rows(
+#   lapply(cell_types, function(ct) get_heidi(ct, smr_dir, disorder))
+# )
+# datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
 ```
 
 ***
@@ -822,11 +822,11 @@ datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI r
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
 ```{r smr_heidi_symbol_mdd, echo=FALSE}
-sig_tbl <- all_sig_results |>
-  left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
-
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+# sig_tbl <- all_sig_results |>
+#   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
+#   select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+# 
+# datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
 
 
@@ -835,8 +835,8 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 ##### SMR logs
 
 ```{r logs_mdd, echo=FALSE}
-log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
-datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+# log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
+# datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
 ```
 
 ***
