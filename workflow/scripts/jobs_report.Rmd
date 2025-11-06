@@ -78,7 +78,7 @@ Settings:
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 hybrid_files <- list.files(
   path = in_dir,
-  pattern = "_hybrid_fdr.tsv.gz$",
+  pattern = "_fdr.tsv$",
   full.names = TRUE
 )
 
