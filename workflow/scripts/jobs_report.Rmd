@@ -76,54 +76,42 @@ Settings:
 ***
 
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-# --------------------------------------------------------------
-# NEW: load the *final* hybrid-FDR files (one per cell type)
-# --------------------------------------------------------------
 hybrid_files <- list.files(
   path = in_dir,
   pattern = "_hybrid_fdr.tsv.gz$",
   full.names = TRUE
 )
 
-# Keep only the 7 L1 cell types
-hybrid_files <- hybrid_files[grepl(paste(cell_types, collapse = "|"), basename(hybrid_files))]
+## Keep only the 7 L1 cell types
+hybrid_files <- hybrid_files[
+  str_detect(basename(hybrid_files), str_c(cell_types, collapse = "|"))
+]
 
-# Read + bind
-hybrid <- lapply(hybrid_files, function(f) {
-  dt <- fread(f)
-  # Extract cell type from filename: jobs_{cell}_hybrid_fdr.tsv.gz
-  dt[, cell := sub(".*jobs_([^_]+)_hybrid.*", "\\1", basename(f))]
-  dt
-}) |> rbindlist(use.names = TRUE, fill = TRUE)
+## Read + bind (tidyverse)
+hybrid <- hybrid_files %>%
+  map(~ {
+    dt <- read_tsv(.x, col_types = cols(.default = "c")) %>%   # read everything as character first
+      type_convert()                                          # let readr guess numeric/logical
+    dt %>%
+      mutate(
+        cell = str_extract(basename(.x), "(?<=jobs_)[^_]+(?=_hybrid)")
+      )
+  }) %>%
+  list_rbind()                                                # vctrs::list_rbind (handles mismatched cols)
 
-# --------------------------------------------------------------
-# Helper: extract clean gene ID (ENSGxxxx)
-# --------------------------------------------------------------
-hybrid[, gene := sub("^(ENSG[0-9]+).*", "\\1", phenotype_id)]
+## --------------------------------------------------------------
+## Helper: extract clean gene ID (ENSGxxxx)
+## --------------------------------------------------------------
+hybrid <- hybrid %>%
+  mutate(gene = str_extract(phenotype_id, "^ENSG[0-9]+"))
 
-# --------------------------------------------------------------
-# 1. Significant eSNPs (FDR < 0.05)
-# --------------------------------------------------------------
-sig_esnps <- hybrid[fdr < 0.05 & !is.na(fdr), .(
-  ID = paste(phenotype_id, variant_id, sep = "-"),
-  gene,
-  snp = variant_id,
-  beta = slope,
-  se = slope_se,
-  pval_nominal,
-  fdr,
-  cell
-)]
-
-sig_esnps_list <- split(sig_esnps, by = "cell")
-
-# --------------------------------------------------------------
-# 2. Significant eGenes – top eSNP per gene (lowest FDR)
-# --------------------------------------------------------------
-sig_egenes_top <- hybrid[fdr < 0.05 & !is.na(fdr)] %>%
-  .[, .SD[which.min(fdr)], by = .(gene, cell)] %>%
-  .[, .(
-    ID = paste(phenotype_id, variant_id, sep = "-"),
+## --------------------------------------------------------------
+## 1. Significant eSNPs (FDR < 0.05)
+## --------------------------------------------------------------
+sig_esnps <- hybrid %>%
+  filter(fdr < 0.05, !is.na(fdr)) %>%
+  transmute(
+    ID = str_c(phenotype_id, variant_id, sep = "-"),
     gene,
     snp = variant_id,
     beta = slope,
@@ -131,15 +119,36 @@ sig_egenes_top <- hybrid[fdr < 0.05 & !is.na(fdr)] %>%
     pval_nominal,
     fdr,
     cell
-  )]
+  )
 
-sig_egenes_top_list <- split(sig_egenes_top, by = "cell")
+sig_esnps_list <- sig_esnps %>% split(.$cell)
 
-# --------------------------------------------------------------
-# 3. TensorQTL-only comparison
-# --------------------------------------------------------------
+## --------------------------------------------------------------
+## 2. Significant eGenes – top eSNP per gene (lowest FDR)
+## --------------------------------------------------------------
+sig_egenes_top <- hybrid %>%
+  filter(fdr < 0.05, !is.na(fdr)) %>%
+  group_by(gene, cell) %>%
+  slice_min(fdr, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  transmute(
+    ID = str_c(phenotype_id, variant_id, sep = "-"),
+    gene,
+    snp = variant_id,
+    beta = slope,
+    se = slope_se,
+    pval_nominal,
+    fdr,
+    cell
+  )
+
+sig_egenes_top_list <- sig_egenes_top %>% split(.$cell)
+
+## --------------------------------------------------------------
+## 3. TensorQTL-only comparison
+## --------------------------------------------------------------
 pval_comparisons <- list()
-egenes_results <- data.frame()
+egenes_results   <- tibble()
 
 for (cell in cell_types) {
   tensor_file <- file.path(
@@ -149,69 +158,80 @@ for (cell in cell_types) {
   )
   if (!file.exists(tensor_file)) next
 
-  tensor_data <- fread(tensor_file)[qval < 0.05,
-    .(gene = phenotype_id, snp = variant_id, tensor_p = pval_nominal)
-  ][, ID := paste(gene, snp, sep = "-")]
+  tensor_data <- read_tsv(tensor_file, col_types = cols(.default = "c")) %>%
+    type_convert() %>%
+    filter(qval < 0.05) %>%
+    transmute(
+      gene = phenotype_id,
+      snp  = variant_id,
+      tensor_p = pval_nominal
+    ) %>%
+    mutate(ID = str_c(gene, snp, sep = "-"))
 
-  # JOBS p-values for overlapping IDs
-  jobs_p <- hybrid[cell == cell & ID %in% tensor_data$ID,
-    .(ID, jobs_p = pval_nominal)
-  ]
+  jobs_p <- hybrid %>%
+    filter(cell == !!cell, ID %in% tensor_data$ID) %>%
+    transmute(ID, jobs_p = pval_nominal)
 
-  comp <- tensor_data[jobs_p, on = "ID"][, .(gene, snp, tensor_p, jobs_p)]
+  comp <- tensor_data %>%
+    left_join(jobs_p, by = "ID") %>%
+    select(gene, snp, tensor_p, jobs_p)
+
   pval_comparisons[[cell]] <- comp
 
-  # eGene sets
+  ## eGene sets
   tensor_genes <- unique(comp$gene)
-  jobs_genes   <- unique(sig_egenes_top[cell == cell]$gene)
+  jobs_genes   <- unique(sig_egenes_top$gene[sig_egenes_top$cell == cell])
 
-  set_overlap     <- intersect(tensor_genes, jobs_genes)
-  set_tensor_only <- setdiff(tensor_genes, jobs_genes)
-  set_jobs_only   <- setdiff(jobs_genes, tensor_genes)
+  set_overlap      <- intersect(tensor_genes, jobs_genes)
+  set_tensor_only  <- setdiff(tensor_genes, jobs_genes)
+  set_jobs_only    <- setdiff(jobs_genes, tensor_genes)
 
-  egenes_results <- rbind(egenes_results, data.frame(
-    cell                 = cell,
-    eqtl_pre_jobs        = length(tensor_genes),
-    intersection         = length(set_overlap),
-    tensor_only_na_jobs  = length(set_tensor_only),
-    jobs_only_not_tensor = length(set_jobs_only),
-    eqtl_post_jobs       = length(set_overlap) + length(set_tensor_only) + length(set_jobs_only),
-    percent_increase     = ifelse(length(tensor_genes) > 0,
-                                  round(100 * (length(set_jobs_only) + length(set_overlap) - length(tensor_genes)) / length(tensor_genes), 1),
-                                  NA),
-    stringsAsFactors = FALSE
-  ))
+  egenes_results <- egenes_results %>%
+    bind_rows(tibble(
+      cell                  = cell,
+      eqtl_pre_jobs         = length(tensor_genes),
+      intersection          = length(set_overlap),
+      tensor_only_na_jobs   = length(set_tensor_only),
+      jobs_only_not_tensor  = length(set_jobs_only),
+      eqtl_post_jobs        = length(set_overlap) + length(set_tensor_only) + length(set_jobs_only),
+      percent_increase      = if (length(tensor_genes) > 0)
+                                 round(100 * (length(set_jobs_only) + length(set_overlap) - length(tensor_genes)) /
+                                       length(tensor_genes), 1) else NA_real_
+    ))
 }
 
-# --------------------------------------------------------------
-# Combine for downstream tables/plots
-# --------------------------------------------------------------
-sig_esnps      <- rbindlist(sig_esnps_list)
-sig_egenes_top <- rbindlist(sig_egenes_top_list)
+## --------------------------------------------------------------
+## Combine for downstream tables/plots
+## --------------------------------------------------------------
+sig_esnps       <- bind_rows(sig_esnps_list)
+sig_egenes_top  <- bind_rows(sig_egenes_top_list)
 
-pval_all <- rbindlist(pval_comparisons, idcol = "cell") %>%
+pval_all <- pval_comparisons %>%
+  bind_rows(.id = "cell") %>%
   mutate(
     log_tensor_p = -log10(pmax(tensor_p, 1e-300)),
     log_jobs_p   = -log10(pmax(jobs_p,   1e-300))
   )
 
-# Comparison summary
+## Comparison summary
 comparison_summary <- pval_all %>%
   group_by(cell) %>%
   summarise(
     tot_eQTL_pre_jobs = n(),
-    non_na_pairs = sum(!is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
-    na_jobs = sum(is.na(jobs_p)),
-    stronger_tensor = sum(tensor_p < jobs_p & !is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
-    equal = sum(abs(jobs_p - tensor_p) < 1e-10 & !is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
-    stronger_jobs = sum(jobs_p < tensor_p & !is.na(jobs_p) & !is.na(tensor_p), na.rm = TRUE),
-    fdr_sig_jobs = sum(jobs_p < 0.05, na.rm = TRUE),
+    non_na_pairs      = sum(!is.na(jobs_p) & !is.na(tensor_p)),
+    na_jobs           = sum(is.na(jobs_p)),
+    stronger_tensor   = sum(tensor_p < jobs_p & !is.na(jobs_p) & !is.na(tensor_p)),
+    equal             = sum(abs(jobs_p - tensor_p) < 1e-10 & !is.na(jobs_p) & !is.na(tensor_p)),
+    stronger_jobs     = sum(jobs_p < tensor_p & !is.na(jobs_p) & !is.na(tensor_p)),
+    fdr_sig_jobs      = sum(jobs_p < 0.05, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  select(cell, tot_eQTL_pre_jobs, non_na_pairs, na_jobs, stronger_tensor, equal, stronger_jobs, fdr_sig_jobs)
+  select(cell, tot_eQTL_pre_jobs, non_na_pairs, na_jobs,
+         stronger_tensor, equal, stronger_jobs, fdr_sig_jobs)
 
-# NA summary
-na_summary <- imap_dfr(pval_comparisons, ~ tibble(cell = .y, na_rate = mean(is.na(.x$jobs_p))))
+## NA summary
+na_summary <- pval_comparisons %>%
+  imap_dfr(~ tibble(cell = .y, na_rate = mean(is.na(.x$jobs_p))))
 ```
 
 ***
