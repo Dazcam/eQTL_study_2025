@@ -9,6 +9,7 @@ params:
   in_dir: null
   bmark_dir: null
   log_dir: null
+  smr_dir: null
   p_smr: null
   p_heidi: null
   tensor_dir: null
@@ -34,10 +35,10 @@ in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 tensor_dir <- params$tensor_dir 
 log_dir <- params$log_dir
+smr_dir <- params$smr_dir
 p_smr <- as.numeric(params$p_smr)
 p_heidi <- as.numeric(params$p_heidi)
 
-smr_dir <- paste0(in_dir, 'smr/')
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 
 
