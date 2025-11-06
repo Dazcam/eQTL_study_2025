@@ -289,7 +289,7 @@ egenes_table
 
 ***
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, total_cnts, echo = FALSE, message = FALSE, warning = FALSE}
 # Totals counts across all cell types 
 grand_egenes <- data.frame(
   category = c("Intersect", "TensorQTL Only (NA in JOBS)", "JOBS Only (Not in TensorQTL)", "Total eGenes"),
@@ -444,7 +444,7 @@ esnps_table
 
 #### Table
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, p_val_comparision, echo = FALSE, message = FALSE, warning = FALSE}
 # GT table
 comparison_table <- comparison_summary %>%
   gt() %>%
@@ -481,28 +481,28 @@ comparison_table
 
 ***
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, p_val_comparision_plot, echo = FALSE, message = FALSE, warning = FALSE}
 # A: Faceted plot of p-value distributions (-log10 for scale)
-p_plot <- pval_all |>
-  filter(!is.na(jobs_p)) |>
-  ggplot(aes(x = log_tensor_p, fill = "TensorQTL")) +
-  geom_density(alpha = 0.5, color = NA) +
-  geom_density(aes(x = log_jobs_p, fill = "JOBs"), alpha = 0.5, color = NA) +
-  facet_wrap(~ cell, scales = "free_y", ncol = 4) +
-  scale_fill_manual(values = c("TensorQTL" = "#1f77b4", "JOBs" = "#ff7f0e")) +
-  labs(
-    title = "Nominal P-Value Distributions: TensorQTL vs. JOBs",
-    x = "-log10(P-value)",
-    y = "Density",
-    fill = "Method"
-  ) +
-  theme_classic(base_size = 12) +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    strip.text = element_text(size = 10),
-    legend.position = "bottom"
-  )
-p_plot
+# p_plot <- pval_all |>
+#   filter(!is.na(jobs_p)) |>
+#   ggplot(aes(x = log_tensor_p, fill = "TensorQTL")) +
+#   geom_density(alpha = 0.5, color = NA) +
+#   geom_density(aes(x = log_jobs_p, fill = "JOBs"), alpha = 0.5, color = NA) +
+#   facet_wrap(~ cell, scales = "free_y", ncol = 4) +
+#   scale_fill_manual(values = c("TensorQTL" = "#1f77b4", "JOBs" = "#ff7f0e")) +
+#   labs(
+#     title = "Nominal P-Value Distributions: TensorQTL vs. JOBs",
+#     x = "-log10(P-value)",
+#     y = "Density",
+#     fill = "Method"
+#   ) +
+#   theme_classic(base_size = 12) +
+#   theme(
+#     plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+#     strip.text = element_text(size = 10),
+#     legend.position = "bottom"
+#   )
+# p_plot
 ```
 ***
 
@@ -514,22 +514,22 @@ p_plot
 
 ***
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
-na_summary <- imap_dfr(pval_comparisons, ~ tibble(cell = .y, na_rate = mean(is.na(.x$jobs_p))))
-na_summary
+```{r, p_val_comparision_NAs, echo = FALSE, message = FALSE, warning = FALSE}
+# na_summary <- imap_dfr(pval_comparisons, ~ tibble(cell = .y, na_rate = mean(is.na(.x$jobs_p))))
+# na_summary
 ```
 
 ***
 
 #### Plot
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE}
-pval_all %>% 
-    mutate(na_jobs = is.na(jobs_p)) %>% 
-    ggplot(aes(x = -log10(tensor_p), fill = na_jobs)) + 
-    geom_density(alpha = 0.7) + 
-    facet_wrap(~ cell) + 
-    labs(title = "TensorQTL Sig Pairs: NA in JOBs?") 
+```{r, p_val_comparision_NAs_plot, echo = FALSE, message = FALSE, warning = FALSE}
+# pval_all %>% 
+#     mutate(na_jobs = is.na(jobs_p)) %>% 
+#     ggplot(aes(x = -log10(tensor_p), fill = na_jobs)) + 
+#     geom_density(alpha = 0.7) + 
+#     facet_wrap(~ cell) + 
+#     labs(title = "TensorQTL Sig Pairs: NA in JOBs?") 
 ```
 ***
 
