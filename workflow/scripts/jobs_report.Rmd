@@ -117,8 +117,26 @@ sig_esnps <- hybrid %>%
 sig_esnps_list <- sig_esnps %>% split(.$cell)
 
 ## --------------------------------------------------------------
-## 2. Significant eGenes – top eSNP per gene (lowest FDR)
+## 2. Significant eGenes – two versions:
+##   • sig_egenes:      all significant eSNPs (FDR < 0.05), allows ties
+##   • sig_egenes_top:  one eSNP per gene (lowest FDR), no ties
 ## --------------------------------------------------------------
+
+# All significant eSNPs (FDR < 0.05) — allows multiple per gene
+sig_egenes <- hybrid %>%
+  filter(fdr < 0.05, !is.na(fdr)) %>%
+  transmute(
+    ID = str_c(phenotype_id, variant_id, sep = "-"),
+    gene,
+    snp = variant_id,
+    beta = slope,
+    se = slope_se,
+    pval_nominal,
+    fdr,
+    cell
+  )
+
+# Top eSNP per gene: lowest FDR, no ties
 sig_egenes_top <- hybrid %>%
   filter(fdr < 0.05, !is.na(fdr)) %>%
   group_by(gene, cell) %>%
@@ -135,6 +153,7 @@ sig_egenes_top <- hybrid %>%
     cell
   )
 
+sig_egenes_list     <- sig_egenes %>% split(.$cell)
 sig_egenes_top_list <- sig_egenes_top %>% split(.$cell)
 
 ## --------------------------------------------------------------
@@ -371,10 +390,10 @@ egenes_table <- sig_egenes_summary %>%
   ) %>%
   tab_options(
     table.font.size = px(14)
-    )
+  )
 
 egenes_table
-#write_tsv(sig_egenes, paste0(in_dir, "sig_egenes_top_fdr05_with_ties.tsv.gz"))
+# write_tsv(sig_egenes, paste0(in_dir, "sig_egenes_top_fdr05_with_ties.tsv.gz"))
 ```
 
 ***
