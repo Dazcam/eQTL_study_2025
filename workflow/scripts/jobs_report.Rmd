@@ -78,32 +78,25 @@ Settings:
 ```{r, calculate_FDR, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 hybrid_files <- list.files(
   path = in_dir,
-  pattern = "_fdr.tsv$",
+  pattern = "_jobs_mrg_fdr\\.tsv$",  # Fixed pattern: no .gz, no _hybrid
   full.names = TRUE
 )
 
-## Keep only the 7 L1 cell types
 hybrid_files <- hybrid_files[
   str_detect(basename(hybrid_files), str_c(cell_types, collapse = "|"))
 ]
 
-## Read + bind (tidyverse)
 hybrid <- hybrid_files %>%
   map(~ {
-    dt <- read_tsv(.x, col_types = cols(.default = "c")) %>%   # read everything as character first
-      type_convert()                                          # let readr guess numeric/logical
+    dt <- read_tsv(.x, col_types = cols(.default = "c")) %>%
+      type_convert()
     dt %>%
       mutate(
-        cell = str_extract(basename(.x), "(?<=jobs_)[^_]+(?=_hybrid)")
+        cell = str_extract(basename(.x), "^([^-]+)(?=-)"),
+        ID = str_c(phenotype_id, variant_id, sep = "-")
       )
   }) %>%
-  list_rbind()                                                # vctrs::list_rbind (handles mismatched cols)
-
-## --------------------------------------------------------------
-## Helper: extract clean gene ID (ENSGxxxx)
-## --------------------------------------------------------------
-hybrid <- hybrid %>%
-  mutate(gene = str_extract(phenotype_id, "^ENSG[0-9]+"))
+  list_rbind()
 
 ## --------------------------------------------------------------
 ## 1. Significant eSNPs (FDR < 0.05)
@@ -148,7 +141,7 @@ sig_egenes_top_list <- sig_egenes_top %>% split(.$cell)
 ## 3. TensorQTL-only comparison
 ## --------------------------------------------------------------
 pval_comparisons <- list()
-egenes_results   <- tibble()
+egenes_results <- tibble()
 
 for (cell in cell_types) {
   tensor_file <- file.path(
@@ -163,10 +156,10 @@ for (cell in cell_types) {
     filter(qval < 0.05) %>%
     transmute(
       gene = phenotype_id,
-      snp  = variant_id,
-      tensor_p = pval_nominal
-    ) %>%
-    mutate(ID = str_c(gene, snp, sep = "-"))
+      snp = variant_id,
+      tensor_p = pval_nominal,
+      ID = str_c(phenotype_id, variant_id, sep = "-")  # ENSURE ID IN tensor_data
+    )
 
   jobs_p <- hybrid %>%
     filter(cell == !!cell, ID %in% tensor_data$ID) %>%
@@ -178,7 +171,6 @@ for (cell in cell_types) {
 
   pval_comparisons[[cell]] <- comp
 
-  ## eGene sets
   tensor_genes <- unique(comp$gene)
   jobs_genes   <- unique(sig_egenes_top$gene[sig_egenes_top$cell == cell])
 
@@ -195,8 +187,8 @@ for (cell in cell_types) {
       jobs_only_not_tensor  = length(set_jobs_only),
       eqtl_post_jobs        = length(set_overlap) + length(set_tensor_only) + length(set_jobs_only),
       percent_increase      = if (length(tensor_genes) > 0)
-                                 round(100 * (length(set_jobs_only) + length(set_overlap) - length(tensor_genes)) /
-                                       length(tensor_genes), 1) else NA_real_
+                                round(100 * (length(set_jobs_only) + length(set_overlap) - length(tensor_genes)) /
+                                      length(tensor_genes), 1) else NA_real_
     ))
 }
 
