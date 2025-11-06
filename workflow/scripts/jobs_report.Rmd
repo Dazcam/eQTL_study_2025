@@ -9,7 +9,7 @@ params:
   in_dir: null
   bmark_dir: null
   log_dir: null
-  smr_dir:null
+  smr_dir: null
   p_smr: null
   p_heidi: null
   tensor_dir: null
