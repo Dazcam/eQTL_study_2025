@@ -156,7 +156,8 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                                ref_name, ref_cell_type = NA_character_) {
   
   # Skip internal self-comparisons but still write dummy outputs 
-  if (!is.na(ref_cell_type) && cell_type == ref_cell_type) {
+  if (!is.na(ref_cell_type) && cell_type == ref_cell_type &&
+      str_detect(ref_name, "internal")) {
     message("Skipping identical cell_type/ref_cell_type comparison: ", cell_type)
     
     enrichment_results <- tibble(
