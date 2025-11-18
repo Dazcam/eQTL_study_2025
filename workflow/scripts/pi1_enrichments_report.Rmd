@@ -903,7 +903,7 @@ plot_grid(heatmap_forward, heatmap_reverse, ncol = 2)
 
 ***
 
-```{r, Internal_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, Fugita_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 fugita_cell_types <- c('Ast', 'Exc', 'Inh', 'Oli', 'OPC', 'Mic', 'End')
 read_enrich_tbl <- function(ct, ref_ct) {
   file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds")
@@ -978,7 +978,7 @@ pi1_enrich_tbl %>%
 
 ***
 
-```{r, interal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
+```{r, fugita_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
   file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_results_tbl.rds")
