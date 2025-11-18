@@ -4,16 +4,17 @@
 #
 #--------------------------------------------------------------------------------------
 
-#  Built to handle 4 options
+#  Built to handle 5 options
 #   - Our eQTL vs. O'Brien bulk eQTL 
 #   - Our eQTL vs. Wen bulk eQTL
 #   - Our eQTL vs. Bryois
+#   - Our eQTL vs. Fugita
 #   - Our eQTL vs. Our eQTL (internal comparison)
 #     - For latter R gens dummy file if cell_type == ref_cell_type for smk to track
 
 #   - Tests: 
 #     - Forward: pi1 enrichment of our sig. sn-eQTL in public nominal eQTL data
-#     - Revserse: pi1 of public sig. sn-eQTL in our nominal sn-eQTL data
+#     - Reverse: pi1 of public sig. sn-eQTL in our nominal sn-eQTL data
 
 #--------------------------------------------------------------------------------------
 
@@ -46,7 +47,15 @@ qtl_top <- snakemake@input[['qtl_top']]
 output_enrich <- snakemake@output[["enrich"]]
 output_pi1 <- snakemake@output[["pi1"]]
 cell_type <- snakemake@wildcards[["cell_type"]]
-ref_cell_type <- if ( "ref_cell_type" %in% names(snakemake@wildcards) ) snakemake@wildcards[["ref_cell_type"]] else NA_character_
+
+ref_cell_type <- if ("ref_cell_type" %in% names(snakemake@wildcards)) {
+  snakemake@wildcards[["ref_cell_type"]]
+} else if ("fugita_cell_type" %in% names(snakemake@wildcards)) {
+  snakemake@wildcards[["fugita_cell_type"]]
+} else {
+  NA_character_
+}
+
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 geno_pc <- snakemake@wildcards[["geno_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
@@ -63,6 +72,8 @@ bryois_cell_map <- c(
   "OPCs"                = "OPCs / COPs",
   "Pericytes"           = "Pericytes"
 )
+
+
 
 
 # Check variable assignment
@@ -227,7 +238,45 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     message("Bryois: number of top (FDR<0.05) eQTL retained for ", excel_cell_type, ": ", nrow(public_top))
   }
   
-  if (!(str_detect(ref_name, "wen") | str_detect(ref_name, "obrien") | str_detect(ref_name, "bryois"))) {
+  if (str_detect(ref_name, "fugita")) {
+    message("Loading Fugita snRNA-seq reference eQTL...")
+    
+    # read entire table once
+    public_nom <- read_tsv(public_all_qtl, show_col_types = FALSE) %>% as_tibble()
+    
+    # Keep only rows for the requested fugita cell type, if provided
+    if (!is.na(ref_cell_type)) {
+      public_nom <- public_nom %>% filter(celltype == ref_cell_type)
+      message("Filtering Fugita table to celltype: ", ref_cell_type, "  (rows retained: ", nrow(public_nom), ")")
+    } else {
+      message("No ref_cell_type wildcard provided; using entire Fugita table (rows: ", nrow(public_nom), ")")
+    }
+  
+    public_full <- public_nom %>%
+      transmute(
+        variant_id = snps,
+        phenotype_id = gene_id,
+        pval = suppressWarnings(as.numeric(pvalue)),
+        slope_ref = suppressWarnings(as.numeric(beta))
+      ) %>%
+      mutate(phenotype_id = str_extract(phenotype_id, "ENSG[0-9]+"))
+    
+    # top table = those marked as significant in two-step permutation (significant_by_2step_FDR == "Yes")
+    public_top <- public_nom %>%
+      filter(!is.na(significant_by_2step_FDR) & significant_by_2step_FDR == "Yes") %>%
+      transmute(
+        variant_id = snps,
+        phenotype_id = gene_id,
+        slope_my = suppressWarnings(as.numeric(beta))
+      ) %>%
+      mutate(phenotype_id = str_extract(phenotype_id, "ENSG[0-9]+"))
+    
+    message("Fugita: number of top (two-step Yes) eQTL retained: ", nrow(public_top))
+    message("Fugita: number of nominal (full) rows retained: ", nrow(public_full))
+  }
+  
+  
+  if (!(str_detect(ref_name, "wen") | str_detect(ref_name, "obrien") | str_detect(ref_name, "bryois") | str_detect(ref_name, "fugita"))) {
     message("Internal mode: comparing ", cell_type, " ↔ ", ref_cell_type)
     
     # Load ref cell type all-eQTL
