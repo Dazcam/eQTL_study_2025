@@ -41,6 +41,13 @@ output      <- snakemake@output[[1]]
 cell_type   <- snakemake@wildcards[["cell_type"]]
 token       <- read_lines(token_file, n_max = 1) %>% str_trim()
 
+message(paste("\ncis-eQTL file: ", perm))
+message(paste("trans-eQTL file: ", trans))
+message(paste("Token file: ", token_file))
+message(paste("Proxy dir: ", proxy_dir))
+message(paste("Output will write to: ", output))
+message(paste("Cell type: ", cell_type))
+
 #dir.create(proxy_dir)
 #setwd(proxy_dir) # Need to set this as LDproxy_batch spits out files to wd
 
@@ -137,9 +144,6 @@ message('Writing file to: ', output)
 write_tsv(trans_sig, output)
 
 message('All Done.')
-
-
-
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
