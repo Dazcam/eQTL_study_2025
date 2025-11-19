@@ -51,20 +51,20 @@ lead_variants <- cis_eQTL_tbl %>%
   filter(qval < 0.05) %>%
   pull(variant_id)
 n_sig_cis <- length(lead_variants)
-message(' ', n_sig_cis, 'FDR sig. eQTL loaded.')
+message(' ', n_sig_cis, ' FDR sig. eQTL loaded.')
 
 
 message('Loading trans-eQTL for: ', cell_type)
 trans_raw <- read_tsv(trans) 
-message(' ', nrow(trans_raw), 'trans eQTL loaded.')
+message(' ', nrow(trans_raw), ' trans eQTL loaded.')
 
 ## Get proxies -----
-message('Collecting LD proxies for: ', cell_type)
-LDproxy_batch(snp = lead_variants, 
-              pop = "CEU", 
-              r2d = "r2", 
-              token = token, 
-              genome_build = "grch38")
+# message('Collecting LD proxies for: ', cell_type)
+# LDproxy_batch(snp = lead_variants, 
+#               pop = "CEU", 
+#               r2d = "r2", 
+#               token = token, 
+#               genome_build = "grch38")
 
 ## Load proxies from file and filter -----
 # message('Loading proxies from files ...')
