@@ -118,6 +118,7 @@ message('Number of BF sig. trans eQTL: ', nrow(trans_sig))
 ## Annotate table -----
 # Add this, or maybe add it in markdown
 # message('Add annotations to trans-eQTL tbl ... ')
+# gene_lookup <- read_tsv('~/Desktop/eQTL_study_2025/resources/sheets/gene_lookup_hg38.tsv')
 # cis_lookup <- cis_eQTL_tbl |>
 #   filter(qval < 0.05) |>
 #   left_join(gene_lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
@@ -137,7 +138,7 @@ write_tsv(trans_sig, output)
 
 message('All Done.')
 
-gene_lookup <- read_tsv('~/Desktop/eQTL_study_2025/resources/sheets/gene_lookup_hg38.tsv')
+
 
 
 #--------------------------------------------------------------------------------------
