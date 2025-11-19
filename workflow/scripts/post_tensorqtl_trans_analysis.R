@@ -10,7 +10,6 @@
 #   3. Collate all rsIDs from step 1 and 2 and filter trans eQTL on rsID overlaps 
 #   4. Filter BF sig. trans eQTL
 
-
 # Note: for now just pulling out rsIDs that were lead SNPs in cis run from trans data
 
 #--------------------------------------------------------------------------------------
@@ -42,8 +41,8 @@ output      <- snakemake@output[[1]]
 cell_type   <- snakemake@wildcards[["cell_type"]]
 token       <- read_lines(token_file, n_max = 1) %>% str_trim()
 
-dir.create(proxy_dir)
-setwd(proxy_dir) # Need to set this as LDproxy_batch spits out files to wd
+#dir.create(proxy_dir)
+#setwd(proxy_dir) # Need to set this as LDproxy_batch spits out files to wd
 
 ## Load data -----
 message('Loading cis-eQTL for: ', cell_type)
@@ -68,41 +67,41 @@ LDproxy_batch(snp = lead_variants,
               genome_build = "grch38")
 
 ## Load proxies from file and filter -----
-message('Loading proxies from files ...')
-perfect_proxies <- list.files(proxy_dir, pattern = "\\.txt$", full.names = TRUE) %>%
-  set_names(~ basename(.) %>% str_remove("_grch38\\.txt$")) %>%
-  map_dfr(~ {
-    read_tsv(
-      .x,
-      col_names = c(                     
-        "row_num",
-        "RS_Number", "Coord", "Alleles", "MAF", "Distance",
-        "Dprime", "R2", "Correlated_Alleles", "FORGEdb",
-        "RegulomeDB", "Function"
-      ),
-      col_select = -row_num,
-      col_types = cols(),
-      skip = 1
-    ) %>%
-      mutate(query_snp = basename(.x) %>% str_remove("_grch38\\.txt$"))
-  }, .id = NULL) %>%                       # no extra id column needed now
-  filter(R2 == 1) %>%
-  select(query_snp, RS_Number, everything()) %>%
-  distinct()
-
-message('Loaded ', nrow(perfect_proxies), ' proxies')
-
-message('Removing non-biallelic proxies ... ')
-perfect_proxies_rs_ids <- perfect_proxies |>
-  filter(RS_Number != '.') |> # Non-biallelic SNP have rsID == '.'
-  pull(RS_Number)
-
-message(' ', nrow(perfect_proxies_rs_ids), ' remain.')
-
-message('Collating cis-eQTL and proxy rsIDs ... ')
-all_rs_ids <- c(lead_variants, perfect_proxies_rs_ids) |>
-  unique()
-message('  ', length(all_rs_ids),'rsIDs in total.')
+# message('Loading proxies from files ...')
+# perfect_proxies <- list.files(proxy_dir, pattern = "\\.txt$", full.names = TRUE) %>%
+#   set_names(~ basename(.) %>% str_remove("_grch38\\.txt$")) %>%
+#   map_dfr(~ {
+#     read_tsv(
+#       .x,
+#       col_names = c(                     
+#         "row_num",
+#         "RS_Number", "Coord", "Alleles", "MAF", "Distance",
+#         "Dprime", "R2", "Correlated_Alleles", "FORGEdb",
+#         "RegulomeDB", "Function"
+#       ),
+#       col_select = -row_num,
+#       col_types = cols(),
+#       skip = 1
+#     ) %>%
+#       mutate(query_snp = basename(.x) %>% str_remove("_grch38\\.txt$"))
+#   }, .id = NULL) %>%                       # no extra id column needed now
+#   filter(R2 == 1) %>%
+#   select(query_snp, RS_Number, everything()) %>%
+#   distinct()
+# 
+# message('Loaded ', nrow(perfect_proxies), ' proxies')
+# 
+# message('Removing non-biallelic proxies ... ')
+# perfect_proxies_rs_ids <- perfect_proxies |>
+#   filter(RS_Number != '.') |> # Non-biallelic SNP have rsID == '.'
+#   pull(RS_Number)
+# 
+# message(' ', nrow(perfect_proxies_rs_ids), ' remain.')
+# 
+# message('Collating cis-eQTL and proxy rsIDs ... ')
+# all_rs_ids <- c(lead_variants, perfect_proxies_rs_ids) |>
+#   unique()
+# message('  ', length(all_rs_ids),'rsIDs in total.')
 
 ## Intersect rsIDs with trans data -----
 bf_p <- 0.05 / (n_sig_cis * length(lead_variants))
