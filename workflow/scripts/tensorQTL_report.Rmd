@@ -884,8 +884,8 @@ for(cell_type in cell_types) {
 
   cat("  \n##### ", cell_type, "\n", sep = "")
   
-  trans_dir <- str_glue('../../results/05TENSORQTL/tensorqtl_trans/', cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
-  trans_file <- str_glue(trans_dir, cell_type, '_', norm_method, '.trans_qtl_pairs.txt.gz')
+  trans_dir <- str_glue('../../results/05TENSORQTL/post_trans/', cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+  trans_file <- str_glue(trans_dir, cell_type, '_', norm_method, '_post_trans.tsv')
   
   cis_dir <- str_glue(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
   cis_file <- str_glue(cis_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
