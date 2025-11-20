@@ -871,49 +871,6 @@ multi_eqtls_tbl <- multi_eqtls %>%
 print(multi_eqtls_tbl)
 ```
 
-
-***
-
-#### Trans
-
-```{r}
-trans_dir <- '~/Desktop/test/ldlinkR/'
-lookup <- read_tsv('~/Desktop/eQTL_study_2025/resources/sheets/gene_lookup_hg38.tsv')
-for(cell_type in cell_types) {
-
-  cat("  \n##### ", cell_type, "\n", sep = "")
-  
-  trans_ann <- read_tsv(str_glue(trans_dir, 'OPC_quantile_post_trans.tsv')) |>
-  left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
-  select(variant_id, trans_ens_id = phenotype_id, trans_smbl = external_gene_name, 
-         trans_biotype = gene_biotype, trans_chr = chromosome_name, pval, b, b_se, af) |>
-  filter(variant_id != '.') |> # Rm non-biallelic SNPs
-  print(n = Inf)
-
-  cis_tbl <- read_tsv('~/Desktop/test/ExN-UL_quantile_perm.cis_qtl.txt.gz') 
-  cis_ann <- cis_tbl |>
-    filter(qval < 0.05) |>
-    left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
-    select(variant_id, cis_ens_id = phenotype_id, cis_smbl = external_gene_name, 
-           cis_biotype = gene_biotype, cis_chr = chromosome_name)
-
-
-  test <- trans_ann |>
-    inner_join(cis_ann, by = join_by(variant_id)) |>
-    distinct()
-
-  cis_tbl |> count(variant_id) |> arrange(desc(n))
-  trans_ann |> count(variant_id) |> arrange(desc(n))
-
-  lead_variants <- cis_ann %>%
-    pull(variant_id)
-  n_sig_cis <- length(lead_variants)
-bf_p <- 0.05 / (n_sig_cis * length(lead_variants))
-  cat(' \n')
-}
-```
-
-
 ***
 
 #### Trans {.tabset}
