@@ -920,7 +920,7 @@ bf_p <- 0.05 / (n_sig_cis * length(lead_variants))
 
 ***
 
-```{r, summary_table, echo = FALSE, message = FALSE, warning = FALSE, , results='asis'}
+```{r, trans_table, echo = FALSE, message = FALSE, warning = FALSE, , results='asis'}
 lookup <- read_tsv('../../resources/sheets/gene_lookup_hg38.tsv')
 
 for(cell_type in cell_types) {
