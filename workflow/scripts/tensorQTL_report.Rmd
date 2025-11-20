@@ -317,7 +317,7 @@ for (cell_type in cell_types) {
   f <- file.path(
     in_dir,
     paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC),
-    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")  # adjust filename
+    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")  
   )
   
   if (file.exists(f)) {
@@ -869,6 +869,147 @@ multi_eqtls_tbl <- multi_eqtls %>%
     table_body.border.bottom.color = "black"
   )
 print(multi_eqtls_tbl)
+```
+
+
+***
+
+#### Trans
+
+```{r}
+trans_dir <- '~/Desktop/test/ldlinkR/'
+lookup <- read_tsv('~/Desktop/eQTL_study_2025/resources/sheets/gene_lookup_hg38.tsv')
+for(cell_type in cell_types) {
+
+  cat("  \n##### ", cell_type, "\n", sep = "")
+  
+  trans_ann <- read_tsv(str_glue(trans_dir, 'OPC_quantile_post_trans.tsv')) |>
+  left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
+  select(variant_id, trans_ens_id = phenotype_id, trans_smbl = external_gene_name, 
+         trans_biotype = gene_biotype, trans_chr = chromosome_name, pval, b, b_se, af) |>
+  filter(variant_id != '.') |> # Rm non-biallelic SNPs
+  print(n = Inf)
+
+  cis_tbl <- read_tsv('~/Desktop/test/ExN-UL_quantile_perm.cis_qtl.txt.gz') 
+  cis_ann <- cis_tbl |>
+    filter(qval < 0.05) |>
+    left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
+    select(variant_id, cis_ens_id = phenotype_id, cis_smbl = external_gene_name, 
+           cis_biotype = gene_biotype, cis_chr = chromosome_name)
+
+
+  test <- trans_ann |>
+    inner_join(cis_ann, by = join_by(variant_id)) |>
+    distinct()
+
+  cis_tbl |> count(variant_id) |> arrange(desc(n))
+  trans_ann |> count(variant_id) |> arrange(desc(n))
+
+  lead_variants <- cis_ann %>%
+    pull(variant_id)
+  n_sig_cis <- length(lead_variants)
+bf_p <- 0.05 / (n_sig_cis * length(lead_variants))
+  cat(' \n')
+}
+```
+
+
+***
+
+#### Trans {.tabset}
+
+***
+
+```{r, summary_table, echo = FALSE, message = FALSE, warning = FALSE, , results='asis'}
+lookup <- read_tsv('../../resources/sheets/gene_lookup_hg38.tsv')
+
+for(cell_type in cell_types) {
+
+  cat("  \n##### ", cell_type, "\n", sep = "")
+  
+  trans_dir <- str_glue('../../results/05TENSORQTL/tensorqtl_trans/', cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+  trans_file <- str_glue(trans_dir, cell_type, '_', norm_method, '.trans_qtl_pairs.txt.gz')
+  
+  cis_dir <- str_glue(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+  cis_file <- str_glue(cis_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
+  
+  trans_ann <- read_tsv(trans_file) |>
+  left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
+  select(variant_id, trans_ens_id = phenotype_id, trans_smbl = external_gene_name, 
+         trans_biotype = gene_biotype, trans_chr = chromosome_name, pval, b, b_se, af) |>
+  filter(variant_id != '.') 
+
+  cis_tbl <- read_tsv(cis_file)
+  cis_ann <- cis_tbl |>
+    filter(qval < 0.05) |>
+    left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
+    select(variant_id, cis_ens_id = phenotype_id, cis_smbl = external_gene_name, 
+           cis_biotype = gene_biotype, cis_chr = chromosome_name)
+
+
+  trans_final <- trans_ann |>
+    inner_join(cis_ann, by = join_by(variant_id)) |>
+    distinct() |>
+    mutate(trans_biotype = str_remove(trans_biotype, "transcribed_unprocessed_")) |>
+    mutate(trans_biotype = str_remove(cis_biotype, "transcribed_unprocessed_"))
+
+  cis_tbl |> count(variant_id) |> arrange(desc(n))
+  trans_ann |> count(variant_id) |> arrange(desc(n))
+
+  lead_variants <- cis_ann %>%
+    pull(variant_id)
+  n_sig_cis <- length(lead_variants)
+  bf_p <- 0.05 / (n_sig_cis * length(lead_variants))
+  
+  gt_tbl <- trans_final |>
+  arrange(trans_chr == "17", trans_chr) |>
+  select(rsID              = variant_id,
+         `Trans Gene`      = trans_smbl,
+         `Trans ENSG`      = trans_ens_id,
+         `Trans Biotype`   = trans_biotype,
+         `Trans Chr`       = trans_chr,
+         `Cis Gene`        = cis_smbl,
+         `Cis ENSG`        = cis_ens_id,
+         `Cis Biotype`     = cis_biotype,
+         `Cis Chr`         = cis_chr,
+         P                 = pval,
+         `β`               = b,
+         SE                = b_se,
+         AF                = af) |>
+  gt() |>
+  tab_header(
+    title = md(paste(cell_type, " trans eQTL")),
+    subtitle = md(paste('Boneferonni P: ', bf_p))
+  ) |>
+  fmt_number(columns = c(P, `β`, SE, AF), decimals = 2) |>
+  fmt_markdown(columns = everything()) |> 
+  cols_align(align = "center", columns = everything()) |>
+  
+  # ─── Vertical borders for visual breathing room ───
+  tab_style(
+    style = cell_borders(sides = "right", weight = px(2), color = "gray70"),
+    locations = cells_body(columns = c(rsID, `Trans Chr`, `Cis Chr`))
+  ) |>
+  
+  tab_style(
+    style = cell_borders(sides = "bottom", color = "black", weight = px(3)),
+    locations = cells_body(
+      rows = which(`Trans Chr` != "17")[sum(`Trans Chr` != "17")]   # last non-17 row
+    )
+  ) |>
+    
+  tab_options(
+    table.font.size = px(13),
+    column_labels.font.weight = "bold",
+    heading.title.font.size = px(18),
+    heading.subtitle.font.size = px(14)
+  )
+  
+  # Print the gt table
+  print(gt_tbl)
+  
+  cat("\n\n")
+}
 ```
 
 ***
