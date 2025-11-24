@@ -102,6 +102,8 @@ for (g in gwas) {
     # Create and print gt table
     z_gene %>%
       dplyr::select(symbol, gene, z, pval, fdr, gene_biotype, chr) %>%
+      mutate(cell_type = ct) %>%
+      relocate(cell_type, .before = symbol) %>%
       gt() %>%
       tab_header(
         title = md(paste0("**", toupper(g), " – ", ct, "**")),
