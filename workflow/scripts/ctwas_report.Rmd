@@ -17,20 +17,24 @@ params:
 library(gt)
 library(tidyverse)
 library(ctwas)
-library(EnsDb.Hsapiens.v86)
+#library(EnsDb.Hsapiens.v86)
 library(cowplot)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 lookup_dir <- params$lookup_dir 
 
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+# in_dir <- '~/Desktop/test/ctwas/'
+# lookup_dir <- '~/Desktop/eQTL_study_2025/resources/sheets/'
+# bmark_dir <- ''
+
+cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "MG", "OPC")
 gwas <- c("scz", "bpd", "mdd", "adhd", "ocd", "ptsd")
 gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
-gwas_n <- 126849 # scz approx - need to pull from ctwas_run
+#gwas_n <- 126849 # scz approx - need to pull from ctwas_run
 
-ens_db <- EnsDb.Hsapiens.v86
+#ens_db <- EnsDb.Hsapiens.v86
 ```
 
 ***
@@ -39,8 +43,7 @@ ens_db <- EnsDb.Hsapiens.v86
 
 ***
 
-We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to integrate our sc-eQTL data with neuropsychiatric GWAS data to identify putative candidate genes associated with these conditions.   [Wen et al 2024]() to boost our eQTL discovery power. 
-The citation for cTWAS is [Zhao et al. (2025), DOI: 10.1038/s41588-023-01648-9](https://www.nature.com/articles/s41588-023-01648-9).
+We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to integrate our sc-eQTL data with neuropsychiatric GWAS data to identify putative candidate genes associated with these conditions. The citation for cTWAS is [Zhao et al. (2025), DOI: 10.1038/s41588-023-01648-9](https://www.nature.com/articles/s41588-023-01648-9).
 
 ***
 
@@ -58,127 +61,157 @@ TODO:
 
 ### Z-scores {.tabset}
 
-```{r, cTWAS_z_score_tbl, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
-# === TWO-TIER LOOP: GWAS (####) → Cell types (#####) ===
+```{r, cTWAS_z_score_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 for (g in gwas) {
-  
-  cat("\n#### ", toupper(g), " {.tabset .tabset-fade}\n\n")
+  cat("#### ", toupper(g), " {.tabset}\n\n")
   
   for (ct in cell_types) {
-    
-    # Construct filename
-    file_path <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
-    
-    # Read data
-    ctw_res <- read_rds(file_path)
-    
-    if (!"z_gene" %in% names(ctw_res) || nrow(ctw_res$z_gene) == 0) {
-      cat("\n##### ", ct, "\n")
-      cat("No gene results available.\n\n")
-      next
-    }
-    
-    # Process z_gene table
+    file <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
+    ctw_res  <- read_rds(file)
+    # Process data
     z_gene <- as_tibble(ctw_res$z_gene) |>
-    separate(id, into = c('gene', 'id'), sep = "\\|") |>
-    separate(id, into = c('cell_type', 'id'), sep = "_") |>
+      separate(id, into = c('gene', 'id'), sep = "\\|") |>
+      separate(id, into = c('cell_type', 'id'), sep = "_") |>
       left_join(gene_lookup, by = join_by(gene == ensembl_id)) |>
-      mutate(
-        pval = 2 * pnorm(-abs(z)),
-        fdr  = p.adjust(pval, method = "BH")
-      ) |>
+      mutate(pval = 2 * pnorm(-abs(z)),
+             fdr  = p.adjust(pval, method = "BH")) |>
       dplyr::filter(fdr < 0.05) |>
       arrange(fdr) |>
-      distinct()
+      distinct(gene, .keep_all = TRUE) |>
+      dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype, chr)
     
-    # Sub-tab header
-    cat("\n#### ", ct, "\n\n")
+ cat("#####", ct, "\n\n")
     
-    # If no significant genes
     if (nrow(z_gene) == 0) {
-      cat("**No significant genes (FDR < 0.05)**\n\n")
-      next
+      cat("No significant genes (FDR < 0.05)\n\n")
+    } else {
+      z_gene |>
+        gt() |>
+        tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
+                   subtitle = md(paste0("cTWAS significant genes (FDR < 0.05): ", nrow(z_gene)))) |>
+        fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
+        cols_label(cell_type = "Cell Type",
+                   symbol = "Gene Symbol",
+                   gene = "ENSG ID",
+                   z = "Z-score",
+                   pval = "P-value",
+                   fdr = "FDR",
+                   gene_biotype = "Gene Type",
+                   chr = "Chr") |>
+    # MAGIC SETTINGS BELOW
+    tab_options(
+        table.font.size = "85%",                 # smaller font
+        data_row.padding = px(4),                # less vertical space per row
+        column_labels.font.weight = "bold",
+        table.width = pct(100),                  # use full width
+        table.border.top.style = "none",
+        table.border.bottom.style = "solid",
+        table.border.bottom.width = px(2),
+        table.border.bottom.color = "gray70"
+    ) |>
+    opt_table_font(font = "Arial") |>
+    tab_style(
+        style = cell_text(size = px(12)),
+        locations = cells_body()
+    ) |>
+    cols_width(
+        everything() ~ px(90)                    # force narrow columns
+    ) |>
+    opt_css(
+        css = "
+      .gt_row { white-space: nowrap; }       /* prevent wrapping in cells */
+      .gt_table { overflow-x: auto; }        /* horizontal scroll if needed */
+    "
+    ) |>
+    print()
+      cat("\n\n")
     }
-    
-    # Create and print gt table
-    z_gene %>%
-      dplyr::select(symbol, gene, z, pval, fdr, gene_biotype, chr) %>%
-      mutate(cell_type = ct) %>%
-      relocate(cell_type, .before = symbol) %>%
-      gt() %>%
-      tab_header(
-        title = md(paste0("**", toupper(g), " – ", ct, "**")),
-        subtitle = "cTWAS significant genes (FDR < 0.05)"
-      ) %>%
-      fmt_scientific(columns = c("pval", "fdr"), decimals = 2) %>%
-      cols_label(
-        cell_type    = "Cell Type",
-        symbol       = "Gene Symbol",
-        gene         = "ENSG ID",
-        z            = "Z-score",
-        pval         = "P-value",
-        fdr          = "FDR",
-        gene_biotype = "Gene Type",
-        chr          = "Chr"
-      ) %>%
-      tab_options(table.font.size = "90%") %>%
-      print()
-    
-    cat("\n\n")  # spacing between tables
   }
 }
-
-# ctwas_res <- read_rds(paste0(in_dir, "ctwas_ExN-UL_scz_ctwas.rds"))
-# z_gene <- as_tibble(ctwas_res$z_gene) |>
-#   separate(id, into = c('gene', 'id'), sep = "\\|") |>
-#   separate(id, into = c('cell_type', 'id'), sep = "_") |>
-#   left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-#   mutate(pval = 2 * pnorm(-abs(z)),
-#          fdr = p.adjust(pval, method = "BH")) |>
-#   dplyr::filter(fdr < 0.05) |>
-#   arrange(fdr) |>
-#   dplyr::select(cell_type, gene, symbol, z, pval, fdr, gene_biotype, chr, start, end) |>
-#   distinct() |>
-#   print(n = Inf)
-# 
-# # Table
-# z_gene %>%
-#   dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) %>%
-#   gt() %>%
-#   tab_header("Table 1. cTWAS significant genes (FDR < 0.05)") %>%
-#   fmt_scientific(columns = c(pval, fdr), decimals = 2) %>%
-#   cols_label(
-#     cell_type = "Cell Type",
-#     symbol = "Gene",
-#     z = "Z-score",
-#     pval = "P-value",
-#     fdr = "FDR",
-#     gene_biotype = "Type"
-#   )
 ```
 
 ***
 
-### Fine-mapping
+### Fine-mapping {.tabset}
 
 ***
 
-```{r ctwas_fine_mapping_tbl, echo = FALSE, message = FALSE, warning = FALSE}
-# finemap_res <- as_tibble(ctwas_res$finemap_res) |>
-#   dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
-#   separate(id, into = c('gene', 'id'), sep = "\\|") |>
-#   separate(id, into = c('cell_type', 'id'), sep = "_") |>
-#   left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-#   arrange(desc(susie_pip))
-# susie_alpha_res <- ctwas_res$susie_alpha_res
-# region_data <- ctwas_res$region_data
-# screen_res <- ctwas_res$screen_res
-# 
-# finemap_res %>%
-#   dplyr::filter(susie_pip > 0.8) %>%
-#   dplyr::select(symbol, cell_type, susie_pip, cs) %>%
-#   gt() %>%
-#   tab_header("Table 2. Fine-mapped causal genes (SuSiE PIP > 0.8)")
+```{r ctwas_fine_mapping_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+
+for (g in gwas) {
+  cat("#### ", toupper(g), " {.tabset}\n\n")
+  
+  for (ct in cell_types) {
+    file <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
+    ctw_res  <- read_rds(file)
+    
+    # ── SAFE extraction of finemap_res ──
+    if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
+      cat("##### ", ct, "\n\n")
+      cat("**No finemapped genes (no credible sets identified)**\n\n")
+      next
+    }
+    
+    finemap_res <- as_tibble(ctw_res$finemap_res) |>
+      dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
+      separate(id, into = c('gene', 'id'), sep = "\\|") |>
+      separate(id, into = c('cell_type', 'id'), sep = "_") |>
+      left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+      arrange(desc(susie_pip)) |>
+      mutate(pval = 2 * pnorm(-abs(z)),
+               fdr  = p.adjust(pval, method = "BH")) |>
+      dplyr::select(cell_type, symbol, gene, z, pval, fdr, susie_pip, cs, gene_biotype, chr)
+    
+    cat("#####", ct, "\n\n")
+    
+    if (nrow(finemap_res) == 0) {
+      cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
+  } else {
+    finemap_res |>
+      gt() |>
+      tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
+                 subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))) |>
+      fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
+      cols_label(cell_type = "Cell Type",
+                 symbol = "Gene Symbol",
+                 gene = "ENSG ID",
+                 z = "Z-score",
+                 pval = "P-value",
+                 fdr = "FDR",
+                 susie_pip = "PIP",
+                 cs = "CS",
+                 gene_biotype = "Gene Type",
+                 chr = "Chr") |>
+  # MAGIC SETTINGS BELOW
+      tab_options(
+          table.font.size = "85%",                 # smaller font
+          data_row.padding = px(4),                # less vertical space per row
+          column_labels.font.weight = "bold",
+          table.width = pct(100),                  # use full width
+          table.border.top.style = "none",
+          table.border.bottom.style = "solid",
+          table.border.bottom.width = px(2),
+          table.border.bottom.color = "gray70"
+      ) |>
+      opt_table_font(font = "Arial") |>
+      tab_style(
+          style = cell_text(size = px(12)),
+          locations = cells_body()
+      ) |>
+      opt_css(
+          css = "
+        .gt_row { white-space: nowrap; }       /* prevent wrapping in cells */
+        .gt_table { overflow-x: auto; }        /* horizontal scroll if needed */
+      "
+      ) |>
+      print()
+      cat("\n\n")
+      
+      }
+    
+  }
+  
+}
 ```
 
 ***
@@ -292,14 +325,14 @@ summary %>%
 ***
 
 ```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
-runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
                                  y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
   geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
                     ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "Runtime (minutes)", 
+  labs(x = "Rule", y = "Runtime (minutes)",
        title = "Mean runtime per rule") +
   theme_classic(base_size = 16) +
   theme(
@@ -312,14 +345,14 @@ runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
 
 
 
-mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
                                 y = mean_ram_gb)) +
   geom_col(fill = "darkorange") +
   geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
                     ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "RAM (GB)", 
+  labs(x = "Rule", y = "RAM (GB)",
        title = "Mean RAM usage per rule") +
   theme_classic(base_size = 16) +
   theme(
