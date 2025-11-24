@@ -88,8 +88,7 @@ for (g in gwas) {
       ) |>
       dplyr::filter(fdr < 0.05) |>
       arrange(fdr) |>
-      distinct() |>
-      dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) 
+      distinct()
     
     # Sub-tab header
     cat("\n#### ", ct, "\n\n")
