@@ -251,15 +251,36 @@ summary <- benchmarks %>%
   arrange(rule)
 
 # Table
-datatable(
-  summary,
-  caption = 'Table 3. Rule benchmarking. Means and SD across replicates.',
-  options = list(
-    pageLength = 25,
-    autoWidth = TRUE,
-    columnDefs = list(list(className = 'dt-center', targets = "_all"))
+summary %>%
+  gt() %>%
+  tab_header(
+    title = "Table X. Benchmarking",
+    subtitle = "Means and SD across replicates"
+  ) %>%
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) %>%
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) %>%
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
   )
-)
 
 ```
 
