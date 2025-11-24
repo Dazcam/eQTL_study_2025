@@ -46,12 +46,12 @@ in_dir  <- params$in_dir
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.CS95.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
   separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
-  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd"))) |>
+  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd|adhd|ocd|ptsd"))) |>
   select(-Category, -suffix) |>
   relocate(cell_type, disorder) |>
   mutate(ldsr = if_else(`Coefficient_z-score` > 0,
                         -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
-  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD")))
+  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD", "ADHD", "OCD", "PTSD")))
 
 # --- Custom colour palette
 custom_palette <- c(
@@ -374,6 +374,204 @@ ldsr_tbl %>%
 
 ***
 
+##### ADHD {.tabset}
+
+***
+
+```{r, cs95_adhd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'ADHD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  select(-main_type, -cluster_level) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 4. ADHD S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+##### OCD {.tabset}
+
+***
+
+```{r, cs95_ocd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'OCD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  select(-main_type, -cluster_level) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 5. OCD S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+##### PTSD {.tabset}
+
+***
+
+```{r, cs95_ptsd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'PTSD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  select(-main_type, -cluster_level) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 6. PTSD S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
 ### MaxCPP {.tabset}
 
 ***
@@ -543,7 +741,7 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 4. Schizophrenia S-LDSC Results",
+    title = "Table 7. Schizophrenia S-LDSC Results",
     subtitle = "Max CPP eQTL used as annotation"
   ) %>%
   # Rename columns for display
@@ -609,7 +807,7 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 5. Bipolar Disorder S-LDSC Results",
+    title = "Table 8. Bipolar Disorder S-LDSC Results",
     subtitle = "Max CPP eQTL used as annotation"
   ) %>%
   # Rename columns for display
@@ -675,7 +873,7 @@ ldsr_tbl %>%
   gt() %>%
   # Add table header and subtitle
   tab_header(
-    title = "Table 6. Major Depressive Disorder S-LDSC Results",
+    title = "Table 9. Major Depressive Disorder S-LDSC Results",
     subtitle = "Max CPP eQTL used as annotation"
   ) %>%
   # Rename columns for display
@@ -716,3 +914,200 @@ ldsr_tbl %>%
 
 ***
 
+##### ADHD
+
+***
+
+```{r, maxCPP_adhd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'ADHD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  select(-main_type, -cluster_level) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 10. ADHD S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+##### OCD
+
+***
+
+```{r, maxCPP_ocd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'OCD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  select(-main_type, -cluster_level) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 11. OCD S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+##### OCD
+
+***
+
+```{r, maxCPP_ptsd_table, sldsr_table, echo = FALSE, message=FALSE}
+ldsr_tbl %>%
+  filter(disorder == 'PTSD') %>%
+  # Round numeric columns to avoid excessive precision
+  mutate(
+    Prop._SNPs = signif(Prop._SNPs, 3),
+    Prop._h2 = signif(Prop._h2, 3),
+    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
+    Enrichment = signif(Enrichment, 3),
+    Enrichment_std_error = signif(Enrichment_std_error, 3),
+    Enrichment_p = signif(Enrichment_p, 3),
+    Coefficient = signif(Coefficient, 3),
+    Coefficient_std_error = signif(Coefficient_std_error, 3),
+    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
+    ldsr = signif(ldsr, 3)
+  ) %>%
+  select(-main_type, -cluster_level) %>%
+  # Create the gt table
+  gt() %>%
+  # Add table header and subtitle
+  tab_header(
+    title = "Table 12. PTSD S-LDSC Results",
+    subtitle = "95% CS eQTL used as annotation"
+  ) %>%
+  # Rename columns for display
+  cols_label(
+    cell_type = "Cell Type",
+    disorder = "Disorder",
+    Prop._SNPs = "Prop. SNPs",
+    Prop._h2 = "Prop. Heritability",
+    Prop._h2_std_error = "Prop. Heritability SE",
+    Enrichment = "Enrichment",
+    Enrichment_std_error = "Enrichment SE",
+    Enrichment_p = "Enrichment p-value",
+    Coefficient = "Coefficient",
+    Coefficient_std_error = "Coefficient SE",
+    `Coefficient_z-score` = "Coefficient z-score",
+    ldsr = "LDSR"
+  ) %>%
+  # Format small values in scientific notation with 2 decimal places
+  fmt_scientific(
+    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
+    decimals = 2
+  ) %>%
+  # Format other numeric columns with 3 decimal places
+  fmt_number(
+    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
+    decimals = 3,
+    use_seps = TRUE
+  ) %>%
+  # Customize table appearance
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3),
+    heading.align = "center",
+    column_labels.font.weight = "bold"
+  )
+```
+
+***
