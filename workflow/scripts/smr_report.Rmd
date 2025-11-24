@@ -17,7 +17,7 @@ params:
 
 ***
 
-We used the the Yang Lab toll for [SMR](https://yanglab.westlake.edu.cn/software/smr/#Overview).The citation for SMR is [Nature Genetics, 48:481-487](https://www.nature.com/articles/ng.3538).
+We used the the Yang Lab binary for [SMR](https://yanglab.westlake.edu.cn/software/smr/#Overview).The citation for SMR is [Nature Genetics, 48:481-487](https://www.nature.com/articles/ng.3538).
 
 ***
 
@@ -368,6 +368,108 @@ datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 
 ***
 
+#### ADHD {.tabset}
+
+***
+
+##### SMR summary
+
+***
+
+```{r smr_summary_adhd, results='asis', echo=FALSE}
+disorder <- 'adhd'
+summary_data <- bind_rows(
+  lapply(cell_types, function(ct) summarize_smr(ct, in_dir, disorder))
+)
+datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
+```
+
+***
+
+##### SMR and HEIDI sig (full)
+
+```{r smr_heidi_sig_adhd, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(
+  lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
+)
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
+```
+
+***
+
+##### SMR and HEIDI sig (abbr. w. symbols)
+
+```{r smr_heidi_symbol_adhd, echo=FALSE}
+sig_tbl <- all_sig_results |>
+  left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
+  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+```
+
+
+***
+
+##### SMR logs
+
+```{r logs_adhd, echo=FALSE}
+log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+```
+
+***
+
+#### OCD {.tabset}
+
+***
+
+##### SMR summary
+
+***
+
+```{r smr_summary_ocd, results='asis', echo=FALSE}
+disorder <- 'ocd'
+summary_data <- bind_rows(
+  lapply(cell_types, function(ct) summarize_smr(ct, in_dir, disorder))
+)
+datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Results by Cell Type')
+```
+
+***
+
+##### SMR and HEIDI sig (full)
+
+```{r smr_heidi_sig_ocd, results='asis', echo=FALSE}
+all_sig_results <- bind_rows(
+  lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
+)
+datatable(as.data.frame(all_sig_results), caption = 'Significant SMR and HEIDI results by Cell Type (full)')
+```
+
+***
+
+##### SMR and HEIDI sig (abbr. w. symbols)
+
+```{r smr_heidi_symbol_ocd, echo=FALSE}
+sig_tbl <- all_sig_results |>
+  left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
+  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name, gene_biotype, topSNP, topSNP_chr, p_SMR,	p_HEIDI,	nsnp_HEIDI)
+
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+```
+
+
+***
+
+##### SMR logs
+
+```{r logs_ocd, echo=FALSE}
+log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+```
+
+***
+
 #### Benchmarking {.tabset}
 
 ***
@@ -400,8 +502,6 @@ benchmarks <- map_dfr(files, function(f) {
     max_rss = df$max_rss
   )
 })
-
-
 
 # Summarise by rule
 summary <- benchmarks %>%
