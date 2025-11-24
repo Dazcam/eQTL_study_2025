@@ -23,8 +23,7 @@ bmark_dir <- params$bmark_dir
 lookup_dir <- params$lookup_dir 
 
 cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
-
-ctwas_res <- read_rds(paste0(in_dir, "ctwas_ExN-UL_scz_ctwas.rds"))
+gwas <- c("scz", "bpd", "mdd", "adhd", "ocd", "ptsd")
 gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
@@ -56,35 +55,104 @@ TODO:
 
 ***
 
-### Z-scores
+### Z-scores {.tabset}
 
-```{r, cTWAS_z_score_tbl, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-z_gene <- as_tibble(ctwas_res$z_gene) |>
-  separate(id, into = c('gene', 'id'), sep = "\\|") |>
-  separate(id, into = c('cell_type', 'id'), sep = "_") |>
-  left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-  mutate(pval = 2 * pnorm(-abs(z)),
-         fdr = p.adjust(pval, method = "BH")) |>
-  dplyr::filter(fdr < 0.05) |>
-  arrange(fdr) |>
-  dplyr::select(cell_type, gene, symbol, z, pval, fdr, gene_biotype, chr, start, end) |>
-  distinct() |>
-  print(n = Inf)
+```{r, cTWAS_z_score_tbl, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+# === TWO-TIER LOOP: GWAS (####) → Cell types (#####) ===
+for (g in gwas) {
+  
+  cat("\n#### ", toupper(g), " {.tabset .tabset-fade}\n\n")
+  
+  for (ct in cell_types) {
+    
+    # Construct filename
+    file_path <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
+    
+    # Read data
+    ctw_res <- read_rds(file_path)
+    
+    if (!"z_gene" %in% names(ctw_res) || nrow(ctw_res$z_gene) == 0) {
+      cat("\n##### ", ct, "\n")
+      cat("No gene results available.\n\n")
+      next
+    }
+    
+    # Process z_gene table
+    z_gene <- as_tibble(ctw_res$z_gene) |>
+    separate(id, into = c('gene', 'id'), sep = "\\|") |>
+    separate(id, into = c('cell_type', 'id'), sep = "_") |>
+      left_join(gene_lookup, by = join_by(gene == ensembl_id)) |>
+      mutate(
+        pval = 2 * pnorm(-abs(z)),
+        fdr  = p.adjust(pval, method = "BH")
+      ) |>
+      dplyr::filter(fdr < 0.05) |>
+      arrange(fdr) |>
+      distinct() |>
+      dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) 
+    
+    # Sub-tab header
+    cat("\n#### ", ct, "\n\n")
+    
+    # If no significant genes
+    if (nrow(z_gene) == 0) {
+      cat("**No significant genes (FDR < 0.05)**\n\n")
+      next
+    }
+    
+    # Create and print gt table
+    z_gene %>%
+      dplyr::select(symbol, gene, z, pval, fdr, gene_biotype, chr) %>%
+      gt() %>%
+      tab_header(
+        title = md(paste0("**", toupper(g), " – ", ct, "**")),
+        subtitle = "cTWAS significant genes (FDR < 0.05)"
+      ) %>%
+      fmt_scientific(columns = c("pval", "fdr"), decimals = 2) %>%
+      cols_label(
+        cell_type    = "Cell Type",
+        symbol       = "Gene Symbol",
+        gene         = "ENSG ID",
+        z            = "Z-score",
+        pval         = "P-value",
+        fdr          = "FDR",
+        gene_biotype = "Gene Type",
+        chr          = "Chr"
+      ) %>%
+      tab_options(table.font.size = "90%") %>%
+      print()
+    
+    cat("\n\n")  # spacing between tables
+  }
+}
 
-# Table
-z_gene %>%
-  dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) %>%
-  gt() %>%
-  tab_header("Table 1. cTWAS significant genes (FDR < 0.05)") %>%
-  fmt_scientific(columns = c(pval, fdr), decimals = 2) %>%
-  cols_label(
-    cell_type = "Cell Type",
-    symbol = "Gene",
-    z = "Z-score",
-    pval = "P-value",
-    fdr = "FDR",
-    gene_biotype = "Type"
-  )
+# ctwas_res <- read_rds(paste0(in_dir, "ctwas_ExN-UL_scz_ctwas.rds"))
+# z_gene <- as_tibble(ctwas_res$z_gene) |>
+#   separate(id, into = c('gene', 'id'), sep = "\\|") |>
+#   separate(id, into = c('cell_type', 'id'), sep = "_") |>
+#   left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+#   mutate(pval = 2 * pnorm(-abs(z)),
+#          fdr = p.adjust(pval, method = "BH")) |>
+#   dplyr::filter(fdr < 0.05) |>
+#   arrange(fdr) |>
+#   dplyr::select(cell_type, gene, symbol, z, pval, fdr, gene_biotype, chr, start, end) |>
+#   distinct() |>
+#   print(n = Inf)
+# 
+# # Table
+# z_gene %>%
+#   dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype) %>%
+#   gt() %>%
+#   tab_header("Table 1. cTWAS significant genes (FDR < 0.05)") %>%
+#   fmt_scientific(columns = c(pval, fdr), decimals = 2) %>%
+#   cols_label(
+#     cell_type = "Cell Type",
+#     symbol = "Gene",
+#     z = "Z-score",
+#     pval = "P-value",
+#     fdr = "FDR",
+#     gene_biotype = "Type"
+#   )
 ```
 
 ***
