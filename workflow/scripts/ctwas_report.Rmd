@@ -109,13 +109,19 @@ for (g in gwas) {
         table.border.bottom.width = px(2),
         table.border.bottom.color = "gray70"
     ) |>
+    cols_width(gene ~ px(150),           
+               symbol ~ px(100),         
+               cell_type ~ px(80),
+               z ~ px(70),
+               pval ~ px(90),
+               fdr ~ px(90),
+               chr ~ px(50),
+               gene_biotype ~ px(110)
+    ) |>
     opt_table_font(font = "Arial") |>
     tab_style(
         style = cell_text(size = px(12)),
         locations = cells_body()
-    ) |>
-    cols_width(
-        everything() ~ px(90)                    # force narrow columns
     ) |>
     opt_css(
         css = "
@@ -168,43 +174,36 @@ for (g in gwas) {
       cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
   } else {
     finemap_res |>
-      gt() |>
-      tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
-                 subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))) |>
-      fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
-      cols_label(cell_type = "Cell Type",
-                 symbol = "Gene Symbol",
-                 gene = "ENSG ID",
-                 z = "Z-score",
-                 pval = "P-value",
-                 fdr = "FDR",
-                 susie_pip = "PIP",
-                 cs = "CS",
-                 gene_biotype = "Gene Type",
-                 chr = "Chr") |>
-  # MAGIC SETTINGS BELOW
-      tab_options(
-          table.font.size = "85%",                 # smaller font
-          data_row.padding = px(4),                # less vertical space per row
-          column_labels.font.weight = "bold",
-          table.width = pct(100),                  # use full width
-          table.border.top.style = "none",
-          table.border.bottom.style = "solid",
-          table.border.bottom.width = px(2),
-          table.border.bottom.color = "gray70"
-      ) |>
-      opt_table_font(font = "Arial") |>
-      tab_style(
-          style = cell_text(size = px(12)),
-          locations = cells_body()
-      ) |>
-      opt_css(
-          css = "
-        .gt_row { white-space: nowrap; }       /* prevent wrapping in cells */
-        .gt_table { overflow-x: auto; }        /* horizontal scroll if needed */
-      "
-      ) |>
-      print()
+    gt() |>
+    tab_header(
+      title = md(paste0("**", toupper(g), " – ", ct, "**")),
+      subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
+    ) |>
+    fmt_scientific(columns = c(pval, fdr, z), decimals = 2) |>
+    fmt_number(columns = susie_pip, decimals = 3) |>
+    cols_label(
+      cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
+      pval = "P", fdr = "FDR", susie_pip = "PIP", cs = "CS",
+      gene_biotype = "Type", chr = "Chr"
+    ) |>
+    cols_width(
+      gene ~ px(150),           
+      symbol ~ px(100),         
+      cell_type ~ px(80),
+      z ~ px(70),
+      pval ~ px(90),
+      fdr ~ px(90),
+      susie_pip ~ px(70),
+      cs ~ px(50),
+      chr ~ px(50),
+      gene_biotype ~ px(110)
+    ) |>
+    tab_options(
+      table.font.size = "84%",
+      data_row.padding = px(4),
+      column_labels.font.weight = "bold"
+    ) |>
+    print()
       cat("\n\n")
       
       }
