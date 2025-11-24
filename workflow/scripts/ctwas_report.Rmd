@@ -163,21 +163,21 @@ for (g in gwas) {
 ***
 
 ```{r ctwas_fine_mapping_tbl, echo = FALSE, message = FALSE, warning = FALSE}
-finemap_res <- as_tibble(ctwas_res$finemap_res) |>
-  dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
-  separate(id, into = c('gene', 'id'), sep = "\\|") |>
-  separate(id, into = c('cell_type', 'id'), sep = "_") |>
-  left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-  arrange(desc(susie_pip))
-susie_alpha_res <- ctwas_res$susie_alpha_res
-region_data <- ctwas_res$region_data
-screen_res <- ctwas_res$screen_res
-
-finemap_res %>%
-  dplyr::filter(susie_pip > 0.8) %>%
-  dplyr::select(symbol, cell_type, susie_pip, cs) %>%
-  gt() %>%
-  tab_header("Table 2. Fine-mapped causal genes (SuSiE PIP > 0.8)")
+# finemap_res <- as_tibble(ctwas_res$finemap_res) |>
+#   dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
+#   separate(id, into = c('gene', 'id'), sep = "\\|") |>
+#   separate(id, into = c('cell_type', 'id'), sep = "_") |>
+#   left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+#   arrange(desc(susie_pip))
+# susie_alpha_res <- ctwas_res$susie_alpha_res
+# region_data <- ctwas_res$region_data
+# screen_res <- ctwas_res$screen_res
+# 
+# finemap_res %>%
+#   dplyr::filter(susie_pip > 0.8) %>%
+#   dplyr::select(symbol, cell_type, susie_pip, cs) %>%
+#   gt() %>%
+#   tab_header("Table 2. Fine-mapped causal genes (SuSiE PIP > 0.8)")
 ```
 
 ***
