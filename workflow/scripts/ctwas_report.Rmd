@@ -186,15 +186,15 @@ finemap_res %>%
 ***
 
 ```{r, ctwas_plot, echo = FALSE, message = FALSE, warning = FALSE}
-make_locusplot(finemap_res,
-               region_id = "22_40149793_42294812",
-               ens_db = ens_db,
-               weights = weights,
-               highlight_pip = 0.8,
-               filter_protein_coding_genes = TRUE,
-               filter_cs = TRUE,
-               color_pval_by = "cs",
-               color_pip_by = "cs")
+# make_locusplot(finemap_res,
+#                region_id = "22_40149793_42294812",
+#                ens_db = ens_db,
+#                weights = weights,
+#                highlight_pip = 0.8,
+#                filter_protein_coding_genes = TRUE,
+#                filter_cs = TRUE,
+#                color_pval_by = "cs",
+#                color_pip_by = "cs")
 ```
 
 ***
