@@ -18,6 +18,7 @@ library(gt)
 library(tidyverse)
 library(ctwas)
 library(EnsDb.Hsapiens.v86)
+library(cowplot)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 lookup_dir <- params$lookup_dir 
