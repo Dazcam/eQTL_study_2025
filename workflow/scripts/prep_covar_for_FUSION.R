@@ -42,7 +42,7 @@ covar_t <- covar %>%
 
 # Write the corrected file
 message('Writing transposed covariate file ...')
-write_tsv(covar_transposed, covar_out)
+write_tsv(covar_t, covar_out)
 
 message('Done.')
 
