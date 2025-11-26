@@ -1,5 +1,38 @@
 localrules: prep_exp_data
 
+def weights_input_function(wildcards):
+    """
+    Return the list of all .wgt.RDat files needed for a given cell_type
+    by reading the cell-type-specific permanent coordinate file.
+    """
+    import pandas as pd
+    
+    coord_file = config["twas"]["prep_exp_data"]["coord"] \
+                 .format(cell_type=wildcards.cell_type)
+    # → becomes ../results/11TWAS/fusion_input/MyCellType_gene_coord.txt
+
+    df = pd.read_csv(coord_file, sep=r'\s+', header=0)
+    # Your file has header: chr start end gene_id
+    genes = df["gene_id"].tolist()
+
+    return expand(
+        "../results/11TWAS/weights/{cell_type}/{gene}.wgt.RDat",
+        cell_type=wildcards.cell_type,
+        gene=genes
+    )
+
+def pos_input_function(wildcards):
+    """
+    Return list of successfully computed .wgt.RDat files for a given cell_type.
+    Only includes genes that actually produced a weight file (some may be empty).
+    """
+    import glob, os
+    weight_dir = f"../results/11TWAS/weights/{wildcards.cell_type}"
+    rdats = glob.glob(f"{weight_dir}/*.wgt.RDat")
+    # Filter out zero-byte files (genes that were skipped)
+    rdats = [f for f in rdats if os.path.getsize(f) > 0]
+    return rdats
+
 rule get_gemma:
    output:  config["twas"]["get_gemma"]["output"] 
    message: "Download gemma binary for FUSION"
@@ -60,44 +93,30 @@ rule restrict_geno_to_ldref:
               --make-bed --out {params.output} > {log} 2>&1
             """
 
-checkpoint get_gene_info:
-    input:   config["twas"]["prep_exp_data"]["coord"]
-    output:  directory("../results/11TWAS/fusion_input/{cell_type}/gene_info")
-    message: "Get gene coords for each gene to pass to FUSION sperately"
-    benchmark: "reports/benchmarks/11twas.get_gene_info_{cell_type}.benchmark.txt"
-    shell:
-        """
-        mkdir {output}
-        tail -n +2 {input} | while IFS=$'\t' read -r line; do
-        gene=$(echo "$line" | cut -f4)
-        echo "$line" > "{output}/${{gene}}_gene_info.txt"
-        done
-        """
-
 rule extract_cis_snps:
-    input:    geno_bed = config["twas"]["restrict_geno_to_ldref"]["bed"],
-              geno_bim = config["twas"]["restrict_geno_to_ldref"]["bim"],
-              geno_fam = config["twas"]["restrict_geno_to_ldref"]["fam"],
-              gene_info = "../results/11TWAS/fusion_input/{cell_type}/gene_info/{gene_id}_gene_info.txt"
-    output:   cis_bed = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
-              cis_bim = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
-              cis_fam = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam"
-    params:   prefix_in = config["twas"]["restrict_geno_to_ldref"]["prefix_out"],
-              prefix_out = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis"
+    input:  geno_bed = config["twas"]["restrict_geno_to_ldref"]["bed"],
+            geno_bim = config["twas"]["restrict_geno_to_ldref"]["bim"],
+            geno_fam = config["twas"]["restrict_geno_to_ldref"]["fam"],
+            coord_file = config["twas"]["prep_exp_data"]["coord"]   # ← new input
+    output: cis_bed = temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed"),
+            cis_bim = temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim"),
+            cis_fam = temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam")
+    params: prefix_in = config["twas"]["restrict_geno_to_ldref"]["prefix_out"],
+            prefix_out = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis"
     envmodules: "plink/2.0"
-    message:  "Extract cis-SNPs within cis-window for each gene"
+    message:  "Extract cis-SNPs within cis-window for {wildcards.gene_id}"
     benchmark: "reports/benchmarks/11twas.extract_cis_snps_{cell_type}_{gene_id}.benchmark.txt"
     shell:
         """
-        GENE_CHR=$(awk '{{print $1}}' {input.gene_info})
-        GENE_START=$(awk '{{print $2}}' {input.gene_info})
-        GENE_END=$(awk '{{print $3}}' {input.gene_info})
+        # Look up chr, start, end for this gene_id directly from the coord file
+        LINE=$(grep -w {wildcards.gene_id} {input.coord_file})
+        GENE_CHR=$(echo "$LINE" | awk '{{print $1}}')
+        GENE_START=$(echo "$LINE" | awk '{{print $2}}')
+        GENE_END=$(echo "$LINE" | awk '{{print $3}}')
+
         CIS_START=$((GENE_START - 500000))
         CIS_END=$((GENE_END + 500000))
-
-        if (( CIS_START < 0 )); then
-          CIS_START=0
-        fi
+        [[ $CIS_START -lt 0 ]] && CIS_START=0
 
         plink2 --bfile {params.prefix_in} \
                --chr $GENE_CHR \
@@ -106,18 +125,15 @@ rule extract_cis_snps:
                --make-bed \
                --out {params.prefix_out} || true
 
-        # Create empty stub files if PLINK didn't output anything
+        # Create empty stubs if no SNPs
         for ext in bed bim fam; do
-            f="{params.prefix_out}.$ext"
-            if [ ! -s "$f" ]; then
-                echo -n "" > "$f"
-            fi
+            [[ -s "{params.prefix_out}.$ext" ]] || touch "{params.prefix_out}.$ext"
         done
         """
 
 rule prepare_gene_pheno:
     input:  config["twas"]["prep_exp_data"]["exp"],
-    output: "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt"
+    output: temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt")
     params: "{gene_id}"
     message:  "Prepare individual gene expression data for FUSION"
     benchmark: "reports/benchmarks/11twas.prepare_gene_pheno.benchmark_{cell_type}_{gene_id}.txt"
@@ -129,6 +145,14 @@ rule prepare_gene_pheno:
         cut -f 1,2,${{COL_IDX}} {input} > {output}
         """
 
+rule prepare_covar:
+    input:  config["tensorQTL"]["split_covariates"]["output"].format(cell_type="{cell_type}", norm_method="quantile", geno_pc=4, exp_pc=40)
+    output: "../results/11TWAS/fusion_input/{cell_type}_covariates.txt"
+    message: "Prepare covariate gene expression data for FUSION"
+    singularity: config["containers"]["r_eqtl"]
+    benchmark: "reports/benchmarks/11twas.prepare_covariates.benchmark_{cell_type}.txt"
+    log:      "../results/00LOG/11TWAS/prepare_covar_{cell_type}.log"
+    script:   "../scripts/prep_covar_for_FUSION.R"    
 
 rule compute_weights:
     # Need to fix blup and bslmm in GEMMA. Running on 3 models only for now
@@ -136,7 +160,7 @@ rule compute_weights:
             geno_bim = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
             geno_fam = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam",
             gene_pheno = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt",
-#            covar = "../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt", # Need to get this into correct format and consider whether to include them or not
+            covar = "../results/11TWAS/fusion_input/{cell_type}_covariates.txt",
             gemma = config["twas"]["get_gemma"]["output"]
     output: "../results/11TWAS/weights/{cell_type}/{gene_id}.wgt.RDat" # Docs say output is .RDat, which is not the case
     params: indir = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis",
@@ -164,36 +188,17 @@ rule compute_weights:
                 --out {params.out_rdat} >> {log} 2>&1 || true
               if [ ! -f {output} ]; then
                 echo "{wildcards.gene_id} was skipped (likely due to low heritability)." >> {log}
-                echo "{wildcards.gene_id} was skipped due to low heritability or other issues." > ../results/11TWAS/weights/{wildcards.cell_type}/{wildcards.gene_id}_skipped.txt
                 touch {output}
               fi
            else
              echo "No SNPs for {wildcards.gene_id}, skipping..." >> {log}
-             echo "{wildcards.gene_id} has no SNPs in the cis region." > ../results/11TWAS/weights/{wildcards.cell_type}/{wildcards.gene_id}_no_snps.txt
              touch {output}
            fi
            """
 
-def aggregate_input(wildcards):
-    checkpoint_output = checkpoints.get_gene_info.get(**wildcards).output[0]
-    return expand(
-        "../results/11TWAS/weights/{cell_type}/{gene_id}.wgt.RDat",
-        cell_type = wildcards.cell_type,
-        gene_id = glob_wildcards(os.path.join(checkpoint_output, "{gene_id}_gene_info.txt")).gene_id,
-    )
-
 rule aggregate_per_cell_type:
-    input: aggregate_input
-    output: "../results/11TWAS/{cell_type}/all_genes_done.txt"
-    message:  "Aggregate cell-specific data after checkpoint"
-    benchmark: "reports/benchmarks/11twas.aggregate_per_cell_type_{cell_type}.benchmark.txt"
-    shell:
-        """
-        echo "Processed genes for {wildcards.cell_type}:" > {output}
-        for file in {input}; do
-            basename $file .RDat >> {output}
-        done
-        """
+    input: weights_input_function
+    output: touch("../results/11TWAS/{cell_type}/all_genes_done.txt")
 
 rule aggregate_all:
     input:  expand("../results/11TWAS/{cell_type}/all_genes_done.txt", cell_type = config['cell_types']),
@@ -202,67 +207,61 @@ rule aggregate_all:
     benchmark: "reports/benchmarks/11twas.aggregate_all.benchmark.txt"
     shell:  "cat {input} > {output}"
 
-def get_weights_for_pos(wildcards):
-    checkpoint_output = checkpoints.get_gene_info.get(cell_type=wildcards.cell_type).output[0]
-    gene_ids = glob_wildcards(os.path.join(checkpoint_output, "{gene_id}_gene_info.txt")).gene_id
-    return [os.path.abspath(f"../results/11TWAS/weights/{wildcards.cell_type}/{g}.wgt.RDat") for g in gene_ids]
-
 rule make_pos_file:
-    #TODO: Fix logs; they are not going to smk log only hawk log - otherwise works well 
-    input:  get_weights_for_pos
+    input:  pos_input_function
     output: "../results/11TWAS/weights/{cell_type}/{cell_type}.pos"
-    params: coord_file = "../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt",
+    params: coord_file = config["twas"]["prep_exp_data"]["coord"],
             cis_window = config["tensorQTL"]["window"]
-    message:  "Generate TWAS weights pos file"
-    benchmark: "reports/benchmarks/11twas.make_pos_file_{cell_type}.benchmark.txt"    
-    log:    "../results/00LOG/11TWAS/make_pos_file_{cell_type}.log"
-    script: "../scripts/make_fusion_pos_file.py"
+    message:  "Generate FUSION .pos file for {wildcards.cell_type}"
+    benchmark: "reports/benchmarks/11twas.make_pos_file_{cell_type}.benchmark.txt"
+    log:      "../results/00LOG/11TWAS/make_pos_file_{cell_type}.log"
+    script:   "../scripts/make_fusion_pos_file.py"
 
-rule clean_sumstats:
-    # FUSION wants LDSR munge_sumstats.py format, but can't handle blank rows so need to omit these first
-    input:  "../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz"
-    output: "../results/11TWAS/gwas/{gwas}_hg38_ldsr_ready.sumstats"
-    shell:  """
-            # Unzip + remove:
-            # - blank lines
-            # - lines with <5 fields
-            # - lines without rsID
-            zcat {input} | \
-            awk 'NF == 5 && $1 ~ /^rs/ {{print}}' > {output}
-            """
+# Not got base TWAS running yet, using CTWAS anyway
 
-rule run_twas:
-    input:  pos = "../results/11TWAS/weights/{cell_type}/{cell_type}.pos",
-            sumstats = "../results/11TWAS/gwas/{gwas}_hg38_ldsr_ready.sumstats"
-    output: "../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.chr{chr}.twas"
-    params: ref_ld = "../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.",
-            weights_dir = "../results/11TWAS/weights/{cell_type}/"
-    resources: threads = 5, mem_mb = 20000, time="5:00:00"
-    singularity: config["containers"]["twas"]
-    log:    "../results/00LOG/11TWAS/run_twas_{cell_type}_{gwas}_chr{chr}.log"
-    benchmark: "reports/benchmarks/11twas.run_twas_{cell_type}_{gwas}_chr{chr}.benchmark.txt"
-    shell:  """
-            Rscript ../resources/fusion/FUSION.assoc_test.R \
-              --sumstats {input.sumstats} \
-              --weights {input.pos} \
-              --weights_dir {params.weights_dir} \
-              --ref_ld_chr {params.ref_ld} \
-              --chr {wildcards.chr} \
-              --out {output} > {log} 2>&1
-            """
+#rule clean_sumstats:
+#    # FUSION wants LDSR munge_sumstats.py format, but can't handle blank rows so need to omit these first
+#    input:    "../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz"
+#    output:   "../results/11TWAS/gwas/{gwas}_hg38_ldsr_ready.sumstats.tsv"
+#    message: "Removing blank rows from sumstats file"
+#    benchmark: "reports/benchmarks/11twas.clean_sumstats_{gwas}.benchmark.txt"
+#    log:    "../results/00LOG/11TWAS/clean_sumstats_{gwas}.log"
+#    shell:    """
+#              zcat {input} | awk 'NR==1 || (NF >= 5 && $1 ~ /^rs/)' > {output} 2>&1 | tee {log}
+#              """
 
-rule merge_twas:
-    input:  expand("../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.chr{chr}.twas", cell_type = config['cell_types'], gwas = config['gwas'], chr=range(1, 23))
-    output: "../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.twas"
-    shell:  """
-            head -n 1 {input[0]} > {output}
-            for f in {input}; do tail -n +2 "$f"; done >> {output}
-            """
+#rule run_twas:
+#    input:  pos = "../results/11TWAS/weights/{cell_type}/{cell_type}.pos",
+#            sumstats = "../results/11TWAS/gwas/{gwas}_hg38_ldsr_ready.sumstats.tsv"
+#    output: "../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.chr{chr}.twas"
+#    params: ref_ld = "../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.",
+#            weights_dir = "../results/11TWAS/weights/{cell_type}/"
+#    resources: threads = 5, mem_mb = 20000, time="5:00:00"
+#    singularity: config["containers"]["twas"]
+#    log:    "../results/00LOG/11TWAS/run_twas_{cell_type}_{gwas}_chr{chr}.log"
+#    benchmark: "reports/benchmarks/11twas.run_twas_{cell_type}_{gwas}_chr{chr}.benchmark.txt"
+#    shell:  """
+#            Rscript ../resources/fusion/FUSION.assoc_test.R \
+#              --sumstats {input.sumstats} \
+#              --weights {input.pos} \
+#              --weights_dir {params.weights_dir} \
+#              --ref_ld_chr {params.ref_ld} \
+#              --chr {wildcards.chr} \
+#              --out {output} > {log} 2>&1
+#            """
+
+#rule merge_twas:
+#    input:  expand("../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.chr{chr}.twas", cell_type = config['cell_types'], gwas = config['gwas'], chr=range(1, 23))
+#    output: "../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.twas"
+#    shell:  """
+#            head -n 1 {input[0]} > {output}
+#            for f in {input}; do tail -n +2 "$f"; done >> {output}
+#            """
 
 rule twas_weights_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  weights_done = "../results/11TWAS/all_genes_in_all_cell_types_done.txt",
-            twas_results = expand("../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.twas", cell_type = config['cell_types'], gwas = config['gwas']),
+#            twas_results = expand("../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.twas", cell_type = config['cell_types'], gwas = config['gwas']),
             rmd_script = "scripts/twas_weights_summary.Rmd"
     output: "reports/11TWAS/11twas_weights_report.html"
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
