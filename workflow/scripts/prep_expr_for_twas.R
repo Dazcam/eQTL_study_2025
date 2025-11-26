@@ -4,7 +4,20 @@
 #
 #--------------------------------------------------------------------------------------
 
-# Option to run with subset of genes here for testing (L35-37)
+# Creates plink ready expr data and gene coordinate file for FUSION weight calculation
+
+# - Input:
+# - Quantile normalised gene expression file cols: (#Chr, start, end, TargetID, 100+ sample IDs)
+#   - Same input as used for TensorQTL: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
+#   - Note: due to eQTL sensitivity analyses input file is not corrected for covariates
+#   - Input cols are: c("#Chr", "start", "end", "TargetID") followed by 100+ sample ID cols
+# - Output:
+#   - Expression file in plink format cols: (FID, IID, ~18K ENSEMBL IDs)
+#     - ../results/11TWAS/fusion_input/{cell_type}_plink.txt
+#   - Gene coordinate file for every gene expressed in cell type (chr, start, end, gene_id)
+#     - ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
+
+# Option to run with subset of genes for testing (L35-37)
 
 ## Set up logging for smk  ------------------------------------------------------------
 if (exists("snakemake")) {
@@ -76,7 +89,7 @@ mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "www.ensemb
 message('Get coords for genes ...')
 gene_ids <- expr_tbl$TargetID
 gene_coord <- getBM(
-  attributes = c("chromosome_name", "start_position", "end_position", "ensembl_gene_id"),
+  attributes = c("chromosome_name", "start_position", "end_position", "ensembl_gene_id", "strand"),
   filters = "ensembl_gene_id",
   values = gene_ids,
   mart = mart
@@ -88,7 +101,10 @@ gene_coord <- getBM(
     end = end_position,
     gene_id = ensembl_gene_id
   ) %>%
-  mutate(chr = str_remove(chr, "^chr")) %>%
+  mutate(chr = str_remove(chr, "^chr"),
+         TSS = if_else(strand == 1, start, end),
+         cis_start = TSS,
+         cis_end = TSS + 1) %>%
   dplyr::select(chr, start, end, gene_id)
 
 # Check for unmatched genes
