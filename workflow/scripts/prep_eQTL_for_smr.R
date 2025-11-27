@@ -4,7 +4,10 @@
 #
 #--------------------------------------------------------------------------------------
 
-# The HEIDI test fails
+# Inputs
+# - TensorQTL nominal eQTL summary statistics
+# - SNP positions and frequencies from the hg38 build reference 
+# - Gene metadata (generated in susie pipeline; prep_susie_gene_meta)
 
 ## Set up logging for smk  ------------------------------------------------------------
 if (exists("snakemake")) {
