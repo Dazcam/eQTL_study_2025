@@ -174,6 +174,26 @@ mrg_tbl <- gwas_tbl %>%
 #   warning(str_glue("\n{nrow(missing_ref_tbl)} SNPs are missing from the reference and will be excluded"))
 # }
 
+# New strategy: 
+# - no allele filpping - 80% are flipped
+# - prioritise GWAS allele order over reference despite 80% mismatch
+# - But flip MAF if necessary
+mrg_tbl <- mrg_tbl %>%
+  mutate(
+    allele_status = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ "aligned",
+      A1 == A2.ref & A2 == A1.ref ~ "flipped",
+      TRUE ~ "mismatched"
+    ),
+    
+    freq = case_when(
+      allele_status == "aligned" ~ MAF,
+      allele_status == "flipped" ~ 1 - MAF,
+      TRUE ~ NA_real_
+    )
+    # b remains unchanged
+  )
+
 # Filter out SNPs with missing freq
 message("Filtering SNPs with missing or mismatched frequencies ...\n")
 result <- mrg_tbl %>%
