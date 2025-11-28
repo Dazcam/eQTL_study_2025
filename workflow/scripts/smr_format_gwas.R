@@ -117,62 +117,62 @@ message("\nAppending freq info to GWAS ...\n")
 mrg_tbl <- gwas_tbl %>%
   left_join(frq_tbl, by = c("CHR", "SNP"), suffix = c("", ".ref"))
 
-# Assign freq and status based on allele alignment
-message("Assigning frequencies and adjusting alleles ...\n")
-mrg_tbl <- mrg_tbl %>%
-  mutate(
-    A1_temp = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ A1,           # Alleles align directly
-      A1 == A2.ref & A2 == A1.ref ~ A1.ref,       # Flipped, use reference alleles
-      TRUE ~ NA_character_                        # Mismatch or missing
-    ),
-    A2_temp = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ A2,           # Alleles align directly
-      A1 == A2.ref & A2 == A1.ref ~ A2.ref,       # Flipped, use reference alleles
-      TRUE ~ NA_character_                        # Mismatch or missing
-    ),
-    freq = case_when(
-      !is.na(A1.ref) & (A1 == A1.ref & A2 == A2.ref | A1 == A2.ref & A2 == A1.ref) ~ MAF,  # Use MAF for aligned or flipped
-      TRUE ~ NA_real_                             # Mismatch or missing
-    ),
-    b = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ b,            # Same alleles
-      A1 == A2.ref & A2 == A1.ref ~ -b,           # Flipped, reverse effect
-      TRUE ~ NA_real_                             # Mismatch or missing
-    ),
-    allele_status = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ "aligned",
-      A1 == A2.ref & A2 == A1.ref ~ "flipped",
-      is.na(A1.ref) ~ "missing_reference",
-      TRUE ~ "mismatched"
-    ),
-    A1 = A1_temp,                                 # Rename to maintain naming convention
-    A2 = A2_temp
-  ) %>%
-  select(-A1_temp, -A2_temp)
-
-# Log allele alignment statistics
-message("Allele alignment summary:\n")
-allele_counts <- mrg_tbl %>%
-  count(allele_status) %>%
-  mutate(percentage = n / nrow(gwas_tbl) * 100)
-walk2(allele_counts$allele_status, allele_counts$percentage,
-      ~ message(str_glue("{.x}: {.y}% (n = {allele_counts$n[allele_counts$allele_status == .x]})")))
-
-# Check for true allele mismatches (excluding missing reference)
-message("\nChecking for true allele mismatches ...\n")
-mismatch_tbl <- mrg_tbl %>%
-  filter(is.na(freq) & !is.na(A1.ref))
-if (nrow(mismatch_tbl) > 0) {
-  warning(str_glue("\n{nrow(mismatch_tbl)} SNPs have mismatched alleles (e.g., non-strand-flip incompatibilities) and will be excluded"))
-}
-
-# Check for missing reference SNPs
-missing_ref_tbl <- mrg_tbl %>%
-  filter(is.na(freq) & is.na(A1.ref))
-if (nrow(missing_ref_tbl) > 0) {
-  warning(str_glue("\n{nrow(missing_ref_tbl)} SNPs are missing from the reference and will be excluded"))
-}
+# # Assign freq and status based on allele alignment
+# message("Assigning frequencies and adjusting alleles ...\n")
+# mrg_tbl <- mrg_tbl %>%
+#   mutate(
+#     A1_temp = case_when(
+#       A1 == A1.ref & A2 == A2.ref ~ A1,           # Alleles align directly
+#       A1 == A2.ref & A2 == A1.ref ~ A1.ref,       # Flipped, use reference alleles
+#       TRUE ~ NA_character_                        # Mismatch or missing
+#     ),
+#     A2_temp = case_when(
+#       A1 == A1.ref & A2 == A2.ref ~ A2,           # Alleles align directly
+#       A1 == A2.ref & A2 == A1.ref ~ A2.ref,       # Flipped, use reference alleles
+#       TRUE ~ NA_character_                        # Mismatch or missing
+#     ),
+#     freq = case_when(
+#       !is.na(A1.ref) & (A1 == A1.ref & A2 == A2.ref | A1 == A2.ref & A2 == A1.ref) ~ MAF,  # Use MAF for aligned or flipped
+#       TRUE ~ NA_real_                             # Mismatch or missing
+#     ),
+#     b = case_when(
+#       A1 == A1.ref & A2 == A2.ref ~ b,            # Same alleles
+#       A1 == A2.ref & A2 == A1.ref ~ -b,           # Flipped, reverse effect
+#       TRUE ~ NA_real_                             # Mismatch or missing
+#     ),
+#     allele_status = case_when(
+#       A1 == A1.ref & A2 == A2.ref ~ "aligned",
+#       A1 == A2.ref & A2 == A1.ref ~ "flipped",
+#       is.na(A1.ref) ~ "missing_reference",
+#       TRUE ~ "mismatched"
+#     ),
+#     A1 = A1_temp,                                 # Rename to maintain naming convention
+#     A2 = A2_temp
+#   ) %>%
+#   select(-A1_temp, -A2_temp)
+# 
+# # Log allele alignment statistics
+# message("Allele alignment summary:\n")
+# allele_counts <- mrg_tbl %>%
+#   count(allele_status) %>%
+#   mutate(percentage = n / nrow(gwas_tbl) * 100)
+# walk2(allele_counts$allele_status, allele_counts$percentage,
+#       ~ message(str_glue("{.x}: {.y}% (n = {allele_counts$n[allele_counts$allele_status == .x]})")))
+# 
+# # Check for true allele mismatches (excluding missing reference)
+# message("\nChecking for true allele mismatches ...\n")
+# mismatch_tbl <- mrg_tbl %>%
+#   filter(is.na(freq) & !is.na(A1.ref))
+# if (nrow(mismatch_tbl) > 0) {
+#   warning(str_glue("\n{nrow(mismatch_tbl)} SNPs have mismatched alleles (e.g., non-strand-flip incompatibilities) and will be excluded"))
+# }
+# 
+# # Check for missing reference SNPs
+# missing_ref_tbl <- mrg_tbl %>%
+#   filter(is.na(freq) & is.na(A1.ref))
+# if (nrow(missing_ref_tbl) > 0) {
+#   warning(str_glue("\n{nrow(missing_ref_tbl)} SNPs are missing from the reference and will be excluded"))
+# }
 
 # Filter out SNPs with missing freq
 message("Filtering SNPs with missing or mismatched frequencies ...\n")
