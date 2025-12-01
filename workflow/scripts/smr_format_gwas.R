@@ -194,6 +194,15 @@ mrg_tbl <- mrg_tbl %>%
     # b remains unchanged
   )
 
+# Report allele flips
+message("\n=== eQTL frequency alignment summary ===")
+mrg_tbl %>%
+  count(allele_status) %>%
+  mutate(percent = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n)) %>%
+  print(n = Inf)
+message("========================================\n")
+
 # Filter out SNPs with missing freq
 message("Filtering SNPs with missing or mismatched frequencies ...\n")
 result <- mrg_tbl %>%
