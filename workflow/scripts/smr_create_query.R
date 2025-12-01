@@ -77,33 +77,26 @@ snp_mrg_tbl <- eqtl_filt_tbl |>
   mutate(Chr = str_replace(Chr, '^chr', ''))
 
 # Align eQTL alleles and frequencies to 1000G reference
-message('Aligning alleles and frequencies to 1000G ...')
+message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
 snp_mrg_tbl <- snp_mrg_tbl %>%
-  left_join(frq_tbl, by = c("Chr" = "CHR", "SNP"), suffix = c("", ".ref")) |>
+  left_join(frq_tbl, by = c("Chr" = "CHR", "SNP")) %>%   # brings A1.ref, A2.ref, MAF
   mutate(
-    A1_temp = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ A1,           # Alleles align directly
-      A1 == A2.ref & A2 == A1.ref ~ A1.ref,       # Flipped, use reference alleles
-      TRUE ~ NA_character_                        # Mismatch or missing
+    allele_status = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ "aligned",
+      A1 == A2.ref & A2 == A1.ref ~ "flipped",
+      is.na(A1.ref)               ~ "missing_ref",
+      TRUE                        ~ "mismatched"
     ),
-    A2_temp = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ A2,           # Alleles align directly
-      A1 == A2.ref & A2 == A1.ref ~ A2.ref,       # Flipped, use reference alleles
-      TRUE ~ NA_character_                        # Mismatch or missing
-    ),
+    
     Freq = case_when(
-      !is.na(A1.ref) & (A1 == A1.ref & A2 == A2.ref | A1 == A2.ref & A2 == A1.ref) ~ MAF,  # Use 1000G MAF
-      TRUE ~ NA_real_                             # Mismatch or missing
-    ),
-    b = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ b,            # Same alleles
-      A1 == A2.ref & A2 == A1.ref ~ -b,           # Flipped, reverse effect
-      TRUE ~ NA_real_                             # Mismatch or missing
-    ),
-    A1 = A1_temp,
-    A2 = A2_temp
+      allele_status == "aligned"       ~ MAF,
+      allele_status == "flipped"       ~ 1 - MAF,
+      allele_status == "missing_ref"   ~ Freq,   # fall back to TensorQTL's own af
+      TRUE                             ~ NA_real_
+    )
   ) %>%
-  select(-A1_temp, -A2_temp, -A1.ref, -A2.ref, -MAF)
+  select(-A1.ref, -A2.ref, -MAF, -allele_status) %>%   # drop helper columns
+  filter(!is.na(Freq))
 
 # Merge with gene meta data
 message('Merging Gene data ...')
