@@ -51,9 +51,8 @@ genes_tbl <- read_tsv(genes_in) |>
          Probe_bp = phenotype_pos, 
          Gene = gene_id) |>
   select(Probe_Chr, Probe_bp, Gene, Orientation)
-# frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d")) |>
-#   select(CHR, SNP, A1, A2, MAF) |>
-#   rename(A1.ref = A1, A2.ref = A2)
+frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i")) |>
+  select(SNP, A1.ref = A1, A2.ref = A2, MAF)
 
 # Filter for significant eQTLs (qval < threshold)
 message('Extracting eQTL cols ...')
@@ -77,26 +76,32 @@ snp_mrg_tbl <- eqtl_filt_tbl |>
   mutate(Chr = str_replace(Chr, '^chr', ''))
 
 # Align eQTL alleles and frequencies to 1000G reference
-# message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
-# snp_mrg_tbl <- snp_mrg_tbl %>%
-#   left_join(frq_tbl, by = c("Chr" = "CHR", "SNP")) %>%   # brings A1.ref, A2.ref, MAF
-#   mutate(
-#     allele_status = case_when(
-#       A1 == A1.ref & A2 == A2.ref ~ "aligned",
-#       A1 == A2.ref & A2 == A1.ref ~ "flipped",
-#       is.na(A1.ref)               ~ "missing_ref",
-#       TRUE                        ~ "mismatched"
-#     ),
-#     
-#     Freq = case_when(
-#       allele_status == "aligned"       ~ MAF,
-#       allele_status == "flipped"       ~ 1 - MAF,
-#       allele_status == "missing_ref"   ~ Freq,   # fall back to TensorQTL's own af
-#       TRUE                             ~ NA_real_
-#     )
-#   ) %>%
-#   select(-A1.ref, -A2.ref, -MAF, -allele_status) %>%   # drop helper columns
-#   filter(!is.na(Freq))
+message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
+snp_mrg_tbl <- snp_mrg_tbl %>%
+  left_join(frq_ref, by = "SNP") %>%
+  mutate(
+    allele_status = case_when(
+      A1 == A1.ref & A2 == A2.ref ~ "aligned",    # A1 = minor allele in 1000G
+      A1 == A2.ref & A2 == A1.ref ~ "flipped",    # A1 = major allele in 1000G → we corrected Freq
+      TRUE ~ "mismatch_or_missing"
+    ),
+    Freq = case_when(
+      allele_status == "aligned" ~ MAF,
+      allele_status == "flipped" ~ 1 - MAF,
+      TRUE ~ Freq
+    )
+  ) %>%
+  select(-A1.ref, -A2.ref, -MAF)
+
+# Report allele flips
+message("\n=== eQTL frequency alignment summary ===")
+snp_mrg_tbl %>%
+  count(allele_status) %>%
+  mutate(percent = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n)) %>%
+  print(n = Inf)
+
+message("========================================\n")
 
 # Merge with gene meta data
 message('Merging Gene data ...')
@@ -106,9 +111,21 @@ smr_tbl <- snp_mrg_tbl |>
   relocate(SNP, Chr, BP, A1, A2, Freq, Probe, Probe_Chr,
            Probe_bp, Gene, Orientation, b, se, p)
 
-message('Running checks ...')
+message('Running NA checks ...')
 if (anyNA(smr_tbl)) {
-  message(sum(!complete.cases(smr_tbl)), " NAs in final df — rm rows with NA ...")
+  
+  na_summary <- smr_tbl %>%
+    filter(if_any(everything(), ~ is.na(.))) %>%
+    summarise(across(everything(), ~ sum(is.na(.)))) %>%
+    pivot_longer(everything(), names_to = "column", values_to = "n_NA") %>%
+    arrange(desc(n_NA))
+  
+  message("\n=== Rows with missing values (n = ", 
+          nrow(smr_tbl %>% filter(if_any(everything(), ~ is.na(.)))), ") ===")
+  message(capture.output(print(na_summary, n = Inf))[-(1:2)])  # skips the "# A tibble" header line
+  message("======================================\n")
+  
+  message('Droppin rows with NA ...')
   smr_tbl <- smr_tbl |>
     drop_na()
 } else {
