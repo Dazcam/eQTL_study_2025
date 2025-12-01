@@ -81,8 +81,8 @@ snp_mrg_tbl <- snp_mrg_tbl %>%
   left_join(frq_tbl, by = "SNP") %>%
   mutate(
     allele_status = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ "aligned",    # A1 = minor allele in 1000G
-      A1 == A2.ref & A2 == A1.ref ~ "flipped",    # A1 = major allele in 1000G → we corrected Freq
+      A1 == A1.ref & A2 == A2.ref ~ "aligned",
+      A1 == A2.ref & A2 == A1.ref ~ "flipped",
       TRUE ~ "mismatch_or_missing"
     ),
     Freq = case_when(
@@ -108,7 +108,7 @@ message('Merging Gene data ...')
 smr_tbl <- snp_mrg_tbl |>
   left_join(genes_tbl, by = "Gene") |>
   mutate(Probe = Gene) |>
-  relocate(SNP, Chr, BP, A1, A2, Freq, Probe, Probe_Chr,
+  select(SNP, Chr, BP, A1, A2, Freq, Probe, Probe_Chr,
            Probe_bp, Gene, Orientation, b, se, p)
 
 message('Running NA checks ...')
