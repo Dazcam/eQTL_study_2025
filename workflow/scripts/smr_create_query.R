@@ -44,16 +44,16 @@ message("Allele frq info loaded from: ", frq_in)
 # Read data
 message('Loading data ...')
 eqtl_tbl <- read_tsv(eqtl_in)
-snps_tbl <- read_tsv(snps_in, col_names = c('Chr', 'BP', 'SNP', 'A1', 'A2'))
+snps_tbl <- read_tsv(snps_in, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
 genes_tbl <- read_tsv(genes_in) |>
   rename(Probe_Chr = chromosome,
          Orientation = strand,
          Probe_bp = phenotype_pos, 
          Gene = gene_id) |>
   select(Probe_Chr, Probe_bp, Gene, Orientation)
-frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d")) |>
-  select(CHR, SNP, A1, A2, MAF) |>
-  rename(A1.ref = A1, A2.ref = A2)
+# frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d")) |>
+#   select(CHR, SNP, A1, A2, MAF) |>
+#   rename(A1.ref = A1, A2.ref = A2)
 
 # Filter for significant eQTLs (qval < threshold)
 message('Extracting eQTL cols ...')
@@ -69,7 +69,7 @@ eqtl_filt_tbl <- eqtl_tbl  |>
     Freq = af
   )
 
-# Merge with SNP position data
+# Merge with SNP position data from 100G hg38 .bim file
 message('Merging SNP data ...')
 snp_mrg_tbl <- eqtl_filt_tbl |>
   left_join(snps_tbl, by = "SNP") |>
@@ -77,26 +77,26 @@ snp_mrg_tbl <- eqtl_filt_tbl |>
   mutate(Chr = str_replace(Chr, '^chr', ''))
 
 # Align eQTL alleles and frequencies to 1000G reference
-message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
-snp_mrg_tbl <- snp_mrg_tbl %>%
-  left_join(frq_tbl, by = c("Chr" = "CHR", "SNP")) %>%   # brings A1.ref, A2.ref, MAF
-  mutate(
-    allele_status = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ "aligned",
-      A1 == A2.ref & A2 == A1.ref ~ "flipped",
-      is.na(A1.ref)               ~ "missing_ref",
-      TRUE                        ~ "mismatched"
-    ),
-    
-    Freq = case_when(
-      allele_status == "aligned"       ~ MAF,
-      allele_status == "flipped"       ~ 1 - MAF,
-      allele_status == "missing_ref"   ~ Freq,   # fall back to TensorQTL's own af
-      TRUE                             ~ NA_real_
-    )
-  ) %>%
-  select(-A1.ref, -A2.ref, -MAF, -allele_status) %>%   # drop helper columns
-  filter(!is.na(Freq))
+# message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
+# snp_mrg_tbl <- snp_mrg_tbl %>%
+#   left_join(frq_tbl, by = c("Chr" = "CHR", "SNP")) %>%   # brings A1.ref, A2.ref, MAF
+#   mutate(
+#     allele_status = case_when(
+#       A1 == A1.ref & A2 == A2.ref ~ "aligned",
+#       A1 == A2.ref & A2 == A1.ref ~ "flipped",
+#       is.na(A1.ref)               ~ "missing_ref",
+#       TRUE                        ~ "mismatched"
+#     ),
+#     
+#     Freq = case_when(
+#       allele_status == "aligned"       ~ MAF,
+#       allele_status == "flipped"       ~ 1 - MAF,
+#       allele_status == "missing_ref"   ~ Freq,   # fall back to TensorQTL's own af
+#       TRUE                             ~ NA_real_
+#     )
+#   ) %>%
+#   select(-A1.ref, -A2.ref, -MAF, -allele_status) %>%   # drop helper columns
+#   filter(!is.na(Freq))
 
 # Merge with gene meta data
 message('Merging Gene data ...')
