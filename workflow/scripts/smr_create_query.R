@@ -113,23 +113,23 @@ smr_tbl <- snp_mrg_tbl |>
 
 message('Running NA checks ...')
 if (anyNA(smr_tbl)) {
+  incomplete_n <- smr_tbl %>% filter(if_any(everything(), is.na)) %>% nrow()
   
-  na_summary <- smr_tbl %>%
-    filter(if_any(everything(), ~ is.na(.))) %>%
+  message("\n=== Rows with missing values (n = ", incomplete_n, ") ===")
+  
+  smr_tbl %>% 
     summarise(across(everything(), ~ sum(is.na(.)))) %>%
     pivot_longer(everything(), names_to = "column", values_to = "n_NA") %>%
-    arrange(desc(n_NA))
+    arrange(desc(n_NA)) %>%
+    mutate(n_NA = scales::comma(n_NA)) %>%
+    print(n = Inf)                     # ← this is the magic line
   
-  message("\n=== Rows with missing values (n = ", 
-          nrow(smr_tbl %>% filter(if_any(everything(), ~ is.na(.)))), ") ===")
-  message(capture.output(print(na_summary, n = Inf))[-(1:2)])  # skips the "# A tibble" header line
-  message("======================================\n")
+  message("======================================================\n")
   
-  message('Droppin rows with NA ...')
-  smr_tbl <- smr_tbl |>
-    drop_na()
+  message("Dropping rows with any NA ...")
+  smr_tbl <- smr_tbl %>% drop_na()
 } else {
-  message("No NAs in final df — no action taken.")
+  message("No missing values in the final table.\n")
 }
 message('Do SNP and Gene Chr annotations match? ', 
         sum(smr_tbl$Chr == smr_tbl$Probe_Chr) == nrow(smr_tbl))
