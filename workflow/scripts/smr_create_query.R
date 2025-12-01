@@ -78,7 +78,7 @@ snp_mrg_tbl <- eqtl_filt_tbl |>
 # Align eQTL alleles and frequencies to 1000G reference
 message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
 snp_mrg_tbl <- snp_mrg_tbl %>%
-  left_join(frq_ref, by = "SNP") %>%
+  left_join(frq_tbl, by = "SNP") %>%
   mutate(
     allele_status = case_when(
       A1 == A1.ref & A2 == A2.ref ~ "aligned",    # A1 = minor allele in 1000G
