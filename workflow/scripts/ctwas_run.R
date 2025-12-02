@@ -6,7 +6,7 @@
 
 ## Info  ------------------------------------------------------------------------------
 
-#  Prep input bed and covarite files for FastQTL 
+#  Prep input bed and covariate files for FastQTL 
 #  Running locally for now
 
 ##  Load Packages, functions and variables  -------------------------------------------
@@ -37,7 +37,7 @@ library(ctwas)
 gwas <- snakemake@input[['gwas']] # From 07prep_gwas.smk
 weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat files
 ld_dir <- snakemake@params[['ld_dir']]
-#snp_info <- snakemake@input[['snp_info']]
+bim_file <- snakemake@input[['bim_file']]
 cell_type <- snakemake@wildcards[['cell_type']]
 gwas_trait <- snakemake@wildcards[['gwas']]
 output <- as.character(snakemake@output[[1]])
@@ -48,22 +48,110 @@ cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
 message("\nLoading data ...\n")
 message("GWAS loaded from: ", gwas)
 message("weights_dir loaded from: ", weights_dir)
+message("Bim file loaded from: ", bim_file)
 message("cell_type: ", cell_type)
 message("Output will be saved to: ", output)
 message("Correlation matrices will be saved to: ", cor_dir)
 
-# Old
-#ld_dir <- "../results/12CTWAS/ld_mats/"  # Downloaded LD files
-#ref_snp_info_file <- "/path/to/ukb_b38_0.1_allchrs_var_info.Rvar.gz"  # Full ref variant info
-
-
 # Prep GWAS
+# Note: Need to harmonise alleles in GWAS, Ref and prediction weights
+# cTWAS says: A1 is the alternate allele, and A2 is the reference allele
+# TensorQTL, input for FUSION prediction weights, has ALT allele as A1
+# In most GWAS, REF is A1 so will need to flip SNPs
 message('Loading GWAS ...')
-z_snp_raw <- read_tsv(gwas) 
-z_snp <- z_snp_raw |>
+gwas_tbl <- read_tsv(gwas) 
+gwas_n <- as.numeric(names(sort(table(gwas_tbl$N), decreasing = TRUE)[1]))
+message('GWAS N is set to: ', gwas_n)
+read_tsv(snps_in, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
+
+
+## GWAS checks  -----------------------------------------------------------------------
+# non-rsIDs
+non_rsids <- gwas_tbl %>%
+  filter(!str_starts(SNP, "rs")) %>%
+  distinct(SNP) %>%
+  nrow()
+if (non_rsids > 0) {
+  message(str_glue("Found {non_rsids} non-rsID SNPs. Removing them ..."))
+  gwas_tbl <- gwas_tbl %>% filter(str_starts(SNP, "rs"))
+} else {
+  message("No non-rsID SNPs found.")
+}
+
+# duplicate rsIDs
+duplicate_rsids <- gwas_tbl %>%
+  group_by(SNP) %>%
+  filter(n() > 1) %>%
+  distinct(SNP) %>%
+  nrow()
+if (duplicate_rsids > 0) {
+  message(str_glue("Found {duplicate_rsids} duplicate rsIDs. Keeping first occurrence ..."))
+  gwas_tbl <- gwas_tbl %>% distinct(SNP, .keep_all = TRUE)
+} else {
+  message("No duplicate rsIDs found.")
+}
+
+# Alt Chrs 
+message("Checking GWAS chromosomes ...\n")
+gwas_tbl |> 
+  group_by(CHR) |> 
+  count() |> 
+  print(n = Inf)
+
+alt_chroms <- gwas_tbl %>%
+  filter(str_ends(CHR, "alt")) %>%
+  distinct(CHR) %>%
+  pull(CHR)
+
+if (length(alt_chroms) > 0) {
+  message("\nChromosomes ending with 'alt' found: ", paste(alt_chroms, collapse = ", "))
+  message("\nCount of SNPs with 'alt' chromosomes: ", 
+          nrow(gwas_tbl %>% filter(str_ends(CHR, "alt"))))
+  message("Removing SNPs with 'alt' chromosomes ... ")
+  gwas_tbl <- gwas_tbl %>% filter(!str_ends(CHR, "alt"))
+} else {
+  message("No chromosomes ending with 'alt' found.")
+}
+
+message("\nAppending bim ref allele info to GWAS for alignment check...\n")
+mrg_tbl <- gwas_tbl %>%
+  left_join(snp_tbl, by = c("SNP"), suffix = c("", ".ref"))
+
+mutate(
+  # classify allele relationships
+  allele_status = case_when(
+    A1 == A1.ref & A2 == A2.ref ~ "aligned",
+    A1 == A2.ref & A2 == A1.ref ~ "flipped",
+    TRUE                       ~ "mismatched"
+  ),
+
+  Z = case_when(
+    allele_status == "flipped" ~ -Z,  
+    TRUE                       ~ Z
+  ),
+  
+  A1 = case_when(
+    allele_status == "flipped" ~ A2,
+    TRUE                       ~ A1
+  ),
+  A2 = case_when(
+    allele_status == "flipped" ~ A1,
+    TRUE                       ~ A2
+  )
+)
+
+# Report allele flips
+message("\n=== GWAS allele alignment summary ===")
+mrg_tbl %>%
+  count(allele_status) %>%
+  mutate(percent = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n)) %>%
+  print(n = Inf)
+message("========================================\n")
+
+z_snp <- mrg_tbl |>
   select(id = SNP, A1, A2, z = Z) |>
   filter(if_all(everything(), ~ !is.na(.) & . != ""))
-gwas_n <- as.numeric(names(sort(table(z_snp_raw$N), decreasing = TRUE)[1]))
 
 # Check for any remaining missing or blank values
 if (any(is.na(z_snp)) || any(z_snp == "", na.rm = TRUE)) {
@@ -71,6 +159,8 @@ if (any(is.na(z_snp)) || any(z_snp == "", na.rm = TRUE)) {
 } else {
   message("No missing values in GWAS data ...")
 }
+
+message("Final number of SNPs in GWAS: ", nrow(z_snp) - 1)
 
 # Region info: included with package
 # local - ctwas_0.1.38
