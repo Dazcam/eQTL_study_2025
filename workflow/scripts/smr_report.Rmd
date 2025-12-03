@@ -59,7 +59,7 @@ Settings in run smr:
 Multiple testing correction:
 
 - Applying a BF correction SMR p 
-- n_probes: `length(unique(smr$probeID))`, ~1K genes per cell type
+- n_probes: `length(unique(smr$probeID))`, see probes_analysed row in SMR_logs table for n_probes value per cell type
 - SMR p thresh: `r p_smr`
 - HEIDI p thresh: `r p_heidi`
 - SMR p is defined sig. if:
