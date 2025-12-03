@@ -197,7 +197,8 @@ get_heidi <- function(cell_type, in_dir, disorder) {
 gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv' # Relative to Rmd file
 if (file.exists(gene_lookup_file)) {
   
-  gene_lookup_hg38_tbl <- suppressMessages(read_tsv(gene_lookup_file))
+  gene_lookup_hg38_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
+    select(ensembl_gene_id, external_gene_name)
   
 } else {
   
@@ -249,7 +250,7 @@ all_sig_results <- bind_rows(
 
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name)
+  relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name)
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
