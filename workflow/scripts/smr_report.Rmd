@@ -250,7 +250,8 @@ all_sig_results <- bind_rows(
 
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name)
+  relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
+  distinct()
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
