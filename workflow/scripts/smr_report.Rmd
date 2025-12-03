@@ -77,7 +77,7 @@ summarize_smr <- function(cell_type, in_dir, disorder) {
   file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_", disorder, ".smr"))
   if (file.exists(file_path)) {
     smr <- suppressMessages(read_tsv(file_path))
-    n_probes <- nrow(smr)
+    n_probes <- length(unique(smr$probeID))
     smr_sig <- smr |> filter(p_SMR < (p_smr / n_probes))
     smr_sig_heidi <- smr_sig |> filter(p_HEIDI > p_heidi)
     return(data.frame(
@@ -240,7 +240,7 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_scz, echo=FALSE}
+```{r smr_heidi_symbol_scz, echo=FALSE, warnings=FALSE}
 gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv'
 
 all_sig_results <- bind_rows(
@@ -286,14 +286,15 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_bpd, echo=FALSE}
+```{r smr_heidi_symbol_bpd, echo=FALSE, warnings=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
 
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name)
+  relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
+  distinct() 
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
@@ -330,14 +331,15 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_mdd, echo=FALSE}
+```{r smr_heidi_symbol_mdd, echo=FALSE, warnings=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
 
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name)
+  relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
+  distinct() 
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
@@ -374,14 +376,15 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_adhd, echo=FALSE}
+```{r smr_heidi_symbol_adhd, echo=FALSE, warnings=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
 
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name)
+  relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
+  distinct() 
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
@@ -422,10 +425,11 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_ocd, echo=FALSE}
+```{r smr_heidi_symbol_ocd, echo=FALSE, warnings=FALSE}
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
-  select(Cell_Type, ensembl_id = probeID, symbol = external_gene_name)
+  relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
+  distinct() 
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
