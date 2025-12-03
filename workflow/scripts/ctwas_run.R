@@ -94,21 +94,21 @@ if (duplicate_rsids > 0) {
 # Alt Chrs 
 message("Checking GWAS chromosomes ...\n")
 gwas_tbl |> 
-  group_by(CHR) |> 
+  group_by(Chr) |> 
   count() |> 
   print(n = Inf)
 
 alt_chroms <- gwas_tbl %>%
-  filter(str_ends(CHR, "alt")) %>%
-  distinct(CHR) %>%
-  pull(CHR)
+  filter(str_ends(Chr, "alt")) %>%
+  distinct(Chr) %>%
+  pull(Chr)
 
 if (length(alt_chroms) > 0) {
   message("\nChromosomes ending with 'alt' found: ", paste(alt_chroms, collapse = ", "))
   message("\nCount of SNPs with 'alt' chromosomes: ", 
-          nrow(gwas_tbl %>% filter(str_ends(CHR, "alt"))))
+          nrow(gwas_tbl %>% filter(str_ends(Chr, "alt"))))
   message("Removing SNPs with 'alt' chromosomes ... ")
-  gwas_tbl <- gwas_tbl %>% filter(!str_ends(CHR, "alt"))
+  gwas_tbl <- gwas_tbl %>% filter(!str_ends(Chr, "alt"))
 } else {
   message("No chromosomes ending with 'alt' found.")
 }
