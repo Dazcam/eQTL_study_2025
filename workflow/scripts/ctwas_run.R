@@ -62,7 +62,7 @@ message('Loading GWAS ...')
 gwas_tbl <- read_tsv(gwas) 
 gwas_n <- as.numeric(names(sort(table(gwas_tbl$N), decreasing = TRUE)[1]))
 message('GWAS N is set to: ', gwas_n)
-read_tsv(snps_in, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
+read_tsv(bim_file, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
 
 
 ## GWAS checks  -----------------------------------------------------------------------
