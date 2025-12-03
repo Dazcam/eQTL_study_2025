@@ -25,13 +25,8 @@ message('\n\nRunning causal TWAS ...')
 
 # Load packages
 library(tidyverse)
-#remotes::install_github("xinhe-lab/ctwas",ref = "main")
-#BiocManager::install("VariantAnnotation")
-#remotes::install_github("mrcieu/gwasvcf")
 library(ctwas)
-#library(VariantAnnotation)
-#library(gwasvcf)
-#library(RSQLite)
+
 
 # Input and output paths
 gwas <- snakemake@input[['gwas']] # From 07prep_gwas.smk
@@ -58,12 +53,12 @@ message("Correlation matrices will be saved to: ", cor_dir)
 # cTWAS says: A1 is the alternate allele, and A2 is the reference allele
 # TensorQTL, input for FUSION prediction weights, has ALT allele as A1
 # In most GWAS, REF is A1 so will need to flip SNPs
+# Note we need to use ../results/07PREP-GWAS/scz_hg38.tsv not LDSR munged sumsats as we need the alleles
 message('Loading GWAS ...')
 gwas_tbl <- read_tsv(gwas) 
 gwas_n <- as.numeric(names(sort(table(gwas_tbl$N), decreasing = TRUE)[1]))
 message('GWAS N is set to: ', gwas_n)
-read_tsv(bim_file, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
-
+snp_tbl <- read_tsv(bim_file, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
 
 ## GWAS checks  -----------------------------------------------------------------------
 # non-rsIDs
@@ -94,21 +89,21 @@ if (duplicate_rsids > 0) {
 # Alt Chrs 
 message("Checking GWAS chromosomes ...\n")
 gwas_tbl |> 
-  group_by(Chr) |> 
+  group_by(CHR) |> 
   count() |> 
   print(n = Inf)
 
 alt_chroms <- gwas_tbl %>%
-  filter(str_ends(Chr, "alt")) %>%
-  distinct(Chr) %>%
-  pull(Chr)
+  filter(str_ends(CHR, "alt")) %>%
+  distinct(CHR) %>%
+  pull(CHR)
 
 if (length(alt_chroms) > 0) {
   message("\nChromosomes ending with 'alt' found: ", paste(alt_chroms, collapse = ", "))
   message("\nCount of SNPs with 'alt' chromosomes: ", 
-          nrow(gwas_tbl %>% filter(str_ends(Chr, "alt"))))
+          nrow(gwas_tbl %>% filter(str_ends(CHR, "alt"))))
   message("Removing SNPs with 'alt' chromosomes ... ")
-  gwas_tbl <- gwas_tbl %>% filter(!str_ends(Chr, "alt"))
+  gwas_tbl <- gwas_tbl %>% filter(!str_ends(CHR, "alt"))
 } else {
   message("No chromosomes ending with 'alt' found.")
 }
@@ -117,7 +112,8 @@ message("\nAppending bim ref allele info to GWAS for alignment check...\n")
 mrg_tbl <- gwas_tbl %>%
   left_join(snp_tbl, by = c("SNP"), suffix = c("", ".ref"))
 
-mutate(
+mrg_tbl <- mrg_tbl |> 
+  mutate(
   # classify allele relationships
   allele_status = case_when(
     A1 == A1.ref & A2 == A2.ref ~ "aligned",
