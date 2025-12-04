@@ -1286,7 +1286,7 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 
 ***
 
-```{r, eQTL_independent_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+```{r, eQTL_independent_L2_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 plt_list <- list()
 genPC <- 4
 expPC <- 40
@@ -1351,7 +1351,7 @@ print(rank_counts)
 
 ***
 
-```{r, eQTL_independent_distance_from_TSS, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+```{r, eQTL_independent_L2_distance_from_TSS, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 median_distances <- all_eqtls %>%
   mutate(tss_distance = abs(start_distance)) %>%
   group_by(cell_type, rank) %>%
