@@ -33,7 +33,7 @@ library(GenomicRanges)
 qtl_perm <- snakemake@input[["qtl_perm"]]
 out_file <- as.character(snakemake@output)
 
-# Make a tibble showing what each variable is set to
+# Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(

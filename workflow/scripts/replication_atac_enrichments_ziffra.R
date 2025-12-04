@@ -195,7 +195,7 @@ for (cell_type in names(cell_type_mapping)) {
   matching_ziffra_cells <- cell_type_mapping[[cell_type]]
   
   for (ziffra_cell in matching_ziffra_cells) {
-    message("Performing permutation test for ", cell_type, " vs ", ziffra_cell)
+    message("\nPerforming permutation test for ", cell_type, " vs ", ziffra_cell)
     
     peaks_gr <- ziffra_peaks |> 
       filter(Cell_Type == ziffra_cell) |>
@@ -225,57 +225,6 @@ for (cell_type in names(cell_type_mapping)) {
 }
 
 write_rds(ziffra_enrichment_results, out_file)
-
-# Move plots to Rmd file
-# ziffra_enrichment_results <- ziffra_enrichment_results %>%
-#   mutate(
-#     logp = -log10(p_value),
-#     sig = ifelse(p_value < 0.05, "*", "")
-#   ) |>
-#   complete(eqtl_cell_type, peak_cell_type) |>
-#   ggplot(aes(x = peak_cell_type, y = eqtl_cell_type, fill = fold_enrichment)) +
-#   geom_tile(color = "black", linewidth = 0.3, na.rm = FALSE) +
-#   geom_text(aes(label = ifelse(!is.na(p_value) & p_value < 0.05, "*", "")),
-#             vjust = 0.5, size = 4, color = "black") +
-#   scale_fill_viridis_c(
-#     option = "C",
-#     direction = 1,
-#     name = "Enrichment",
-#     na.value = "white"   # blanks appear white
-#   )+
-#   labs(
-#     x = "ATAC-seq peak cell type",
-#     y = "eQTL cell type",
-#     title = "eQTL enrichment in ATAC-seq peaks"
-#   ) +
-#   theme_minimal(base_size = 14) +
-#   theme(
-#     axis.text.x = element_text(angle = 45, hjust = 1),
-#     panel.grid = element_blank()
-#   )
-# 
-# 
-# ziffra_enrichment_results <- ziffra_enrichment_results %>%
-#   mutate(
-#     logp = -log10(p_value),
-#     sig = ifelse(p_value < 0.05, "*", "")
-#   ) |> ggplot(aes(x = eqtl_cell_type, y = fold_enrichment, fill = peak_cell_type)) +
-#   geom_col(position = position_dodge(width = 0.8), width = 0.7, color = "black") +
-#   geom_text(aes(label = sig),
-#             position = position_dodge(width = 0.8),
-#             vjust = -0.5, size = 5, color = "black") +
-#   labs(
-#     title = "eQTL enrichment in ATAC-seq peaks",
-#     x = "eQTL cell type",
-#     y = "Fold enrichment",
-#     fill = "ATAC-seq peak cell type"
-#   ) +
-#   scale_fill_brewer(palette = "Set2") +
-#   theme_classic(base_size = 14) +
-#   theme(
-#     axis.text.x = element_text(angle = 45, hjust = 1),
-#     legend.position = "right"
-#   )
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
