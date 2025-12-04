@@ -59,9 +59,9 @@ message(n_sig_cis, ' FDR sig. eQTL loaded.')
 # Set wd  -----
 # LDproxy_batch spits out files to wd
 # Need to do it after cis_eQTL_tbl is loaded
-message('WD set to: ', proxy_dir)
 dir.create(proxy_dir)
 setwd(proxy_dir) 
+message('WD set to: ', proxy_dir)
 
 # Get proxies -----
 message('Collecting LD proxies for: ', cell_type)
@@ -84,7 +84,12 @@ for (snp in lead_variants) {
   
   tryCatch(
     {
-      LDproxy(snp = snp, pop = "CEU", r2d = "r2", token = token, genome_build = "grch38")
+      LDproxy(snp = snp, 
+              pop = "CEU", 
+              r2d = "r2", 
+              token = token, 
+              genome_build = "grch38",
+              file = paste0(proxy_dir, snp, '_grch38.txt'))
     },
     error = function(e) {
       message("Error querying SNP ", snp, ": ", e$message)
