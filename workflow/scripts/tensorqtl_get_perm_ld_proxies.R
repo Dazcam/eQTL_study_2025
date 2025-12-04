@@ -59,9 +59,9 @@ message(n_sig_cis, ' FDR sig. eQTL loaded.')
 # Set wd  -----
 # LDproxy_batch spits out files to wd
 # Need to do it after cis_eQTL_tbl is loaded
-dir.create(proxy_dir)
-setwd(proxy_dir) 
-message('WD set to: ', proxy_dir)
+# dir.create(proxy_dir)
+# setwd(proxy_dir) 
+# message('WD set to: ', proxy_dir)
 
 # Get proxies -----
 message('Collecting LD proxies for: ', cell_type)
