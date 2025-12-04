@@ -9,6 +9,9 @@
 #   2. For each SNP in 1, get it’s LD proxies using LDlinkR
 #   3. Collate all rsIDs from step 1 and 2
 
+# LDlinkR does not like concurrent requests so need to run this sequentially 
+# for each cell type in a single script
+
 #--------------------------------------------------------------------------------------
 # Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -62,11 +65,46 @@ setwd(proxy_dir)
 
 # Get proxies -----
 message('Collecting LD proxies for: ', cell_type)
-LDproxy_batch(snp = lead_variants,
-              pop = "CEU",
-              r2d = "r2",
-              token = token,
-              genome_build = "grch38")
+# SOme SNPs fail when using batch, try another approach
+# LDproxy_batch(snp = lead_variants,
+#               pop = "CEU",
+#               r2d = "r2",
+#               token = token,
+#               genome_build = "grch38")
+failed_snps <- character(0) 
+for (snp in lead_variants) {
+  message("Submitting request for query variant ", snp, " ..")
+  
+  # Make sure we don't already have data for SNP
+  out_file <- file.path(proxy_dir, paste0(snp, "_grch38.txt"))
+  if (file.exists(out_file)) {
+    message("Skipping ", snp, " (already done).")
+    next
+  }
+  
+  tryCatch(
+    {
+      LDproxy(snp = snp, pop = "CEU", r2d = "r2", token = token, genome_build = "grch38")
+    },
+    error = function(e) {
+      message("Error querying SNP ", snp, ": ", e$message)
+      failed_snps <<- c(failed_snps, snp)
+      return(NULL)
+    }
+  )
+}
+
+# Save failed SNPs  
+if (length(failed_snps) > 0) {
+  failed_file <- file.path(proxy_dir, "failed_snps.txt")
+  writeLines(failed_snps, failed_file)
+  message("Written ", length(failed_snps), " failed SNPs to: ", failed_file)
+} else {
+  message("No SNPs failed.")
+}
+
+
+
 
 # Load proxies from file and filter -----
 message('Loading proxies from files ...')
