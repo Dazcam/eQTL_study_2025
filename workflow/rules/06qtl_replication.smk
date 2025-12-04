@@ -1,4 +1,10 @@
+configfile: "../config/config.yaml"
+
 localrules: dwnld_obrien, dwnld_bryois, dwnld_ziffra, dwnld_wen, snp_lookup
+
+rule all:
+    input:
+        "reports/06QTL-REPLICATION/pi1_enrichments_report.html"
 
 rule dwnld_obrien:
     output: all_qtl = config["qtl_rep"]["dwnld_obrien"]["all_qtl"],
@@ -77,7 +83,7 @@ rule snp_lookup:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.snp_lookup_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["snp_lookup"]["log"]
-    script: "../scripts/create_snp_lookup.R"     
+    script: "../scripts/replication_create_snp_lookup.R"     
 
 rule atac_enrich:
     input:  qtl_perm = config["qtl_rep"]["snp_lookup"]["qtl_perm"], 
@@ -89,7 +95,7 @@ rule atac_enrich:
     message: "Test for sig. eQTL enrichments in Ziffra ATAC-seq peaks"
     benchmark: "reports/benchmarks/qtl_replication.atac_enrich_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["atac_enrich"]["log"]
-    script: "../scripts/atac_enrichments_ziffra.R"
+    script: "../scripts/replication_atac_enrichments_ziffra.R"
   
 rule cat_nom_qtl:
     input:   parquets = expand(config["qtl_rep"]["cat_nom_qtl"]["parquet"], chr=range(1,23),allow_missing=True)
@@ -113,7 +119,7 @@ rule pi1_enrich_obrien:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_obrien_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_obrien"]["log"]    
-    script: "../scripts/pi1_enrichments_bulk.R"    
+    script: "../scripts/replication_pi1_enrichment.R"    
 
 rule pi1_enrich_wen:
     # Currenly running all cell types together at a specific exp_pc, gen_pc, norm_method (norm method stil to be added)
@@ -128,7 +134,7 @@ rule pi1_enrich_wen:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_wen_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_wen"]["log"]
-    script: "../scripts/pi1_enrichments_bulk.R"
+    script: "../scripts/replication_pi1_enrichment.R"
 
 rule pi1_enrich_bryois:
     input:  public_all = config["qtl_rep"]["pi1_enrich_bryois"]["public_all"],
@@ -138,6 +144,26 @@ rule pi1_enrich_bryois:
     output: enrich = config["qtl_rep"]["pi1_enrich_bryois"]["enrich"],
             pi1    = config["qtl_rep"]["pi1_enrich_bryois"]["pi1"]
     resources: threads = 4, mem_mb = 20000, time="1:00:00"
+    message: "Calc pi1 enrichments between sn-eQTL and Bryois 2022 single-cell eQTL"
+    singularity: config["containers"]["r_eqtl"]
+    benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_bryois_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["qtl_rep"]["pi1_enrich_bryois"]["log"]
+    script: "../scripts/replication_pi1_enrichment.R"    
+
+
+rule pi1_enrich_fugita:
+    input: public_all = config["qtl_rep"]["pi1_enrich_fugita"]["public_all"],
+           public_top = config["qtl_rep"]["pi1_enrich_fugita"]["public_top"],
+           qtl_all = rules.cat_nom_qtl.output,
+           qtl_top = config["tensorQTL"]["tensorqtl_perm"]["output"]
+    output: enrich = config["qtl_rep"]["pi1_enrich_fugita"]["enrich"],
+            pi1 = config["qtl_rep"]["pi1_enrich_fugita"]["pi1"]
+    resources: threads = 4, mem_mb = 20000, time="1:00:00"
+    message: "Calc pi1 enrichments between sn-eQTL and Fugita 2024 single-cell eQTL"
+    singularity: config["containers"]["r_eqtl"]
+    benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_fugita_{cell_type}_vs_{fugita_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["qtl_rep"]["pi1_enrich_fugita"]["log"]
+    script: "../scripts/replication_pi1_enrichment.R"
     
 rule pi1_enrich_internal:
     input:      public_all = "../results/06QTL-REPLICATION/cat_nom_qtl/{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz",
@@ -151,14 +177,15 @@ rule pi1_enrich_internal:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_internal"]["log"]
-    script: "../scripts/pi1_enrichments_sc.R"    
+    script: "../scripts/replication_pi1_enrichment.R"    
 
-rule pi1_enrichments_report:
+rule pi1_enrichment_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  ziffra = expand(rules.atac_enrich.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             obrien = expand(rules.pi1_enrich_obrien.output.pi1, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             wen = expand(rules.pi1_enrich_wen.output.pi1, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             bryois = expand(rules.pi1_enrich_bryois.output.pi1, cell_type=config["cell_types"],ref_cell_type=config["cell_types_bryois"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            fugita = expand(rules.pi1_enrich_fugita.output.pi1, cell_type=config["cell_types"],fugita_cell_type=config["fugita_cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             internal = expand(rules.pi1_enrich_internal.output.pi1, cell_type=config["cell_types"],ref_cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             rmd_script = "scripts/pi1_enrichments_report.Rmd"
     output: "reports/06QTL-REPLICATION/pi1_enrichments_report.html"
@@ -166,16 +193,17 @@ rule pi1_enrichments_report:
             obrien_dir = "../../results/06QTL-REPLICATION/obrien_bulk/",
             wen_dir = "../../results/06QTL-REPLICATION/wen_bulk/",
             bryois_dir = "../../results/06QTL-REPLICATION/bryois/",
+            fugita_dir = "../../results/06QTL-REPLICATION/fugita/",
             internal_dir = "../../results/06QTL-REPLICATION/internal/",
             bmark_dir = "../reports/benchmarks/",
             output_file = "../reports/06QTL-REPLICATION/pi1_enrichments_report.html"
     singularity: config["containers"]["r_eqtl"]
     message: "Generate pi1 enrichments report report"
     benchmark: "reports/benchmarks/qtl_replication.pi1_enrichments_report.benchmark.txt"
-    log:     "../results/00LOG/06QTL-REPLICATION/pi1_enrichments_report.log"
+    log:     "../results/00LOG/06QTL-REPLICATION/replication_pi1_enrichment_report.log"
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(ziffra_dir = '{params.ziffra_dir}', obrien_dir = '{params.obrien_dir}', wen_dir = '{params.wen_dir}', bryois_dir = '{params.bryois_dir}', internal_dir = '{params.internal_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+            params = list(ziffra_dir = '{params.ziffra_dir}', obrien_dir = '{params.obrien_dir}', wen_dir = '{params.wen_dir}', bryois_dir = '{params.bryois_dir}', internal_dir = '{params.internal_dir}', fugita_dir = '{params.fugita_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
