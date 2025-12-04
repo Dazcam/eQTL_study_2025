@@ -18,19 +18,19 @@ cell_types:
   - "Endo-Peri"
   - "OPC" 
   - "MG"
-  - "ExN-UL-0"
-  - "ExN-UL-1"
-  - "ExN-UL-2"
-  - "ExN-DL-0"
-  - "ExN-DL-1"
-  - "ExN-DL-2"
-  - "ExN-DL-3"
-  - "InN-0"
-  - "InN-1"
-  - "RG-0"
-  - "RG-1"
-  - "RG-2"
-  - "RG-3"
+#  - "ExN-UL-0"
+#  - "ExN-UL-1"
+#  - "ExN-UL-2"
+#  - "ExN-DL-0"
+#  - "ExN-DL-1"
+#  - "ExN-DL-2"
+#  - "ExN-DL-3"
+#  - "InN-0"
+#  - "InN-1"
+#  - "RG-0"
+#  - "RG-1"
+#  - "RG-2"
+#  - "RG-3"
 
 cell_types_bryois:
   - "Astrocytes"
@@ -42,6 +42,15 @@ cell_types_bryois:
   - "Pericytes"
   - "Microglia"
 #  - "pb"
+
+fugita_cell_types:
+  - "Ast"
+  - "Exc"
+  - "Inh"
+  - "Oli"
+  - "OPC"
+  - "Mic"
+  - "End"
 
 eqtl_fdr: 0.05
 
@@ -58,13 +67,15 @@ p_heidi: 0.01
 smr_window: 500
 smr_gene: 'ENSG00000214435' # is 'AS3MT'
 
-gwas:
-  scz: https://figshare.com/ndownloader/files/34517828  # PMID:35396580, EUR only
-  bpd: https://figshare.com/ndownloader/files/49760772  # PMID:39843750
-  mdd: https://figshare.com/ndownloader/files/51487022  # PMID:39814019
-#  hgt: https://giant-consortium.web.broadinstitute.org/images/f/f7/GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_EUR.gz
+twas_run_test: FALSE
 
-#https://eur03.safelinks.protection.outlook.com/?url=https%3A%2F%2Fportals.broadinstitute.org%2Fcollaboration%2Fgiant%2Fimages%2Ff%2Ff7%2FGIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_EUR.gz&data=05%7C02%7CBaranY%40cardiff.ac.uk%7Cb4fbaa4e236042ccde8108dd6bbdb94f%7Cbdb74b3095684856bdbf06759778fcbc%7C1%7C0%7C638785184769053042%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=yNgCf5EVEHMayI6yj73W7V9p3cLgNez1kWNb5HLySQI%3D&reserved=0  #PMID:36224396  
+gwas:
+  scz: https://figshare.com/ndownloader/files/34517828                  # PMID:35396580, EUR only
+  bpd: https://figshare.com/ndownloader/files/49760772                  # PMID:39843750
+  mdd: https://figshare.com/ndownloader/files/51487022                  # PMID:39814019
+  adhd: https://figshare.com/ndownloader/articles/22564390/versions/1    # PMID:36702997 
+  ptsd: https://figshare.com/ndownloader/articles/26349322/versions/3    # PMID:38637617
+  ocd: https://figshare.com/ndownloader/articles/28707155/versions/4     # PMID:40360802  
  
 containers:
   fastqtl: ../resources/containers/gtex_eqtl.sif
@@ -369,6 +380,12 @@ tensorQTL:
     prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_trans.log
 
+  post_trans:
+    output: ../results/05TENSORQTL/post_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_post_trans.tsv 
+    proxy_dir: ../results/05TENSORQTL/proxies/{cell_type}/
+    ldlink_token: ../config/ldlink_token.txt
+    log: ../results/00LOG/05TENSORQTL/post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
+
   tensorqtl_tss_plt: ../results/figs/tss_density_plot_combined.png
   tensorqtl_tss_tbl: ../results/tables/tensorqtl_summary_table.tsv
 
@@ -440,6 +457,13 @@ qtl_rep:
     enrich: ../results/06QTL-REPLICATION/bryois/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
     pi1: ../results/06QTL-REPLICATION/bryois/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_results_tbl.rds
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_bryois.log    
+
+  pi1_enrich_fugita:
+    public_all: ../resources/public_datasets/fugita_2024/celltype-eqtl-sumstats.{fugita_cell_type}.tsv
+    public_top: ../resources/public_datasets/fugita_2024/celltype-eqtl-sumstats.{fugita_cell_type}.tsv
+    enrich: ../results/06QTL-REPLICATION/fugita/{cell_type}_vs_{fugita_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
+    pi1: ../results/06QTL-REPLICATION/fugita/{cell_type}_vs_{fugita_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_results_tbl.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{fugita_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_fugita.log
 
   pi1_enrich_internal:
     enrich: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
@@ -584,38 +608,44 @@ sldsr:
     log: ../results/00LOG/09SLDSR/ldsr_report.log
 
 # ---------  TWAS  ----------
+# Note that I'm hardcoding the norm_method and genPC and expPC here
+# TODO: add covariates / Fix GEMMA models
 
 twas:
   get_gemma:
     output: ../resources/gemma/gemma
   prep_exp_data:
-    input: ../results/03SCANPY/pseudobulk/{cell_type}_tmm.bed
-    exp: ../results/06TWAS/fusion_input/{cell_type}_tmm_plink.txt
-    coord: ../results/06TWAS/fusion_input/{cell_type}_gene_coord.txt
-    log: ../results/00LOG/06TWAS/prep_exp_data_{cell_type}.log
+    input: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
+    exp: ../results/11TWAS/fusion_input/{cell_type}_plink.txt
+    coord: ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
+    log: ../results/00LOG/11TWAS/prep_exp_data_{cell_type}.log
   convert_vcf:
-    input: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt.vcf.gz
-    bed: ../results/06TWAS/fusion_input/genotypes_hg38.bed
-    bim: ../results/06TWAS/fusion_input/genotypes_hg38.bim
-    fam: ../results/06TWAS/fusion_input/genotypes_hg38.fam 
-    prefix: ../results/06TWAS/fusion_input/genotypes_hg38
-    log: ../results/00LOG/06TWAS/convert_vcf.log
+    input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    bed: ../results/11TWAS/fusion_input/genotypes_hg38.bed
+    bim: ../results/11TWAS/fusion_input/genotypes_hg38.bim
+    fam: ../results/11TWAS/fusion_input/genotypes_hg38.fam 
+    prefix: ../results/11TWAS/fusion_input/genotypes_hg38
+    log: ../results/00LOG/11TWAS/convert_vcf.log
   restrict_geno_to_ldref:
-    bed: ../results/06TWAS/fusion_input/genotypes_hg38_filt.bed 
-    bim: ../results/06TWAS/fusion_input/genotypes_hg38_filt.bim
-    fam: ../results/06TWAS/fusion_input/genotypes_hg38_filt.fam
-    snp_lst: ../results/06TWAS/fusion_input/ldref_snps.txt
-    prefix_in: ../results/06TWAS/fusion_input/genotypes_hg38
-    prefix_out: ../results/06TWAS/fusion_input/genotypes_hg38_filt
-    log: ../results/00LOG/06TWAS/restrict_geno_to_ldref.log
+    bed: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bed 
+    bim: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bim
+    fam: ../results/11TWAS/fusion_input/genotypes_hg38_filt.fam
+    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
+    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
+    prefix_out: ../results/11TWAS/fusion_input/genotypes_hg38_filt
+    log: ../results/00LOG/11TWAS/restrict_geno_to_ldref.log
+  prepare_gene_inputs:
+    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
+    prefix_out: ../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis
+
   compute_weights:
-    covar: ../results/03SCANPY/pseudobulk/{cell_type}_covariates.txt
-    output: ../results/06TWAS/weights/{cell_type}/{gene_id}.wgt.RDat
-    outdir: ../results/06TWAS/weights/{cell_type}
-    log: ../results/00LOG/06TWAS/weights_{cell_type}_{gene_id}.log
+    covar: ../results/05TENSORQTL/prep_input/{cell_type}_quantile_genPC_4_expPC_40_split_covariates.txt
+    output: ../results/11TWAS/weights/{cell_type}/{gene_id}.RDat
+    outdir: ../results/11TWAS/weights/{cell_type}
+    log: ../results/00LOG/11TWAS/weights_{cell_type}_{gene_id}.log
   aggregate_weights:
-    output: ../results/06TWAS/weights/{cell_type}/summary.txt
-    log: ../results/00LOG/06TWAS/aggregate_{cell_type}.log
+    output: ../results/11TWAS/weights/{cell_type}/summary.txt
+    log: ../results/00LOG/11TWAS/aggregate_{cell_type}.log
 
 # ---------  SMR  ----------
 
@@ -624,10 +654,6 @@ smr:
     smr: ../resources/smr/smr
     prefix: ../resources/smr
 
-  get_snp_positions:
-    snp_pos: ../results/10SMR/smr_input/snp_positions.txt
-    log: ../results/00LOG/10SMR/get_snp_positions.log
-
   cat_tensorqtl_nom_snps:
     cat_snps: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
     summary: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
@@ -635,7 +661,7 @@ smr:
     log: ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
 
   create_query:
-    r_script: scripts/prep_eQTL_for_smr.R
+    r_script: scripts/smr_create_query.R
     query: ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
     gene_lst: ../results/10SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
     log: ../results/00LOG/10SMR/create_query_{cell_type}.log
@@ -715,10 +741,31 @@ plotting:
 jobs:
   run_jobs:
     bulk_file: ../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz
-    output: "../results/12JOBS/jobs_pval_fdr_genomewide.tsv.gz"
+    output: ../results/12JOBS/jobs_with_se_p.tsv.gz
     sc_dir: ../results/10SMR/smr_input/
     out_dir: ../results/12JOBS/
     log: ../results/00LOG/12JOBS/run_jobs.log
+
+  merge_jobs: 
+    nom_p: ../results/12JOBS/mrgd/{cell_type}_nom.cis_qtl_pairs_jobs_mrg.tsv
+    fdr: ../results/12JOBS/mrgd/{cell_type}_nom.cis_qtl_pairs_jobs_mrg_fdr.tsv
+    jobs_dir: ../results/12JOBS/
+    log: ../results/00LOG/12JOBS/smr_input/merge_jobs_{cell_type}.log
+
+  create_query:
+    query: ../results/12JOBS/smr_input/{cell_type}/{cell_type}_query.tsv
+    gene_lst: ../results/12JOBS/smr_input/{cell_type}/{cell_type}_gene_list.tsv
+    log: ../results/00LOG/12JOBS/create_query_{cell_type}.log
+
+  create_besd:
+    besd: ../results/12JOBS/smr_input/{cell_type}/{cell_type}.besd
+    prefix: ../results/12JOBS/smr_input/{cell_type}/{cell_type}
+    log: ../results/00LOG/12JOBS/create_besd_{cell_type}.log
+
+  smr:
+    smr: ../results/12JOBS/smr/{cell_type}/{cell_type}_{gwas}.smr
+    smr_prefix: ../results/12JOBS/smr/{cell_type}/{cell_type}_{gwas}
+    log: ../results/00LOG/12JOBS/smr_{cell_type}_{gwas}.log 
 
 # ---------  Smpl Swaps  ----------
 

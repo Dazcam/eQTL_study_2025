@@ -5,7 +5,7 @@ use-envmodules: True
 conda-frontend: conda
 use-singularity: True
 keep-going: True
-jobs: 10
+jobs: 500
 rerun-incomplete: True
 #restart-times: 1
 printshellcmds: True
@@ -22,6 +22,7 @@ cluster-generic-submit-cmd:
     --output=../results/00LOG/smk-logfiles/{rule}.%j.out
     --error=../results/00LOG/smk-logfiles/{rule}.%j.err
     --account=scw1641
+    --qos=maxjobs500
     --partition=c_compute_neuro1
 
 default-resources:

@@ -1,5 +1,9 @@
 configfile: "../config/config.yaml"
 
+rule all:
+    input:
+        "reports/05TENSORQTL/tensorqtl_report.html"        
+    
 rule prep_tensorQTL_input:
     input:  cov_file = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
             sex_file = config["tensorQTL"]["prep_tensorQTL_input"]["sex_file"],
@@ -137,11 +141,24 @@ rule tensorqtl_trans:
               --window {params.window} >> {log} 2>&1
             """
 
+rule post_trans:
+    input:  perm = rules.tensorqtl_perm.output,
+            trans = rules.tensorqtl_trans.output
+    output: config["tensorQTL"]["post_trans"]["output"] 
+    params: proxy_dir = config["tensorQTL"]["post_trans"]["proxy_dir"],
+            ldlink_token = config["tensorQTL"]["post_trans"]["ldlink_token"]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Run post-trans eQTL analysis and get LD proxies for perm eQTL"
+    benchmark: "reports/benchmarks/05tensorQTL.post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    log:    config["tensorQTL"]["post_trans"]["log"]
+    script:  "../scripts/post_tensorqtl_trans_analysis.R"
+
 rule tensorqtl_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  perm  = expand(rules.tensorqtl_perm.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             indep = expand(rules.tensorqtl_independent.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]), 
             trans = expand(rules.tensorqtl_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+            post_trans = expand(rules.post_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             rmd_script = "scripts/tensorQTL_report.Rmd"
     output: "reports/05TENSORQTL/tensorqtl_report.html"
     params: in_dir = "../../results/05TENSORQTL/tensorqtl_perm/",

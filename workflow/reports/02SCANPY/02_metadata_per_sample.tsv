@@ -1,5 +1,7 @@
 sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
+1102	F	F	F	3	0	F	2	12
 1117		M	M	0	2	M	1	15
+1118		M		0	1	A	0	12
 1558	F	F	F	3	0	F	2	12
 1923	F	F	F	3	0	F	2	13
 2143		M	M	0	2	M	1	12
@@ -7,6 +9,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 11449	M	M	M	0	3	M	1	14
 11511	M	M	M	0	3	M	1	14
 11654	F	F	F	3	0	F	2	13
+11834	M	M		0	2	M	1	12
 11875	M	M	M	0	3	M	1	19
 11921	M	M	M	0	3	M	1	17
 11928	M	M	M	0	3	M	1	13
@@ -29,13 +32,15 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 13950		M	M	0	2	M	1	16
 14105	M	M	M	0	3	M	1	15
 14149		F	F	2	0	F	2	16
+14159	M	M		0	2	M	1	20
+14160	M	M		0	2	M	1	19
 14205	M	M	M	0	3	M	1	20
 14211	F	F	F	3	0	F	2	19
 14284	M	M	M	0	3	M	1	18
 14402	M	M	M	0	3	M	1	20
 14404	M	M	M	0	3	M	1	19
 14473	M	F	M	1	2	M	1	17
-14493			F	1	0	A	0	15
+14493		F	F	2	0	F	2	15
 14501		M	M	0	2	M	1	16
 14521		M	M	0	2	M	1	12
 14524		F	F	2	0	F	2	15
@@ -55,11 +60,14 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 15070		M	M	0	2	M	1	12
 15091		F	F	2	0	F	2	17
 15125	F	F	F	3	0	F	2	20
+15135		M		0	1	A	0	13
 15183	F	A	F	2	0	F	2	20
 15217	M	M	M	0	3	M	1	19
 15218	M	M	M	0	3	M	1	16
 15219	M	M	M	0	3	M	1	18
+15237		M		0	1	A	0	13
 15245	M	M	M	0	3	M	1	17
+15248	F	F		2	0	F	2	14
 15249	F	F	F	3	0	F	2	13
 15260	F	F	F	3	0	F	2	17
 15265	F	F	F	3	0	F	2	20
@@ -72,7 +80,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 15432		M	M	0	2	M	1	16
 15444		F	F	2	0	F	2	12
 15517	M	M	M	0	3	M	1	13
-15611			M	0	1	A	0	unknown
+15611		M	M	0	2	M	1	unknown
 15626	M	M	M	0	3	M	1	12
 15658	F	F	F	3	0	F	2	14
 15699	F	F	F	3	0	F	2	19
@@ -86,6 +94,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 16024		M	M	0	2	M	1	17
 16246	F	F	F	3	0	F	2	15
 16281	M	M	M	0	3	M	1	21
+16385		F		1	0	A	0	16
 16393	F	F	F	3	0	F	2	16
 16438		A	M	0	1	A	0	21
 16488	M	M	M	0	3	M	1	14
@@ -97,6 +106,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 17053	M	M	M	0	3	M	1	14
 17071	M	M	M	0	3	M	1	14
 17072	M	M	M	0	3	M	1	15
+17086		F		1	0	A	0	unknown
 17109	F	F	F	3	0	F	2	13
 17160	F	F	F	3	0	F	2	17
 17162	M	M	M	0	3	M	1	17
@@ -107,7 +117,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 17369	M	M	M	0	3	M	1	15
 17486	F	F	F	3	0	F	2	18
 17629	M	M	M	0	3	M	1	15
-17630			F	1	0	A	0	unknown
+17630		F	F	2	0	F	2	unknown
 17634	F	F	F	3	0	F	2	21
 17671	M	M	M	0	3	M	1	16
 17754	M	M	M	0	3	M	1	13
@@ -121,6 +131,7 @@ sample	meta_sex	Sex_exp	sex_geno	f_count	m_count	sex_final	sex_code	PCW
 17940		M	M	0	2	M	1	19
 17972		F	F	2	0	F	2	17
 17978	M	M	M	0	3	M	1	19
+18011		A		0	0	A	0	13
 18039	F	F	F	3	0	F	2	20
 18048	F	F	F	3	0	F	2	16
 18061	M	M	M	0	3	M	1	20
