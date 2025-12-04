@@ -76,8 +76,8 @@ for (snp in lead_variants) {
   message("Submitting request for query variant ", snp, " ..")
   
   # Make sure we don't already have data for SNP
-  out_file <- file.path(proxy_dir, paste0(snp, "_grch38.txt"))
-  if (file.exists(out_file)) {
+  # Careful here, wd is already proxy_dir
+  if (file.exists(paste0(snp, "_grch38.txt"))) {
     message("Skipping ", snp, " (already done).")
     next
   }
