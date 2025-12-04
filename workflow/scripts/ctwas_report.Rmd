@@ -178,11 +178,11 @@ for (g in gwas) {
       title = md(paste0("**", toupper(g), " – ", ct, "**")),
       subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
     ) |>
-    fmt_scientific(columns = c(pval, fdr, z), decimals = 2) |>
+    fmt_scientific(columns = c(pval, z), decimals = 2) |>
     fmt_number(columns = susie_pip, decimals = 3) |>
     cols_label(
       cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
-      pval = "P", fdr = "FDR", susie_pip = "PIP", cs = "CS",
+      pval = "P", susie_pip = "PIP", cs = "CS",
       gene_biotype = "Type", chr = "Chr"
     ) |>
     cols_width(
@@ -191,7 +191,6 @@ for (g in gwas) {
       cell_type ~ px(80),
       z ~ px(70),
       pval ~ px(90),
-      fdr ~ px(90),
       susie_pip ~ px(70),
       cs ~ px(50),
       chr ~ px(50),
