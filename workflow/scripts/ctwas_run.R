@@ -226,6 +226,9 @@ weights <- preprocess_weights(weights_dir,
                               load_predictdb_LD = FALSE,
                               ncore = 4)
 
+message('Writing cTWAS weights for plotting later ...')
+write_rds(weights, paste0(out_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
+
 # Then run ctwas (example for full analysis)
 message('Run cTWAS ...')
 ctwas_res <- ctwas_sumstats(z_snp, 
