@@ -1,4 +1,9 @@
-localrules: prep_exp_data
+configfile: "../config/config.yaml"
+#localrules: prep_exp_data
+
+rule all:
+    input: 
+        "reports/11TWAS/11twas_weights_report.html"        
 
 def weights_input_function(wildcards):
     """
@@ -7,9 +12,7 @@ def weights_input_function(wildcards):
     """
     import pandas as pd
     
-    coord_file = config["twas"]["prep_exp_data"]["coord"] \
-                 .format(cell_type=wildcards.cell_type)
-    # → becomes ../results/11TWAS/fusion_input/MyCellType_gene_coord.txt
+    coord_file = config["twas"]["prep_exp_data"]["coord"].format(cell_type=wildcards.cell_type)
 
     df = pd.read_csv(coord_file, sep=r'\s+', header=0)
     # Your file has header: chr start end gene_id
@@ -54,7 +57,7 @@ rule prep_exp_data:
     message: "Creating plink ready expression data and gene coordinate file for FUSION weight calculation"
     benchmark: "reports/benchmarks/11twas.prep_exp_data_{cell_type}.benchmark.txt"    
     log:    config["twas"]["prep_exp_data"]["log"]
-    script: "../scripts/prep_expr_for_twas.R"
+    script: "../scripts/prep_expr_for_FUSION.R"
 
 # Rule to convert VCF to PLINK
 rule convert_vcf:
@@ -69,81 +72,18 @@ rule convert_vcf:
     log:    config["twas"]["convert_vcf"]["log"]
     shell:  """plink2 --vcf {input} --make-bed --out {params} > {log} 2>&1"""   
 
-rule restrict_geno_to_ldref:
-    input:  bed = config["twas"]["convert_vcf"]["bed"],
-            bim = config["twas"]["convert_vcf"]["bim"],
-            fam = config["twas"]["convert_vcf"]["fam"],
-            ldref_bim = expand("../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim", chr = range(1, 23))
-    output: bed = config["twas"]["restrict_geno_to_ldref"]["bed"],
-            bim = config["twas"]["restrict_geno_to_ldref"]["bim"],
-            fam = config["twas"]["restrict_geno_to_ldref"]["fam"],
-            snp_list = config["twas"]["restrict_geno_to_ldref"]["snp_lst"]
-    params: input = config["twas"]["restrict_geno_to_ldref"]["prefix_in"],
-            output = config["twas"]["restrict_geno_to_ldref"]["prefix_out"]
+rule get_ldref_snplist:
+    input:       expand("../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim", chr = range(1, 23))
+    output:      config["twas"]["restrict_geno_to_ldref"]["snp_lst"]
     envmodules: "plink/2.0"
-    message: "Restrict genotyped SNPs to LD reference SNPs"
-    benchmark: "reports/benchmarks/11twas.restrict_geno_to_ldref.benchmark.txt"
-    log:    "../results/00LOG/11TWAS/restrict_genotypes_to_ldref.log"
-    shell:  """
-            # Extract SNP IDs from LD reference .bim files
-            cat {input.ldref_bim} | cut -f 2 > {output.snp_list}
-            # Restrict genotypes to LD reference SNPs
-            plink2 --bfile {params.input} \
-              --extract {output.snp_list} \
-              --make-bed --out {params.output} > {log} 2>&1
-            """
+    message:    "Restrict genotyped SNPs to LD reference SNPs"
+    benchmark:  "reports/benchmarks/11twas.restrict_geno_to_ldref.benchmark.txt"
+    log:        "../results/00LOG/11TWAS/restrict_genotypes_to_ldref.log"
+    shell:      """
+                # Extract SNP IDs from LD reference .bim files
+                cat {input} | cut -f 2 > {output} 2>&1 | tee {log}                
+                """
 
-rule extract_cis_snps:
-    input:  geno_bed = config["twas"]["restrict_geno_to_ldref"]["bed"],
-            geno_bim = config["twas"]["restrict_geno_to_ldref"]["bim"],
-            geno_fam = config["twas"]["restrict_geno_to_ldref"]["fam"],
-            coord_file = config["twas"]["prep_exp_data"]["coord"]   # ← new input
-    output: cis_bed = temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed"),
-            cis_bim = temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim"),
-            cis_fam = temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam")
-    params: prefix_in = config["twas"]["restrict_geno_to_ldref"]["prefix_out"],
-            prefix_out = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis"
-    envmodules: "plink/2.0"
-    message:  "Extract cis-SNPs within cis-window for {wildcards.gene_id}"
-    benchmark: "reports/benchmarks/11twas.extract_cis_snps_{cell_type}_{gene_id}.benchmark.txt"
-    shell:
-        """
-        # Look up chr, start, end for this gene_id directly from the coord file
-        LINE=$(grep -w {wildcards.gene_id} {input.coord_file})
-        GENE_CHR=$(echo "$LINE" | awk '{{print $1}}')
-        GENE_START=$(echo "$LINE" | awk '{{print $2}}')
-        GENE_END=$(echo "$LINE" | awk '{{print $3}}')
-
-        CIS_START=$((GENE_START - 500000))
-        CIS_END=$((GENE_END + 500000))
-        [[ $CIS_START -lt 0 ]] && CIS_START=0
-
-        plink2 --bfile {params.prefix_in} \
-               --chr $GENE_CHR \
-               --from-bp $CIS_START \
-               --to-bp $CIS_END \
-               --make-bed \
-               --out {params.prefix_out} || true
-
-        # Create empty stubs if no SNPs
-        for ext in bed bim fam; do
-            [[ -s "{params.prefix_out}.$ext" ]] || touch "{params.prefix_out}.$ext"
-        done
-        """
-
-rule prepare_gene_pheno:
-    input:  config["twas"]["prep_exp_data"]["exp"],
-    output: temp("../results/11TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt")
-    params: "{gene_id}"
-    message:  "Prepare individual gene expression data for FUSION"
-    benchmark: "reports/benchmarks/11twas.prepare_gene_pheno.benchmark_{cell_type}_{gene_id}.txt"
-    shell:
-        """
-        # Get the column index of the gene_id
-        COL_IDX=$(head -n 1 {input} | tr '\t' '\n' | grep -n -w {params} | cut -f1 -d:)
-        # Extract FID, IID, and the gene_id column
-        cut -f 1,2,${{COL_IDX}} {input} > {output}
-        """
 
 rule prepare_covar:
     input:  config["tensorQTL"]["split_covariates"]["output"].format(cell_type="{cell_type}", norm_method="quantile", geno_pc=4, exp_pc=40)
@@ -155,60 +95,100 @@ rule prepare_covar:
     script:   "../scripts/prep_covar_for_FUSION.R"    
 
 rule compute_weights:
-    # Need to fix blup and bslmm in GEMMA. Running on 3 models only for now
-    input:  geno_bed = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bed",
-            geno_bim = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.bim",
-            geno_fam = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis.fam",
-            gene_pheno = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_pheno.txt",
-            covar = "../results/11TWAS/fusion_input/{cell_type}_covariates.txt",
-            gemma = config["twas"]["get_gemma"]["output"]
-    output: "../results/11TWAS/weights/{cell_type}/{gene_id}.wgt.RDat" # Docs say output is .RDat, which is not the case
-    params: indir = "../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis",
-            outdir = "../results/11TWAS/weights/{cell_type}",
-            out_rdat = "../results/11TWAS/weights/{cell_type}/{gene_id}"
+    input:
+        bed = config["twas"]["convert_vcf"]["bed"],
+        bim = config["twas"]["convert_vcf"]["bim"],
+        fam = config["twas"]["convert_vcf"]["fam"],
+        expr_file = rules.prep_exp_data.output.exp,
+        coord_file = rules.prep_exp_data.output.coord,
+        ldref_snps = rules.get_ldref_snplist.output,
+        covar = "../results/11TWAS/fusion_input/{cell_type}_covariates.txt",
+        gemma = config["twas"]["get_gemma"]["output"]
+    output:
+        touch("../results/11TWAS/weights/{cell_type}/all_weights_done.txt")
+    params:
+        prefix_in = config["twas"]["convert_vcf"]["prefix"],
+        outdir = "../results/11TWAS/weights/{cell_type}"
     singularity: config["containers"]["twas"]
-    message:  "Compute expression weights with FUSION"
-    benchmark: "reports/benchmarks/11twas.compute_weights_{cell_type}_{gene_id}.benchmark.txt"
-    log:    "../results/00LOG/11TWAS/compute_weights_{cell_type}_{gene_id}.log"
+    message: "Running FUSION weights for ALL genes in {wildcards.cell_type}"
+    benchmark: "reports/benchmarks/11twas.compute_all_weights_{cell_type}.benchmark.txt"
+    log: "../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log"
     shell:
-            r"""
-            if [ -s {input.geno_bed} ]; then
-              echo "Running compute_weights for {wildcards.gene_id}" >> {log}
-              Rscript ../resources/fusion/FUSION.compute_weights.R \
-                --bfile {params.indir} \
-                --pheno {input.gene_pheno} \
-                --hsq_p 0.01 \
-                --crossval 5 \
-                --tmp {params.outdir}/{wildcards.gene_id}.tmp \
-                --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
-                --PATH_gcta ../resources/fusion/gcta_nr_robust \
-                --PATH_gemma {input.gemma} \
-                --models top1,lasso,enet \
-                --verbose 2 \
-                --out {params.out_rdat} >> {log} 2>&1 || true
-              if [ ! -f {output} ]; then
-                echo "{wildcards.gene_id} was skipped (likely due to low heritability)." >> {log}
-                touch {output}
-              fi
-           else
-             echo "No SNPs for {wildcards.gene_id}, skipping..." >> {log}
-             touch {output}
-           fi
-           """
+        r"""
+        echo "Starting weight computation for {wildcards.cell_type}" > {log}
 
-rule aggregate_per_cell_type:
-    input: weights_input_function
-    output: touch("../results/11TWAS/{cell_type}/all_genes_done.txt")
+        COORD={input.coord_file}
+        EXPR={input.expr_file}
+        LDREF={input.ldref_snps}
+        COVAR={input.covar}
+        GEMMA={input.gemma}
+        GENOPREFIX={params.prefix_in}
+        OUTDIR={params.outdir}
 
-rule aggregate_all:
-    input:  expand("../results/11TWAS/{cell_type}/all_genes_done.txt", cell_type = config['cell_types']),
-    output: "../results/11TWAS/all_genes_in_all_cell_types_done.txt",
-    message:  "Aggregate all (cell- and gene-specific) data after checkpoint"
-    benchmark: "reports/benchmarks/11twas.aggregate_all.benchmark.txt"
-    shell:  "cat {input} > {output}"
+        mkdir -p $OUTDIR
+        
+        while read CHR START END GENE; do
+            echo "Processing $GENE" >> {log}
+
+            WORKDIR="../results/11TWAS/fusion_input/{wildcards.cell_type}/${{GENE}}"
+            mkdir -p $WORKDIR
+
+            CIS_START=$((START - 500000))
+            CIS_END=$((END + 500000))
+            [ $CIS_START -lt 0 ] && CIS_START=0
+
+            # Extract cis SNPs
+            plink2 --bfile $GENOPREFIX \
+                   --chr $CHR \
+                   --from-bp $CIS_START \
+                   --to-bp $CIS_END \
+                   --extract $LDREF \
+                   --force-intersect \
+                   --make-bed \
+                   --out $WORKDIR/cis || true
+
+            for ext in bed bim fam; do
+                [[ -s "$WORKDIR/cis.$ext" ]] || touch "$WORKDIR/cis.$ext"
+            done
+
+            # Extract expression column
+            COL=$(head -1 $EXPR | tr '\t' '\n' | grep -n -w $GENE | cut -d: -f1)
+            cut -f1,2,$COL $EXPR > $WORKDIR/pheno.txt
+
+            # Run FUSION if SNPs exist
+            OUTPREFIX="$OUTDIR/${{GENE}}"
+            if [ -s "$WORKDIR/cis.bed" ]; then
+                Rscript ../resources/fusion/FUSION.compute_weights.R \
+                    --bfile $WORKDIR/cis \
+                    --pheno $WORKDIR/pheno.txt \
+                    --covar $COVAR \
+                    --hsq_p 0.01 \
+                    --crossval 5 \
+                    --tmp $OUTPREFIX.tmp \
+                    --PATH_gemma $GEMMA \
+                    --PATH_gcta ../resources/fusion/gcta_nr_robust \
+                    --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
+                    --verbose 2 \
+                    --models top1,lasso,enet \
+                    --out $OUTPREFIX >> {log} 2>&1 || true
+            fi
+
+            [ -f "$OUTPREFIX.wgt.RDat" ] || touch "$OUTPREFIX.wgt.RDat"
+            
+            rm -rf $WORKDIR 
+            if [ ! -d "$WORKDIR" ]; then
+              echo "$WORKDIR removed" >> {log}
+            else
+              echo "WARNING: Failed to remove $WORKDIR" >> {log}
+            fi 
+            
+        done < <(tail -n +2 $COORD)
+
+        echo "All genes completed" >> {log}
+        """
 
 rule make_pos_file:
-    input:  pos_input_function
+    input:  "../results/11TWAS/weights/{cell_type}/all_weights_done.txt"
     output: "../results/11TWAS/weights/{cell_type}/{cell_type}.pos"
     params: coord_file = config["twas"]["prep_exp_data"]["coord"],
             cis_window = config["tensorQTL"]["window"]
@@ -260,7 +240,7 @@ rule make_pos_file:
 
 rule twas_weights_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
-    input:  weights_done = "../results/11TWAS/all_genes_in_all_cell_types_done.txt",
+    input:  pos = expand("../results/11TWAS/weights/{cell_type}/{cell_type}.pos", cell_type = config['cell_types']),
 #            twas_results = expand("../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.twas", cell_type = config['cell_types'], gwas = config['gwas']),
             rmd_script = "scripts/twas_weights_summary.Rmd"
     output: "reports/11TWAS/11twas_weights_report.html"
