@@ -1,8 +1,6 @@
 configfile: '../config/config.yaml'
 
-rule all:
-    input:
-        expand("../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_pip.tsv", cell_type = config['cell_types'], gwas = config['gwas'])
+localrules: ctwas_report
 
 rule create_ld_matrices:
     output: "../results/12CTWAS/ld_mats/create_ctwas_ld_matrices.done"
@@ -40,14 +38,38 @@ rule copy_fusion_weights:
 
 rule run_ctwas:
     input:  ld_mat = rules.create_ld_matrices.output,
-            gwas = "../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz",
-            weights = "../results/12CTWAS/stubs/{cell_type}_copy_weights.done"
-    output: "../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_pip.tsv"
+            gwas = "../results/07PREP-GWAS/{gwas}_hg38.tsv",
+            weights = "../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done",
+            bim_file = "../results/10SMR/smr_input/1000G.EUR.hg38.bim"
+    output: "../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds"
     params: ld_dir = "../results/12CTWAS/ld_mats/",
-            weights_dir = "../results/12CTWAS/weights/{cell_type}/" 
-    resources: threads = 6, mem_mb = 24000, time="3-0:00:00"
+            weights_dir = "../results/12CTWAS/weights/{cell_type}/"
+    resources: threads = 6, mem_mb = 96000, time="3-0:00:00"
     singularity: config["containers"]["twas"]
-    message:  "Creating LD matrices and variant info files for causal TWAS"
+    message:  "Running cTWAS"
     benchmark: "reports/benchmarks/12ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt"
     log:    "../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log"
     script: "../scripts/ctwas_run.R"
+
+rule ctwas_report:
+    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
+    input:  ctwas_res = expand(rules.run_ctwas.output, cell_type = config['cell_types'], gwas = config['gwas']),
+            rmd_script = "scripts/ctwas_report.Rmd"
+    output: "reports/12CTWAS/ctwas_report.html"
+    params: in_dir = "../../results/12CTWAS/output/",
+            bmark_dir = "../reports/benchmarks/",
+            lookup_dir = "../../resources/sheets/",
+            output_file = "../reports/12CTWAS/ctwas_report.html"
+    singularity: config["containers"]["twas"] # Need to add ctwas to r_eqtl conatiner to print locus plot
+    message: "Generate cTWAS report"
+    benchmark: "reports/benchmarks/12ctwas.ctwas_report.benchmark.txt"
+    log:     "../results/00LOG/12CTWAS/ctwas_report.log"
+    shell:
+        """
+        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+            output_file = '{params.output_file}', \
+            params = list(in_dir = '{params.in_dir}', \
+            bmark_dir = '{params.bmark_dir}', \
+            lookup_dir = '{params.lookup_dir}'))" > {log} 2>&1
+        """
+

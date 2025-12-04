@@ -12,9 +12,10 @@ configfile: '../config/config.yaml'
 #include: 'rules/08susie.smk'
 #include: 'rules/09sldsr.smk'
 #include: 'rules/10smr.smk'
-#include: 'rules/10twas.smk'
+#include: 'rules/11twas.smk'
 #include: 'rules/11plotting.smk'
-include: 'rules/12jobs.smk'
+include: 'rules/12ctwas.smk'
+#include: 'rules/12jobs.smk'
 
 # Set QTL tool
 QTL_TOOL = config["tensorQTL"]["tool"]
@@ -74,9 +75,11 @@ def aggregate_input(wildcards):
 
 rule all:
     input:
+#        "reports/11TWAS/11twas_weights_report.html",
+#        expand("../results/11TWAS/weights/{cell_type}/{cell_type}.pos", cell_type=config["cell_types"])
 #        "reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds",
 #        "reports/11PLOTTING/boxplots_py/plot_qtl.done"
-        "../results/12JOBS/jobs_pval_fdr_genomewide.tsv.gz"
+#        "reports/12JOBS/jobs_report.html"
 #         expand(config["sldsr"]["ldsr_strat_summary"]["output"], annot_type = config["annot_types"])
 #        "../results/02SCANPY/scanpy_subclustering.html",
 #        "../results/02SCANPY/scanpy_clustering.html",
@@ -92,7 +95,9 @@ rule all:
 #        "reports/08SUSIE/08susie_report.html",
 #        "reports/09SLDSR/09ldsr_report.html",
 #        "reports/10SMR/10smr_report.html",
-#        "reports/11PLOTTING/eqtl_boxplots.rds"
+#        "reports/11PLOTTING/eqtl_boxplots.rds",
+         "reports/12CTWAS/ctwas_report.html"
+#
 #        expand("/scratch/c.c1477909/fastqs/250716/{sample}_{lane}_R1_001.fastq.gz", sample=ALL_SAMPLES, lane=["L001", "L002", "L003", "L004"])
 #        "reports/read_counts/summary_read_counts.txt"
 #        "../resources/refs/ref.done",

@@ -1,6 +1,16 @@
+configfile: "../config/config.yaml"
+
+rule all:
+    input:
+        "reports/10SMR/10smr_report.html"
+#        expand("../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr", cell_type=config["cell_types"], gwas=config["gwas"])
+     
+
 rule get_smr_binary:
    output: config["smr"]["get_smr_binary"]["smr"]
    params: config["smr"]["get_smr_binary"]["prefix"]
+   message: "Download the smr binary file"
+   benchmark: "reports/benchmarks/10smr.get_smr_binary.txt"
    shell:
       """
       wget https://yanglab.westlake.edu.cn/software/smr/download/smr-1.4.0-linux-x86_64.zip
@@ -20,6 +30,8 @@ rule cat_refs:
             bed = config["smr"]["cat_refs"]["cat_bed"],
             bim = config["smr"]["cat_refs"]["cat_bim"],
             fam = config["smr"]["cat_refs"]["cat_fam"]
+    message: "Cat hg38 refs into a single file"
+    benchmark: "reports/benchmarks/10smr.cat_refs.txt"
     log: config["smr"]["cat_refs"]["log"]
     shell: 
         """
@@ -35,20 +47,17 @@ rule cat_refs:
         echo "Concatenated frq, bed, bim, fam files" > {log}
         """
 
-rule get_snp_positions:
-    input: rules.cat_refs.output.bim
-    output: config["smr"]["get_snp_positions"]["snp_pos"]
-    envmodules: "bcftools"
-    log: config["smr"]["get_snp_positions"]["log"]
-#    shell: "bcftools query -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\n' {input} > {output}" # if input is vcf
-    shell: """awk '{{print $1 "\t" $4 "\t" $2 "\t" $6 "\t" $5}}' {input} > {output}"""
-
 # Move this to tensorflow rules when debugged
 rule cat_tensorqtl_nom_snps:
-    input: config["output_files"]["tensorqtl_output"]
+    input: lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
+                geno_pc=config['tensorQTL']['geno_pcs'],
+                exp_pc=config['tensorQTL']['exp_pcs'][0]:
+                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{w.cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet"
     output: cat_snps = config["smr"]["cat_tensorqtl_nom_snps"]["cat_snps"],
             summary = config["smr"]["cat_tensorqtl_nom_snps"]["summary"]
-    params: config["smr"]["cat_tensorqtl_nom_snps"]["dir"] 
+    params: config["smr"]["cat_tensorqtl_nom_snps"]["dir"]
+    message: "Cat TensorQTL parquet files into single file for SMR"
+    benchmark: "reports/benchmarks/10smr.cat_tensorqtl_nom_snps_{cell_type}.txt"
     log: config["smr"]["cat_tensorqtl_nom_snps"]["log"]
     shell:
         """
@@ -62,8 +71,8 @@ rule cat_tensorqtl_nom_snps:
 rule create_query:
     input:  eqtl = rules.cat_tensorqtl_nom_snps.output.cat_snps,
 #            eqtl = config["output_files"]["tensorqtl_perm_output"], # All probes failed HEIDI when using perm
-            snps = rules.get_snp_positions.output,
-            genes = config["slsdr"]["prep_susie_gene_meta"]["output"],
+            snps = rules.cat_refs.output.bim,
+            genes = config["susie"]["prep_susie_gene_meta"]["output"],
             frq = rules.cat_refs.output.frq,
             r_script = config["smr"]["create_query"]["r_script"]
     output: query = config["smr"]["create_query"]["query"],
@@ -71,8 +80,10 @@ rule create_query:
 #    params: qval_thresh = config["eqtl_fdr"]
     singularity: config["containers"]["R"]
     resources: threads = 4, mem_mb = 20000
+    message: "Create query file for SMR"
+    benchmark: "reports/benchmarks/10smr.create_query_{cell_type}.txt"
     log: config["smr"]["create_query"]["log"]
-    script: "../scripts/prep_eQTL_for_smr.R"
+    script: "../scripts/smr_create_query.R"
 
 rule create_besd:
     input: query = config["smr"]["create_query"]["query"],
@@ -81,10 +92,12 @@ rule create_besd:
     params: config["smr"]["create_besd"]["prefix"]
     resources: threads = 4, mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
+    message: "Create besd file for SMR"
+    benchmark: "reports/benchmarks/10smr.create_besd_{cell_type}.txt"
     log: config["smr"]["create_besd"]["log"]
     shell:
         """
-        {input.smr} --qfile {input.query} --make-besd --out {params} > {log} 2>&1
+        {input.smr} --qfile {input.query} --add-n 133 --make-besd --out {params} > {log} 2>&1
         """
 
 # Generate frq files from my samples; fails smr due to allele freq discrepancies
@@ -107,13 +120,15 @@ rule create_besd:
 rule format_gwas:
     input:  gwas = config["smr"]["format_gwas"]["gwas"],
             frq  = rules.cat_refs.output.frq,
-            script = "scripts/prep_gwas_for_smr.R"
+            script = "scripts/smr_format_gwas.R"
     output: config["smr"]["format_gwas"]["ma"]
     params: config["smr"]["format_gwas"]["prefix"]
     resources: threads = 4, mem_mb = 20000
     singularity: config["containers"]["R"]
+    message: "Prep GWAS into .ma format for SMR"
+    benchmark: "reports/benchmarks/10smr.format_gwas_{gwas}.txt"
     log: config["smr"]["format_gwas"]["log"]
-    script: "../scripts/prep_gwas_for_smr.R"    
+    script: "../scripts/smr_format_gwas.R"    
 
 rule smr:
     input:  bin = rules.get_smr_binary.output,
@@ -125,28 +140,76 @@ rule smr:
             out_prefix = config["smr"]["smr"]["smr_prefix"]
     resources: threads = 4, mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
+    message: "Run SMR"
+    benchmark: "reports/benchmarks/10smr.smr_{cell_type}_{gwas}.txt"
     log:    config["smr"]["smr"]["log"]
     shell:  """
             {input.bin} --bfile {params.geno_prefix} \
                 --gwas-summary {input.gwas} \
                 --beqtl-summary {params.besd_prefix} \
                 --out {params.out_prefix} \
-                --peqtl-smr 0.01 >> {log} 2>&1 
+                --peqtl-smr 5e-8 >> {log} 2>&1 
             """
+
+# These rules can be used to generate code for smr plots
+# Note that smr_plot doesn't produce output for snp / gene pairs
+# If using these rules need to get code to handel this
+#rule prep_gene_lists:
+#    input: rules.create_query.output.gene_lst
+#    output: ensembl = config['smr']['prep_gene_lists']['ensembl'],
+#            symbol = config['smr']['prep_gene_lists']['symbol']
+#    singularity: config["containers"]["R"]
+#    message: "Creating the gene lists file for SMR plotting"
+#    benchmark: "reports/benchmarks/10smr.prep_gene_lists_{cell_type}.txt"
+#    log: config["smr"]["prep_gene_lists"]["log"]
+#    script: "../scripts/prep_gene_lists_for_smr_plts.R"
+
+#rule smr_plot:
+#    input:  gwas = rules.format_gwas.output,
+#            gene_list = rules.prep_gene_lists.output.ensembl,
+#            bin = rules.get_smr_binary.output,
+#    output: config["smr"]["smr_plot"]["output"]
+#    params: geno_prefix = config["smr"]["smr"]["geno_prefix"],
+#            besd_prefix = config["smr"]["create_besd"]["prefix"],
+#            out_prefix = config["smr"]["smr_plot"]["out_prefix"],
+#            smr_gene = config['smr_gene'],
+#            window =  config['smr_window']
+#    resources: threads = 4, mem_mb = 20000
+#    envmodules: "compiler/gnu/5/5.0"
+#    message: "Generate data for SMR plotting"
+#    benchmark: "reports/benchmarks/10smr.smr_plot_{cell_type}_{gwas}_{smr_gene}.txt"
+#    log:    config["smr"]["smr_plot"]["log"]
+#    shell:  """
+#            {input.bin} --bfile {params.geno_prefix} \
+#              --gwas-summary {input.gwas} \
+#              --beqtl-summary {params.besd_prefix} \
+#              --out {params.out_prefix} \
+#              --plot \
+#              --probe {params.smr_gene} \
+#              --probe-wind {params.window} \
+#              --gene-list {input.gene_list} >> {log} 2>&1
+#            """ 
 
 rule smr_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  smr_files = expand(rules.smr.output, cell_type = config["cell_types"], gwas = config["gwas"]),
+#            plt_files = expand(rules.smr_plot.output, cell_type = config["cell_types"], gwas = config["gwas"], smr_gene = config['smr_gene']),
             rmd_script = "scripts/smr_report.Rmd"
     output: config["smr"]["smr_report"]["html"]
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
             in_dir = config["smr"]["smr_report"]["in_dir"],
-            output_file = "../reports/07smr_report.html"
-    singularity: config["containers"]["R"]
+            output_file = "../reports/10SMR/10smr_report.html",
+            p_smr = config["p_smr"],
+            p_heidi =  config["p_heidi"]    
+    resources: threads = 4, mem_mb = 20000
+    singularity: config["containers"]["r_eqtl"]
+    message: "Generate SMR report"
+    benchmark: "reports/benchmarks/10smr.smr_report.txt"
     log: config["smr"]["smr_report"]["log"]
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(cell_types = c({params.cell_types}), in_dir = '{params.in_dir}'))" > {log} 2>&1
+            params = list(cell_types = c({params.cell_types}), in_dir = '{params.in_dir}', p_smr = '{params.p_smr}', p_heidi = '{params.p_heidi}', bmark_dir = '../reports/benchmarks/'))" > {log} 2>&1
         """
+

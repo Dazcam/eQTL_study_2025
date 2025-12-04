@@ -104,7 +104,7 @@ rule cat_nom_qtl:
     message: "Combine per-chr parquet files into gzip file for pi1 enrichment"
     benchmark: "reports/benchmarks/qtl_replication.cat_nom_qtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:     config["qtl_rep"]["cat_nom_qtl"]["log"]
-    shell:   "scripts/cat_nom_qtl.py {output} {input.parquets} > {log} 2>&1"
+    shell:   "scripts/replication_cat_nom_qtl.py {output} {input.parquets} > {log} 2>&1"
 
 rule pi1_enrich_obrien:
     # Currenly running all cell types together at a specific exp_pc, gen_pc, norm_method (norm method stil to be added)
