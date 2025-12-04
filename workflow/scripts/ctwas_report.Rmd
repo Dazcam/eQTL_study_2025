@@ -164,8 +164,6 @@ for (g in gwas) {
       separate(id, into = c('cell_type', 'id'), sep = "_") |>
       left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
       arrange(desc(susie_pip)) |>
-      mutate(pval = 2 * pnorm(-abs(z)),
-               fdr  = p.adjust(pval, method = "BH")) |>
       dplyr::select(cell_type, symbol, gene, z, pval, fdr, susie_pip, cs, gene_biotype, chr)
     
     cat("#####", ct, "\n\n")
