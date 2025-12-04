@@ -44,9 +44,6 @@ message(paste("Proxy dir: ", proxy_dir))
 message(paste("Output will write to: ", output))
 message(paste("Cell type: ", cell_type, '\n'))
 
-dir.create(proxy_dir)
-setwd(proxy_dir) # Need to set this as LDproxy_batch spits out files to wd
-
 ## Load data -----
 message('Loading cis-eQTL for: ', cell_type)
 cis_eQTL_tbl <- read_tsv(perm)
@@ -55,6 +52,13 @@ lead_variants <- cis_eQTL_tbl %>%
   pull(variant_id)
 n_sig_cis <- length(lead_variants)
 message(n_sig_cis, ' FDR sig. eQTL loaded.')
+
+# Set wd  -----
+# LDproxy_batch spits out files to wd
+# Need to do it after cis_eQTL_tbl is loaded
+message('WD set to: ', proxy_dir)
+dir.create(proxy_dir)
+setwd(proxy_dir) 
 
 # Get proxies -----
 message('Collecting LD proxies for: ', cell_type)
