@@ -108,42 +108,43 @@ if (length(failed_snps) > 0) {
   message("\nNo SNPs failed.")
 }
 
-# Load proxies from file and filter -----
-message('Loading proxies from files ...')
-perfect_proxies <- list.files(proxy_dir, pattern = "\\.txt$", full.names = TRUE) %>%
-  set_names(~ basename(.) %>% str_remove("_grch38\\.txt$")) %>%
-  map_dfr(~ {
-    read_tsv(
-      .x,
-      col_names = c(
-        "row_num",
-        "RS_Number", "Coord", "Alleles", "MAF", "Distance",
-        "Dprime", "R2", "Correlated_Alleles", "FORGEdb",
-        "RegulomeDB", "Function"
-      ),
-      col_select = -row_num,
-      col_types = cols(),
-      skip = 1
-    ) %>%
-      mutate(query_snp = basename(.x) %>% str_remove("_grch38\\.txt$"))
-  }, .id = NULL) %>%                       # no extra id column needed now
-  filter(R2 == 1) %>%
-  select(query_snp, RS_Number, everything()) %>%
-  distinct()
+# # Load proxies from file and filter -----
+# Move this code to replication_create_snp_lookup.R
+# message('Loading proxies from files ...')
+# perfect_proxies <- list.files(proxy_dir, pattern = "_grch38\\.txt$", full.names = TRUE) %>%
+#   set_names(~ basename(.) %>% str_remove("_grch38\\.txt$")) %>%
+#   map_dfr(~ {
+#     read_tsv(
+#       .x,
+#       col_names = c(
+#         "row_num",
+#         "RS_Number", "Coord", "Alleles", "MAF", "Distance",
+#         "Dprime", "R2", "Correlated_Alleles", "FORGEdb",
+#         "RegulomeDB", "Function"
+#       ),
+#       col_select = -row_num,
+#       col_types = cols(),
+#       skip = 1
+#     ) %>%
+#       mutate(query_snp = basename(.x) %>% str_remove("_grch38\\.txt$"))
+#   }, .id = NULL) %>%                       # no extra id column needed now
+#   filter(R2 == 1) %>%
+#   select(query_snp, RS_Number, everything()) %>%
+#   distinct()
+# 
+# message('Loaded ', nrow(perfect_proxies), ' proxies')
+# 
+# message('Removing non-biallelic proxies ... ')
+# perfect_proxies_rs_ids <- perfect_proxies |>
+#   filter(RS_Number != '.') |> # Non-biallelic SNP have rsID == '.'
+#   pull(RS_Number)
+# 
+# message(' ', length(perfect_proxies_rs_ids), ' remain.')
 
-message('Loaded ', nrow(perfect_proxies), ' proxies')
-
-message('Removing non-biallelic proxies ... ')
-perfect_proxies_rs_ids <- perfect_proxies |>
-  filter(RS_Number != '.') |> # Non-biallelic SNP have rsID == '.'
-  pull(RS_Number)
-
-message(' ', length(perfect_proxies_rs_ids), ' remain.')
-
-message('Collating cis-eQTL and proxy rsIDs ... ')
-all_rs_ids <- c(lead_variants, perfect_proxies_rs_ids) |>
-  unique()
-message('  ', length(all_rs_ids),' rsIDs in total.')
+# message('Collating cis-eQTL and proxy rsIDs ... ')
+# all_rs_ids <- c(lead_variants, perfect_proxies_rs_ids) |>
+#   unique()
+# message('  ', length(all_rs_ids),' rsIDs in total.')
 
 ## Write output -----
 message('\nWriting file to: ', output)
