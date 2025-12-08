@@ -105,11 +105,8 @@ if (length(failed_snps) > 0) {
   writeLines(failed_snps, failed_file)
   message("Written ", length(failed_snps), " failed SNPs to: ", failed_file)
 } else {
-  message("No SNPs failed.")
+  message("\nNo SNPs failed.")
 }
-
-
-
 
 # Load proxies from file and filter -----
 message('Loading proxies from files ...')
@@ -146,7 +143,7 @@ message(' ', length(perfect_proxies_rs_ids), ' remain.')
 message('Collating cis-eQTL and proxy rsIDs ... ')
 all_rs_ids <- c(lead_variants, perfect_proxies_rs_ids) |>
   unique()
-message('  ', length(all_rs_ids),'rsIDs in total.')
+message('  ', length(all_rs_ids),' rsIDs in total.')
 
 ## Write output -----
 message('\nWriting file to: ', output)
