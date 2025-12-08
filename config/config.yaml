@@ -18,19 +18,19 @@ cell_types:
   - "Endo-Peri"
   - "OPC" 
   - "MG"
-#  - "ExN-UL-0"
-#  - "ExN-UL-1"
-#  - "ExN-UL-2"
-#  - "ExN-DL-0"
-#  - "ExN-DL-1"
-#  - "ExN-DL-2"
-#  - "ExN-DL-3"
-#  - "InN-0"
-#  - "InN-1"
-#  - "RG-0"
-#  - "RG-1"
-#  - "RG-2"
-#  - "RG-3"
+  - "ExN-UL-0"
+  - "ExN-UL-1"
+  - "ExN-UL-2"
+  - "ExN-DL-0"
+  - "ExN-DL-1"
+  - "ExN-DL-2"
+  - "ExN-DL-3"
+  - "InN-0"
+  - "InN-1"
+  - "RG-0"
+  - "RG-1"
+  - "RG-2"
+  - "RG-3"
 
 cell_types_bryois:
   - "Astrocytes"
@@ -380,11 +380,20 @@ tensorQTL:
     prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_trans.log
 
-  post_trans:
-    output: ../results/05TENSORQTL/post_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_post_trans.tsv 
-    proxy_dir: ../results/05TENSORQTL/proxies/{cell_type}/
+  get_perm_ld_proxies:
+    output: ../results/05TENSORQTL/proxies/{cell_type}/tensorqtl_perm_proxies.tsv    
+    proxy_dir: ../results/05TENSORQTL/proxies/{cell_type}/    
     ldlink_token: ../config/ldlink_token.txt
-    log: ../results/00LOG/05TENSORQTL/post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
+    log: ../results/00LOG/05TENSORQTL/get_perm_ld_proxies_{cell_type}.log
+
+# Note: split this into 2 scripts
+# ../scripts/tensorqtl_get_perm_ld_proxies.R uses LDlink R to download proxy SNPs first
+# Still to updtae trans script, we may drop this analysis anyway
+#  post_trans:
+#    output: ../results/05TENSORQTL/post_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_post_trans.tsv 
+#    proxy_dir: ../results/05TENSORQTL/proxies/{cell_type}/
+#    ldlink_token: ../config/ldlink_token.txt
+#    log: ../results/00LOG/05TENSORQTL/post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
 
   tensorqtl_tss_plt: ../results/figs/tss_density_plot_combined.png
   tensorqtl_tss_tbl: ../results/tables/tensorqtl_summary_table.tsv
@@ -426,6 +435,12 @@ qtl_rep:
     qtl_perm: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz    
     out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup.log
+
+  get_perm_ld_proxies:
+    output: ../results/06QTL-REPLICATION/proxies/{cell_type}/tensorqtl_perm_proxies.tsv
+    proxy_dir: ../results/QTL-REPLICATION/proxies/{cell_type}/
+    ldlink_token: ../config/ldlink_token.txt
+    log: ../results/00LOG/QTL-REPLICATION/get_perm_ld_proxies_{cell_type}.log
 
   atac_enrich:
     peak_dir: ../resources/public_datasets/ziffra_2021/ 
