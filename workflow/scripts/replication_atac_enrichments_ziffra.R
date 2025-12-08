@@ -32,7 +32,6 @@ library(GenomeInfoDb)
 library(readxl)
 
 # Input and output paths
-qtl_perm <- snakemake@input[["qtl_perm"]]
 snp_file <- snakemake@input[["snp_file"]]
 peaks <- snakemake@input[["peaks"]]
 out_file <- as.character(snakemake@output)
@@ -55,9 +54,9 @@ norm_method <- snakemake@wildcards[["norm_method"]]
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("qtl_perm", "snp_file", "out_file", "peaks", "peak_dir", "cell_type", 
+  variable = c("snp_file", "out_file", "peaks", "peak_dir", "cell_type", 
                "gen_pc", "exp_pc", "norm_method"),
-  value    = c(qtl_perm, snp_file, out_file, peaks, peak_dir, cell_type, 
+  value    = c(snp_file, out_file, peaks, peak_dir, cell_type, 
                gen_pc, exp_pc, norm_method)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
@@ -73,15 +72,32 @@ peak_list <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx")
 #  dplyr::select(peak_name) # Might use these later
 lookup_peaks <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx"), sheet = "ST3 MACSpeaks_byCelltype")
 
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
 ziffra_mapping_all <- list(
-  "RG" = "RG_MACSpeaks",
-  "ExN-UL" = "dlEN_MACSpeaks",
-  "ExN-DL" = "dlEN_MACSpeaks",
-  "InN" = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
   "Endo-Peri" = "EndoMural_MACSpeaks",
-  "MG" = "Microglia_MACSpeaks",
-  "OPC" = "AstroOligo_MACSpeaks"
+  
+  "ExN-DL"   = "dlEN_MACSpeaks",
+  "ExN-DL-0" = "dlEN_MACSpeaks",
+  "ExN-DL-1" = "dlEN_MACSpeaks",
+  "ExN-DL-2" = "dlEN_MACSpeaks",
+  "ExN-DL-3" = "dlEN_MACSpeaks",
+  
+  "ExN-UL"   = "ulEN_MACSpeaks",
+  "ExN-UL-0" = "ulEN_MACSpeaks",
+  "ExN-UL-1" = "ulEN_MACSpeaks",
+  "ExN-UL-2" = "ulEN_MACSpeaks",
+  
+  "InN"   = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
+  "InN-0" = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
+  "InN-1" = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
+  
+  "MG"  = "Microglia_MACSpeaks",
+  "OPC" = "AstroOligo_MACSpeaks",
+  
+  "RG"   = "RG_MACSpeaks",
+  "RG-0" = "RG_MACSpeaks",
+  "RG-1" = "RG_MACSpeaks",
+  "RG-2" = "RG_MACSpeaks",
+  "RG-3" = "RG_MACSpeaks"
 )
 
 # Only run relevant cell type mappings
@@ -171,18 +187,18 @@ for (cell_type in names(cell_type_mapping)) {
   message("\nProcessing cell type: ", cell_type)
   
   # Load significant eQTL SNPs
-  my_eqtl <- read_tsv(qtl_perm) %>%
-    filter(qval < 0.05) %>%
-    dplyr::select(variant_id)
+  my_eqtl <- read_rds(snp_file)
   
   if (nrow(my_eqtl) == 0) {
     message("No significant eQTLs found for ", cell_type)
     next
+  } else {
+    message("  ", nrow(my_eqtl), " eQTL or proxies loaded.")
   }
   
   # Convert to GRanges
-  sig_snps_gr <- read_rds(snp_file) %>%
-    filter(refsnp_id %in% my_eqtl$variant_id) %>%
+  message("  converting to GRanges object.")
+  sig_snps_gr <- read_rds(my_eqtl) %>%
     distinct(refsnp_id, .keep_all = TRUE) %>%
     makeGRangesFromDataFrame(
       seqnames.field = "chr_name",
