@@ -198,7 +198,7 @@ for (cell_type in names(cell_type_mapping)) {
   
   # Convert to GRanges
   message("  converting to GRanges object.")
-  sig_snps_gr <- read_rds(my_eqtl) %>%
+  sig_snps_gr <- my_eqtl %>%
     distinct(refsnp_id, .keep_all = TRUE) %>%
     makeGRangesFromDataFrame(
       seqnames.field = "chr_name",
