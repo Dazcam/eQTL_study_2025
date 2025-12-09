@@ -35,7 +35,7 @@ library(GenomicRanges)
 
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
-proxy_dir <- snakemake@params[["proxy_dir"]]
+proxy_dir <- snakemake@params[[1]]
 out_file <- snakemake@output[[1]]
 message('qtl: ', qtl_perm)
 message('prx: ', proxy_dir)
