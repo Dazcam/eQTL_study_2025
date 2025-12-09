@@ -35,17 +35,16 @@ gwas <- snakemake@input[['gwas']] # From 07prep_gwas.smk
 weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat files
 ld_dir <- snakemake@params[['ld_dir']]
 bim_file <- snakemake@input[['bim_file']]
-cell_types <- snakemake@wildcards[['cell_types']]
+cell_types <- snakemake@params[['cell_types']]
 gwas_trait <- snakemake@wildcards[['gwas']]
 output <- as.character(snakemake@output[[1]])
 out_dir <- dirname(output)
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_multi'))
 
 # Read in data
-message("\nLoading data ...\n")
-message("GWAS loaded from: ", gwas)
+message("\nGWAS loaded from: ", gwas)
 message("weights_dir loaded from: ", weights_dir)
-message("Bim file loaded from: ", bim_file)
+message("bim file loaded from: ", bim_file)
 message("cell_types: ", cell_types)
 message("Output will be saved to: ", output)
 message("Correlation matrices will be saved to: ", cor_dir)
@@ -56,7 +55,7 @@ message("Correlation matrices will be saved to: ", cor_dir)
 # TensorQTL, input for FUSION prediction weights, has ALT allele as A1
 # In most GWAS, REF is A1 so will need to flip SNPs
 # Note we need to use ../results/07PREP-GWAS/scz_hg38.tsv not LDSR munged sumsats as we need the alleles
-message('Loading GWAS ...')
+message('\nLoading GWAS ...')
 gwas_tbl <- read_tsv(gwas) 
 gwas_n <- as.numeric(names(sort(table(gwas_tbl$N), decreasing = TRUE)[1]))
 message('GWAS N is set to: ', gwas_n)
@@ -69,7 +68,7 @@ non_rsids <- gwas_tbl %>%
   distinct(SNP) %>%
   nrow()
 if (non_rsids > 0) {
-  message(str_glue("Found {non_rsids} non-rsID SNPs. Removing them ..."))
+  message(str_glue("\nFound {non_rsids} non-rsID SNPs. Removing them ..."))
   gwas_tbl <- gwas_tbl %>% filter(str_starts(SNP, "rs"))
 } else {
   message("No non-rsID SNPs found.")
@@ -180,25 +179,6 @@ message('Generating snp_map and LD_map for cTWAS ...')
 res <- create_snp_LD_map(region_metatable)
 snp_map <- res$snp_map
 LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas() later
-
-# Optional: Harmonize GWAS first (add after reading z_snp)
-# message('Preprocessing GWAS for cTWAS ...')
-# z_snp <- preprocess_z_snp(z_snp, snp_map, 
-#                           drop_multiallelic = TRUE, 
-#                           drop_strand_ambig = TRUE)  # Converts to chr:pos_ref_alt
-
-# Converter function to help with error
-varID_converter_fun <- function(varID, snp_map) {
-  # varID = rsid from weight
-  # Find in snp_map
-  snp_info <- do.call(rbind, snp_map)
-  idx <- match(varID, snp_info$id)
-  missing <- is.na(idx)
-  if (any(missing)) {
-    message("Missing ", sum(missing), " rsids in reference: ", paste(head(varID[missing]), collapse = " "))
-  }
-  snp_info$id[idx]
-}
 
 # FUSION weights
 weights_list <- list()  # To hold combined weights
