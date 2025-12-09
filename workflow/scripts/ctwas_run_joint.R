@@ -39,14 +39,14 @@ cell_types <- snakemake@wildcards[['cell_types']]
 gwas_trait <- snakemake@wildcards[['gwas']]
 output <- as.character(snakemake@output[[1]])
 out_dir <- dirname(output)
-cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
+cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_multi'))
 
 # Read in data
 message("\nLoading data ...\n")
 message("GWAS loaded from: ", gwas)
 message("weights_dir loaded from: ", weights_dir)
 message("Bim file loaded from: ", bim_file)
-message("cell_type: ", cell_type)
+message("cell_types: ", cell_types)
 message("Output will be saved to: ", output)
 message("Correlation matrices will be saved to: ", cor_dir)
 
