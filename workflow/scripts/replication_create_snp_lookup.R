@@ -36,7 +36,10 @@ library(GenomicRanges)
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
 proxy_dir <- snakemake@params[["proxy_dir"]]
-out_file <- as.character(snakemake@output[[1]])
+out_file <- snakemake@output[[1]]
+message('qtl: ', qtl_perm)
+message('prx: ', proxy_dir)
+message('out: ', out_file)
 
 # Check variable assignment
 message("\nVariables")
