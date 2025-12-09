@@ -25,7 +25,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nObtain SNP lookup file for cell-specific sig. eQTL and LD proxies ...")
+message("\n\nGenerate SNP lookup file for cell-specific sig. eQTL and LD proxies ...")
 
 # -------------------------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ library(GenomicRanges)
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
 proxy_dir <- snakemake@params[["proxy_dir"]]
-out_file <- as.character(snakemake@output)
+out_file <- as.character(snakemake@output[[1]])
 
 # Check variable assignment
 message("\nVariables")
