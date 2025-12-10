@@ -6,8 +6,10 @@
 
 ## Info  ------------------------------------------------------------------------------
 
-#  Prep input bed and covariate files for FastQTL 
-#  Running locally for now
+#  Input
+#  - GWAS sumstats per trait
+#  - TWAS weights per cell type
+#  - LD reference file (1000G hg38)
 
 ##  Load Packages, functions and variables  -------------------------------------------
 ## Set up logging for smk  ------------------------------------------------------------
@@ -37,6 +39,7 @@ cell_type <- snakemake@wildcards[['cell_type']]
 gwas_trait <- snakemake@wildcards[['gwas']]
 output <- as.character(snakemake@output[[1]])
 out_dir <- dirname(output)
+processed_weights_dir <- file.path(out_dir, 'processed_weights/')
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
 
 # Read in data
@@ -46,13 +49,14 @@ message("weights_dir loaded from: ", weights_dir)
 message("Bim file loaded from: ", bim_file)
 message("cell_type: ", cell_type)
 message("Output will be saved to: ", output)
+message("Processed weights will be save to: ", processed_weights_dir)
 message("Correlation matrices will be saved to: ", cor_dir)
 
 # Prep GWAS
 # Note: Need to harmonise alleles in GWAS, Ref and prediction weights
 # cTWAS says: A1 is the alternate allele, and A2 is the reference allele
 # TensorQTL, input for FUSION prediction weights, has ALT allele as A1
-# In most GWAS, REF is A1 so will need to flip SNPs
+# In most GWAS, REF is A1 so will check and likely flip SNPs
 # Note we need to use ../results/07PREP-GWAS/scz_hg38.tsv not LDSR munged sumsats as we need the alleles
 message('Loading GWAS ...')
 gwas_tbl <- read_tsv(gwas) 
@@ -227,7 +231,8 @@ weights <- preprocess_weights(weights_dir,
                               ncore = 4)
 
 message('Writing cTWAS weights for plotting later ...')
-write_rds(weights, paste0(out_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
+dir.create(processed_weights_dir)
+write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
 
 # Then run ctwas (example for full analysis)
 message('Run cTWAS ...')
@@ -247,9 +252,6 @@ ctwas_res <- ctwas_sumstats(z_snp,
                             save_cor = TRUE,
                             cor_dir = cor_dir,
                             force_compute_cor = FALSE)
-
-message('Structure of cTWAS res ...')
-str(ctwas_res)
 
 # Output: Save ctwas_res$region_pip (gene PIPs per region)
 message('Write cTWAS pip output ...')
