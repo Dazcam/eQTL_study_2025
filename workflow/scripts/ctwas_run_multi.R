@@ -189,8 +189,9 @@ for (ct in cell_types) {
   message("\nProcessing weights for context: ", ct)
   
   message("\nFirst check if cTWAS processed weight file already exists ... ")
-  weights_file <- str_glue('../results/12CTWAS/output/processed_weights_', ct, '_', gwas_trait, '.rds')
+  weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', ct, '_', gwas_trait, '.rds')
   weights_file_mult <- file.path(processed_weights_dir, str_glue('processed_weights_', ct, '_', gwas_trait, '.rds'))
+  
   
   if (file.exists(weights_file) || file.exists(weights_file_mult)) {
     message("Yes! Loading processed weight file ...")
