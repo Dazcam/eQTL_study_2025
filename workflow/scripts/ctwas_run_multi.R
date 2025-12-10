@@ -39,6 +39,7 @@ cell_types <- snakemake@params[['cell_types']]
 gwas_trait <- snakemake@wildcards[['gwas']]
 output <- as.character(snakemake@output[[1]])
 out_dir <- dirname(output)
+processed_weights_dir <- file.path(out_dir, 'processed_weights/')
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_multi'))
 
 # Read in data
@@ -47,6 +48,7 @@ message("weights_dir loaded from: ", weights_dir)
 message("bim file loaded from: ", bim_file)
 message("cell_types: ", cell_types)
 message("Output will be saved to: ", output)
+message("Processed weights will be save to: ", processed_weights_dir)
 message("Correlation matrices will be saved to: ", cor_dir)
 
 # Prep GWAS
@@ -184,37 +186,52 @@ LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas()
 weights_list <- list()  # To hold combined weights
 message('Preprocessing FUSION weights for multi-group cTWAS ...')
 for (ct in cell_types) {
-  message("Processing weights for context: ", ct)
-  ct_weights_dir <- file.path(weights_dir, ct)
+  message("\nProcessing weights for context: ", ct)
   
-  ct_weights <- preprocess_weights(ct_weights_dir,
-                                   region_info,
-                                   gwas_snp_ids = z_snp$id,
-                                   snp_map = snp_map, # Need
-                                   LD_map = LD_map, # Need
-                                   type = "expression",
-                                   context = ct,
-                                   weight_format = "FUSION",
-                                   fusion_method = "lasso", # Run Lasso for now
-                                   fusion_genome_version = "b38",
-                                   top_n_snps = NULL,
-                                   drop_strand_ambig = TRUE,
-                                   filter_protein_coding_genes = FALSE,
-                                   scale_predictdb_weights = FALSE,
-                                   load_predictdb_LD = FALSE,
-                                   ncore = 4)
+  message("\nFirst check if cTWAS processed weight file already exists ... ")
+  weights_file <- file.path(processed_weights_dir, str_glue('processed_weights_', ct, '_', gwas_trait, '.rds'))
   
-  weights_list <- c(weights_list, ct_weights)
+  if(file.exists(weights_file)) {
+    message("Yes! Loading processed weight file ...")
+    ct_weights <- read_rds(weights_file)
+    weights_list <- c(weights_list, ct_weights)
+    
+  } else {
+    
+    message("No! Generating cTWAS ready weights ...")
+    ct_weights_dir <- file.path(weights_dir, ct)
+    
+    ct_weights <- preprocess_weights(ct_weights_dir,
+                                     region_info,
+                                     gwas_snp_ids = z_snp$id,
+                                     snp_map = snp_map, # Need
+                                     LD_map = LD_map, # Need
+                                     type = "expression",
+                                     context = ct,
+                                     weight_format = "FUSION",
+                                     fusion_method = "lasso", # Run Lasso for now
+                                     fusion_genome_version = "b38",
+                                     top_n_snps = NULL,
+                                     drop_strand_ambig = TRUE,
+                                     filter_protein_coding_genes = FALSE,
+                                     scale_predictdb_weights = FALSE,
+                                     load_predictdb_LD = FALSE,
+                                     ncore = 4)
+    
+    weights_list <- c(weights_list, ct_weights)
+  
+  }
+  
 }
 
 
 message('Writing multi-group cTWAS weights for plotting later ...')
-write_rds(weights, paste0(out_dir, 'processed_weights_multi_', gwas_trait, '.rds'))
+write_rds(weights_list, paste0(out_dir, 'processed_weights_multi_', gwas_trait, '.rds'))
 
 # Then run ctwas (example for full analysis)
 message('Run multi-group cTWAS ...')
 ctwas_res <- ctwas_sumstats(z_snp, 
-                            weights, 
+                            weights_list, 
                             region_info, 
                             LD_map, 
                             snp_map, 
