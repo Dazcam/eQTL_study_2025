@@ -178,7 +178,7 @@ fisher_results <- overlaps_per_ct %>%
     b = length(mvar_rsids) - overlap_count,                 # mVar & not sig
     c = n_sig_snps_in_pop - overlap_count,                  # not mVar & sig
     d = total_tested_snps - (a + b + c),                    # not mVar & not sig
-    or = (a/d) / (b/c),
+    or = (a/b) / (c/d),
     p_value = pmap_dbl(list(a, b, c, d), ~ {
       matrix <- matrix(c(..1, ..2, ..3, ..4), nrow = 2)
       fisher.test(matrix, alternative = "greater")$p.value
