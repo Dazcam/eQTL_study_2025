@@ -213,6 +213,21 @@ varID_converter_fun <- function(varID, snp_map) {
 
 # FUSION weights
 message('Preprocessing FUSION weights for cTWAS ...')
+if (cell_type %in% c('InN-0', 'InN-0') &
+    gwas_trait %in% c('ocd', 'adhd', 'ptsd')) {
+  
+  # A few ct / gwas combos threw this error
+  # 'NULL' found in mclapply output. Results may be incomplete! Try more memory or ncore = 1.
+  # Or this Error in abs(z_gene$z) : non-numeric argument to mathematical function
+  
+  message('Setting cores to 1 for ', cell_type, ' / ', gwas_trait, '...')
+  cores = 1
+  
+} else {
+  message('Setting cores to 6 for ', cell_type, ' / ', gwas_trait, '...')
+  cores = 6 # was 4
+}
+
 weights <- preprocess_weights(weights_dir,
                               region_info,
                               gwas_snp_ids = z_snp$id,
@@ -228,7 +243,7 @@ weights <- preprocess_weights(weights_dir,
                               filter_protein_coding_genes = FALSE,
                               scale_predictdb_weights = FALSE,
                               load_predictdb_LD = FALSE,
-                              ncore = 4)
+                              ncore = cores)
 
 message('Writing cTWAS weights for plotting later ...')
 dir.create(processed_weights_dir)
