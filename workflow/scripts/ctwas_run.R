@@ -198,35 +198,22 @@ LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas()
 #                           drop_multiallelic = TRUE, 
 #                           drop_strand_ambig = TRUE)  # Converts to chr:pos_ref_alt
 
-# Converter function to help with error
-varID_converter_fun <- function(varID, snp_map) {
-  # varID = rsid from weight
-  # Find in snp_map
-  snp_info <- do.call(rbind, snp_map)
-  idx <- match(varID, snp_info$id)
-  missing <- is.na(idx)
-  if (any(missing)) {
-    message("Missing ", sum(missing), " rsids in reference: ", paste(head(varID[missing]), collapse = " "))
-  }
-  snp_info$id[idx]
-}
-
 # FUSION weights
 message('Preprocessing FUSION weights for cTWAS ...')
-if (cell_type %in% c('InN-0', 'InN-0') &
-    gwas_trait %in% c('ocd', 'adhd', 'ptsd')) {
-  
-  # A few ct / gwas combos threw this error
-  # 'NULL' found in mclapply output. Results may be incomplete! Try more memory or ncore = 1.
-  # Or this Error in abs(z_gene$z) : non-numeric argument to mathematical function
-  
-  message('Setting cores to 1 for ', cell_type, ' / ', gwas_trait, '...')
-  cores = 1
-  
-} else {
-  message('Setting cores to 6 for ', cell_type, ' / ', gwas_trait, '...')
-  cores = 6 # was 4
-}
+# if (cell_type %in% c('InN-0', 'InN-0') &
+#     gwas_trait %in% c('ocd', 'adhd', 'ptsd')) {
+#   
+#   # A few ct / gwas combos threw this error
+#   # 'NULL' found in mclapply output. Results may be incomplete! Try more memory or ncore = 1.
+#   # Or this Error in abs(z_gene$z) : non-numeric argument to mathematical function
+#   
+#   message('Setting cores to 1 for ', cell_type, ' / ', gwas_trait, '...')
+#   cores = 1
+#   
+# } else {
+#   message('Setting cores to 6 for ', cell_type, ' / ', gwas_trait, '...')
+#   cores = 6 # was 4
+#}
 
 weights <- preprocess_weights(weights_dir,
                               region_info,
@@ -243,7 +230,7 @@ weights <- preprocess_weights(weights_dir,
                               filter_protein_coding_genes = FALSE,
                               scale_predictdb_weights = FALSE,
                               load_predictdb_LD = FALSE,
-                              ncore = cores)
+                              ncore = 16)
 
 message('Writing cTWAS weights for plotting later ...')
 dir.create(processed_weights_dir)
