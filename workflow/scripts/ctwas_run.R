@@ -58,7 +58,7 @@ message("Correlation matrices will be saved to: ", cor_dir)
 # TensorQTL, input for FUSION prediction weights, has ALT allele as A1
 # In most GWAS, REF is A1 so will check and likely flip SNPs
 # Note we need to use ../results/07PREP-GWAS/scz_hg38.tsv not LDSR munged sumsats as we need the alleles
-message('Loading GWAS ...')
+message('\nLoading GWAS ...')
 gwas_tbl <- read_tsv(gwas) 
 gwas_n <- as.numeric(names(sort(table(gwas_tbl$N), decreasing = TRUE)[1]))
 message('GWAS N is set to: ', gwas_n)
@@ -204,7 +204,7 @@ message('Preprocessing FUSION weights for cTWAS ...')
 
   
 message("\nFirst check if cTWAS processed weight file already exists ... ")
-weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', ct, '_', gwas_trait, '.rds')
+weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', cell_type, '_', gwas_trait, '.rds')
 
 
 if (file.exists(weights_file)) {
