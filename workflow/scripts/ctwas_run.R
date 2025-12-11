@@ -200,41 +200,83 @@ LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas()
 
 # FUSION weights
 message('Preprocessing FUSION weights for cTWAS ...')
-# if (cell_type %in% c('InN-0', 'InN-0') &
-#     gwas_trait %in% c('ocd', 'adhd', 'ptsd')) {
-#   
-#   # A few ct / gwas combos threw this error
-#   # 'NULL' found in mclapply output. Results may be incomplete! Try more memory or ncore = 1.
-#   # Or this Error in abs(z_gene$z) : non-numeric argument to mathematical function
-#   
-#   message('Setting cores to 1 for ', cell_type, ' / ', gwas_trait, '...')
-#   cores = 1
-#   
-# } else {
-#   message('Setting cores to 6 for ', cell_type, ' / ', gwas_trait, '...')
-#   cores = 6 # was 4
-#}
 
-weights <- preprocess_weights(weights_dir,
-                              region_info,
-                              gwas_snp_ids = z_snp$id,
-                              snp_map = snp_map, # Need
-                              LD_map = LD_map, # Need
-                              type = "expression",
-                              context = cell_type,                         
-                              weight_format = "FUSION",
-                              fusion_method = "lasso", # Run Lasso for now
-                              fusion_genome_version = "b38",
-                              top_n_snps = NULL,
-                              drop_strand_ambig = TRUE,
-                              filter_protein_coding_genes = FALSE,
-                              scale_predictdb_weights = FALSE,
-                              load_predictdb_LD = FALSE,
-                              ncore = 16)
 
-message('Writing cTWAS weights for plotting later ...')
-dir.create(processed_weights_dir)
-write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
+  
+message("\nFirst check if cTWAS processed weight file already exists ... ")
+weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', ct, '_', gwas_trait, '.rds')
+
+
+if (file.exists(weights_file)) {
+  message("Yes! Loading processed weight file ...")
+  weights <- read_rds(weights_file)
+  
+} else {
+  
+  message("No! Generating cTWAS ready weights ...")
+  weights <- preprocess_weights(weights_dir,
+                                region_info,
+                                gwas_snp_ids = z_snp$id,
+                                snp_map = snp_map, # Need
+                                LD_map = LD_map, # Need
+                                type = "expression",
+                                context = cell_type,                         
+                                weight_format = "FUSION",
+                                fusion_method = "lasso", # Run Lasso for now
+                                fusion_genome_version = "b38",
+                                top_n_snps = NULL,
+                                drop_strand_ambig = TRUE,
+                                filter_protein_coding_genes = FALSE,
+                                scale_predictdb_weights = FALSE,
+                                load_predictdb_LD = FALSE,
+                                ncore = 16)
+  
+  message('Writing cTWAS weights for plotting later ...')
+  dir.create(processed_weights_dir)
+  write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
+
+}
+
+### Adding a diagnostic section to troubleshoot failures. -----------------
+
+# Diagnostic: Compute gene z-scores and check for issues
+message('Diagnosing gene z-scores...')
+
+# Extract the internal config for compute_gene_z (mimics what's passed internally)
+ctwas_config <- list(
+  z_snp = z_snp,
+  R_snp = NULL,  # Computed on-the-fly if needed
+  LD_map = LD_map,
+  snp_map = snp_map
+)
+
+# Call compute_gene_z directly (uses susieR internally)
+z_gene <- compute_gene_z(ctwas_config$z_snp, weights, ncore = 1)  # Use 1 core to avoid mclapply noise
+
+message(sprintf("Total genes processed: %d", nrow(z_gene)))
+message(sprintf("Non-finite z-scores (NA/NaN/Inf): %d", sum(!is.finite(z_gene$z))))
+
+if (any(!is.finite(z_gene$z))) {
+  bad_genes <- z_gene[!is.finite(z_gene$z), ]
+  message("Offending genes:")
+  print(bad_genes)  # Shows gene ID, z (NaN), and metadata
+  # Optional: Save for inspection
+  write_rds(bad_genes, file.path(processed_weights_dir, 
+                                 sprintf('bad_genes_%s_%s.rds', cell_type, gwas_trait)))
+  
+  # Quick per-gene SNP check for the worst offender
+  if (nrow(bad_genes) > 0) {
+    example_gene <- bad_genes$gene_id[1]  # First bad gene
+    gene_snps <- weights$weights[[example_gene]]$snps  # SNPs for this gene
+    overlapping_snps <- intersect(gene_snps, z_snp$id)
+    message(sprintf("For gene %s: %d/%d SNPs overlap with GWAS", 
+                    example_gene, length(overlapping_snps), length(gene_snps)))
+  }
+} else {
+  message("No bad z-scores found—issue might be deeper in susie fine-mapping.")
+}
+
+### ----------------------------------------------------------
 
 # Then run ctwas (example for full analysis)
 message('Run cTWAS ...')

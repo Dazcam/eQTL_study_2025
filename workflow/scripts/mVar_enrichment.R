@@ -147,7 +147,7 @@ cat(sprintf("   → %d of %d mVar SNPs (%.2f%%) are FDR-significant eQTLs in ≥
 message("==========================================================================\n")
 
 
-# Part 2: Fisher's exact test (enrichment of mVars among sig eQTLs)
+# Part 2: Fisher's exact test - Are mVars enriched amoung FDR sig. eQTLs per cell type?
 get_total_tested_snps <- function(ct) {
   perm_path <- str_glue("../results/05TENSORQTL/tensorqtl_perm/{ct}_quantile_genPC_4_expPC_40/{ct}_quantile_perm.cis_qtl.txt.gz")
   
@@ -198,8 +198,8 @@ print(fisher_results %>%
 message("==========================================================================\n")
 
 
-# Part 3: Wilcoxon test pleiotropic mVars are active in more developmental ExN populations
-cat("\n=== PART 3: Pleiotropy vs number of active ExN populations ===\n")
+# Part 3: Are Pleiotropic mVars more active ExN pops than single-trait mVars?
+cat("\n=== PART 3: Wicoon test  ===\n")
 
 # Count in how many of the 9 cell types each mVar is an FDR-significant eQTL
 mvar_activity <- tibble(rsid = mvar_rsids) %>%
