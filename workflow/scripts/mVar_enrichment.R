@@ -250,31 +250,16 @@ message("=======================================================================
 # Quick violin/boxplot (optional – looks great in papers)
 message("Plotting and saving to file ... ")
 ggplot(mvar_activity, aes(x = group, y = n_active_pops, fill = group)) +
-  geom_violin(alpha = 0.6) +
+  geom_violin(trim = FALSE, alpha = 0.6) +
   geom_boxplot(width = 0.25, outlier.alpha = 0, alpha = 0.3) +
-  scale_y_continuous(breaks = 0:9) +
-  labs(title = "Pleiotropic mVars are eQTLs in more developmental ExN populations",
-       x = "", y = "Number of ExN populations with FDR-significant eQTL",
+  scale_y_continuous(breaks = 0:10, limits = c(-0.5, 9.5)) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Pleiotropic and single-trait operating mVars in ExN pops",
+       x = "", y = "No. of ExN pops with mVar",
        fill = "") +
   theme_minimal(base_size = 14) +
   theme(legend.position = "none")
-ggsave("../results/20MVARS/mVar_pleiotropy_vs_celltype_breadth.pdf", width = 6, height = 5)
-
-ggplot(mvar_activity, aes(x = group, y = n_active_pops, fill = group)) +
-  geom_violin(trim = FALSE, alpha = 0.6) +
-  geom_boxplot(width = 0.2, outlier.alpha = 0, color = "black") +
-  geom_jitter(width = 0.15, size = 1.2, alpha = 0.4, shape = 16) +
-  scale_y_continuous(breaks = 0:9, limits = c(-0.5, 9.5)) +
-  scale_fill_brewer(palette = "Set2") +
-  labs(
-    title = "Regulatory breadth across 9 developing ExN populations",
-    x = "",
-    y = "Number of populations in which the mVar is an FDR-significant eQTL",
-    fill = "mVar pleiotropy"
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "top")
-ggsave("../results/20MVARS/mVar_pleiotropy_breadth_final.pdf", width = 6, height = 5.5, dpi = 300)
+ggsave("../results/20MVARS/mVar_pleiotropy_vs_celltype_breadth.pdf", width = 8, height = 6)
 
 enrichment_for_plot <- overlaps_per_ct %>%
   left_join(total_tested_per_ct, by = "cell_type") %>%
