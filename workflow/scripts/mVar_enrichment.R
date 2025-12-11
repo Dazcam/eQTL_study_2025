@@ -241,9 +241,7 @@ cat("\nWilcoxon rank-sum test (one-sided): pleiotropic > single-trait\n")
 cat("W = ", wilcox_result$statistic[[1]], 
     "  p-value = ", format.pval(wilcox_result$p.value, digits = 3), "\n\n")
 
-# Effect size
-r_effect <- 1 - (2 * wilcox_result$statistic) / (nrow(mvar_activity) * (nrow(mvar_activity) + 1))
-cat("Rank-biserial effect size (r) ≈", round(r_effect, 3), "\n")
+message("==========================================================================\n")
 
 # Save everything
 #write_csv(mvar_activity, "results/mVar_activity_across_9_ExN_pops.csv")
