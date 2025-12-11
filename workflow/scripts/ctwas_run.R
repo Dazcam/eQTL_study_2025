@@ -265,27 +265,39 @@ if (dropped > 0) {
   message("All genes have at least one SNP—proceeding normally.")
 }
 
-message("Checking for singular LD matrices in weights...")
+message("Checking for problematic R_wgt matrices in weights...")
 
-bad_singular <- character(0)
+bad_genes <- character(0)
+
 for (gn in names(weights)) {
   Rmat <- weights[[gn]]$R_wgt
-  # If matrix is 1×1 it's always fine
+  
+  # Case 1: R_wgt is NULL → this is a 1-SNP gene → always safe, keep it
+  if (is.null(Rmat)) next
+  
+  # Case 2: R_wgt exists but is empty or corrupted (should never happen, but has been seen)
+  if (!is.matrix(Rmat) || nrow(Rmat) == 0) {
+    bad_genes <- c(bad_genes, gn)
+    next
+  }
+  
+  # Case 3: matrix ≥2×2 → check if singular
   if (nrow(Rmat) > 1) {
-    # Compute determinant (log-scale to avoid underflow)
-    if (is.na(determinant(Rmat, logarithm = TRUE)$modulus) ||
-        determinant(Rmat, logarithm = TRUE)$modulus < -10) {
-      bad_singular <- c(bad_singular, gn)
+    det_val <- determinant(Rmat, logarithm = TRUE)$modulus
+    # det_val can be -Inf, NA, or a very large negative number if singular
+    if (is.na(det_val) || is.infinite(det_val) || det_val < -10) {
+      bad_genes <- c(bad_genes, gn)
     }
   }
+  # 1×1 matrices are always fine → do nothing
 }
 
-if (length(bad_singular) > 0) {
-  message(sprintf("Dropping %d genes with singular/near-singular R_wgt (this is the real crash cause)", 
-                  length(bad_singular)))
-  weights <- weights[!names(weights) %in% bad_singular]
+if (length(bad_genes) > 0) {
+  message(sprintf("Dropping %d genes with singular/near-singular R_wgt:", length(bad_genes)))
+  print(head(bad_genes, 10))
+  weights <- weights[!names(weights) %in% bad_genes]
 } else {
-  message("No singular LD matrices detected.")
+  message("No problematic R_wgt matrices found.")
 }
 
 ### ----------------------------------------------------------
