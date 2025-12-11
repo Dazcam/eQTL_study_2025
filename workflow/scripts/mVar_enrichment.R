@@ -164,11 +164,12 @@ total_tested_per_ct <- tibble(
 
 
 
-cat("\n=== PART 2: Fisher's Exact Tests ===\n")
+cat("\n=================== PART 2: Fisher's Exact Tests ====================\n")
 
 message('\nUniverse (total SNPs) per cell type:\n')
 print(total_tested_per_ct)
 
+message('\nFishers Exact test results per cell type:\n')
 # Function for Fisher's per cell type
 fisher_results <- overlaps_per_ct %>%
   left_join(total_tested_per_ct, by = "cell_type") %>%
@@ -194,6 +195,8 @@ fisher_results <- overlaps_per_ct %>%
 print(fisher_results %>%
         select(cell_type, a, or, p_value, p_adjusted_fdr, p_adjusted_bonf), n = Inf)
 
+message("==========================================================================\n")
+
 
 # Part 3: Wilcoxon test pleiotropic mVars are active in more developmental ExN populations
 cat("\n=== PART 3: Pleiotropy vs number of active ExN populations ===\n")
@@ -211,9 +214,7 @@ mvar_activity <- tibble(rsid = mvar_rsids) %>%
     )
   ) %>%
   filter(group != "Excluded (mDisorder = 0 or 2)") |>
-  arrange(desc(n_active_pops)) |>
-  print(n = Inf)
-
+  arrange(desc(n_active_pops)) 
 
 # Summary statistics
 summary_pleio <- mvar_activity %>%
@@ -228,6 +229,7 @@ summary_pleio <- mvar_activity %>%
   ) %>%
   mutate(across(c(median_pops, Q25, Q75), as.integer))
 
+message('\nSumstats for Wilcoxon input:\n')
 print(summary_pleio)
 
 # One-sided Wilcoxon rank-sum test (pleiotropic > single-trait)
