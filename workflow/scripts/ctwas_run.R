@@ -239,7 +239,7 @@ if (file.exists(weights_file)) {
 
 ### Adding a diagnostic section to troubleshoot failures. -----------------
 
-# ── AUTO-FIX: remove genes that have no longer have any SNPs (prevents the crash) ──
+message("Checking for genes with no SNPs in weights...")
 n_before <- length(weights)
 
 # Filter: Keep only genes where at least one SNP overlaps with this GWAS
@@ -263,6 +263,29 @@ if (dropped > 0) {
   message(sprintf("Dropped %d genes with zero SNPs overlapping this GWAS (prevents cTWAS crash)", dropped))
 } else {
   message("All genes have at least one SNP—proceeding normally.")
+}
+
+message("Checking for singular LD matrices in weights...")
+
+bad_singular <- character(0)
+for (gn in names(weights)) {
+  Rmat <- weights[[gn]]$R_wgt
+  # If matrix is 1×1 it's always fine
+  if (nrow(Rmat) > 1) {
+    # Compute determinant (log-scale to avoid underflow)
+    if (is.na(determinant(Rmat, logarithm = TRUE)$modulus) ||
+        determinant(Rmat, logarithm = TRUE)$modulus < -10) {
+      bad_singular <- c(bad_singular, gn)
+    }
+  }
+}
+
+if (length(bad_singular) > 0) {
+  message(sprintf("Dropping %d genes with singular/near-singular R_wgt (this is the real crash cause)", 
+                  length(bad_singular)))
+  weights <- weights[!names(weights) %in% bad_singular]
+} else {
+  message("No singular LD matrices detected.")
 }
 
 ### ----------------------------------------------------------
