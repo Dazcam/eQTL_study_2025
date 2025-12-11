@@ -239,41 +239,30 @@ if (file.exists(weights_file)) {
 
 ### Adding a diagnostic section to troubleshoot failures. -----------------
 
-# Diagnostic: Compute gene z-scores and check for issues
-message('Diagnosing gene z-scores...')
+# ── AUTO-FIX: remove genes that have no longer have any SNPs (prevents the crash) ──
+n_before <- length(weights)
 
-# Extract the internal config for compute_gene_z (mimics what's passed internally)
-ctwas_config <- list(
-  z_snp = z_snp,
-  R_snp = NULL,  # Computed on-the-fly if needed
-  LD_map = LD_map,
-  snp_map = snp_map
-)
-
-# Call compute_gene_z directly (uses susieR internally)
-z_gene <- compute_gene_z(ctwas_config$z_snp, weights, ncore = 1)  # Use 1 core to avoid mclapply noise
-
-message(sprintf("Total genes processed: %d", nrow(z_gene)))
-message(sprintf("Non-finite z-scores (NA/NaN/Inf): %d", sum(!is.finite(z_gene$z))))
-
-if (any(!is.finite(z_gene$z))) {
-  bad_genes <- z_gene[!is.finite(z_gene$z), ]
-  message("Offending genes:")
-  print(bad_genes)  # Shows gene ID, z (NaN), and metadata
-  # Optional: Save for inspection
-  write_rds(bad_genes, file.path(processed_weights_dir, 
-                                 sprintf('bad_genes_%s_%s.rds', cell_type, gwas_trait)))
+# Filter: Keep only genes where at least one SNP overlaps with this GWAS
+weights <- weights[sapply(names(weights), function(gene_key) {
+  gene_entry <- weights[[gene_key]]
   
-  # Quick per-gene SNP check for the worst offender
-  if (nrow(bad_genes) > 0) {
-    example_gene <- bad_genes$gene_id[1]  # First bad gene
-    gene_snps <- weights$weights[[example_gene]]$snps  # SNPs for this gene
-    overlapping_snps <- intersect(gene_snps, z_snp$id)
-    message(sprintf("For gene %s: %d/%d SNPs overlap with GWAS", 
-                    example_gene, length(overlapping_snps), length(gene_snps)))
+  # Get SNPs for this gene (prefer $snps if present; fallback to rownames(wgt))
+  snps_in_gene <- if ("snps" %in% names(gene_entry)) {
+    gene_entry$snps
+  } else {
+    rownames(gene_entry$wgt)
   }
+  
+  length(intersect(snps_in_gene, z_snp$id)) > 0
+})]
+
+n_after <- length(weights)
+dropped <- n_before - n_after
+
+if (dropped > 0) {
+  message(sprintf("Dropped %d genes with zero SNPs overlapping this GWAS (prevents cTWAS crash)", dropped))
 } else {
-  message("No bad z-scores found—issue might be deeper in susie fine-mapping.")
+  message("All genes have at least one SNP—proceeding normally.")
 }
 
 ### ----------------------------------------------------------
