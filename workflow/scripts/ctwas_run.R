@@ -154,7 +154,7 @@ z_snp <- mrg_tbl |>
   filter(if_all(everything(), ~ !is.na(.) & . != ""))
 
 # Check for any remaining missing or blank values
-if (any(is.na(z_snp)) || any(z_snp == "", na.rm = TRUE)) {
+if (anyNA(z_snp) || any(z_snp == "", na.rm = TRUE)) {
   stop("Missing values found in GWAS data.")
 } else {
   message("No missing values in GWAS data ...")
@@ -315,7 +315,7 @@ ctwas_res <- ctwas_sumstats(z_snp,
                             group_prior_var_structure = "shared_all", 
                             min_nonSNP_PIP = 0.5,
                             min_abs_corr = 0.1, 
-                            ncore = 6, 
+                            ncore = 16, 
                             ncore_LD = 4,
                             save_cor = TRUE,
                             cor_dir = cor_dir,
