@@ -320,7 +320,6 @@ message("Dropped ", n_before - length(weights),
         " genes with |r| ≥ 0.999 in reference LD")
 
 ### ----------------------------------------------------------
-
 # Then run ctwas (example for full analysis)
 message('Run cTWAS ...')
 ctwas_res <- ctwas_sumstats(z_snp, 
