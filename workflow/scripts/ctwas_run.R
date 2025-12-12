@@ -238,67 +238,86 @@ if (file.exists(weights_file)) {
 }
 
 ### Adding a diagnostic section to troubleshoot failures. -----------------
-
-message("Checking for genes with no SNPs in weights...")
-n_before <- length(weights)
-
-# Filter: Keep only genes where at least one SNP overlaps with this GWAS
-weights <- weights[sapply(names(weights), function(gene_key) {
-  gene_entry <- weights[[gene_key]]
+diagnose_ctwas_weights <- function(weights, z_snp) {
+  message("=== cTWAS weights diagnostic report ===")
+  n_total <- length(weights)
+  message("Total molecular features (genes): ", n_total)
   
-  # Get SNPs for this gene (prefer $snps if present; fallback to rownames(wgt))
-  snps_in_gene <- if ("snps" %in% names(gene_entry)) {
-    gene_entry$snps
-  } else {
-    rownames(gene_entry$wgt)
-  }
+  # Counters
+  n_gene           <- 1
+  n_single_snp     <- 0
+  n_null_R_wgt     <- 0
+  n_multi_snp      <- 0
+  n_perfect_ld     <- 0
+  problematic_genes <- character(0)
   
-  length(intersect(snps_in_gene, z_snp$id)) > 0
-})]
-
-n_after <- length(weights)
-dropped <- n_before - n_after
-
-if (dropped > 0) {
-  message(sprintf("Dropped %d genes with zero SNPs overlapping this GWAS (prevents cTWAS crash)", dropped))
-} else {
-  message("All genes have at least one SNP—proceeding normally.")
-}
-
-message("Checking for problematic R_wgt matrices in weights...")
-
-bad_genes <- character(0)
-
-for (gn in names(weights)) {
-  Rmat <- weights[[gn]]$R_wgt
-  
-  # Case 1: R_wgt is NULL → this is a 1-SNP gene → always safe, keep it
-  if (is.null(Rmat)) next
-  
-  # Case 2: R_wgt exists but is empty or corrupted (should never happen, but has been seen)
-  if (!is.matrix(Rmat) || nrow(Rmat) == 0) {
-    bad_genes <- c(bad_genes, gn)
-    next
-  }
-  
-  # Case 3: matrix ≥2×2 → check if singular
-  if (nrow(Rmat) > 1) {
-    det_val <- determinant(Rmat, logarithm = TRUE)$modulus
-    # det_val can be -Inf, NA, or a very large negative number if singular
-    if (is.na(det_val) || is.infinite(det_val) || det_val < -10) {
-      bad_genes <- c(bad_genes, gn)
+  for (gene_id in names(weights)) {
+    
+    message('\nRunning diagnostic test on gene ', n_gene, ' of ', n_total, ' ...')     
+    
+    g <- weights[[gene_id]]
+    snps_in_gene  <- rownames(g$wgt)
+    snps_in_gwas  <- intersect(snps_in_gene, z_snp$id)
+    n_snps        <- length(snps_in_gwas)
+    
+    if (n_snps == 0) {
+      # Should never happen because preprocess_weights() filters these out
+      next
     }
+    
+    if (n_snps == 1) {
+      n_single_snp <- n_single_snp + 1
+      if (is.null(g$R_wgt)) n_null_R_wgt <- n_null_R_wgt + 1
+    } else {
+      n_multi_snp <- n_multi_snp + 1
+    }
+    
+    # Check for perfect LD (r = ±1 or |r| > 0.9999) → denominator will be zero → NaN/Inf
+    if (!is.null(g$R_wgt) && nrow(g$R_wgt) >= 2) {
+      off_diag <- abs(g$R_wgt[upper.tri(g$R_wgt)])
+      if (any(off_diag > 0.9999, na.rm = TRUE)) {
+        n_perfect_ld <- n_perfect_ld + 1
+        problematic_genes <- c(problematic_genes, gene_id)
+      }
+    }
+    
+    n_gene <- n_gene + 1
   }
-  # 1×1 matrices are always fine → do nothing
+  
+  message("Genes with exactly 1 SNP after harmonisation: ", n_single_snp)
+  message("  ... of which have R_wgt = NULL (will crash compute_gene_z): ", n_null_R_wgt)
+  message("Genes with ≥2 SNPs: ", n_multi_snp)
+  message("Genes with near-perfect LD (|r| > 0.9999) → will produce NaN/Inf z-score: ", n_perfect_ld)
+  
+  if (length(problematic_genes) > 0) {
+    message("\nExample problematic genes (perfect LD):")
+    print(head(problematic_genes))
+  }
+  
+  if (n_null_R_wgt > 0 || n_perfect_ld > 0) {
+    message("\nCONCLUSION: compute_gene_z() WILL crash on this combination.")
+    if (n_null_R_wgt > 0)  message("  → because of single-SNP genes with R_wgt = NULL")
+    if (n_perfect_ld > 0)  message("  → because of perfect LD causing division by zero")
+  } else {
+    message("\nCONCLUSION: This combination should run fine.")
+  }
+  
+  invisible(list(single_snp = n_single_snp,
+                 null_R_wgt = n_null_R_wgt,
+                 perfect_ld = n_perfect_ld,
+                 bad_genes = problematic_genes))
 }
+diagnose_ctwas_weights(weights, z_snp)
 
-if (length(bad_genes) > 0) {
-  message(sprintf("Dropping %d genes with singular/near-singular R_wgt:", length(bad_genes)))
-  print(head(bad_genes, 10))
-  weights <- weights[!names(weights) %in% bad_genes]
-} else {
-  message("No problematic R_wgt matrices found.")
-}
+
+# Try to remove problematic genes
+n_before <- length(weights)
+weights <- weights[sapply(weights, function(g) {
+  if (is.null(g$R_wgt)) return(TRUE)
+  max(abs(g$R_wgt[upper.tri(g$R_wgt)])) < 0.999
+})]
+message("Dropped ", n_before - length(weights), 
+        " genes with |r| ≥ 0.999 in reference LD")
 
 ### ----------------------------------------------------------
 
