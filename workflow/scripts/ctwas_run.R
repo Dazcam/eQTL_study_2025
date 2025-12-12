@@ -316,7 +316,7 @@ ctwas_res <- ctwas_sumstats(z_snp,
                             min_nonSNP_PIP = 0.5,
                             min_abs_corr = 0.1, 
                             ncore = 16, 
-                            ncore_LD = 4,
+                            ncore_LD = 16,
                             save_cor = TRUE,
                             cor_dir = cor_dir,
                             force_compute_cor = FALSE)
