@@ -204,8 +204,8 @@ message('Preprocessing FUSION weights for cTWAS ...')
 
   
 message("\nFirst check if cTWAS processed weight file already exists ... ")
-weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', cell_type, '_', gwas_trait, '.rds')
-
+weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', 
+                         cell_type, '_', gwas_trait, '.rds')
 
 if (file.exists(weights_file)) {
   message("Yes! Loading processed weight file ...")
@@ -231,143 +231,9 @@ if (file.exists(weights_file)) {
                                 load_predictdb_LD = FALSE,
                                 ncore = 6)
   
-  message('Writing cTWAS weights for plotting later ...')
-  dir.create(processed_weights_dir)
-  write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
-
 }
 
-### Adding a diagnostic section to troubleshoot failures. -----------------
-# diagnose_ctwas_weights <- function(weights, z_snp) {
-#   message("=== cTWAS weights diagnostic report ===")
-#   n_total <- length(weights)
-#   message("Total molecular features (genes): ", n_total)
-#   
-#   # Counters
-#   n_gene           <- 1
-#   n_single_snp     <- 0
-#   n_null_R_wgt     <- 0
-#   n_multi_snp      <- 0
-#   n_perfect_ld     <- 0
-#   problematic_genes <- character(0)
-#   
-#   message('Running diagnostic tests: ')
-#   for (gene_id in names(weights)) {
-#     
-#     message('Gene ', n_gene, ' of ', n_total, ' ...')     
-#     
-#     g <- weights[[gene_id]]
-#     snps_in_gene  <- rownames(g$wgt)
-#     snps_in_gwas  <- intersect(snps_in_gene, z_snp$id)
-#     n_snps        <- length(snps_in_gwas)
-#     
-#     if (n_snps == 0) {
-#       # Should never happen because preprocess_weights() filters these out
-#       next
-#     }
-#     
-#     if (n_snps == 1) {
-#       n_single_snp <- n_single_snp + 1
-#       if (is.null(g$R_wgt)) n_null_R_wgt <- n_null_R_wgt + 1
-#     } else {
-#       n_multi_snp <- n_multi_snp + 1
-#     }
-#     
-#     # Check for perfect LD (r = ±1 or |r| > 0.9999) → denominator will be zero → NaN/Inf
-#     if (!is.null(g$R_wgt) && nrow(g$R_wgt) >= 2) {
-#       off_diag <- abs(g$R_wgt[upper.tri(g$R_wgt)])
-#       if (any(off_diag > 0.9999, na.rm = TRUE)) {
-#         n_perfect_ld <- n_perfect_ld + 1
-#         problematic_genes <- c(problematic_genes, gene_id)
-#       }
-#     }
-#     
-#     n_gene <- n_gene + 1
-#   }
-#   
-#   message("Genes with exactly 1 SNP after harmonisation: ", n_single_snp)
-#   message("  ... of which have R_wgt = NULL (will crash compute_gene_z): ", n_null_R_wgt)
-#   message("Genes with ≥2 SNPs: ", n_multi_snp)
-#   message("Genes with near-perfect LD (|r| > 0.9999) → will produce NaN/Inf z-score: ", n_perfect_ld)
-#   
-#   if (length(problematic_genes) > 0) {
-#     message("\nExample problematic genes (perfect LD):")
-#     print(head(problematic_genes))
-#   }
-#   
-#   if (n_null_R_wgt > 0 || n_perfect_ld > 0) {
-#     message("\nCONCLUSION: compute_gene_z() WILL crash on this combination.")
-#     if (n_null_R_wgt > 0)  message("  → because of single-SNP genes with R_wgt = NULL")
-#     if (n_perfect_ld > 0)  message("  → because of perfect LD causing division by zero")
-#   } else {
-#     message("\nCONCLUSION: This combination should run fine.")
-#   }
-#   
-#   invisible(list(single_snp = n_single_snp,
-#                  null_R_wgt = n_null_R_wgt,
-#                  perfect_ld = n_perfect_ld,
-#                  bad_genes = problematic_genes))
-# }
-# diagnose_ctwas_weights(weights, z_snp)
-# 
-# 
-# # Try to remove problematic genes
-# n_before <- length(weights)
-# weights <- weights[sapply(weights, function(g) {
-#   if (is.null(g$R_wgt)) return(TRUE)
-#   max(abs(g$R_wgt[upper.tri(g$R_wgt)])) < 0.999
-# })]
-# message("Dropped ", n_before - length(weights), 
-#         " genes with |r| ≥ 0.999 in reference LD")
 
-# Single-core check to identify the first actor that causes an error
-# message("=== cTWAS weights diagnostic report ===")
-# find_offender <- function(weights, z_snp) {
-#   for (id in names(weights)) {
-#     g <- weights[[id]]
-#     # Basic existence checks
-#     if (!all(c("wgt","R_wgt","type","context") %in% names(g))) {
-#       cat("OFFENDER:", id, "- missing expected fields\n")
-#       return(list(id=id, reason="missing_fields", fields=names(g)))
-#     }
-#     # try full computation exactly as compute_gene_z would do (but single-core)
-#     res <- tryCatch({
-#       wgt <- as.matrix(g[["wgt"]])
-#       R.s <- as.matrix(g[["R_wgt"]])
-#       # ensure numeric storage
-#       storage.mode(wgt) <- "double"
-#       storage.mode(R.s) <- "double"
-#       # match z_snp
-#       wgt_snp_ids <- rownames(wgt)
-#       z.idx <- match(wgt_snp_ids, z_snp$id)
-#       if (any(is.na(z.idx))) stop("SNP IDs missing in z_snp")
-#       z.s <- as.matrix(z_snp$z[z.idx])
-#       denom <- sqrt(as.numeric(t(wgt) %*% R.s %*% wgt))
-#       num   <- as.numeric(crossprod(wgt, z.s))
-#       # produce numeric result (this will raise if anything is wrong)
-#       zscore <- num / denom
-#       list(id=id, ok=TRUE, z=zscore)
-#     }, error = function(e) {
-#       list(id=id, ok=FALSE, err=conditionMessage(e),
-#            class_wgt=class(g[["wgt"]]), class_Rw=class(g[["R_wgt"]]),
-#            dim_wgt=dim(g[["wgt"]]), dim_Rw=dim(g[["R_wgt"]]))
-#     })
-#     if (!is.null(res) && !isTRUE(res$ok)) {
-#       cat("FAILED at gene:", id, "\nError message:", res$err, "\n")
-#       cat("wgt class:", res$class_wgt, " dim:", paste(res$dim_wgt, collapse="x"), "\n")
-#       cat("R_wgt class:", res$class_Rw, " dim:", paste(res$dim_Rw, collapse="x"), "\n")
-#       return(res)
-#     }
-#   }
-#   cat("No offender found — all genes passed the single-core numeric test.\n")
-#   NULL
-# }
-# 
-# offender <- find_offender(weights, z_snp)
-# print(offender)
-
-
-message("=== Running full gene-by-gene QC before cTWAS ===")
 qc_ctwas_weights <- function(weights, z_snp, ld_threshold = 0.9999) {
   
   results <- vector("list", length(weights))
@@ -471,34 +337,38 @@ qc_ctwas_weights <- function(weights, z_snp, ld_threshold = 0.9999) {
   return(qc_tbl)
 }
 
-# ------------------------------------------------------------
-# Run QC
-# ------------------------------------------------------------
-qc_tbl <- qc_ctwas_weights(weights, z_snp)
+if (cell_type %in%  c("InN-0", "InN-1") &
+    gwas_trait %in% c("adhd", "ocd", "ptsd")) {
+  
+  message("=== Running full gene-by-gene QC before cTWAS ===")
+  qc_tbl <- qc_ctwas_weights(weights, z_snp)
 
-message("\n=== QC Summary ===")
-print(qc_tbl %>% count(status, reason), n = Inf)
+  message("\n=== QC Summary ===")
+  print(qc_tbl %>% count(status, reason), n = Inf)
 
-# ------------------------------------------------------------
-# Filter weights: keep only PASS
-# ------------------------------------------------------------
-failed_genes <- qc_tbl %>% filter(status == "FAIL") %>% pull(gene)
-passed_genes <- qc_tbl %>% filter(status == "PASS") %>% pull(gene)
+  failed_genes <- qc_tbl %>% filter(status == "FAIL") %>% pull(gene)
+  passed_genes <- qc_tbl %>% filter(status == "PASS") %>% pull(gene)
 
-message("\nDropping ", length(failed_genes), " genes failing QC.")
-message("Keeping ", length(passed_genes), " genes.")
+  message("\nDropping ", length(failed_genes), " genes failing QC.")
+  message("Keeping ", length(passed_genes), " genes.")
 
-weights_clean <- weights[passed_genes]
+  weights_clean <- weights[passed_genes]
 
-# Save QC table for audit
-qc_file <- file.path(out_dir, paste0("ctwas_weight_qc_", gwas_trait, "_", cell_type, ".tsv"))
-readr::write_tsv(qc_tbl, qc_file)
-message("QC report saved to: ", qc_file)
+  # Save QC table for audit
+  qc_file <- file.path(out_dir, paste0("ctwas_weight_qc_", cell_type, "_", gwas_trait, ".tsv"))
+  readr::write_tsv(qc_tbl, qc_file)
+  message("QC report saved to: ", qc_file)
 
-# Replace weights with cleaned version
-weights <- weights_clean
+  # Replace weights with cleaned version
+  weights <- weights_clean
 
-message("=== QC complete. Proceeding to run cTWAS with cleaned weight set ===")
+  message("=== QC complete. Proceeding to run cTWAS with cleaned weight set ===")
+  
+}
+
+message('Writing cTWAS weights for plotting later ...')
+dir.create(processed_weights_dir)
+write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
 
 
 ### ----------------------------------------------------------
