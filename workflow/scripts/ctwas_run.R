@@ -229,7 +229,7 @@ if (file.exists(weights_file)) {
                                 filter_protein_coding_genes = FALSE,
                                 scale_predictdb_weights = FALSE,
                                 load_predictdb_LD = FALSE,
-                                ncore = 1)
+                                ncore = 6)
   
   message('Writing cTWAS weights for plotting later ...')
   dir.create(processed_weights_dir)
@@ -368,7 +368,6 @@ if (file.exists(weights_file)) {
 
 
 message("=== Running full gene-by-gene QC before cTWAS ===")
-
 qc_ctwas_weights <- function(weights, z_snp, ld_threshold = 0.9999) {
   
   results <- vector("list", length(weights))
@@ -516,8 +515,8 @@ ctwas_res <- ctwas_sumstats(z_snp,
                             group_prior_var_structure = "shared_all", 
                             min_nonSNP_PIP = 0.5,
                             min_abs_corr = 0.1, 
-                            ncore = 1, 
-                            ncore_LD = 1,
+                            ncore = 6, 
+                            ncore_LD = 4,
                             save_cor = TRUE,
                             cor_dir = cor_dir,
                             force_compute_cor = FALSE)
