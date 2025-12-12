@@ -229,7 +229,7 @@ if (file.exists(weights_file)) {
                                 filter_protein_coding_genes = FALSE,
                                 scale_predictdb_weights = FALSE,
                                 load_predictdb_LD = FALSE,
-                                ncore = 6)
+                                ncore = 1)
   
   message('Writing cTWAS weights for plotting later ...')
   dir.create(processed_weights_dir)
@@ -321,50 +321,185 @@ if (file.exists(weights_file)) {
 #         " genes with |r| ≥ 0.999 in reference LD")
 
 # Single-core check to identify the first actor that causes an error
-message("=== cTWAS weights diagnostic report ===")
-find_offender <- function(weights, z_snp) {
-  for (id in names(weights)) {
-    g <- weights[[id]]
-    # Basic existence checks
-    if (!all(c("wgt","R_wgt","type","context") %in% names(g))) {
-      cat("OFFENDER:", id, "- missing expected fields\n")
-      return(list(id=id, reason="missing_fields", fields=names(g)))
+# message("=== cTWAS weights diagnostic report ===")
+# find_offender <- function(weights, z_snp) {
+#   for (id in names(weights)) {
+#     g <- weights[[id]]
+#     # Basic existence checks
+#     if (!all(c("wgt","R_wgt","type","context") %in% names(g))) {
+#       cat("OFFENDER:", id, "- missing expected fields\n")
+#       return(list(id=id, reason="missing_fields", fields=names(g)))
+#     }
+#     # try full computation exactly as compute_gene_z would do (but single-core)
+#     res <- tryCatch({
+#       wgt <- as.matrix(g[["wgt"]])
+#       R.s <- as.matrix(g[["R_wgt"]])
+#       # ensure numeric storage
+#       storage.mode(wgt) <- "double"
+#       storage.mode(R.s) <- "double"
+#       # match z_snp
+#       wgt_snp_ids <- rownames(wgt)
+#       z.idx <- match(wgt_snp_ids, z_snp$id)
+#       if (any(is.na(z.idx))) stop("SNP IDs missing in z_snp")
+#       z.s <- as.matrix(z_snp$z[z.idx])
+#       denom <- sqrt(as.numeric(t(wgt) %*% R.s %*% wgt))
+#       num   <- as.numeric(crossprod(wgt, z.s))
+#       # produce numeric result (this will raise if anything is wrong)
+#       zscore <- num / denom
+#       list(id=id, ok=TRUE, z=zscore)
+#     }, error = function(e) {
+#       list(id=id, ok=FALSE, err=conditionMessage(e),
+#            class_wgt=class(g[["wgt"]]), class_Rw=class(g[["R_wgt"]]),
+#            dim_wgt=dim(g[["wgt"]]), dim_Rw=dim(g[["R_wgt"]]))
+#     })
+#     if (!is.null(res) && !isTRUE(res$ok)) {
+#       cat("FAILED at gene:", id, "\nError message:", res$err, "\n")
+#       cat("wgt class:", res$class_wgt, " dim:", paste(res$dim_wgt, collapse="x"), "\n")
+#       cat("R_wgt class:", res$class_Rw, " dim:", paste(res$dim_Rw, collapse="x"), "\n")
+#       return(res)
+#     }
+#   }
+#   cat("No offender found — all genes passed the single-core numeric test.\n")
+#   NULL
+# }
+# 
+# offender <- find_offender(weights, z_snp)
+# print(offender)
+
+
+message("=== Running full gene-by-gene QC before cTWAS ===")
+
+qc_ctwas_weights <- function(weights, z_snp, ld_threshold = 0.9999) {
+  
+  results <- vector("list", length(weights))
+  names(results) <- names(weights)
+  counter <- 1
+  total   <- length(weights)
+  
+  for (gene_id in names(weights)) {
+    g <- weights[[gene_id]]
+    cat("Checking gene", counter, "of", total, ":", gene_id, "...\n")
+    counter <- counter + 1
+    
+    # ----------------------------------------------------
+    # 1. Basic structure checks
+    # ----------------------------------------------------
+    if (is.null(g$wgt) || !is.matrix(g$wgt)) {
+      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "wgt_not_matrix")
+      next
     }
-    # try full computation exactly as compute_gene_z would do (but single-core)
+    if (is.null(g$R_wgt)) {
+      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "R_wgt_NULL")
+      next
+    }
+    if (!is.matrix(g$R_wgt)) {
+      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "R_wgt_not_matrix")
+      next
+    }
+    
+    wgt <- as.matrix(g$wgt)
+    R   <- as.matrix(g$R_wgt)
+    
+    # Must be numeric
+    if (!is.numeric(wgt) || !is.numeric(R)) {
+      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "non_numeric")
+      next
+    }
+    
+    # ----------------------------------------------------
+    # 2. Dimensionality checks
+    # ----------------------------------------------------
+    if (nrow(R) != ncol(R)) {
+      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "R_wgt_not_square")
+      next
+    }
+    if (nrow(wgt) != nrow(R)) {
+      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "dim_mismatch")
+      next
+    }
+    
+    # ----------------------------------------------------
+    # 3. SNP matching
+    # ----------------------------------------------------
+    snps <- rownames(wgt)
+    idx  <- match(snps, z_snp$id)
+    if (any(is.na(idx))) {
+      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "SNP_missing_in_z")
+      next
+    }
+    zvec <- z_snp$z[idx]
+    
+    # ----------------------------------------------------
+    # 4. Perfect LD detection
+    # ----------------------------------------------------
+    if (nrow(R) > 1) {
+      offdiag <- abs(R[upper.tri(R)])
+      if (any(offdiag > ld_threshold)) {
+        results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "perfect_LD")
+        next
+      }
+    }
+    
+    # ----------------------------------------------------
+    # 5. Run the exact compute_gene_z math
+    # ----------------------------------------------------
     res <- tryCatch({
-      wgt <- as.matrix(g[["wgt"]])
-      R.s <- as.matrix(g[["R_wgt"]])
-      # ensure numeric storage
       storage.mode(wgt) <- "double"
-      storage.mode(R.s) <- "double"
-      # match z_snp
-      wgt_snp_ids <- rownames(wgt)
-      z.idx <- match(wgt_snp_ids, z_snp$id)
-      if (any(is.na(z.idx))) stop("SNP IDs missing in z_snp")
-      z.s <- as.matrix(z_snp$z[z.idx])
-      denom <- sqrt(as.numeric(t(wgt) %*% R.s %*% wgt))
-      num   <- as.numeric(crossprod(wgt, z.s))
-      # produce numeric result (this will raise if anything is wrong)
-      zscore <- num / denom
-      list(id=id, ok=TRUE, z=zscore)
+      storage.mode(R) <- "double"
+      storage.mode(zvec) <- "double"
+      
+      denom <- sqrt(as.numeric(t(wgt) %*% R %*% wgt))
+      num   <- as.numeric(crossprod(wgt, zvec))
+      z     <- num / denom
+      
+      if (!is.finite(z)) stop("computed z is not finite")
+      
+      list(id = gene_id, status = "PASS", z = z)
     }, error = function(e) {
-      list(id=id, ok=FALSE, err=conditionMessage(e),
-           class_wgt=class(g[["wgt"]]), class_Rw=class(g[["R_wgt"]]),
-           dim_wgt=dim(g[["wgt"]]), dim_Rw=dim(g[["R_wgt"]]))
+      list(id = gene_id, status = "FAIL", reason = paste("compute_error:", conditionMessage(e)))
     })
-    if (!is.null(res) && !isTRUE(res$ok)) {
-      cat("FAILED at gene:", id, "\nError message:", res$err, "\n")
-      cat("wgt class:", res$class_wgt, " dim:", paste(res$dim_wgt, collapse="x"), "\n")
-      cat("R_wgt class:", res$class_Rw, " dim:", paste(res$dim_Rw, collapse="x"), "\n")
-      return(res)
-    }
+    
+    results[[gene_id]] <- res
   }
-  cat("No offender found — all genes passed the single-core numeric test.\n")
-  NULL
+  
+  # Convert list → tibble
+  qc_tbl <- tibble::tibble(
+    gene   = names(results),
+    status = sapply(results, function(x) x$status),
+    reason = sapply(results, function(x) if ("reason" %in% names(x)) x$reason else NA_character_)
+  )
+  
+  return(qc_tbl)
 }
 
-offender <- find_offender(weights, z_snp)
-print(offender)
+# ------------------------------------------------------------
+# Run QC
+# ------------------------------------------------------------
+qc_tbl <- qc_ctwas_weights(weights, z_snp)
+
+message("\n=== QC Summary ===")
+print(qc_tbl %>% count(status, reason), n = Inf)
+
+# ------------------------------------------------------------
+# Filter weights: keep only PASS
+# ------------------------------------------------------------
+failed_genes <- qc_tbl %>% filter(status == "FAIL") %>% pull(gene)
+passed_genes <- qc_tbl %>% filter(status == "PASS") %>% pull(gene)
+
+message("\nDropping ", length(failed_genes), " genes failing QC.")
+message("Keeping ", length(passed_genes), " genes.")
+
+weights_clean <- weights[passed_genes]
+
+# Save QC table for audit
+qc_file <- file.path(out_dir, paste0("ctwas_weight_qc_", gwas_trait, "_", cell_type, ".tsv"))
+readr::write_tsv(qc_tbl, qc_file)
+message("QC report saved to: ", qc_file)
+
+# Replace weights with cleaned version
+weights <- weights_clean
+
+message("=== QC complete. Proceeding to run cTWAS with cleaned weight set ===")
 
 
 ### ----------------------------------------------------------
