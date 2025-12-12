@@ -92,7 +92,11 @@ Test direction:
 
 ```{r, ziffra_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 #ziffra_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/06QTL-REPLICATION/ziffra/'
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri",
+                "ExN-UL-0", "ExN-UL-1", "ExN-UL-2", 
+                "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
+                "InN-0", "InN-1", 
+                "RG-0", "RG-1", "RG-2", "RG-3")
 
 # Create a function to read and add cell_type identifier (optional)
 read_rds_file <- function(cell_type) {
@@ -190,36 +194,6 @@ ziffra_plt
 
 ***
 
-#### Bar plot
-
-```{r, ziffra_barplot, echo = FALSE, message = FALSE, warning = FALSE}
-bar_plt <- combined_data %>%
-  mutate(
-    logp = -log10(p_value),
-    sig = ifelse(p_value < 0.05, "*", ""),
-    peak_cell_type = str_remove(peak_cell_type, "_MACSpeaks")
-  ) |> ggplot(aes(x = eqtl_cell_type, y = fold_enrichment, fill = peak_cell_type)) +
-  geom_col(position = position_dodge(width = 0.8), width = 0.7, color = "black") +
-  geom_text(aes(label = sig),
-            position = position_dodge(width = 0.8), hjust = 0.4,
-            size = 5, color = "black") +
-  labs(
-    title = "eQTL enrichment in ATAC-seq peaks",
-    x = "eQTL cell type",
-    y = "Fold enrichment",
-    fill = "snATAC-seq peak cell type"
-  ) +
-  scale_fill_brewer(palette = "Set2") +
-  theme_classic(base_size = 14) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "right"
-  ) + coord_flip()
-bar_plt
-```
-
-***
-
 ### O'Brien {.tabset}
 
 ***
@@ -230,7 +204,8 @@ bar_plt
 
 ```{r, obrien_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 #obrien_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/06QTL-REPLICATION/obrien/'
-# Create a function to read and add cell_type identifier (optional)
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+
 read_rds_file <- function(cell_type) {
   file_path <- paste0(obrien_dir, cell_type, '_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds')
   read_rds(file_path) %>%
