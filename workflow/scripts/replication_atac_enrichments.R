@@ -73,15 +73,32 @@ peak_list <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx")
 #  dplyr::select(peak_name) # Might use these later
 lookup_peaks <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx"), sheet = "ST3 MACSpeaks_byCelltype")
 
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri",
+                "ExN-UL-0", "ExN-UL-1", "ExN-UL-2", 
+                "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
+                "InN-0", "InN-1", 
+                "RG-0", "RG-1", "RG-2", "RG-3")
 ziffra_mapping_all <- list(
-  "RG" = "RG_MACSpeaks",
-  "ExN-UL" = "ulEN_MACSpeaks",
-  "ExN-DL" = "dlEN_MACSpeaks",
-  "InN" = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
+  "RG"        = "RG_MACSpeaks",
+  "RG-0"      = "RG_MACSpeaks", 
+  "RG-1"      = "RG_MACSpeaks", 
+  "RG-2"      = "RG_MACSpeaks", 
+  "RG-3"      = "RG_MACSpeaks",
+  "ExN-UL"    = "ulEN_MACSpeaks",
+  "ExN-UL-0"  = "ulEN_MACSpeaks", 
+  "ExN-UL-1"  = "ulEN_MACSpeaks", 
+  "ExN-UL-2"  = "ulEN_MACSpeaks",
+  "ExN-DL"    = "dlEN_MACSpeaks",
+  "ExN-DL-0"  = "dlEN_MACSpeaks",
+  "ExN-DL-1"  = "dlEN_MACSpeaks",
+  "ExN-DL-2"  = "dlEN_MACSpeaks",
+  "ExN-DL-3"  = "dlEN_MACSpeaks",
+  "InN"       = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
+  "InN-0"     = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
+  "InN-1"     = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
   "Endo-Peri" = "EndoMural_MACSpeaks",
-  "MG" = "Microglia_MACSpeaks",
-  "OPC" = "AstroOligo_MACSpeaks"
+  "MG"        = "Microglia_MACSpeaks",
+  "OPC"       = "AstroOligo_MACSpeaks"
 )
 
 # Only run relevant cell type mappings
