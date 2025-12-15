@@ -16,7 +16,7 @@ params:
 ```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(gt)
 library(tidyverse)
-library(ctwas)
+#library(ctwas)
 #library(EnsDb.Hsapiens.v86)
 library(cowplot)
 in_dir <- params$in_dir
@@ -46,7 +46,7 @@ We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to inte
 
 ***
 
-1. `create_ld_matrices`: Create (1000G hg38)LD matrices and variant info files for causal TWAS dataset
+1. `create_ld_matrices`: Create (1000G hg38 build) LD matrices and variant info files for cTWAS 
 2. `copy_fusion_weights`: Copy genuine FUSION weight files (cTWAS chokes if any empty files are in weight dir)
 3. `run_ctwas`: Run cTWAS on sc-eQTL and GWAS data
 4. `run_ctwas_multi`: Run multi-group cTWAS all cell types per GWAS
@@ -54,8 +54,8 @@ We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to inte
 
 TODO: 
 
-1. Rpt configured for 1 cell type and scz atm, need to rejig to handle all
-2. Need option to alter gene / region for plot(s) in smk call
+1. Just showing multi for now. Can add individual runs again later
+2. Add gene / region for plot(s) for interesting genes
 
 ***
 
@@ -130,7 +130,7 @@ final_table |>
 
 ```{r, cTWAS_z_score_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 for (g in gwas) {
-  cat("##### ", toupper(g), " {.tabset}\n\n")
+  cat("##### ", toupper(g), " \n\n")
   
   file <- paste0(in_dir, "ctwas_multi_", g, "_ctwas.rds")
   ctw_res  <- read_rds(file)
@@ -187,7 +187,7 @@ for (g in gwas) {
 ```{r ctwas_fine_mapping_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 
 for (g in gwas) {
-  cat("##### ", toupper(g), " {.tabset}\n\n")
+  cat("##### ", toupper(g), " \n\n")
   
   file <- paste0(in_dir, "ctwas_multi_", g, "_ctwas.rds")
   ctw_res  <- read_rds(file)
