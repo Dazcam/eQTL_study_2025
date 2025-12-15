@@ -152,7 +152,7 @@ for (g in gwas) {
   if (nrow(z_gene) == 0) {
     cat("No significant genes (FDR < 0.05)\n\n")
   } else {
-    z_gene |>
+    z_gene_tbl <- z_gene |>
       gt() |>
       tab_header(title = md(paste0("**", toupper(g), "**")),
                  subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): ", nrow(z_gene)))) |>
@@ -172,7 +172,8 @@ for (g in gwas) {
   ) |>
   opt_table_font(
     font = list(default_fonts())
-  )
+  ) 
+  print(z_gene_tbl)
   }
   
 }
@@ -216,7 +217,7 @@ for (g in gwas) {
   if (nrow(finemap_res) == 0) {
     cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
 } else {
-  finemap_res |>
+  finemap_tbl <- finemap_res |>
   gt() |>
   tab_header(
     title = md(paste0("**", toupper(g), "**")),
@@ -237,10 +238,10 @@ for (g in gwas) {
   opt_table_font(
     font = list(default_fonts())
   )
-    
-    }
-    
+  print(finemap_tbl)
   
+  }
+    
 }
 ```
 
