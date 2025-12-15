@@ -49,6 +49,7 @@ We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to inte
 1. `create_ld_matrices`: Create (1000G hg38)LD matrices and variant info files for causal TWAS dataset
 2. `copy_fusion_weights`: Copy genuine FUSION weight files (cTWAS chokes if any empty files are in weight dir)
 3. `run_ctwas`: Run cTWAS on sc-eQTL and GWAS data
+4. 
 4. `ctwas_report`: Generate cTWAS report
 
 TODO: 
@@ -96,11 +97,9 @@ unique_genes_all <- perm_tbl %>%
   nrow()
 
 final_table <- per_cell_counts %>%
-  mutate(n_sig_genes = format(n_sig_genes, big.mark = ",")) %>%
   bind_rows(tibble(
     cell_type = "Unique across all cell types",
-    n_sig_genes = format(unique_genes_all, big.mark = ",")
-  ))
+    n_sig_genes = unique_genes_all))
 
 final_table %>%
   gt() %>%
@@ -163,7 +162,7 @@ for (g in gwas) {
     left_join(gene_lookup, by = join_by(gene == ensembl_id)) |>
     mutate(pval = 2 * pnorm(-abs(z)),
            fdr  = p.adjust(pval, method = "BH"),
-           pval_bf = pval * bf_denominator) |>
+           pval_bf = pval * unique_genes_all) |>
     mutate(pval_bf = pmin(pval_bf, 1)) |>
     arrange(pval_bf) |>
     filter(pval_bf < 0.05) |>
@@ -177,7 +176,7 @@ for (g in gwas) {
     z_gene |>
       gt() |>
       tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
-                 subtitle = md(paste0("cTWAS significant genes (P < 0.05): ", nrow(z_gene)))) |>
+                 subtitle = md(paste0("cTWAS significant genes (<sub>BF</sub> < 0.05): ", nrow(z_gene)))) |>
       fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
       cols_label(cell_type = "Cell Type",
                  symbol = "Gene Symbol",
