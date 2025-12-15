@@ -27,7 +27,6 @@ lookup_dir <- params$lookup_dir
 # lookup_dir <- '~/Desktop/eQTL_study_2025/resources/sheets/'
 # bmark_dir <- ''
 
-cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "MG", "OPC")
 gwas <- c("scz", "bpd", "mdd", "adhd", "ocd", "ptsd")
 gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
@@ -59,93 +58,97 @@ TODO:
 
 ***
 
-### Z-scores {.tabset}
+### Multi
+
+***
+
+#### Z-scores {.tabset}
 
 ```{r, cTWAS_z_score_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+#cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "MG", "OPC")
 for (g in gwas) {
-  cat("#### ", toupper(g), " {.tabset}\n\n")
+  cat("##### ", toupper(g), " {.tabset}\n\n")
   
-  for (ct in cell_types) {
-    file <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
-    ctw_res  <- read_rds(file)
-    # Process data
-    z_gene <- as_tibble(ctw_res$z_gene) |>
-      separate(id, into = c('gene', 'id'), sep = "\\|") |>
-      separate(id, into = c('cell_type', 'id'), sep = "_") |>
-      left_join(gene_lookup, by = join_by(gene == ensembl_id)) |>
-      mutate(pval = 2 * pnorm(-abs(z)),
-             fdr  = p.adjust(pval, method = "BH")) |>
-      dplyr::filter(fdr < 0.05) |>
-      arrange(fdr) |>
-      distinct(gene, .keep_all = TRUE) |>
-      dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype, chr)
+  file <- paste0(in_dir, "ctwas_multi_", ct, "_", g, "_ctwas.rds")
+  ctw_res  <- read_rds(file)
+  # Process data
+  z_gene <- as_tibble(ctw_res$z_gene) |>
+    separate(id, into = c('gene', 'id'), sep = "\\|") |>
+    separate(id, into = c('cell_type', 'id'), sep = "_") |>
+    left_join(gene_lookup, by = join_by(gene == ensembl_id)) |>
+    mutate(pval = 2 * pnorm(-abs(z)),
+           fdr  = p.adjust(pval, method = "BH")) |>
+    dplyr::filter(fdr < 0.05) |>
+    arrange(fdr) |>
+    distinct(gene, .keep_all = TRUE) |>
+    dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype, chr)
     
  cat("#####", ct, "\n\n")
     
-    if (nrow(z_gene) == 0) {
-      cat("No significant genes (FDR < 0.05)\n\n")
-    } else {
-      z_gene |>
-        gt() |>
-        tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
-                   subtitle = md(paste0("cTWAS significant genes (FDR < 0.05): ", nrow(z_gene)))) |>
-        fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
-        cols_label(cell_type = "Cell Type",
-                   symbol = "Gene Symbol",
-                   gene = "ENSG ID",
-                   z = "Z-score",
-                   pval = "P-value",
-                   fdr = "FDR",
-                   gene_biotype = "Gene Type",
-                   chr = "Chr") |>
-    # MAGIC SETTINGS BELOW
-    tab_options(
-        table.font.size = "85%",                 # smaller font
-        data_row.padding = px(4),                # less vertical space per row
-        column_labels.font.weight = "bold",
-        table.width = pct(100),                  # use full width
-        table.border.top.style = "none",
-        table.border.bottom.style = "solid",
-        table.border.bottom.width = px(2),
-        table.border.bottom.color = "gray70"
-    ) |>
-    cols_width(gene ~ px(150),           
-               symbol ~ px(100),         
-               cell_type ~ px(80),
-               z ~ px(70),
-               pval ~ px(90),
-               fdr ~ px(90),
-               chr ~ px(50),
-               gene_biotype ~ px(110)
-    ) |>
-    opt_table_font(font = "Arial") |>
-    tab_style(
-        style = cell_text(size = px(12)),
-        locations = cells_body()
-    ) |>
-    opt_css(
-        css = "
-      .gt_row { white-space: nowrap; }       /* prevent wrapping in cells */
-      .gt_table { overflow-x: auto; }        /* horizontal scroll if needed */
-    "
-    ) |>
-    print()
-      cat("\n\n")
-    }
+  if (nrow(z_gene) == 0) {
+    cat("No significant genes (FDR < 0.05)\n\n")
+  } else {
+    z_gene |>
+      gt() |>
+      tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
+                 subtitle = md(paste0("cTWAS significant genes (FDR < 0.05): ", nrow(z_gene)))) |>
+      fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
+      cols_label(cell_type = "Cell Type",
+                 symbol = "Gene Symbol",
+                 gene = "ENSG ID",
+                 z = "Z-score",
+                 pval = "P-value",
+                 fdr = "FDR",
+                 gene_biotype = "Gene Type",
+                 chr = "Chr") |>
+  # MAGIC SETTINGS BELOW
+  tab_options(
+      table.font.size = "85%",                 # smaller font
+      data_row.padding = px(4),                # less vertical space per row
+      column_labels.font.weight = "bold",
+      table.width = pct(100),                  # use full width
+      table.border.top.style = "none",
+      table.border.bottom.style = "solid",
+      table.border.bottom.width = px(2),
+      table.border.bottom.color = "gray70"
+  ) |>
+  cols_width(gene ~ px(150),           
+             symbol ~ px(100),         
+             cell_type ~ px(80),
+             z ~ px(70),
+             pval ~ px(90),
+             fdr ~ px(90),
+             chr ~ px(50),
+             gene_biotype ~ px(110)
+  ) |>
+  opt_table_font(font = "Arial") |>
+  tab_style(
+      style = cell_text(size = px(12)),
+      locations = cells_body()
+  ) |>
+  opt_css(
+      css = "
+    .gt_row { white-space: nowrap; }       /* prevent wrapping in cells */
+    .gt_table { overflow-x: auto; }        /* horizontal scroll if needed */
+  "
+  ) |>
+  print()
+    cat("\n\n")
   }
+  
 }
 ```
 
 ***
 
-### Fine-mapping {.tabset}
+#### Fine-mapping {.tabset}
 
 ***
 
 ```{r ctwas_fine_mapping_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 
 for (g in gwas) {
-  cat("#### ", toupper(g), " {.tabset}\n\n")
+  cat("##### ", toupper(g), " {.tabset}\n\n")
   
   for (ct in cell_types) {
     file <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
@@ -235,7 +238,7 @@ for (g in gwas) {
 
 ***
 
-#### Table
+##### Table
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files for the pipeline
