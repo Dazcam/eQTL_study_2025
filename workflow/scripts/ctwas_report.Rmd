@@ -157,7 +157,8 @@ for (g in gwas) {
     filter(pval_bf < 0.05) |>
    # arrange(fdr) |>
     distinct(gene, .keep_all = TRUE) |>
-    mutate(across(c(z, pval, pval_bf, fdr), ~ round(.x, 3))) |>
+    mutate(across(c(pval, pval_bf, fdr), ~ signif(.x, 2)),
+           z = round(z, 2)) |>
     dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, fdr, gene_biotype, chr)
     
   if (nrow(z_gene) == 0) {
@@ -225,7 +226,8 @@ for (g in gwas) {
    # filter(pval_bf < 0.05) |>
    # arrange(fdr) |>
    # distinct(gene, .keep_all = TRUE) |>
-    mutate(across(c(z, pval, pval_bf, susie_pip), ~ round(.x, 3))) |>
+    mutate(across(c(pval, pval_bf, susie_pip), ~ signif(.x, 2)),
+           z = round(z, 2)) |>
     dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
   
   if (nrow(finemap_res) == 0) {
