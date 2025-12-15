@@ -217,8 +217,6 @@ for (g in gwas) {
   }
   
   finemap_res <- as_tibble(ctw_res$finemap_res) |>
-    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
-    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
     dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
     separate(id, into = c('gene', 'id'), sep = "\\|") |>
     separate(id, into = c('cell_type', 'id'), sep = "_") |>
@@ -237,6 +235,9 @@ for (g in gwas) {
     cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
 } else {
   finemap_tbl <- finemap_res |>
+    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
+    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
+    mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
   gt() |>
   tab_header(
     title = md(paste0("**", toupper(g), "**")),
