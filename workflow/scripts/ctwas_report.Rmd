@@ -58,6 +58,106 @@ TODO:
 
 ***
 
+### Correction
+
+```{r, get_gene_lists_for correction, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+perm_files <- tibble(
+  cell_type = cell_types,
+  file = glue::glue(
+    "../results/05TENSORQTL/tensorqtl_perm/{cell_types}_quantile_genPC_4_expPC_40/{cell_types}_quantile_perm.cis_qtl.txt.gz"
+  )
+)
+
+# Read, filter, and annotate
+perm_tbl <- tibble(file = perm_files) %>%
+  mutate(
+    cell_type = str_extract(file, "(?<=tensorqtl_perm/)[^_/]+")
+  ) %>%
+  mutate(
+    data = map(
+      file,
+      ~ read_tsv(.x, show_col_types = FALSE) %>%
+          filter(pval_nominal < 0.01) %>%
+          select(phenotype_id)
+    )
+  ) %>%
+  select(cell_type, data) %>%
+  unnest(data)
+
+perm_tbl <- perm_files %>%
+  mutate(
+    data = map(
+      file,
+      ~ read_tsv(.x, show_col_types = FALSE) %>%
+          filter(pval_nominal < 0.01) %>%
+          select(phenotype_id)
+    )
+  ) %>%
+  select(cell_type, data) %>%
+  unnest(data)
+
+per_celltype_counts <- perm_tbl %>%
+  distinct(cell_type, phenotype_id) %>%
+  count(cell_type, name = "n_sig_genes") %>%
+  arrange(desc(n_sig_genes))
+
+unique_gene_count <- perm_tbl %>%
+  distinct(phenotype_id) %>%
+  summarise(
+    cell_type = "Unique across all cell types",
+    n_sig_genes = n()
+  )
+
+final_table <- bind_rows(
+  per_celltype_counts,
+  unique_gene_count
+) 
+
+bf_denominator <- final_table %>%
+  filter(cell_type == "Unique across all cell types") %>%
+  pull(n_sig_genes)
+
+final_table %>%
+  gt() %>%
+  cols_label(
+    cell_type = "Cell type",
+    n_sig_genes = "Genes with cis-eQTL (P < 0.01)"
+  ) %>%
+  fmt_number(
+    columns = n_sig_genes,
+    decimals = 0,
+    use_seps = TRUE
+  ) %>%
+  tab_spanner(
+    label = "TensorQTL cis-eQTL discovery",
+    columns = n_sig_genes
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(weight = "bold")
+    ),
+    locations = cells_body(
+      rows = cell_type == "Unique across all cell types"
+    )
+  ) %>%
+  tab_style(
+    style = list(
+      cell_borders(
+        sides = "top",
+        weight = px(2)
+      )
+    ),
+    locations = cells_body(
+      rows = cell_type == "Unique across all cell types"
+    )
+  ) %>%
+  tab_source_note(
+    source_note = md(
+      "Genes were defined as cis-regulated if at least one variant showed nominal association with expression (TensorQTL nominal *P* < 0.01). The final row reports the union of genes across all cell types and defines the Bonferroni correction denominator for causal TWAS analyses."
+    )
+  )
+```
+
 ### Multi
 
 ***
@@ -65,7 +165,7 @@ TODO:
 #### Z-scores {.tabset}
 
 ```{r, cTWAS_z_score_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
-#cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "MG", "OPC")
+cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "MG", "OPC")
 for (g in gwas) {
   cat("##### ", toupper(g), " {.tabset}\n\n")
   
@@ -77,11 +177,14 @@ for (g in gwas) {
     separate(id, into = c('cell_type', 'id'), sep = "_") |>
     left_join(gene_lookup, by = join_by(gene == ensembl_id)) |>
     mutate(pval = 2 * pnorm(-abs(z)),
-           fdr  = p.adjust(pval, method = "BH")) |>
-    dplyr::filter(fdr < 0.05) |>
-    arrange(fdr) |>
+           fdr  = p.adjust(pval, method = "BH"),
+           pval_bf = pval * bf_denominator) |>
+    mutate(pval_bf = pmin(pval_bf, 1)) |>
+    arrange(pval_bf) |>
+    filter(pval_bf < 0.05) |>
+   # arrange(fdr) |>
     distinct(gene, .keep_all = TRUE) |>
-    dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype, chr)
+    dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, fdr, gene_biotype, chr)
     
   if (nrow(z_gene) == 0) {
     cat("No significant genes (FDR < 0.05)\n\n")
@@ -152,7 +255,7 @@ for (g in gwas) {
   ctw_res  <- read_rds(file)
   
   if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
-    cat("##### ", ct, "\n\n")
+
     cat("**No finemapped genes (no credible sets identified)**\n\n")
     next
   }
