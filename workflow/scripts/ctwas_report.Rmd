@@ -175,7 +175,7 @@ for (g in gwas) {
   } else {
     z_gene |>
       gt() |>
-      tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
+      tab_header(title = md(paste0("**", toupper(g), "**")),
                  subtitle = md(paste0("cTWAS significant genes (<sub>BF</sub> < 0.05): ", nrow(z_gene)))) |>
       fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
       cols_label(cell_type = "Cell Type",
