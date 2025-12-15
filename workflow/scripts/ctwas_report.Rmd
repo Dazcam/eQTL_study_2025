@@ -66,61 +66,41 @@ cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG",
                 "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
                 "InN-0", "InN-1",
                 "RG-0", "RG-1", "RG-2", "RG-3")
-perm_files <- tibble(
-  cell_type = cell_types,
-  file = glue::glue(
-    "../results/05TENSORQTL/tensorqtl_perm/{cell_types}_quantile_genPC_4_expPC_40/{cell_types}_quantile_perm.cis_qtl.txt.gz"
-  )
-)
 
-# Read, filter, and annotate
-perm_tbl <- tibble(file = perm_files) %>%
-  mutate(
-    cell_type = str_extract(file, "(?<=tensorqtl_perm/)[^_/]+")
-  ) %>%
-  mutate(
-    data = map(
-      file,
-      ~ read_tsv(.x, show_col_types = FALSE) %>%
-          filter(pval_nominal < 0.01) %>%
-          select(phenotype_id)
-    )
-  ) %>%
-  select(cell_type, data) %>%
-  unnest(data)
+perm_tbl <- map_dfr(cell_types, function(ct) {
+  path <- glue::glue("../results/05TENSORQTL/tensorqtl_perm/{ct}_quantile_genPC_4_expPC_40/{ct}_quantile_perm.cis_qtl.txt.gz")
+  
+  read_tsv(path, show_col_types = FALSE) %>%
+    filter(pval_nominal < 0.01) %>%
+    distinct(phenotype_id) %>%
+    mutate(cell_type = ct) %>%
+    select(cell_type, phenotype_id)
+  
+})
 
-perm_tbl <- perm_files %>%
-  mutate(
-    data = map(
-      file,
-      ~ read_tsv(.x, show_col_types = FALSE) %>%
-          filter(pval_nominal < 0.01) %>%
-          select(phenotype_id)
-    )
-  ) %>%
-  select(cell_type, data) %>%
-  unnest(data)
-
-per_celltype_counts <- perm_tbl %>%
-  distinct(cell_type, phenotype_id) %>%
-  count(cell_type, name = "n_sig_genes") %>%
+# Count sig genes per cell type
+per_cell_counts <- perm_tbl %>%
+  group_by(cell_type) %>%
+  summarise(n_sig_genes = n_distinct(phenotype_id)) %>%
   arrange(desc(n_sig_genes))
 
-unique_gene_count <- perm_tbl %>%
+# Count sig genes per cell type
+per_cell_counts <- perm_tbl %>%
+  group_by(cell_type) %>%
+  summarise(n_sig_genes = n_distinct(phenotype_id)) %>%
+  arrange(desc(n_sig_genes))
+
+# Unique across all cell types
+unique_genes_all <- perm_tbl %>%
   distinct(phenotype_id) %>%
-  summarise(
+  nrow()
+
+final_table <- per_cell_counts %>%
+  mutate(n_sig_genes = format(n_sig_genes, big.mark = ",")) %>%
+  bind_rows(tibble(
     cell_type = "Unique across all cell types",
-    n_sig_genes = n()
-  )
-
-final_table <- bind_rows(
-  per_celltype_counts,
-  unique_gene_count
-) 
-
-bf_denominator <- final_table %>%
-  filter(cell_type == "Unique across all cell types") %>%
-  pull(n_sig_genes)
+    n_sig_genes = format(unique_genes_all, big.mark = ",")
+  ))
 
 final_table %>%
   gt() %>%
@@ -197,7 +177,7 @@ for (g in gwas) {
     z_gene |>
       gt() |>
       tab_header(title = md(paste0("**", toupper(g), " – ", ct, "**")),
-                 subtitle = md(paste0("cTWAS significant genes (FDR < 0.05): ", nrow(z_gene)))) |>
+                 subtitle = md(paste0("cTWAS significant genes (P < 0.05): ", nrow(z_gene)))) |>
       fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
       cols_label(cell_type = "Cell Type",
                  symbol = "Gene Symbol",
