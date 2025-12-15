@@ -101,40 +101,20 @@ final_table <- per_cell_counts %>%
     cell_type = "Unique across all cell types",
     n_sig_genes = unique_genes_all))
 
-final_table %>%
-  gt() %>%
+final_table |>
+  gt() |>
   cols_label(
     cell_type = "Cell type",
     n_sig_genes = "Genes with cis-eQTL (P < 0.01)"
-  ) %>%
-  fmt_number(
-    columns = n_sig_genes,
-    decimals = 0,
-    use_seps = TRUE
-  ) %>%
-  tab_spanner(
-    label = "TensorQTL cis-eQTL discovery",
-    columns = n_sig_genes
-  ) %>%
-  tab_style(
-    style = list(
-      cell_text(weight = "bold")
-    ),
-    locations = cells_body(
-      rows = cell_type == "Unique across all cell types"
-    )
-  ) %>%
-  tab_style(
-    style = list(
-      cell_borders(
-        sides = "top",
-        weight = px(2)
-      )
-    ),
-    locations = cells_body(
-      rows = cell_type == "Unique across all cell types"
-    )
-  ) %>%
+  ) |>
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
+  ) |>
+  opt_table_font(
+    font = list(default_fonts())
+  ) |>
   tab_source_note(
     source_note = md(
       "Genes were defined as cis-regulated if at least one variant showed nominal association with expression (TensorQTL nominal *P* < 0.01). The final row reports the union of genes across all cell types and defines the Bonferroni correction denominator for causal TWAS analyses."
@@ -142,7 +122,7 @@ final_table %>%
   )
 ```
 
-### Multi
+### Multi {.tabset}
 
 ***
 
@@ -175,7 +155,7 @@ for (g in gwas) {
     z_gene |>
       gt() |>
       tab_header(title = md(paste0("**", toupper(g), "**")),
-                 subtitle = md(paste0("cTWAS significant genes (<sub>BF</sub> < 0.05): ", nrow(z_gene)))) |>
+                 subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): ", nrow(z_gene)))) |>
       fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
       cols_label(cell_type = "Cell Type",
                  symbol = "Gene Symbol",
@@ -185,39 +165,14 @@ for (g in gwas) {
                  fdr = "FDR",
                  gene_biotype = "Gene Type",
                  chr = "Chr") |>
-  # MAGIC SETTINGS BELOW
   tab_options(
-      table.font.size = "85%",                 # smaller font
-      data_row.padding = px(4),                # less vertical space per row
-      column_labels.font.weight = "bold",
-      table.width = pct(100),                  # use full width
-      table.border.top.style = "none",
-      table.border.bottom.style = "solid",
-      table.border.bottom.width = px(2),
-      table.border.bottom.color = "gray70"
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
   ) |>
-  cols_width(gene ~ px(150),           
-             symbol ~ px(100),         
-             cell_type ~ px(80),
-             z ~ px(70),
-             pval ~ px(90),
-             fdr ~ px(90),
-             chr ~ px(50),
-             gene_biotype ~ px(110)
-  ) |>
-  opt_table_font(font = "Arial") |>
-  tab_style(
-      style = cell_text(size = px(12)),
-      locations = cells_body()
-  ) |>
-  opt_css(
-      css = "
-    .gt_row { white-space: nowrap; }       /* prevent wrapping in cells */
-    .gt_table { overflow-x: auto; }        /* horizontal scroll if needed */
-  "
-  ) |>
-  print()
-    cat("\n\n")
+  opt_table_font(
+    font = list(default_fonts())
+  )
   }
   
 }
@@ -274,24 +229,14 @@ for (g in gwas) {
     pval = "P", susie_pip = "PIP", cs = "CS",
     gene_biotype = "Type", chr = "Chr"
   ) |>
-  cols_width(
-    gene ~ px(150),           
-    symbol ~ px(100),         
-    cell_type ~ px(80),
-    z ~ px(70),
-    pval ~ px(90),
-    susie_pip ~ px(70),
-    cs ~ px(50),
-    chr ~ px(50),
-    gene_biotype ~ px(110)
-  ) |>
   tab_options(
-    table.font.size = "84%",
-    data_row.padding = px(4),
-    column_labels.font.weight = "bold"
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
   ) |>
-  print()
-    cat("\n\n")
+  opt_table_font(
+    font = list(default_fonts())
+  )
     
     }
     
@@ -323,7 +268,7 @@ for (g in gwas) {
 
 ***
 
-##### Table
+#### Table
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files for the pipeline
