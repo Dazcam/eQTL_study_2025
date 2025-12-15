@@ -34,6 +34,7 @@ gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
 #gwas_n <- 126849 # scz approx - need to pull from ctwas_run
 
 #ens_db <- EnsDb.Hsapiens.v86
+Sys.setlocale("LC_ALL", "English_United Kingdom.utf8")
 ```
 
 ***
@@ -153,6 +154,8 @@ for (g in gwas) {
     cat("No significant genes (FDR < 0.05)\n\n")
   } else {
     z_gene_tbl <- z_gene |>
+    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
+    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
       gt() |>
       tab_header(title = md(paste0("**", toupper(g), "**")),
                  subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): ", nrow(z_gene)))) |>
