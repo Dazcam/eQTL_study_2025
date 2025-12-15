@@ -83,8 +83,6 @@ for (g in gwas) {
     distinct(gene, .keep_all = TRUE) |>
     dplyr::select(cell_type, symbol, gene, z, pval, fdr, gene_biotype, chr)
     
- cat("#####", ct, "\n\n")
-    
   if (nrow(z_gene) == 0) {
     cat("No significant genes (FDR < 0.05)\n\n")
   } else {
@@ -167,8 +165,6 @@ for (g in gwas) {
     arrange(desc(susie_pip)) |>
     mutate(pval = 2 * pnorm(-abs(z))) |>
     dplyr::select(cell_type, symbol, gene, z, pval, susie_pip, cs, gene_biotype, chr)
-  
-  cat("#####", ct, "\n\n")
   
   if (nrow(finemap_res) == 0) {
     cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
