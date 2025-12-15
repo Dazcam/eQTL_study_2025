@@ -157,6 +157,7 @@ for (g in gwas) {
     filter(pval_bf < 0.05) |>
    # arrange(fdr) |>
     distinct(gene, .keep_all = TRUE) |>
+    mutate(across(c(z, pval, pval_bf, fdr), ~ round(.x, 3))) |>
     dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, fdr, gene_biotype, chr)
     
   if (nrow(z_gene) == 0) {
@@ -178,10 +179,6 @@ for (g in gwas) {
                fdr = "FDR",
                gene_biotype = "Gene Type",
                chr = "Chr") |>
-    fmt_number(
-      columns = vars(z, pval, pval_bf, fdr),
-      decimals = 3
-    ) |>
     tab_options(
       table.font.names = "Arial",
       table.font.size = 12,
@@ -221,7 +218,6 @@ for (g in gwas) {
     separate(id, into = c('gene', 'id'), sep = "\\|") |>
     separate(id, into = c('cell_type', 'id'), sep = "_") |>
     left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-    arrange(desc(susie_pip)) |>
     mutate(pval = 2 * pnorm(-abs(z)),
            pval_bf = pval * unique_genes_all) |>
     mutate(pval_bf = pmin(pval_bf, 1)) |>
@@ -229,6 +225,7 @@ for (g in gwas) {
    # filter(pval_bf < 0.05) |>
    # arrange(fdr) |>
    # distinct(gene, .keep_all = TRUE) |>
+    mutate(across(c(z, pval, pval_bf, fdr), ~ round(.x, 3))) |>
     dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
   
   if (nrow(finemap_res) == 0) {
@@ -247,10 +244,6 @@ for (g in gwas) {
     cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
     pval = "P", pval_bf = "BF(P)", susie_pip = "PIP", cs = "CS",
     gene_biotype = "Type", chr = "Chr"
-  ) |>
-  fmt_number(
-    columns = vars(z, pval, pval_bf, susie_pip),
-    decimals = 3
   ) |>
   tab_options(
     table.font.names = "Arial",
