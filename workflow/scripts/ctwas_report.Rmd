@@ -34,7 +34,6 @@ gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
 #gwas_n <- 126849 # scz approx - need to pull from ctwas_run
 
 #ens_db <- EnsDb.Hsapiens.v86
-Sys.setlocale("LC_ALL", "English_United Kingdom.utf8")
 ```
 
 ***
@@ -104,6 +103,10 @@ final_table <- per_cell_counts %>%
 
 final_table |>
   gt() |>
+    tab_header(
+    title = "Table 1. Sig. genes per cell type nominal P < 0.01",
+    subtitle = "Prep. for BF correction"
+  ) |>
   cols_label(
     cell_type = "Cell type",
     n_sig_genes = "Genes with cis-eQTL (P < 0.01)"
@@ -156,27 +159,32 @@ for (g in gwas) {
     z_gene_tbl <- z_gene |>
     mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
     mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
-      gt() |>
-      tab_header(title = md(paste0("**", toupper(g), "**")),
-                 subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): ", nrow(z_gene)))) |>
-      fmt_scientific(columns = c(pval, fdr), decimals = 2) |>
-      cols_label(cell_type = "Cell Type",
-                 symbol = "Gene Symbol",
-                 gene = "ENSG ID",
-                 z = "Z-score",
-                 pval = "P-value",
-                 fdr = "FDR",
-                 gene_biotype = "Gene Type",
-                 chr = "Chr") |>
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3)
-  ) |>
-  opt_table_font(
-    font = list(default_fonts())
-  ) 
-  print(z_gene_tbl)
+    mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
+    gt() |>
+    tab_header(title = md(paste0("**", toupper(g), "**")),
+               subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): **", nrow(z_gene)), "**")) |>
+    cols_label(cell_type = "Cell Type",
+               symbol = "Gene Symbol",
+               gene = "ENSG ID",
+               z = "Z-score",
+               pval = "P-value",
+               pval_bf = "BF(P)",
+               fdr = "FDR",
+               gene_biotype = "Gene Type",
+               chr = "Chr") |>
+    fmt_number(
+      columns = vars(z, pval, pval_bf, fdr),
+      decimals = 3
+    ) |>
+    tab_options(
+      table.font.names = "Arial",
+      table.font.size = 12,
+      data_row.padding = px(3)
+    ) |>
+    opt_table_font(
+      font = list(default_fonts())
+    ) 
+    print(z_gene_tbl)
   }
   
 }
@@ -203,6 +211,8 @@ for (g in gwas) {
   }
   
   finemap_res <- as_tibble(ctw_res$finemap_res) |>
+    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
+    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
     dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
     separate(id, into = c('gene', 'id'), sep = "\\|") |>
     separate(id, into = c('cell_type', 'id'), sep = "_") |>
@@ -226,12 +236,14 @@ for (g in gwas) {
     title = md(paste0("**", toupper(g), "**")),
     subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
   ) |>
-  fmt_scientific(columns = c(pval, z), decimals = 2) |>
-  fmt_number(columns = susie_pip, decimals = 3) |>
   cols_label(
     cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
-    pval = "P", susie_pip = "PIP", cs = "CS",
+    pval = "P", pval_bf = "BF(P)", susie_pip = "PIP", cs = "CS",
     gene_biotype = "Type", chr = "Chr"
+  ) |>
+  fmt_number(
+    columns = vars(z, pval, pval_bf, susie_pip),
+    decimals = 3
   ) |>
   tab_options(
     table.font.names = "Arial",
