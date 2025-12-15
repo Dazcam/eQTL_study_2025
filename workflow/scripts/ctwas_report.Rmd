@@ -119,6 +119,12 @@ final_table |>
   opt_table_font(
     font = list(default_fonts())
   ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(
+      rows = cell_type == "Unique across all cell types"
+    )
+  ) |>
   tab_source_note(
     source_note = md(
       "Genes were defined as cis-regulated if at least one variant showed nominal association with expression (TensorQTL nominal *P* < 0.01). The final row reports the union of genes across all cell types and defines the Bonferroni correction denominator for causal TWAS analyses."
@@ -162,7 +168,7 @@ for (g in gwas) {
     mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
     gt() |>
     tab_header(title = md(paste0("**", toupper(g), "**")),
-               subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): **", nrow(z_gene)), "**")) |>
+               subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): **", nrow(z_gene), "**"))) |>
     cols_label(cell_type = "Cell Type",
                symbol = "Gene Symbol",
                gene = "ENSG ID",
