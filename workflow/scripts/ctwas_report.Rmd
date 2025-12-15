@@ -68,7 +68,7 @@ cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG",
                 "RG-0", "RG-1", "RG-2", "RG-3")
 
 perm_tbl <- map_dfr(cell_types, function(ct) {
-  path <- glue::glue("../results/05TENSORQTL/tensorqtl_perm/{ct}_quantile_genPC_4_expPC_40/{ct}_quantile_perm.cis_qtl.txt.gz")
+  path <- glue::glue("../../results/05TENSORQTL/tensorqtl_perm/{ct}_quantile_genPC_4_expPC_40/{ct}_quantile_perm.cis_qtl.txt.gz")
   
   read_tsv(path, show_col_types = FALSE) %>%
     filter(pval_nominal < 0.01) %>%
