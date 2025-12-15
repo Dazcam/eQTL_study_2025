@@ -150,66 +150,63 @@ for (g in gwas) {
 for (g in gwas) {
   cat("##### ", toupper(g), " {.tabset}\n\n")
   
-  for (ct in cell_types) {
-    file <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
-    ctw_res  <- read_rds(file)
+  file <- paste0(in_dir, "ctwas_multi_", ct, "_", g, "_ctwas.rds")
+  ctw_res  <- read_rds(file)
+  
+  if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
+    cat("##### ", ct, "\n\n")
+    cat("**No finemapped genes (no credible sets identified)**\n\n")
+    next
+  }
+  
+  finemap_res <- as_tibble(ctw_res$finemap_res) |>
+    dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
+    separate(id, into = c('gene', 'id'), sep = "\\|") |>
+    separate(id, into = c('cell_type', 'id'), sep = "_") |>
+    left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+    arrange(desc(susie_pip)) |>
+    mutate(pval = 2 * pnorm(-abs(z))) |>
+    dplyr::select(cell_type, symbol, gene, z, pval, susie_pip, cs, gene_biotype, chr)
+  
+  cat("#####", ct, "\n\n")
+  
+  if (nrow(finemap_res) == 0) {
+    cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
+} else {
+  finemap_res |>
+  gt() |>
+  tab_header(
+    title = md(paste0("**", toupper(g), " – ", ct, "**")),
+    subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
+  ) |>
+  fmt_scientific(columns = c(pval, z), decimals = 2) |>
+  fmt_number(columns = susie_pip, decimals = 3) |>
+  cols_label(
+    cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
+    pval = "P", susie_pip = "PIP", cs = "CS",
+    gene_biotype = "Type", chr = "Chr"
+  ) |>
+  cols_width(
+    gene ~ px(150),           
+    symbol ~ px(100),         
+    cell_type ~ px(80),
+    z ~ px(70),
+    pval ~ px(90),
+    susie_pip ~ px(70),
+    cs ~ px(50),
+    chr ~ px(50),
+    gene_biotype ~ px(110)
+  ) |>
+  tab_options(
+    table.font.size = "84%",
+    data_row.padding = px(4),
+    column_labels.font.weight = "bold"
+  ) |>
+  print()
+    cat("\n\n")
     
-    # ── SAFE extraction of finemap_res ──
-    if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
-      cat("##### ", ct, "\n\n")
-      cat("**No finemapped genes (no credible sets identified)**\n\n")
-      next
     }
     
-    finemap_res <- as_tibble(ctw_res$finemap_res) |>
-      dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
-      separate(id, into = c('gene', 'id'), sep = "\\|") |>
-      separate(id, into = c('cell_type', 'id'), sep = "_") |>
-      left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-      arrange(desc(susie_pip)) |>
-      mutate(pval = 2 * pnorm(-abs(z))) |>
-      dplyr::select(cell_type, symbol, gene, z, pval, susie_pip, cs, gene_biotype, chr)
-    
-    cat("#####", ct, "\n\n")
-    
-    if (nrow(finemap_res) == 0) {
-      cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
-  } else {
-    finemap_res |>
-    gt() |>
-    tab_header(
-      title = md(paste0("**", toupper(g), " – ", ct, "**")),
-      subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
-    ) |>
-    fmt_scientific(columns = c(pval, z), decimals = 2) |>
-    fmt_number(columns = susie_pip, decimals = 3) |>
-    cols_label(
-      cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
-      pval = "P", susie_pip = "PIP", cs = "CS",
-      gene_biotype = "Type", chr = "Chr"
-    ) |>
-    cols_width(
-      gene ~ px(150),           
-      symbol ~ px(100),         
-      cell_type ~ px(80),
-      z ~ px(70),
-      pval ~ px(90),
-      susie_pip ~ px(70),
-      cs ~ px(50),
-      chr ~ px(50),
-      gene_biotype ~ px(110)
-    ) |>
-    tab_options(
-      table.font.size = "84%",
-      data_row.padding = px(4),
-      column_labels.font.weight = "bold"
-    ) |>
-    print()
-      cat("\n\n")
-      
-      }
-    
-  }
   
 }
 ```
