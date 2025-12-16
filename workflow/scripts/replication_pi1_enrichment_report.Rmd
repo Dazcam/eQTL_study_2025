@@ -86,7 +86,7 @@ Test direction:
 
 ***
 
-#### Table
+#### Primary
 
 ***
 
@@ -108,10 +108,6 @@ read_rds_file <- function(cell_type) {
 # Read all files and bind rows
 combined_data <- map_dfr(cell_types, read_rds_file)
 
-# View the result
-library(gt)
-library(dplyr)
-
 # Assume your data is in combined_data
 combined_data %>%
   # Optionally, round numeric columns for clarity
@@ -125,7 +121,7 @@ combined_data %>%
   # Create the gt table
   gt() %>%
   tab_header(
-    title = "Table 1. sc-eQTL Enrichment in Ziffra et. al. (2021) snATAC-seq OCRs",
+    title = "Table 1. Primary sc-eQTL Enrichment in Ziffra et. al. (2021) snATAC-seq OCRs",
     subtitle = "Observed vs Permuted Overlap"
   ) %>%
   cols_label(
@@ -157,39 +153,72 @@ combined_data %>%
 
 ***
 
-#### Heatmap
+#### Secondary
 
 ***
 
-```{r, ziffra_heatmap, echo = FALSE, message = FALSE, warning = FALSE}
-ziffra_plt <- combined_data %>%
+```{r, ziffra_enrichments_secondary, echo = FALSE, message = FALSE, warning = FALSE}
+second_dir <- '../../results/06QTL-REPLICATION/atac_enrich_indep/'
+
+# Create a function to read and add cell_type identifier (optional)
+read_rds_file <- function(cell_type) {
+  file_path <- paste0(second_dir, cell_type, '_quantile_genPC_4_expPC_40.ziffra_peak_enrich_indep.rds')
+  res <- read_rds(file_path) 
+  
+  if (nrow(res) == 0) {
+    message("Empty stub file (skipping): ", file_path)
+    return(tibble())
+  }
+  
+  res |>
+    mutate(source_cell_type = cell_type) 
+  
+}
+
+# Read all files and bind rows
+combined_data <- map_dfr(cell_types, read_rds_file)
+
+# Assume your data is in combined_data
+combined_data %>%
+  # Optionally, round numeric columns for clarity
   mutate(
-    logp = -log10(p_value),
-    sig = ifelse(p_value < 0.05, "*", ""),
-    peak_cell_type = str_remove(peak_cell_type, "_MACSpeaks")
-  ) |>
-  complete(eqtl_cell_type, peak_cell_type) |>
-  ggplot(aes(x = peak_cell_type, y = eqtl_cell_type, fill = fold_enrichment)) +
-  geom_tile(color = "black", linewidth = 0.3, na.rm = FALSE) +
-  geom_text(aes(label = ifelse(!is.na(p_value) & p_value < 0.05, "*", "")),
-            vjust = 0.5, size = 4, color = "black") +
-  scale_fill_viridis_c(
-    option = "C",
-    direction = 1,
-    name = "Fold Enrichment",
-    na.value = "white"   # blanks appear white
-  ) +
-  labs(
-    x = "ATAC-seq peak cell type",
-    y = "eQTL cell type",
-    title = "eQTL enrichment in ATAC-seq peaks"
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid = element_blank()
+    p_value = signif(p_value, 3),
+    mean_permuted_overlap = round(mean_permuted_overlap, 1),
+    fold_enrichment = round(fold_enrichment, 2),
+    peak_cell_type = str_remove(peak_cell_type, '_MACSpeaks')
+  ) %>%
+  dplyr::select(-source_cell_type) %>%
+  # Create the gt table
+  gt() %>%
+  tab_header(
+    title = "Table 2. Secondary sc-eQTL Enrichment in Ziffra et. al. (2021) snATAC-seq OCRs",
+    subtitle = "Observed vs Permuted Overlap (only cell types with ≥20 secondary eQTLs)"
+  ) %>%
+  cols_label(
+    eqtl_cell_type = "eQTL Cell Type",
+    peak_cell_type = "Peak Cell Type",
+    p_value = "P Value",
+    observed_overlap = "Observed Overlap",
+    mean_permuted_overlap = "Mean Permuted Overlap",
+    fold_enrichment = "Fold Enrichment"
+  ) %>%
+  fmt_number(
+    columns = vars(p_value, fold_enrichment),
+    decimals = 3
+  ) %>%
+  fmt_number(
+    columns = vars(mean_permuted_overlap),
+    decimals = 1
+  ) %>%
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
+  ) %>%
+  opt_table_font(
+    font = list(default_fonts())
   )
-ziffra_plt
+
 ```
 
 ***
@@ -228,7 +257,7 @@ pi1_summary_tbl %>%
   select(-source_cell_type) %>%
   gt() %>%
   tab_header(
-    title = "Table 2. Pi1 Enrichment: cell-specific eQTL with O'Brien et. al. (2018) bulk eQTL data"
+    title = "Table 3. Pi1 Enrichment: cell-specific eQTL with O'Brien et. al. (2018) bulk eQTL data"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -485,7 +514,7 @@ pi1_summary_tbl %>%
   select(-source_cell_type) %>%
   gt() %>%
   tab_header(
-    title = "Table 3. Pi1 Enrichment: cell-specific eQTL with Wen et. al. (2024) bulk eQTL data"
+    title = "Table 4. Pi1 Enrichment: cell-specific eQTL with Wen et. al. (2024) bulk eQTL data"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -747,7 +776,7 @@ pi1_enrich_tbl %>%
   ) %>%
   gt() %>%
   tab_header(
-    title = "Table 4. Internal Pi1 Enrichment Summary cell-specific eQTL"
+    title = "Table 5. Internal Pi1 Enrichment Summary cell-specific eQTL"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -908,7 +937,7 @@ pi1_enrich_tbl %>%
   ) %>%
   gt() %>%
   tab_header(
-    title = "Table 5. Fugita Pi1 Enrichment Summary cell-specific eQTL"
+    title = "Table 6. Fugita Pi1 Enrichment Summary cell-specific eQTL"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
