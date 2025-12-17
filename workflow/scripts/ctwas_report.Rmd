@@ -70,7 +70,7 @@ cell_types <- c(
   "RG-0", "RG-1", "RG-2", "RG-3"
 )
 
-weights_root <- "../results/12CTWAS/weights"
+weights_root <- "../../results/12CTWAS/weights"
 
 fusion_tbl <- map_dfr(cell_types, function(ct) {
 
