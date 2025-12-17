@@ -62,54 +62,66 @@ TODO:
 ### Correction
 
 ```{r, get_gene_lists_for correction, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
-cell_types <- c("ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG",
-                "ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
-                "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
-                "InN-0", "InN-1",
-                "RG-0", "RG-1", "RG-2", "RG-3")
+cell_types <- c(
+  "ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG",
+  "ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
+  "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
+  "InN-0", "InN-1",
+  "RG-0", "RG-1", "RG-2", "RG-3"
+)
 
-perm_tbl <- map_dfr(cell_types, function(ct) {
-  path <- glue::glue("../../results/05TENSORQTL/tensorqtl_perm/{ct}_quantile_genPC_4_expPC_40/{ct}_quantile_perm.cis_qtl.txt.gz")
-  
-  read_tsv(path, show_col_types = FALSE) %>%
-    filter(pval_nominal < 0.01) %>%
-    distinct(phenotype_id) %>%
-    mutate(cell_type = ct) %>%
-    select(cell_type, phenotype_id)
-  
+weights_root <- "../results/12CTWAS/weights"
+
+fusion_tbl <- map_dfr(cell_types, function(ct) {
+
+  ct_dir <- file.path(weights_root, ct)
+
+  if (!dir.exists(ct_dir)) {
+    return(tibble())
+  }
+
+  files <- list.files(
+    ct_dir,
+    pattern = "\\.wgt\\.RDat$",
+    full.names = TRUE
+  )
+
+  # Keep only non-empty RDat files (hsq_p < 0.01 passed)
+  files <- files[file.info(files)$size > 0]
+
+  tibble(
+    cell_type = ct,
+    gene_id = basename(files) |>
+      str_remove("\\.wgt\\.RDat$")
+  )
 })
 
-# Count sig genes per cell type
-per_cell_counts <- perm_tbl %>%
+# Count genes per cell type
+per_cell_counts <- fusion_tbl %>%
   group_by(cell_type) %>%
-  summarise(n_sig_genes = n_distinct(phenotype_id)) %>%
+  summarise(n_sig_genes = n_distinct(gene_id), .groups = "drop") %>%
   arrange(desc(n_sig_genes))
 
-# Count sig genes per cell type
-per_cell_counts <- perm_tbl %>%
-  group_by(cell_type) %>%
-  summarise(n_sig_genes = n_distinct(phenotype_id)) %>%
-  arrange(desc(n_sig_genes))
-
-# Unique across all cell types
-unique_genes_all <- perm_tbl %>%
-  distinct(phenotype_id) %>%
+# Unique genes across all cell types
+unique_genes_all <- fusion_tbl %>%
+  distinct(gene_id) %>%
   nrow()
 
 final_table <- per_cell_counts %>%
   bind_rows(tibble(
     cell_type = "Unique across all cell types",
-    n_sig_genes = unique_genes_all))
+    n_sig_genes = unique_genes_all
+  ))
 
 final_table |>
   gt() |>
-    tab_header(
-    title = "Table 1. Sig. genes per cell type nominal P < 0.01",
-    subtitle = "Prep. for BF correction"
+  tab_header(
+    title = "Table 1. cTWAS-testable genes per cell type",
+    subtitle = "Defined in FUSION compute weights step, cis-heritability (hsq_p < 0.01)"
   ) |>
   cols_label(
     cell_type = "Cell type",
-    n_sig_genes = "Genes with cis-eQTL (P < 0.01)"
+    n_sig_genes = "Genes tested in TWAS"
   ) |>
   tab_options(
     table.font.names = "Arial",
@@ -127,9 +139,10 @@ final_table |>
   ) |>
   tab_source_note(
     source_note = md(
-      "Genes were defined as cis-regulated if at least one variant showed nominal association with expression (TensorQTL nominal *P* < 0.01). The final row reports the union of genes across all cell types and defines the Bonferroni correction denominator for causal TWAS analyses."
+      "Genes were included if FUSION produced a non-empty weight file, indicating sig. cis-heritability (hsq_p < 0.01). The final row reports the union of genes across all cell types and defines BF correction factor for cTWAS analyses."
     )
   )
+
 ```
 
 ### Multi {.tabset}
