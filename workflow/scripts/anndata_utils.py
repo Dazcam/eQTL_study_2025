@@ -790,7 +790,7 @@ def plot_umap_grid(ann_obj, obs_columns, grid_size=(2, 2), figsize=(10, 8), save
         raise ValueError(f"Grid size {grid_size} is too small for {num_plots} plots.")
     
     fig, axes = plt.subplots(rows, cols, figsize=figsize)
-    axes = axes.flatten()  # Flatten axes for easy indexing
+    axes = np.atleast_1d(axes).flatten()
 
     for i, column in enumerate(obs_columns):
         sc.pl.umap(ann_obj, color=column, ax=axes[i], show=False, title=column)
