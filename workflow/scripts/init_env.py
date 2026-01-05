@@ -18,6 +18,7 @@ from memory_profiler import profile
 import ipywidgets as widgets
 import logging  # Import the logging module
 from pathlib import Path
+import math
 
 def initialize_env(plate):
     """
