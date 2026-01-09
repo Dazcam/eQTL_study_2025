@@ -79,7 +79,7 @@ pooled_my <- all_my_sig %>%
   filter(str_detect(snp, '^rs')) |> 
   filter(str_detect(gene, '^ENSG')) |>
   mutate(key = paste(snp, gene, sep = '_')) |>
-  select(key, my_beta = beta)
+  select(key, beta_my = beta)
 message('Pooled sig. eQTL after dup rm : ', nrow(pooled_my))
 message('Any NAs in pooled sig. eQTL? ', anyNA(pooled_my))
 message('\nPooled sig. eQTL tbl:\n')
@@ -136,12 +136,12 @@ pooled_fugita_dt[
   , .(key, beta_fugita = beta)
 ]
 
-# Assign to a regular tibble/data.frame for downstream compatibility (optional but recommended)
+# Revert to tibble
 pooled_fugita <- as_tibble(pooled_fugita_dt)
 
-# Clean up the large intermediate object to free memory
+# Clean up
 rm(all_fugita_df, pooled_fugita_dt)
-gc()  # Force garbage collection
+gc() 
 
 
 message('Fugita SNP-gene pairs after dup rm: ', nrow(pooled_fugita))
