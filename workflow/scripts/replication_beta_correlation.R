@@ -94,7 +94,7 @@ for (cell_type in fugita_cell_types) {
   # Read the file
   fugita_df <- read_delim(file_path, delim = '\t', col_names = TRUE, na = c("", "NA", "na", "-")) |>
     select(snp = snps, gene = gene_id, beta, celltype) |>
-    mutate(beta = as.numeric(beta))
+    mutate(beta = as.numeric(beta)) |>
     filter(str_detect(snp, '^rs')) |> 
     filter(str_detect(gene, '^ENSG')) |>
     filter(!is.na(beta))
