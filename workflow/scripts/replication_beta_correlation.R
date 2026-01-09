@@ -4,7 +4,6 @@
 #
 #--------------------------------------------------------------------------------------
 
-# See bootRanges for SNP-Peak overlap: https://academic.oup.com/bioinformatics/article/39/5/btad190/7115835
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -28,6 +27,7 @@ out_file <- snakemake@output[[1]]
 
 # Load required libraries
 library(tidyverse)
+library(data.table)
 
 # Define variables
 cell_types <- c(
@@ -98,7 +98,7 @@ for (cell_type in fugita_cell_types) {
     filter(str_detect(snp, '^rs')) |> 
     filter(str_detect(gene, '^ENSG')) |>
     filter(!is.na(beta))
-  message('Total SNP-gene pairs in Fugita ', cell_type, ': ' , nrow(fugita_df))
+  message('\nTotal SNP-gene pairs in Fugita ', cell_type, ': ' , nrow(fugita_df), '\n')
   
   # Append to list
   fugita_lst[[cell_type]] <- fugita_df
@@ -108,15 +108,42 @@ for (cell_type in fugita_cell_types) {
 # Combine all Fugita data
 all_fugita_df <- bind_rows(fugita_lst)
 message('Combined Fugita SNP-gene pairs before dup rm: ', nrow(all_fugita_df))
-message('Are Fugita betas numeric: ', str(all_fugita_df$beta))
+message('Are Fugita betas numeric: ')
+
 
 # For duplicates in Fugita, keep max abs(beta)
-pooled_fugita <- all_fugita_df %>%
-  group_by(snp, gene) %>%
-  slice_max(abs(beta), n = 1, with_ties = FALSE) %>%
-  ungroup() %>%
-  mutate(key = paste(snp, gene, sep = '_')) |>
-  select(key, beta_fugita = beta)
+# pooled_fugita <- all_fugita_df %>%
+#   group_by(snp, gene) %>%
+#   slice_max(abs(beta), n = 1, with_ties = FALSE) %>%
+#   ungroup() %>%
+#   mutate(key = paste(snp, gene, sep = '_')) |>
+#   select(key, beta_fugita = beta)
+
+# Need to use DT as computation takes ages otherwise
+setDT(all_fugita_df)
+
+# De-duplicate: keep the row with max(abs(beta)) for each (snp, gene) group
+# If ties in abs(beta), keeps the first occurrence (same as your with_ties = FALSE)
+pooled_fugita_dt <- all_fugita_df[
+  , .SD[which.max(abs(beta))], 
+  by = .(snp, gene)
+]
+
+# Create the key and select only needed columns
+pooled_fugita_dt[
+  , key := paste(snp, gene, sep = '_')
+][
+  , .(key, beta_fugita = beta)
+]
+
+# Assign to a regular tibble/data.frame for downstream compatibility (optional but recommended)
+pooled_fugita <- as_tibble(pooled_fugita_dt)
+
+# Clean up the large intermediate object to free memory
+rm(all_fugita_df, pooled_fugita_dt)
+gc()  # Force garbage collection
+
+
 message('Fugita SNP-gene pairs after dup rm: ', nrow(pooled_fugita))
 message('Any NAs in pooled Fugita data? ', anyNA(pooled_fugita))
 message('Pooled Fugita tbl:\n')
@@ -130,6 +157,7 @@ message('Number of overlapping SNP-gene pairs: ', nrow(paired_betas))
 message('Paired betas tbl:\n')
 paired_betas
 
+message('Writing tbl to:', out_file)
 write_tsv(paired_betas, out_file)
 
 #--------------------------------------------------------------------------------------
