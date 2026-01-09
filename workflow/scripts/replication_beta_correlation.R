@@ -89,10 +89,10 @@ message('\nLoading Fugita data ...\n')
 fugita_lst <- list()
 for (cell_type in fugita_cell_types) {
 
-  file_path <- paste0(fugita_dir, 'celltype-eqtl-sumstats.', cell_type,'.tsv', na = c("", "NA", "na", "-"))
+  file_path <- paste0(fugita_dir, 'celltype-eqtl-sumstats.', cell_type,'.tsv')
   
   # Read the file
-  fugita_df <- read_delim(file_path, delim = '\t', col_names = TRUE) |>
+  fugita_df <- read_delim(file_path, delim = '\t', col_names = TRUE, na = c("", "NA", "na", "-")) |>
     select(snp = snps, gene = gene_id, beta, celltype) |>
     mutate(beta = as.numeric(beta))
     filter(str_detect(snp, '^rs')) |> 
