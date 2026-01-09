@@ -39,6 +39,7 @@ cell_types <- c(
   "OPC",
   "MG"
 )
+
 exp_PCs <- 40
 gen_PCs <- 4
 norm_method <- 'quantile' 
@@ -59,7 +60,7 @@ for (cell_type in cell_types) {
   df_sig <- read_delim(file_path, delim = '\t', col_names = TRUE) %>%
     filter(qval < 0.05) %>%
     select(snp = variant_id, gene = phenotype_id, beta = slope)
-  message('Sig. eQTL in ', cell_type, ':', nrow(df_sig))
+  message('\nSig. eQTL in ', cell_type, ':', nrow(df_sig), '\n')
   
   # Append to list
   my_data_list[[cell_type]] <- df_sig
@@ -88,13 +89,15 @@ message('\nLoading Fugita data ...\n')
 fugita_lst <- list()
 for (cell_type in fugita_cell_types) {
 
-  file_path <- paste0(fugita_dir, 'celltype-eqtl-sumstats.', cell_type,'.tsv')
+  file_path <- paste0(fugita_dir, 'celltype-eqtl-sumstats.', cell_type,'.tsv', na = c("", "NA", "na", "-"))
   
   # Read the file
   fugita_df <- read_delim(file_path, delim = '\t', col_names = TRUE) |>
     select(snp = snps, gene = gene_id, beta, celltype) |>
+    mutate(beta = as.numeric(beta))
     filter(str_detect(snp, '^rs')) |> 
-    filter(str_detect(gene, '^ENSG'))
+    filter(str_detect(gene, '^ENSG')) |>
+    filter(!is.na(beta))
   message('Total SNP-gene pairs in Fugita ', cell_type, ': ' , nrow(fugita_df))
   
   # Append to list
@@ -105,6 +108,7 @@ for (cell_type in fugita_cell_types) {
 # Combine all Fugita data
 all_fugita_df <- bind_rows(fugita_lst)
 message('Combined Fugita SNP-gene pairs before dup rm: ', nrow(all_fugita_df))
+message('Are Fugita betas numeric: ', str(all_fugita_df$beta))
 
 # For duplicates in Fugita, keep max abs(beta)
 pooled_fugita <- all_fugita_df %>%
