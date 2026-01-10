@@ -108,7 +108,7 @@ for (cell_type in fugita_cell_types) {
 # Combine all Fugita data
 all_fugita_df <- bind_rows(fugita_lst)
 message('Combined Fugita SNP-gene pairs before dup rm: ', nrow(all_fugita_df))
-message('Are Fugita betas numeric: ')
+message('Are Fugita betas numeric after coercion? ', is.numeric(all_fugita_df$beta))
 
 
 # For duplicates in Fugita, keep max abs(beta)
@@ -130,10 +130,9 @@ pooled_fugita_dt <- all_fugita_df[
 ]
 
 # Create the key and select only needed columns
-pooled_fugita_dt[
-  , key := paste(snp, gene, sep = '_')
-][
-  , .(key, beta = beta_fugita)
+pooled_fugita_dt <- pooled_fugita_dt[
+  , .(key = paste(snp, gene, sep = '_'),
+      beta_fugita = beta)                 # ← rename here
 ]
 
 # Revert to tibble
