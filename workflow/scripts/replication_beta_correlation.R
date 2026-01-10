@@ -133,7 +133,7 @@ pooled_fugita_dt <- all_fugita_df[
 pooled_fugita_dt[
   , key := paste(snp, gene, sep = '_')
 ][
-  , .(key, beta_fugita = beta)
+  , .(key, beta = beta_fugita)
 ]
 
 # Revert to tibble
