@@ -220,6 +220,17 @@ nick_genes = [
     'C3',  # Microglia
 ]
 
+final_genes = [
+    "CUX2", "SATB2",      
+    "TLE4",                 
+    "GAD1", "GAD2",                 
+    "GLI3", "PRDM16", "PAX6",  
+    "COL4A1", "FN1",                              
+    "PDGFRA",                                      
+    "C3",
+    "MYT1L"
+]
+
 small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
                      'ACTA2', 'RGS5', 'ALDH1A1',      # Smooth muscle cells
                      'SLC38A2', 'SLC4A10', 'SLC26A2', 'SLC47A1', 'FXYD5',  # Fibroblast
