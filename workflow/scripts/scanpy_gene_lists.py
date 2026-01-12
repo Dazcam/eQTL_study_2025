@@ -231,6 +231,16 @@ final_genes = [
     "MYT1L"                     # Extra
 ]
 
+big_gene_list = [
+    "CELF2", "NKAIN2", "PLXNA4", "SLC1A3", "GAS7"
+    "GLI2", "GLI3", "GRIK3", "HS3ST4", "TLE4",
+    "UNC5D", "NRXN3", "ERBB4", "SNHG14", "MEG3",
+    "RARB", "EBF1", "CNTNAP2", "SLC7A5", "FN1",
+    "PDGFRA", "BCL11B", "C3", "CSMD1", "DSCAM",
+    "CSMD1", "OTX2-AS1", "COL5A1", "ADGRV1", "MSI2"
+
+]
+
 small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
                      'ACTA2', 'RGS5', 'ALDH1A1',      # Smooth muscle cells
                      'SLC38A2', 'SLC4A10', 'SLC26A2', 'SLC47A1', 'FXYD5',  # Fibroblast
