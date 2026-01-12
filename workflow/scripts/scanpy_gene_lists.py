@@ -221,14 +221,14 @@ nick_genes = [
 ]
 
 final_genes = [
-    "CUX2", "SATB2",      
-    "TLE4",                 
-    "GAD1", "GAD2",                 
-    "GLI3", "PRDM16", "PAX6",  
-    "COL4A1", "FN1",                              
-    "PDGFRA",                                      
-    "C3",
-    "MYT1L"
+    "CUX2", "SATB2",            # Upper layer ExN
+    "TLE4",                     # Deep layer ExN
+    "GAD1", "GAD2",             # Radial glia    
+    "GLI3", "PRDM16", "PAX6",   # InN
+    "COL4A1", "FN1",            # Endothelial cells                  
+    "PDGFRA",                   # OPCs                    
+    "C3",                       # MG
+    "MYT1L"                     # Extra
 ]
 
 small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
