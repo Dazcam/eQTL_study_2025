@@ -18,6 +18,9 @@ import seaborn as sns
 from matplotlib import MatplotlibDeprecationWarning
 import logging
 from sklearn.decomposition import PCA
+import matplotlib.gridspec as gridspec
+from matplotlib.colors import LinearSegmentedColormap
+import math
 
 ##########  LOAD FUNCTIONS  ############  
 #@profile
@@ -565,6 +568,126 @@ def is_running_in_jupyter():
         return False  # Standard Python interpreter
 
 ##########  VISUALISATION FUNCTIONS  ############  
+def plot_celltype_and_gene_features(
+    adata,
+    final_genes,
+    cell_type_column="cell_type",
+    figsize_width=9.0,
+    base_height_per_row=0.95,
+    extra_height=3.0,
+    ncols=3,
+    cmap_name="light_dark_blue"
+):
+    """
+    Create a publication-style figure with:
+      - Left: large UMAP colored by cell type (panel A)
+      - Right: grid of feature plots for selected genes (panel B)
+    
+    Parameters
+    ----------
+    adata : AnnData
+        Annotated data object containing UMAP coordinates and gene expression
+    final_genes : list of str
+        List of gene names to plot as feature plots
+    cell_type_column : str, default: "cell_type"
+        Column in adata.obs to use for coloring the main cell type UMAP
+    figsize_width : float, default: 9.0
+        Width of figure in inches (Nature Genetics double column ~174 mm ≈ 9 inches)
+    base_height_per_row : float, default: 0.95
+        Height per row of feature plots (tune for your preference)
+    extra_height : float, default: 3.0
+        Additional height for the top part (title space + main UMAP)
+    ncols : int, default: 3
+        Number of columns for the gene feature plot grid
+    cmap_name : str, default: "light_dark_blue"
+        Name of the custom colormap to create (currently only light→dark blue supported)
+        
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The created figure object (you can call plt.show() or save it)
+    """
+    # ── Custom colormap ───────────────────────────────────────────────────────
+    if cmap_name == "light_dark_blue":
+        cmap = LinearSegmentedColormap.from_list(
+            "light_dark_blue",
+            ["#f7fbff", "#08306b"]
+        )
+    else:
+        raise ValueError(f"Unsupported cmap_name: {cmap_name}. Currently only 'light_dark_blue' is implemented.")
+
+    # ── Layout calculations ───────────────────────────────────────────────────
+    n_genes = len(final_genes)
+    nrows = math.ceil(n_genes / ncols)
+    
+    fig_height = extra_height + (nrows * base_height_per_row)
+    
+    # Nature Genetics style defaults
+    plt.rcParams.update({
+        "font.family": "sans-serif",
+        "font.size": 9,
+        "axes.titlesize": 12,
+    })
+
+    # ── Create figure & grid ──────────────────────────────────────────────────
+    fig = plt.figure(figsize=(figsize_width, fig_height))
+    
+    gs = gridspec.GridSpec(
+        nrows=nrows,
+        ncols=ncols + 2,
+        figure=fig,
+        width_ratios=[1.4, 1.4] + [1] * ncols,
+        wspace=0.35,
+        hspace=0.35
+    )
+
+    # ── Panel A: Cell type UMAP ───────────────────────────────────────────────
+    ax_main = fig.add_subplot(gs[:, :2])
+    sc.pl.umap(
+        adata,
+        color=cell_type_column,
+        ax=ax_main,
+        legend_loc="on data",
+        legend_fontsize=11,
+        legend_fontoutline=3,
+        frameon=False,
+        title="",
+        show=False
+    )
+    ax_main.set_title("A", loc="left", fontweight="bold", fontsize=14)
+
+    # ── Panel B: Gene feature plots ───────────────────────────────────────────
+    feature_axes = []
+    for i, gene in enumerate(final_genes):
+        row = i // ncols
+        col = i % ncols
+        
+        ax = fig.add_subplot(gs[row, col + 2])
+        feature_axes.append(ax)
+        
+        sc.pl.umap(
+            adata,
+            color=gene,
+            ax=ax,
+            vmin=0,
+            vmax="p99",
+            cmap=cmap,
+            frameon=False,
+            title=gene,
+            show=False
+        )
+        ax.title.set_fontsize(12)
+
+    # Add "B" label on the first feature plot
+    if feature_axes:  # only if there are genes
+        feature_axes[0].set_title("B", loc="left", fontweight="bold", fontsize=14)
+
+    plt.tight_layout()
+    
+    return fig
+
+
+
 def plot_gene_read_distribution(adata):
     """
     Plots the distribution of total reads per gene in an AnnData object.
