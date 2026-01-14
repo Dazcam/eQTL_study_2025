@@ -227,7 +227,8 @@ final_genes = [
     "GLI3", "PRDM16", "PAX6",   # InN
     "COL4A1", "FN1",            # Endothelial cells                  
     "PDGFRA",                   # OPCs                    
-    "C3"                        # Extra
+    "C3",                       # MG
+    "EOMES", "LRP8"             # IPC
 ]
 
 big_gene_list = [
