@@ -227,8 +227,7 @@ final_genes = [
     "GLI3", "PRDM16", "PAX6",   # InN
     "COL4A1", "FN1",            # Endothelial cells                  
     "PDGFRA",                   # OPCs                    
-    "C3",                       # MG
-    "MYT1L"                     # Extra
+    "C3"                        # Extra
 ]
 
 big_gene_list = [
@@ -239,9 +238,10 @@ big_gene_list = [
     "PDGFRA", "BCL11B", "C3", "CSMD1", "DSCAM",
     "CSMD1", "OTX2-AS1", "COL5A1", "ADGRV1", "MSI2",
     "MEF2C", "DLG2", "TCF4", "NR4A2", "CCN2",
-    "MEIS2"
-
+    "MEIS2", "MYT1L", "CDR1", "CHD7", "LMO1",
+    "RORA"
 ]
+
 
 small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
                      'ACTA2', 'RGS5', 'ALDH1A1',      # Smooth muscle cells
