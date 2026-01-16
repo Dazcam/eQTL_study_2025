@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 
-# Harmonises the pseudobulk and covariate data for each cell type into a TensorQTL 
+# Harmonises the pseudobulk and covariate data for each cell type for TensorQTL 
 # - TMM normalises pseudobulk data
 # - Applies various additional normalisation options for eQTL sensitivity testing
 # - Runs PCA to calculate expression PCs to add as covariates
