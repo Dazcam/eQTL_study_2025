@@ -4,7 +4,65 @@
 #
 # --------------------------------------------------------------------------------------
 
-# Info  ------------------------------------------------------------------------------
+# Main gene set clusters  --------------------------------------------------------------
+cluster_anns = {
+    '0': 'Glu-UL',
+    '1': 'Glu-DL',
+    '2': 'NPC',
+    '3': 'Glu-UL',
+    '4': 'GABA',
+    '5': 'GABA',
+    '6': 'Endo-Peri',
+    '7': 'OPC',
+    '8': 'MG',
+    '9': 'NPC'
+}
+
+custom_palette = {
+  'Glu-UL': '#4363d8',
+  'Glu-DL': '#00B6EB',
+  'NPC': '#FF5959',
+  'GABA': '#3CBB75FF',
+  'Endo-Peri': '#B200ED',
+  'MG': '#F58231',
+  'OPC': '#FDE725FF'
+}
+    
+custom_palette2 = {
+    'Glu-UL': '#2d5ba8',
+    'Glu-DL': '#88b2de',
+    'NPC': '#da0106',
+    'GABA': '#5aad56',
+    'Endo-Peri': '#b674a2',
+    'MG': '#ee900c',
+    'OPC': '#f6eb43'
+}
+
+final_genes = [
+    "CUX2", "SATB2",            # Upper layer ExN
+    "TLE4",                     # Deep layer ExN
+    "GAD1",                     # Radial glia    
+    "GLI3", "PAX6",             # InN                                    
+    "PDGFRA",                   # OPCs                    
+    "C3",                       # MG
+    "FN1"                       # Endothelial cells   
+]
+
+big_gene_list = [
+    "CELF2", "NKAIN2", "PLXNA4", "SLC1A3", "GAS7",
+    "GLI2", "GLI3", "GRIK3", "HS3ST4", "TLE4",
+    "UNC5D", "NRXN3", "ERBB4", "SNHG14", "MEG3",
+    "RARB", "EBF1", "CNTNAP2", "SLC7A5", "FN1",
+    "PDGFRA", "BCL11B", "C3", "CSMD1", "DSCAM",
+    "CSMD1", "OTX2-AS1", "COL5A1", "ADGRV1", "MSI2",
+    "MEF2C", "DLG2", "TCF4", "NR4A2", "CCN2",
+    "MEIS2", "MYT1L", "CDR1", "CHD7", "LMO1",
+    "RORA"
+]
+
+
+
+# Extra genes for testing -------------------------------------------------------------
 # Set features
 pfc_features = [
     "GAD1", "SLC17A7", "EOMES", "GLI3", "OLIG1",
@@ -219,30 +277,6 @@ nick_genes = [
     'PDGFRA',  # OPCs
     'C3',  # Microglia
 ]
-
-final_genes = [
-    "CUX2", "SATB2",            # Upper layer ExN
-    "TLE4",                     # Deep layer ExN
-    "GAD1", "GAD2",             # Radial glia    
-    "GLI3", "PRDM16", "PAX6",   # InN
-    "COL4A1", "FN1",            # Endothelial cells                  
-    "PDGFRA",                   # OPCs                    
-    "C3",                       # MG
-    "EOMES", "LRP8"             # IPC
-]
-
-big_gene_list = [
-    "CELF2", "NKAIN2", "PLXNA4", "SLC1A3", "GAS7",
-    "GLI2", "GLI3", "GRIK3", "HS3ST4", "TLE4",
-    "UNC5D", "NRXN3", "ERBB4", "SNHG14", "MEG3",
-    "RARB", "EBF1", "CNTNAP2", "SLC7A5", "FN1",
-    "PDGFRA", "BCL11B", "C3", "CSMD1", "DSCAM",
-    "CSMD1", "OTX2-AS1", "COL5A1", "ADGRV1", "MSI2",
-    "MEF2C", "DLG2", "TCF4", "NR4A2", "CCN2",
-    "MEIS2", "MYT1L", "CDR1", "CHD7", "LMO1",
-    "RORA"
-]
-
 
 small_populations = ['VTN', 'KCNJ8', 'ABCC9', 'ART3',  # Pericytes
                      'ACTA2', 'RGS5', 'ALDH1A1',      # Smooth muscle cells
