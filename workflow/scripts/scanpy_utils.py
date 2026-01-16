@@ -576,7 +576,8 @@ def plot_celltype_and_gene_features(
     base_height_per_row=0.95,
     extra_height=3.0,
     ncols=3,
-    cmap_name="light_dark_blue"
+    cmap_name="light_dark_blue",
+    umap_palette=None
 ):
     """
     Create a publication-style figure with:
@@ -607,7 +608,7 @@ def plot_celltype_and_gene_features(
     fig : matplotlib.figure.Figure
         The created figure object (you can call plt.show() or save it)
     """
-    # ── Custom colormap ───────────────────────────────────────────────────────
+    # ── Custom fetaure plot colormap 
     if cmap_name == "light_dark_blue":
         cmap = LinearSegmentedColormap.from_list(
             "light_dark_blue",
@@ -616,7 +617,7 @@ def plot_celltype_and_gene_features(
     else:
         raise ValueError(f"Unsupported cmap_name: {cmap_name}. Currently only 'light_dark_blue' is implemented.")
 
-    # ── Layout calculations ───────────────────────────────────────────────────
+    # ── Layout calculations 
     n_genes = len(final_genes)
     nrows = math.ceil(n_genes / ncols)
     
@@ -629,7 +630,7 @@ def plot_celltype_and_gene_features(
         "axes.titlesize": 12,
     })
 
-    # ── Create figure & grid ──────────────────────────────────────────────────
+    # ── Create figure & grid 
     fig = plt.figure(figsize=(figsize_width, fig_height))
     
     gs = gridspec.GridSpec(
@@ -641,12 +642,13 @@ def plot_celltype_and_gene_features(
         hspace=0.35
     )
 
-    # ── Panel A: Cell type UMAP ───────────────────────────────────────────────
+    # ── Panel A: Cell type UMAP 
     ax_main = fig.add_subplot(gs[:, :2])
     sc.pl.umap(
         adata,
         color=cell_type_column,
         ax=ax_main,
+        palette=umap_palette,
         legend_loc="on data",
         legend_fontsize=11,
         legend_fontoutline=3,
@@ -656,7 +658,7 @@ def plot_celltype_and_gene_features(
     )
     ax_main.set_title("A", loc="left", fontweight="bold", fontsize=14)
 
-    # ── Panel B: Gene feature plots ───────────────────────────────────────────
+    # ── Panel B: Gene feature plots 
     feature_axes = []
     for i, gene in enumerate(final_genes):
         row = i // ncols
