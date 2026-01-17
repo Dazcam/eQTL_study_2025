@@ -64,7 +64,7 @@ Settings:
 ***
 
 ```{r, summary_table, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 #in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
 #bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
 exp_PCs <- c(10, 20, 30, 40, 50)
@@ -175,14 +175,14 @@ summary_list <- summarise_logs(cell_types, in_dir)
 
 ```{r, eQTL_by_exp_PC_plot, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
 # Define custom color palette
-custom_palette <- c(
-  "RG" = "#FF5959",
-  "ExN-UL" = "#00B6EB",
-  "InN" = "#3CBB75FF",
-  "ExN-DL" = "#CEE5FD",
-  "Endo-Peri" = "#B200ED",
-  "MG" = "#F58231",
-  "OPC" = "#FDE725FF"
+custom_palette < c(
+  'Glu-UL' = '#4363d8',
+  'Glu-DL' = '#00B6EB',
+  'NPC' = '#FF5959',
+  'GABA' = '#3CBB75FF',
+  'Endo-Peri' = '#B200ED',
+  'MG' = '#F58231',
+  'OPC' = '#FDE725FF'
 )
 
 summary_tbl <- bind_rows(summary_list)
@@ -415,8 +415,8 @@ ggplot(pie_dat, aes(ymax = ymax, ymin = ymin, xmax = 1, xmin = 0, fill = label))
 
 ```{r, counts, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
 cell_counts <- tibble(
-  cell_type = c("ExN-UL","ExN-DL","RG","InN","Endo-Peri","OPC","MG"),
-  n_cells   = c(359823, 200545, 178642, 154155, 20160, 13797, 7406)
+  cell_type = c("Glu-UL","Glu-DL","NPC","GABA","Endo-Peri","OPC","MG"),
+  n_cells   = c(271180, 136070, 128017, 103598, 19842, 13794, 7297)
 )
 egene_per_cell <- gene_cell %>% count(cell_type)
 
