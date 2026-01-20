@@ -1327,7 +1327,7 @@ summary_list <- summarise_logs(cell_types, in_dir)
 
 ***
 
-```{r, eQTL_by_exp_PC_plot_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5)}
+```{r, eQTL_by_exp_PC_plot_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7.5,5)}
 summary_tbl <- bind_rows(summary_list)
 
 # Function to make one plot per norm_method
