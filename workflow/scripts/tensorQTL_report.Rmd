@@ -1321,11 +1321,13 @@ summary_list <- summarise_logs(cell_types, in_dir)
 
 ***
 
-#### Sensitivity plot
+#### Sensitivity {.tabset}
+
+##### Plot
 
 ***
 
-```{r, eQTL_by_exp_PC_plot_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7.5,7.5)}
+```{r, eQTL_by_exp_PC_plot_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5)}
 summary_tbl <- bind_rows(summary_list)
 
 # Function to make one plot per norm_method
@@ -1368,6 +1370,108 @@ print(combined_plot)
 
 # Optionally save
 # ggsave("qtl_fdr_by_expPC_all_norms.png", combined_plot, width = 12, height = 10, dpi = 300)
+```
+
+***
+
+##### Table (best)
+
+***
+
+```{r, sensitivity_table_best_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+best_tbl <- summary_tbl |> 
+  select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
+  group_by(cell_type) |>
+  slice_max(qtl_fdr_0.05, n = 1, with_ties = FALSE) |>
+  ungroup()
+
+# Create the gt table
+table <- best_tbl %>%
+  gt() %>%
+  tab_header(
+    title = "Table 1. Best param configuration per cell type"
+  ) %>%
+  cols_label(
+    cell_type = "Cell Type",
+    expPC = "Expression PCs",
+    norm_methods = "Normalisation method",
+    qtl_fdr_0.05 = "No. of eGenes"
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(weight = "bold")
+    ),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.title.font.weight = "bold",
+    heading.subtitle.font.size = 14,
+    column_labels.border.top.color = "black",
+    column_labels.border.bottom.color = "black",
+    table.border.top.color = "black",
+    table.border.bottom.color = "transparent",
+    table_body.hlines.color = "grey80",
+    table_body.border.bottom.color = "black"
+  )
+
+# Save the table as a LaTeX file for publication
+#gtsave(table, filename = "summary_table.tex")
+
+# Optionally, display the table
+print(table)
+```
+
+***
+
+##### Table (all)
+
+***
+
+```{r, sensitivity_table_all_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+all_tbl <- summary_tbl |> 
+  select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
+  pivot_wider(
+    id_cols     = c(expPC, norm_methods),        
+    names_from  = cell_type,
+    values_from = qtl_fdr_0.05,
+    names_sort  = TRUE) |>
+  arrange(desc(expPC)) 
+
+table <- all_tbl %>%
+  gt() %>%
+  tab_header(
+    title = "Table 2. All param configurations "
+  ) %>%
+  cols_label(
+    expPC = "Expression PCs",
+    norm_methods = "Normalisation method",
+  ) %>%
+  tab_style(
+    style = list(
+      cell_text(weight = "bold")
+    ),
+    locations = cells_column_labels()
+  ) %>%
+  tab_options(
+    table.font.size = 14,
+    heading.title.font.size = 16,
+    heading.title.font.weight = "bold",
+    heading.subtitle.font.size = 14,
+    column_labels.border.top.color = "black",
+    column_labels.border.bottom.color = "black",
+    table.border.top.color = "black",
+    table.border.bottom.color = "transparent",
+    table_body.hlines.color = "grey80",
+    table_body.border.bottom.color = "black"
+  )
+
+# Save the table as a LaTeX file for publication
+#gtsave(table, filename = "summary_table.tex")
+
+# Optionally, display the table
+print(table)
 ```
 
 ***
