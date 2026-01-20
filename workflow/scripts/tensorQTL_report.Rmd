@@ -1378,7 +1378,7 @@ print(combined_plot)
 
 ***
 
-```{r, sensitivity_table_best_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+```{r, sensitivity_table_best_L2, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 best_tbl <- summary_tbl |> 
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   group_by(cell_type) |>
@@ -1429,7 +1429,7 @@ print(table)
 
 ***
 
-```{r, sensitivity_table_all_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+```{r, sensitivity_table_all_L2, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 all_tbl <- summary_tbl |> 
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   pivot_wider(
