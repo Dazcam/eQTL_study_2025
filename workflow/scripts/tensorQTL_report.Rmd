@@ -63,7 +63,7 @@ Settings:
 
 ***
 
-```{r, summary_table, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, summary_table_L1, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 #in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
 #bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
@@ -175,7 +175,7 @@ summary_list <- summarise_logs(cell_types, in_dir)
 
 ```{r, eQTL_by_exp_PC_plot, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
 # Define custom color palette
-custom_palette < c(
+custom_palette <- c(
   'Glu-UL' = '#4363d8',
   'Glu-DL' = '#00B6EB',
   'NPC' = '#FF5959',
@@ -877,7 +877,7 @@ print(multi_eqtls_tbl)
 
 ***
 
-```{r, trans_table, echo = FALSE, message = FALSE, warning = FALSE, , results='asis'}
+```{r, trans_table, echo = FALSE, message = FALSE, warning = FALSE, , results='asis', eval=FALSE}
 lookup <- read_tsv('../../resources/sheets/gene_lookup_hg38.tsv')
 
 for(cell_type in cell_types) {
@@ -1086,8 +1086,185 @@ plot_grid(runtime_plt, mem_plt)
 # ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
 
+***
 
 ### Level 2 {.tabset}
+
+***
+
+```{r, summary_table_L2, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+cell_types <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+                "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
+                "GABA-0", "GABA-1", "GABA-2",
+                "NPC-0", "NPC-1", "NPC-2")
+
+custom_palette <- c(
+  "NPC-0" = '#FF5959',
+  "NPC-1" = '#FF5959',
+  "NPC-2" = '#FF5959',
+  "Glu-UL-0" = '#4363d8',
+  "Glu-UL-1" = '#4363d8',
+  "Glu-UL-2" = '#4363d8',
+  "Glu-DL-0" = '#00B6EB',
+  "Glu-DL-1" = '#00B6EB',
+  "Glu-DL-2" = '#00B6EB',
+  "GABA-0" = '#3CBB75FF',
+  "GABA-1" = '#3CBB75FF',
+  "GABA-2" = '#3CBB75FF'
+)
+
+exp_PCs <- c(10, 20, 30, 40, 50)
+gen_PCs <- 4
+norm_methods <- 'quantile'
+
+summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs, 
+                           genPC = gen_PCs, norm_method = norm_methods) {
+  # Generate all combinations of cell types and expPC values
+  params_grid <- expand.grid(cell_type = cell_types, expPC = expPCs, norm_method = norm_methods,
+                             stringsAsFactors = FALSE)
+  
+  # Function to process a single log file
+  process_log <- function(cell_type, expPC, norm_method) {
+    message('Reading eQTL log file for: ', cell_type, ', ', norm_method , 
+            ', with genPC_', genPC, ' expPC_', expPC)
+    
+    # Construct the log file path
+    log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+    log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.tensorQTL.cis.log')
+
+    # Check if file exists
+    if (!file.exists(log_file)) {
+      message('Log file not found: ', log_file)
+      return(NULL)
+    }
+    
+    # Read and process the log file
+    lines <- readLines(log_file, warn = FALSE)
+    
+    gene_line <- str_subset(lines, 'phenotypes tested:')
+    sample_line <- str_subset(lines, 'samples')
+    covariate_line <- tail(str_subset(lines, 'covariates'), 1) # need to fix this
+    variants_line <- str_subset(lines, 'variants')
+    qtl_line <- str_subset(lines, 'QTL phenotypes @ FDR 0.05:')
+    window_line <- str_subset(lines, 'cis-window:')
+    run_line <- str_subset(lines, 'Time elapsed:')
+    beta_line <- str_subset(lines, 'Correlation between Beta-approximated and empirical p-values:')
+    min_p_line <- str_subset(lines, 'min p-value threshold @ FDR 0.05:')
+    prop_sig_line <- str_subset(lines, 'Proportion of significant phenotypes')
+    
+    # Extract numbers
+    num_genes <- as.integer(str_extract(gene_line, '\\d+$'))
+    num_samples <- as.integer(str_extract(sample_line, '\\d+'))
+    covariates <- as.integer(str_extract(covariate_line, '\\d+$'))
+    variants <- as.integer(str_extract(variants_line, '\\d+'))
+    num_qtls <- as.integer(str_extract(qtl_line, '\\d+$'))
+    cis_window <- as.integer(str_extract(window_line, '\\d+'))
+    run_time <- as.integer(str_extract(run_line, '\\d+'))
+    beta_cor <- as.numeric(str_extract(beta_line, '[0-9\\.eE-]+$'))
+    min_p <- as.numeric(str_extract(min_p_line, '[0-9\\.eE-]+$'))
+    prop_sig <- as.integer(str_extract(prop_sig_line, '\\d+$'))
+    
+    message('Collating sumstats for: ', cell_type, ' with genPC_', genPC, ' expPC_', expPC, ' ...')
+    
+    # Create tibble with all relevant fields
+    tibble(
+      cell_type = cell_type,
+      genPC = genPC,
+      expPC = expPC,
+      norm_methods = norm_method,
+      genes_tested = num_genes,
+      samples = num_samples,
+      covariates = covariates,
+      variants = variants,
+      qtl_fdr_0.05 = num_qtls,
+      cis_window_kb = cis_window,
+      beta_cor = beta_cor,
+      min_p = formatC(min_p, format = "e", digits = 2),
+      prop_sig = prop_sig,
+      run_time_min = run_time
+    )
+  }
+  
+  # Apply the processing function to all combinations
+  summary_list <- pmap(params_grid, function(cell_type, expPC, norm_method) {
+    process_log(cell_type, expPC, norm_method)
+  })
+  
+  # Identify which elements are non-null
+  valid_idx <- !sapply(summary_list, is.null)
+  table(valid_idx)  # how many TRUE vs FALSE
+  length(summary_list)
+  sum(valid_idx)
+
+  # Keep only valid entries
+  summary_list <- summary_list[valid_idx]
+
+  # Name the list elements for clarity
+  names(summary_list) <- paste0(
+    params_grid$cell_type, '_', 
+    params_grid$norm_method, '_genPC_', genPC, 
+    '_expPC_', params_grid$expPC
+    )[valid_idx]
+  
+  # Return the list of summary tibbles
+  return(summary_list)
+}
+
+summary_list <- summarise_logs(cell_types, in_dir)
+```
+
+***
+
+#### Sensitivity plot
+
+***
+
+```{r, eQTL_by_exp_PC_plot, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
+summary_tbl <- bind_rows(summary_list)
+
+# Function to make one plot per norm_method
+make_plot <- function(df, norm) {
+  ggplot(df %>% filter(norm_methods == norm),
+         aes(x = expPC, y = qtl_fdr_0.05, color = cell_type, group = cell_type)) +
+    geom_line(linewidth = 1) +
+    geom_point(size = 2) +
+    scale_color_manual(values = custom_palette) +
+    labs(
+      x = "Expression PCs",
+      y = "eGene count (FDR < 0.05)",
+      color = "Cell Type",
+      title = paste("Number of Significant QTL by Expression PCs\nNorm method:", norm)
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      axis.title = element_text(face = "bold"),
+      axis.text = element_text(color = "black"),
+      legend.position = "right",
+      legend.title = element_text(face = "bold"),
+      legend.text = element_text(size = 10),
+      panel.grid.major = element_line(color = "grey90"),
+      panel.grid.minor = element_line(color = "grey95"),
+      plot.margin = margin(10, 10, 10, 10)
+    ) + ylim(0, 2100)
+}
+
+# Generate one plot per norm method
+plots <- lapply(unique(summary_tbl$norm_methods), function(norm) {
+  make_plot(summary_tbl, norm)
+})
+
+# Arrange in 2x2 grid
+combined_plot <- plot_grid(plotlist = plots, ncol = 2)
+
+# Show the combined plot
+print(combined_plot)
+
+# Optionally save
+# ggsave("qtl_fdr_by_expPC_all_norms.png", combined_plot, width = 12, height = 10, dpi = 300)
+```
+
+***
 
 #### Density plot {.tabset}
 
@@ -1100,40 +1277,6 @@ plot_grid(runtime_plt, mem_plt)
 ***
 
 ```{r, eQTL_density_plt_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(20,15)}
-cell_types <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
-                "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3", 
-                "InN-0", "InN-1", 
-                "RG-0", "RG-1", "RG-2", "RG-3")
-
-custom_palette <- c(
-  # RG — oranges to reds (warm)
-  "RG-0" = "#E66100",
-  "RG-1" = "#F4A582",
-  "RG-2" = "#B2182B",
-  "RG-3" = "#D6604D",
-
-  # ExN-UL — blue–cyan (cool, vivid)
-  "ExN-UL-0" = "#1F78B4",
-  "ExN-UL-1" = "#4DBBD5",
-  "ExN-UL-2" = "#9ECAE1",
-
-  # ExN-DL — purple–violet (cool, distinct from UL)
-  "ExN-DL-0" = "#7B3294",
-  "ExN-DL-1" = "#C2A5CF",
-  "ExN-DL-2" = "#9E0142",
-  "ExN-DL-3" = "#E7D4E8",
-
-  # InN — greens (contrasting well against others)
-  "InN-0" = "#1A9850",
-  "InN-1" = "#91CF60"
-)
-
-
-#in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
-#bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
-exp_PCs <- 40
-gen_PCs <- 4
-norm_methods <- 'quantile'
 for (cell_type in cell_types) {
   
   message('Reading eQTL data for: ', cell_type)
@@ -1248,7 +1391,7 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
 
 ```{r, counts_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
 cell_counts <- tibble(
-  cell_type = cell_types <- c("ExN-UL-0", "ExN-UL-1", "ExN-UL-2", "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3", "InN-0", "InN-1", "RG-0", "RG-1", "RG-2", "RG-3"),
+  cell_type = cell_types,
   n_cells   = c(142531, 125275, 92017, 71047, 52050, 50457, 26991, 67519, 61457, 81114, 40164, 33657, 23707)
 )
 
