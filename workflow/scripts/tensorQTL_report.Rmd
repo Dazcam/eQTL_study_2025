@@ -240,14 +240,14 @@ print(combined_plot)
 ***
 
 ```{r, sensitivity_table_best_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-summary_tbl |> 
+best_tbl <- summary_tbl |> 
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   group_by(cell_type) |>
   slice_max(qtl_fdr_0.05, n = 1, with_ties = FALSE) |>
   ungroup()
 
 # Create the gt table
-table <- summary_table %>%
+table <- best_tbl %>%
   gt() %>%
   tab_header(
     title = "Table 1. Best param configuration per cell type"
@@ -291,17 +291,16 @@ print(table)
 ***
 
 ```{r, sensitivity_table_all_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-summary_tbl |> 
+all_tbl |> 
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   pivot_wider(
     id_cols     = c(expPC, norm_methods),        
     names_from  = cell_type,
     values_from = qtl_fdr_0.05,
     names_sort  = TRUE) |>
-  arrange(desc(expPC))
+  arrange(desc(expPC)) 
 
-# Create the gt table
-table <- summary_table %>%
+table <- all_tbl %>%
   gt() %>%
   tab_header(
     title = "Table 2. All param configurations "
