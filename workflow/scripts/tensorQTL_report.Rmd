@@ -1392,7 +1392,7 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
 ```{r, counts_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
 cell_counts <- tibble(
   cell_type = cell_types,
-  n_cells   = c(123028, 87340, 60812, 49120, 44808, 50457, 42142, 59350, 47255, 20371, 33789, 32047, 17799)
+  n_cells   = c(123028, 87340, 60812, 49120, 44808, 42142, 59350, 47255, 20371, 33789, 32047, 17799)
 )
 
 gene_cell <- eqtls_all %>%
