@@ -291,7 +291,7 @@ print(table)
 ***
 
 ```{r, sensitivity_table_all_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-all_tbl |> 
+all_tbl <- summary_tbl |> 
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   pivot_wider(
     id_cols     = c(expPC, norm_methods),        
