@@ -49,7 +49,7 @@ The citation for tensorQTL is [Taylor-Weiner et al. 2019 (DOI:10.1186/s13059-019
 8. `tensorqtl_trans`: Run TensorQTL to detect trans-eQTL
 
 
-Settings:
+Sensitivity settings:
 
 + cis-window: $\pm$ 500kb
 + Expression PC covariates tested: 10, 20, 30, 40, 50
@@ -343,16 +343,27 @@ print(table)
 
 ***
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
 ```{r, eQTL_density_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
 plt_list <- list()
 genPC <- 4
-expPC <- 40
+expPC_map <- c(
+  "Glu-UL"     = 50,
+  "Glu-DL"     = 40,
+  "GABA"       = 30,
+  "NPC"        = 30,
+  "MG"         = 30,
+  "OPC"        = 30,
+  "Endo-Peri"  = 30
+)
 norm_method <- 'quantile'
+
 for (cell_type in cell_types) {
+  
+  expPC <- expPC_map[[cell_type]]
   
   message('Reading eQTL data for: ', cell_type)
   log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
@@ -411,15 +422,17 @@ combined_plot
 
 ##### Combined
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ```{r, denisty_combined, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 eqtl_list <- list()
 genPC <- 4
-expPC <- 40
 norm_method <- 'quantile'
 
 for (cell_type in cell_types) {
+  
+  expPC <- expPC_map[[cell_type]]
+  
   f <- file.path(
     in_dir,
     paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC),
@@ -462,7 +475,7 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
 
 #### Pie Chart
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ```{r, pie_chart, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7.5,7.5) }
 gene_cell <- eqtls_all %>%
@@ -515,7 +528,7 @@ ggplot(pie_dat, aes(ymax = ymax, ymin = ymin, xmax = 1, xmin = 0, fill = label))
 
 #### Counts
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -564,7 +577,7 @@ upset(gene_by_cell, nsets = length(cell_types), order.by = "freq")
 
 #### Scatter
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -653,139 +666,26 @@ print(table)
 
 ***
 
-#### Counts 2 {.tabset}
-
-***
-
-##### Cell Type
-
-+ Showing counts for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
-
-***
-
-```{r, cnts_cell_tpe, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
-# Build all file paths
-summary_tbl <- map_dfr(cell_types, function(ct) {
-  log_dir <- paste0(in_dir, ct, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
-  log_file <- paste0(log_dir, ct, '_', norm_method, '_perm.cis_qtl.txt.gz')
-  
-  if (!file.exists(log_file)) {
-    message("File missing: ", log_file)
-    return(tibble(
-      cell_type = ct,
-      total_sig_eqtl = NA_integer_,
-      unique_eQTL = NA_integer_,
-      unique_eGenes = NA_integer_,
-      top_eQTL = NA_integer_
-    ))
-  }
-  
-  df <- read_tsv(log_file, show_col_types = FALSE) %>%
-    filter(qval < 0.05)
-  
-  # Total significant eQTLs
-  total_sig_eqtl <- nrow(df)
-  
-  # Unique variant-gene pairs
-  unique_eQTL <- df %>% distinct(variant_id, phenotype_id) %>% nrow()
-  
-  # Unique eGenes
-  unique_eGenes <- df %>% distinct(phenotype_id) %>% nrow()
-  
-  # Top eQTL per gene (smallest qval per phenotype_id)
-  top_eQTL <- df %>%
-    group_by(phenotype_id) %>%
-    slice_min(qval, n = 1, with_ties = FALSE) %>%
-    ungroup() %>%
-    nrow()
-  
-  tibble(
-    cell_type = ct,
-    total_sig_eqtl = total_sig_eqtl,
-    unique_eQTL = unique_eQTL,
-    unique_eGenes = unique_eGenes,
-    top_eQTL = top_eQTL
-  ) 
-})
-
-total_row <- tibble(
-  cell_type = "Total",
-  total_sig_eqtl = sum(summary_tbl$total_sig_eqtl),
-  unique_eQTL    = sum(summary_tbl$unique_eQTL),        # sum across cell types
-  unique_eGenes  = sum(summary_tbl$unique_eGenes),      # sum across cell types
-  top_eQTL       = sum(summary_tbl$top_eQTL)
-)
-
-# Bind to original table
-tbl_totals <- bind_rows(summary_tbl, total_row)
-tbl_totals
-
-```
-
-***
-
-##### All
-
-+ Showing counts for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
-
-***
-
-```{r, cnts_total, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
-# Build all file paths
-perm_files <- expand_grid(cell_type = cell_types,
-                          norm_method = norm_method,
-                          genPC = genPC,
-                          expPC = expPC) %>%
-  mutate(log_dir = paste0(in_dir, cell_type, "_", norm_method,
-                          "_genPC_", genPC, "_expPC_", expPC, "/"),
-         log_file = paste0(log_dir, cell_type, "_", norm_method,
-                           "_perm.cis_qtl.txt.gz"))
-
-# Read and combine all results
-perm_results <- perm_files %>%
-  mutate(data = map(log_file, ~ read_tsv(.x, show_col_types = FALSE) %>%
-                      mutate(cell_type = cur_data()$cell_type,
-                             norm_method = cur_data()$norm_method,
-                             genPC = cur_data()$genPC,
-                             expPC = cur_data()$expPC))) %>%
-  pull(data) %>%
-  bind_rows()
-
-# Filter significant results
-sig_eqtl <- perm_results %>% filter(qval < 0.05)
-
-# Filter significant results
-sig_eqtl <- perm_results %>% filter(qval < 0.05)
-
-# Summaries
-summary_tbl <- tibble(
-  total_sig_eqtl = nrow(sig_eqtl),
-  unique_eGenes  = n_distinct(sig_eqtl$phenotype_id),
-  unique_eQTL    = n_distinct(paste(sig_eqtl$phenotype_id, sig_eqtl$variant_id, sep = "_"))
-)
-
-summary_tbl
-```
-***
-
 #### Independent {.tabset}
 
 ***
 
 ##### Counts
 
-+ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
 ```{r, eQTL_independent_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 plt_list <- list()
 genPC <- 4
-expPC <- 40
 norm_method <- 'quantile'
 ind_dir <- '../../results/05TENSORQTL/tensorqtl_independent/'
 
 read_indep <- function(cell_type) {
+  
+  expPC <- expPC_map[[cell_type]]
+  
   log_dir <- paste0(ind_dir, cell_type, "_", norm_method,
                     "_genPC_", genPC, "_expPC_", expPC, "/")
   log_file <- paste0(log_dir, cell_type, "_", norm_method,
@@ -839,7 +739,7 @@ print(rank_counts)
 
 ##### Distance from TSS
 
-+ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -893,7 +793,7 @@ print(median_distances)
 
 ##### SNPs
 
-+ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -989,6 +889,8 @@ lookup <- read_tsv('../../resources/sheets/gene_lookup_hg38.tsv')
 for(cell_type in cell_types) {
 
   cat("  \n##### ", cell_type, "\n", sep = "")
+  
+  expPC <- expPC_map[[cell_type]]
   
   trans_dir <- str_glue('../../results/05TENSORQTL/post_trans/', cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
   trans_file <- str_glue(trans_dir, cell_type, '_', norm_method, '_post_trans.tsv')
@@ -1327,7 +1229,7 @@ summary_list <- summarise_logs(cell_types, in_dir)
 
 ***
 
-```{r, eQTL_by_exp_PC_plot_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7.5,5)}
+```{r, eQTL_by_exp_PC_plot_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
 summary_tbl <- bind_rows(summary_list)
 
 # Function to make one plot per norm_method
@@ -1482,12 +1384,28 @@ print(table)
 
 ***
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
 ```{r, eQTL_density_plt_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(20,15)}
+expPC_map <- c(
+  "Glu-UL-0"     = 30,
+  "Glu-UL-1"     = 50,
+  "Glu-UL-2"     = 40,
+  "Glu-DL-0"     = 40,
+  "Glu-DL-1"     = 40,
+  "Glu-DL-2"     = 30,
+  "GABA-0"       = 30,
+  "GABA-1"       = 40,
+  "GABA-2"       = 40,
+  "NPC-0"        = 50,
+  "NPC-1"        = 30,
+  "NPC-2"        = 20
+)
 for (cell_type in cell_types) {
+  
+  expPC <- expPC_map[[cell_type]]
   
   message('Reading eQTL data for: ', cell_type)
   log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
@@ -1546,11 +1464,14 @@ combined_plot
 
 ##### Combined
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ```{r, denisty_combined_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 eqtl_list <- list()
 for (cell_type in cell_types) {
+  
+  expPC <- expPC_map[[cell_type]]
+  
   f <- file.path(
     in_dir,
     paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC),
@@ -1595,7 +1516,7 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
 
 #### Counts
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -1635,18 +1556,18 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 
 ##### Counts
 
-+ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
 ```{r, eQTL_independent_L2_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 plt_list <- list()
-genPC <- 4
-expPC <- 40
-norm_method <- 'quantile'
 ind_dir <- '../../results/05TENSORQTL/tensorqtl_independent/'
 
 read_indep <- function(cell_type) {
+  
+  expPC <- expPC_map[[cell_type]]
+  
   log_dir <- paste0(ind_dir, cell_type, "_", norm_method,
                     "_genPC_", genPC, "_expPC_", expPC, "/")
   log_file <- paste0(log_dir, cell_type, "_", norm_method,
@@ -1700,7 +1621,7 @@ print(rank_counts)
 
 ##### Distance from TSS
 
-+ Showing tables for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -1755,7 +1676,9 @@ print(median_distances)
 
 ### Combined {.tabset}
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
+#### Shared
+
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -1766,9 +1689,36 @@ cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
                    "GABA-0", "GABA-1", "GABA-2",
                    "NPC-0", "NPC-1", "NPC-2")
 
+expPC_map_L1 <- c(
+  "Glu-UL"     = 50,
+  "Glu-DL"     = 40,
+  "GABA"       = 30,
+  "NPC"        = 30,
+  "MG"         = 30,
+  "OPC"        = 30,
+  "Endo-Peri"  = 30
+)
+
+expPC_map_L2 <- c(
+  "Glu-UL-0"     = 30,
+  "Glu-UL-1"     = 50,
+  "Glu-UL-2"     = 40,
+  "Glu-DL-0"     = 40,
+  "Glu-DL-1"     = 40,
+  "Glu-DL-2"     = 30,
+  "GABA-0"       = 30,
+  "GABA-1"       = 40,
+  "GABA-2"       = 40,
+  "NPC-0"        = 50,
+  "NPC-1"        = 30,
+  "NPC-2"        = 20
+)
+
 # Function to extract eGenes for a cell type
 read_eGenes <- function(cell_type, in_dir, norm_method, genPC, expPC) {
-  log_dir  <- file.path(in_dir, paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC))
+  
+  
+log_dir  <- file.path(in_dir, paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC))
   log_file <- file.path(log_dir, paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz"))
   if (!file.exists(log_file)) return(tibble(cell_type = cell_type, eGene = character(0)))
   
@@ -1778,12 +1728,29 @@ read_eGenes <- function(cell_type, in_dir, norm_method, genPC, expPC) {
     mutate(cell_type = cell_type)
 }
 
-eqtl_all <- map_dfr(c(cell_types_L1, cell_types_L2),
-                    read_eGenes,
-                    in_dir = in_dir,
-                    norm_method = norm_method,
-                    genPC = genPC,
-                    expPC = expPC)
+eqtl_L1 <- map_dfr(
+  cell_types_L1,
+  ~ read_eGenes(
+      cell_type   = .x,
+      in_dir      = in_dir,
+      norm_method = norm_method,
+      genPC       = genPC,
+      expPC       = expPC_map_L1[[.x]]
+    )
+)
+
+eqtl_L2 <- map_dfr(
+  cell_types_L2,
+  ~ read_eGenes(
+      cell_type   = .x,
+      in_dir      = in_dir,
+      norm_method = norm_method,
+      genPC       = genPC,
+      expPC       = expPC_map_L2[[.x]]
+    )
+)
+
+eqtl_all <- bind_rows(eqtl_L1, eqtl_L2)
 
 # Separate into lists
 egenes_L1 <- eqtl_all %>% filter(cell_type %in% cell_types_L1)
@@ -1841,3 +1808,145 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
         axis.text.y = element_text(face = "bold"),
         axis.text.x = element_text(color = "black"))
 ```
+
+***
+
+#### Counts CT {.tabset}
+
++ Showing counts for geno PCs = 4, Exp PCs = `expPC_map_L1` or `expPC_map_L2`, norm method = 'quantile'
+
+***
+
+```{r, cnts_cell_tpe, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+cell_types_all <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
+                    "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+                    "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
+                    "GABA-0", "GABA-1", "GABA-2",
+                    "NPC-0", "NPC-1", "NPC-2")
+
+expPC_map_all <- c(
+  "Glu-UL"     = 50,
+  "Glu-DL"     = 40,
+  "GABA"       = 30,
+  "NPC"        = 30,
+  "MG"         = 30,
+  "OPC"        = 30,
+  "Endo-Peri"  = 30,
+  "Glu-UL-0"     = 30,
+  "Glu-UL-1"     = 50,
+  "Glu-UL-2"     = 40,
+  "Glu-DL-0"     = 40,
+  "Glu-DL-1"     = 40,
+  "Glu-DL-2"     = 30,
+  "GABA-0"       = 30,
+  "GABA-1"       = 40,
+  "GABA-2"       = 40,
+  "NPC-0"        = 50,
+  "NPC-1"        = 30,
+  "NPC-2"        = 20
+)
+
+# Build all file paths
+summary_tbl <- map_dfr(cell_types_all, function(ct) {
+  
+  expPC <- expPC_map_all[[ct]]
+  
+  log_dir <- paste0(in_dir, ct, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
+  log_file <- paste0(log_dir, ct, '_', norm_method, '_perm.cis_qtl.txt.gz')
+  
+  if (!file.exists(log_file)) {
+    message("File missing: ", log_file)
+    return(tibble(
+      cell_type = ct,
+      total_sig_eqtl = NA_integer_,
+      unique_eQTL = NA_integer_,
+      unique_eGenes = NA_integer_,
+      top_eQTL = NA_integer_
+    ))
+  }
+  
+  df <- read_tsv(log_file, show_col_types = FALSE) %>%
+    filter(qval < 0.05)
+  
+  # Total significant eQTLs
+  total_sig_eqtl <- nrow(df)
+  
+  # Unique variant-gene pairs
+  unique_eQTL <- df %>% distinct(variant_id, phenotype_id) %>% nrow()
+  
+  # Unique eGenes
+  unique_eGenes <- df %>% distinct(phenotype_id) %>% nrow()
+  
+  # Top eQTL per gene (smallest qval per phenotype_id)
+  top_eQTL <- df %>%
+    group_by(phenotype_id) %>%
+    slice_min(qval, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    nrow()
+  
+  tibble(
+    cell_type = ct,
+    total_sig_eqtl = total_sig_eqtl,
+    unique_eQTL = unique_eQTL,
+    unique_eGenes = unique_eGenes,
+    top_eQTL = top_eQTL
+  ) 
+})
+
+total_row <- tibble(
+  cell_type = "Total",
+  total_sig_eqtl = sum(summary_tbl$total_sig_eqtl),
+  unique_eQTL    = sum(summary_tbl$unique_eQTL),        # sum across cell types
+  unique_eGenes  = sum(summary_tbl$unique_eGenes),      # sum across cell types
+  top_eQTL       = sum(summary_tbl$top_eQTL)
+)
+
+# Bind to original table
+tbl_totals <- bind_rows(summary_tbl, total_row)
+tbl_totals
+
+```
+
+***
+
+#### Counts All
+
++ Showing counts for geno PCs = 4, Exp PCs = `expPC_map_all`, norm method = 'quantile'
+
+***
+
+```{r, cnts_total, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+# Build all file paths
+perm_files <- expand_grid(cell_type = cell_types_all,
+                          norm_method = norm_method,
+                          genPC = genPC) %>%
+  mutate(expPC = expPC_map_all[cell_type],
+         log_dir = paste0(in_dir, cell_type, "_", norm_method,
+                          "_genPC_", genPC, "_expPC_", expPC, "/"),
+         log_file = paste0(log_dir, cell_type, "_", norm_method,
+                           "_perm.cis_qtl.txt.gz"))
+
+# Read and combine all results
+perm_results <- perm_files %>%
+  mutate(data = map(log_file, ~ read_tsv(.x, show_col_types = FALSE) %>%
+                      mutate(cell_type = cur_data()$cell_type,
+                             norm_method = cur_data()$norm_method,
+                             genPC = cur_data()$genPC,
+                             expPC = cur_data()$expPC))) %>%
+  pull(data) %>%
+  bind_rows()
+
+# Filter significant results
+sig_eqtl <- perm_results %>% filter(qval < 0.05)
+
+# Summaries
+summary_tbl <- tibble(
+  total_sig_eqtl = nrow(sig_eqtl),
+  unique_eGenes  = n_distinct(sig_eqtl$phenotype_id),
+  unique_eQTL    = n_distinct(paste(sig_eqtl$phenotype_id, sig_eqtl$variant_id, sep = "_"))
+)
+
+summary_tbl
+```
+
+***
