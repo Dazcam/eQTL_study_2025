@@ -1819,6 +1819,7 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
 
 ```{r, cnts_cell_tpe, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 cell_types_all <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
+                    "MG", "OPC", "Endo-Peri",
                     "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
                     "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
                     "GABA-0", "GABA-1", "GABA-2",
