@@ -48,12 +48,6 @@ covar_matrix = covar_data.iloc[:, 1:].to_numpy().T  # Transpose so samples are r
 # Function to extract data for one gene
 def extract_data_for_gene(row):
 
-    logging.basicConfig(
-    filename=snakemake.log[0],
-    level=print,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    force=True)
-
     try:
         # Extract gene information (line below for testing)
         # gene, chrom, cis_start, cis_end = cis_windows.iloc[0][['ensembl_gene_id', 'chromosome_name', 'cis_start', 'cis_end']].values
