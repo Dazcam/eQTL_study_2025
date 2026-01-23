@@ -30,11 +30,13 @@ library(tidyverse)
 library(cowplot)
 obrien_dir <- params$obrien_dir
 ziffra_dir <- params$ziffra_dir
+ziffra_indep_dir <- params$ziffra_indep_dir
 bmark_dir <- params$bmark_dir
 wen_dir <- params$wen_dir
 bryois_dir <- params$bryois_dir
 fugita_dir <- params$fugita_dir
 internal_dir <- params$internal_dir
+beta_dir <- params$beta_dir
 
 custom_palette <- c(
   "RG" = "#FF5959",
@@ -57,12 +59,15 @@ custom_palette <- c(
 4. `dwnld_wen`: Download Wen 2024 bulk dev-brain eQTL files      PMID:38781368
 5. `snp_lookup`: Generate snp lookup for eQTL / ATAC-seq peak enrichments
 6. `atac_enrich`: Test for eQTL enrichments in Ziffra ATAC-seq peaks
-7. `cat_nom_qtl`: Combine per-chr nominal eQTL parquet files into gzip file for pi1 enrichment
-8. `pi1_enrich_obrien`: Calc. pi1 enrichments between sn-eQTL and O'Brien 2018 bulk brain eQTL
-9. `pi1_enrich_wen`: Calc. pi1 enrichments between sn-eQTL and Wen 2024 bulk brain eQTL
-10. `pi1_enrich_bryois`: Calc. pi1 enrichments between sn-eQTL and Bryois 2022 adult brain sn-eQTL
-11. `pi1_enrich_fugita`: Calc. pi1 enrichments between sn-eQTL and Fugita 2024 adult brain sn-eQTL
-12. `pi1_enrichments_report`: Rule to create this report
+7. `snp_lookup_indep`: Generate snp lookup for eQTL / ATAC-seq peak enrichments (independent)
+8. `atac_enrich_indep`: Test for eQTL enrichments in Ziffra ATAC-seq peaks (independent)
+9. `cat_nom_qtl`: Combine per-chr nominal eQTL parquet files into gzip file for pi1 enrichment
+10. `pi1_enrich_obrien`: Calc. pi1 enrichments between sn-eQTL and O'Brien 2018 bulk brain eQTL
+11. `pi1_enrich_wen`: Calc. pi1 enrichments between sn-eQTL and Wen 2024 bulk brain eQTL
+12. `pi1_enrich_bryois`: Calc. pi1 enrichments between sn-eQTL and Bryois 2022 adult brain sn-eQTL
+13. `pi1_enrich_fugita`: Calc. pi1 enrichments between sn-eQTL and Fugita 2024 adult brain sn-eQTL
+14. `beta_corre`
+15. `pi1_enrichments_report`: Rule to create this report
 
 Settings:
 
@@ -78,7 +83,7 @@ Test direction:
 
 + NA in pi1 test means either:
   + too few overlapping eQTLs (<50) for pi1 calculation
-  + pi1 smoother (and bootstap backup test) failed
+  + pi1 smoother (and bootstap backup test) failed (also due tot few overlaps see: )
 
 ***
 
@@ -92,15 +97,45 @@ Test direction:
 
 ```{r, ziffra_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 #ziffra_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/06QTL-REPLICATION/ziffra/'
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri",
-                "ExN-UL-0", "ExN-UL-1", "ExN-UL-2", 
-                "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
-                "InN-0", "InN-1", 
-                "RG-0", "RG-1", "RG-2", "RG-3")
+cell_types <- c(
+  "Glu-UL", "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+  "Glu-DL", "Glu-DL-0", "Glu-DL-1", "Glu-DL-2", 
+  "NPC", "NPC-0", "NPC-1", "NPC-2", 
+  "GABA", "GABA-0", "GABA-1", "GABA-2",
+  "Endo-Peri",
+  "OPC",
+  "MG"
+)
+
+# Exp PC map
+expPC_map_all <- c(
+  "Glu-UL"     = 50,
+  "Glu-DL"     = 40,
+  "GABA"       = 30,
+  "NPC"        = 30,
+  "MG"         = 30,
+  "OPC"        = 30,
+  "Endo-Peri"  = 30,
+  "Glu-UL-0"     = 30,
+  "Glu-UL-1"     = 50,
+  "Glu-UL-2"     = 40,
+  "Glu-DL-0"     = 40,
+  "Glu-DL-1"     = 40,
+  "Glu-DL-2"     = 30,
+  "GABA-0"       = 30,
+  "GABA-1"       = 40,
+  "GABA-2"       = 40,
+  "NPC-0"        = 50,
+  "NPC-1"        = 30,
+  "NPC-2"        = 20
+)
 
 # Create a function to read and add cell_type identifier (optional)
 read_rds_file <- function(cell_type) {
-  file_path <- paste0(ziffra_dir, cell_type, '_quantile_genPC_4_expPC_40.ziffra_peak_enrich.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(ziffra_dir, cell_type, '_quantile_genPC_4_expPC_', expPC, '.ziffra_peak_enrich.rds')
   read_rds(file_path) %>%
     mutate(source_cell_type = cell_type) # Optional: add column to track source
 }
@@ -158,11 +193,11 @@ combined_data %>%
 ***
 
 ```{r, ziffra_enrichments_secondary, echo = FALSE, message = FALSE, warning = FALSE}
-second_dir <- '../../results/06QTL-REPLICATION/atac_enrich_indep/'
-
-# Create a function to read and add cell_type identifier (optional)
 read_rds_file <- function(cell_type) {
-  file_path <- paste0(second_dir, cell_type, '_quantile_genPC_4_expPC_40.ziffra_peak_enrich_indep.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(ziffra_indep_dir, cell_type, '_quantile_genPC_4_expPC_', expPC, '.ziffra_peak_enrich_indep.rds')
   res <- read_rds(file_path) 
   
   if (nrow(res) == 0) {
@@ -231,12 +266,14 @@ combined_data %>%
 
 ***
 
-```{r, obrien_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
-#obrien_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/06QTL-REPLICATION/obrien/'
-cell_types <- c("ExN-UL", "ExN-DL", "InN", "RG", "MG", "OPC", "Endo-Peri")
+```{r, obrien_enrichments, echo = FALSE, message = FALSE, warning = FALSE, eval=FALSE}
+cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 
 read_rds_file <- function(cell_type) {
-  file_path <- paste0(obrien_dir, cell_type, '_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(obrien_dir, cell_type, '_quantile_genPC_4_expPC_', expPC, '_pi1_enrich_tbl.rds')
   read_rds(file_path) %>%
     mutate(source_cell_type = cell_type) # Optional: add column to track source
 }
@@ -301,10 +338,13 @@ pi1_summary_tbl %>%
 
 ***
 
-```{r, obrien_heatmap, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, obrien_heatmap, echo = FALSE, message = FALSE, warning = FALSE, eval=FALSE}
 # Create a function to read and add cell_type identifier (optional)
 read_pi1_file <- function(cell_type) {
-  file_path <- paste0(obrien_dir, cell_type, '_quantile_genPC_4_expPC_40_pi1_results_tbl.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(obrien_dir, cell_type, '_quantile_genPC_4_expPC_', expPC, '_pi1_results_tbl.rds')
   pi1_list <- read_rds(file_path)
   
   tibble(
@@ -356,10 +396,13 @@ ggplot(pi1_long, aes(x = cell_type, y =  direction, fill = pi1)) +
 
 ***
 
-```{r, obrien_hist_forward, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10)}
+```{r, obrien_hist_forward, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10), eval=FALSE}
 # Create a function to read and add cell_type identifier (optional)
 read_pi1_file <- function(cell_type) {
-  file_path <- paste0(obrien_dir, cell_type, '_quantile_genPC_4_expPC_40_pi1_results_tbl.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(obrien_dir, cell_type, '_quantile_genPC_4_expPC_', expPC, '_pi1_results_tbl.rds')
   pi1_list <- read_rds(file_path)
   
   tibble(
@@ -432,7 +475,7 @@ combined_plot
 
 ***
 
-```{r, obrien_hist_reverse, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10)}
+```{r, obrien_hist_reverse, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10), eval=FALSE}
 plot_list <- list()
 
 for (cell_type in cell_types) {
@@ -490,10 +533,13 @@ combined_plot
 
 ***
 
-```{r, wen_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, wen_enrichments, echo = FALSE, message = FALSE, warning = FALSE, eval=FALSE}
 # Create a function to read and add cell_type identifier (optional)
 read_rds_file <- function(cell_type) {
-  file_path <- paste0(wen_dir, cell_type, '_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(wen_dir, cell_type, '_quantile_genPC_4_expPC_', expPC, '_pi1_enrich_tbl.rds')
   read_rds(file_path) %>%
     mutate(source_cell_type = cell_type) # Optional: add column to track source
 }
@@ -558,10 +604,13 @@ pi1_summary_tbl %>%
 
 ***
 
-```{r, wen_heatmap, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, wen_heatmap, echo = FALSE, message = FALSE, warning = FALSE, eval=FALSE}
 # Create a function to read and add cell_type identifier (optional)
 read_pi1_file <- function(cell_type) {
-  file_path <- paste0(wen_dir, cell_type, '_quantile_genPC_4_expPC_40_pi1_results_tbl.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(wen_dir, cell_type, '_quantile_genPC_4_expPC_', expPC,'_pi1_results_tbl.rds')
   pi1_list <- read_rds(file_path)
   
   tibble(
@@ -613,10 +662,13 @@ ggplot(pi1_long, aes(x = cell_type, y =  direction, fill = pi1)) +
 
 ***
 
-```{r, wen_hist_forward, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10)}
+```{r, wen_hist_forward, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10), eval=FALSE}
 # Create a function to read and add cell_type identifier (optional)
 read_pi1_file <- function(cell_type) {
-  file_path <- paste0(wen_dir, cell_type, '_quantile_genPC_4_expPC_40_pi1_results_tbl.rds')
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(wen_dir, cell_type, '_quantile_genPC_4_expPC_', expPC, '_pi1_results_tbl.rds')
   pi1_list <- read_rds(file_path)
   
   tibble(
@@ -689,7 +741,7 @@ combined_plot
 
 ***
 
-```{r, wen_hist_reverse, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10)}
+```{r, wen_hist_reverse, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 10), eval=FALSE}
 plot_list <- list()
 
 for (cell_type in cell_types) {
@@ -749,7 +801,12 @@ combined_plot
 
 ```{r, Internal_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 read_enrich_tbl <- function(ct, ref_ct) {
-  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds")
+  
+  expPC <- expPC_map_all[[cell_type]]
+  expPCref <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
+                      expPC ,"_expPCref_", expPCref, "_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
     read_rds(file_path) %>%
       mutate(cell_type = ct,
@@ -824,7 +881,13 @@ pi1_enrich_tbl %>%
 ```{r, interal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
-  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_results_tbl.rds")
+    
+  expPC <- expPC_map_all[[cell_type]]
+  expPCref <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
+                      expPC ,"_expPCref_", expPCref, "_pi1_enrich_tbl.rds")
+  
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
     
@@ -909,8 +972,12 @@ plot_grid(heatmap_forward, heatmap_reverse, ncol = 2)
 
 ```{r, Fugita_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 fugita_cell_types <- c('Ast', 'Exc', 'Inh', 'Oli', 'OPC', 'Mic', 'End')
+
 read_enrich_tbl <- function(ct, ref_ct) {
-  file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_enrich_tbl.rds")
+  
+    expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", expPC, "_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
     read_rds(file_path) %>%
       mutate(cell_type = ct,
@@ -985,7 +1052,11 @@ pi1_enrich_tbl %>%
 ```{r, fugita_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
-  file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_40_pi1_results_tbl.rds")
+  
+  expPC <- expPC_map_all[[cell_type]]
+  
+  file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", expPC,"_pi1_results_tbl.rds")
+  
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
     
@@ -1059,11 +1130,81 @@ plot_grid(heatmap_forward, heatmap_reverse, ncol = 2)
 
 ***
 
+### Beta correlation
+
+***
+
+```{r, beta_correlation, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
+paired_betas <- read_tsv(paste0(beta_dir, 'replication_beta_correlation.tsv')) |>
+  separate(key, into = c('snp', 'gene')) |>
+  left_join(gene_lookup) |>
+  group_by(gene) |>
+  slice_max(abs(beta_my), n = 1, with_ties = FALSE) |> # Drops from ~3.6K to ~1.7K
+  ungroup() |>
+  distinct()
+
+# Fit lm
+model <- lm(beta_my ~ beta_fugita, data = paired_betas)
+
+# Calculate perpendicular-ish distance from line + absolute residual
+paired_betas <- paired_betas %>%
+  mutate(.resid = resid(model),.dist  = abs(.resid),
+         discordant = sign(beta_my) != sign(beta_fugita) & !is.na(beta_my) & !is.na(beta_fugita),
+         label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol),
+         
+         # Decide who deserves a label (adjust thresholds!)
+         is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),  # ~top 8%
+         should_label = is_strong_outlier | discordant)
+
+# How many labels will we actually try to show?
+n_labels <- sum(paired_betas$should_label, na.rm = TRUE)
+message("Number of points selected for labelling: ", n_labels)
+
+# Plot
+beta_cor_plt <- ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
+  geom_point(alpha = 0.2, color = "grey70", size = 1.4) +
+  geom_point(data = filter(paired_betas, is_strong_outlier & discordant), color = "#d32f2f", size = 2, alpha = 0.5) +
+  geom_point(data = filter(paired_betas, is_strong_outlier & !discordant),
+             color = "#1976d2", size = 2, alpha = 0.5) +   # blue for concordant strength) +
+  geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 0.9) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
+              color = "grey50", linewidth = 0.5) +
+  geom_text_repel(
+    data = filter(paired_betas, should_label),
+    aes(label = label_text),
+    size          = 3.1,
+    color         = "black",
+    fontface      = "bold",
+    box.padding   = 0.45,
+    point.padding = 0.5,
+    segment.color = "grey50",
+    segment.size  = 0.25,
+    min.segment.length = 0,
+    max.overlaps  = 25,             # ← increased from default 10
+    force         = 1.5,            # pull labels apart more aggressively
+    force_pull    = 0.8,
+    direction     = "both",
+    seed          = 2025            # for reproducibility of label placement
+  ) +
+  annotate("text", x = Inf, y = Inf, label = cor_label,
+           hjust = 2.3, vjust = 3, size = 5, fontface = "bold") +
+  labs(x = "Beta (Fujita)", y = "Beta (eGenes)",) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title   = element_text(hjust = 0.5, face = "bold", size = 14),
+        axis.title   = element_text(face = "bold"),
+        plot.margin  = margin(t = 20, r = 35, b = 30, l = 25, unit = "pt"))
+beta_cor_plt
+```
+
+***
+
 ### Benchmarking {.tabset}
 
 ***
 
 #### Table
+
+***
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files for the pipeline
@@ -1194,3 +1335,4 @@ plot_grid(runtime_plt, mem_plt)
 
 # ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
+
