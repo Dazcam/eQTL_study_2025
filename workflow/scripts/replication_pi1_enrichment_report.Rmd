@@ -8,10 +8,12 @@ output:
 params:
   obrien_dir: null
   ziffra_dir: null
+  ziffra_indep_dir: null
   wen_dir: null
   bryois_dir: null
   fugita_dir: null
   internal_dir: null
+  beta_dir: null
   bmark_dir: null
 ---
 
