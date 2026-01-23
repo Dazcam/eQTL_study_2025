@@ -66,7 +66,7 @@ print(opt)
 importQtlmapCovariates <- function(covariates_path){
   pc_matrix = read.table(covariates_path, check.names = F, header = T, stringsAsFactors = F)
   
-  # Added this. Testdata does not have chracter qualitative covariates
+  # Added this. Testdata does not have character qualitative covariates
   pc_matrix[pc_matrix == "M"] <- 0
   pc_matrix[pc_matrix == "F"] <- 1
   # Error of colinear cov matrix for male/female eQTL. All sex is 0/1
@@ -113,7 +113,9 @@ finemapPhenotype <- function(phenotype_id, se, genotype_file, covariates, cis_di
   
   #Extract phenotype from SE
   gene_vector = eQTLUtils::extractPhentypeFromSE(phenotype_id, se, "counts") %>%
-    dplyr::mutate(phenotype_value_std = qnorm((rank(phenotype_value, na.last = "keep") - 0.5) / sum(!is.na(phenotype_value))))
+    #Skipped quantile normalisation as this has already been applied upstream; ned to keep col id though
+    #dplyr::mutate(phenotype_value_std = qnorm((rank(phenotype_value, na.last = "keep") - 0.5) / sum(!is.na(phenotype_value))))
+    dplyr::mutate(phenotype_value_std = phenotype_value)
   selected_phenotype = phenotype_id
   gene_meta = dplyr::filter(SummarizedExperiment::rowData(se) %>% as.data.frame(), phenotype_id == selected_phenotype)
   
