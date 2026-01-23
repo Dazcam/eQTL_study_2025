@@ -46,31 +46,31 @@ in_dir  <- params$in_dir
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.CS95.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
   separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
-  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd|adhd|ocd|ptsd"))) |>
+  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd|adhd|ocd"))) |>
   select(-Category, -suffix) |>
   relocate(cell_type, disorder) |>
   mutate(ldsr = if_else(`Coefficient_z-score` > 0,
                         -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
-  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD", "ADHD", "OCD", "PTSD")))
+  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD", "ADHD", "OCD")))
 
 # --- Custom colour palette
 custom_palette <- c(
-  "RG" = "#FF5959",
-  "ExN-UL" = "#00B6EB",
-  "InN" = "#3CBB75FF",
-  "ExN-DL" = "#CEE5FD",
-  "Endo-Peri" = "#B200ED",
-  "MG" = "#F58231",
-  "OPC" = "#FDE725FF"
+  'Glu-UL' = '#4363d8',
+  'Glu-DL' = '#00B6EB',
+  'NPC' = '#FF5959',
+  'GABA' = '#3CBB75FF',
+  'Endo-Peri' = '#B200ED',
+  'MG' = '#F58231',
+  'OPC' = '#FDE725FF'
 )
 
 # --- Assign main cluster to subclusters
 ldsr_tbl <- ldsr_tbl |>
   mutate(main_type = case_when(
-    str_detect(cell_type, "ExN-UL") ~ "ExN-UL",
-    str_detect(cell_type, "ExN-DL") ~ "ExN-DL",
-    str_detect(cell_type, "InN") ~ "InN",
-    str_detect(cell_type, "RG") ~ "RG",
+    str_detect(cell_type, "Glu-UL") ~ "Glu-UL",
+    str_detect(cell_type, "Glu-DL") ~ "Glu-DL",
+    str_detect(cell_type, "GABA") ~ "GABA",
+    str_detect(cell_type, "NPC") ~ "NPC",
     str_detect(cell_type, "OPC") ~ "OPC",
     str_detect(cell_type, "MG") ~ "MG",
     str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
@@ -79,10 +79,10 @@ ldsr_tbl <- ldsr_tbl |>
 
 # --- Specify y-axis order
 cell_order <- c(
-  "ExN-UL", grep("^ExN-UL", ldsr_tbl$cell_type, value = TRUE),
-  "ExN-DL", grep("^ExN-DL", ldsr_tbl$cell_type, value = TRUE),
-  "InN", grep("^InN", ldsr_tbl$cell_type, value = TRUE),
-  "RG", grep("^RG", ldsr_tbl$cell_type, value = TRUE),
+  "Glu-UL", grep("^Glu-UL", ldsr_tbl$cell_type, value = TRUE),
+  "Glu-DL", grep("^Glu-DL", ldsr_tbl$cell_type, value = TRUE),
+  "GABA", grep("^GABA", ldsr_tbl$cell_type, value = TRUE),
+  "NPC", grep("^NPC", ldsr_tbl$cell_type, value = TRUE),
   "OPC", "MG", "Endo-Peri"
 ) |> unique()
 
@@ -506,72 +506,6 @@ ldsr_tbl %>%
 
 ***
 
-##### PTSD {.tabset}
-
-***
-
-```{r, cs95_ptsd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'PTSD') %>%
-  # Round numeric columns to avoid excessive precision
-  mutate(
-    Prop._SNPs = signif(Prop._SNPs, 3),
-    Prop._h2 = signif(Prop._h2, 3),
-    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
-    Enrichment = signif(Enrichment, 3),
-    Enrichment_std_error = signif(Enrichment_std_error, 3),
-    Enrichment_p = signif(Enrichment_p, 3),
-    Coefficient = signif(Coefficient, 3),
-    Coefficient_std_error = signif(Coefficient_std_error, 3),
-    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
-    ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level) %>%
-  # Create the gt table
-  gt() %>%
-  # Add table header and subtitle
-  tab_header(
-    title = "Table 6. PTSD S-LDSC Results",
-    subtitle = "95% CS eQTL used as annotation"
-  ) %>%
-  # Rename columns for display
-  cols_label(
-    cell_type = "Cell Type",
-    disorder = "Disorder",
-    Prop._SNPs = "Prop. SNPs",
-    Prop._h2 = "Prop. Heritability",
-    Prop._h2_std_error = "Prop. Heritability SE",
-    Enrichment = "Enrichment",
-    Enrichment_std_error = "Enrichment SE",
-    Enrichment_p = "Enrichment p-value",
-    Coefficient = "Coefficient",
-    Coefficient_std_error = "Coefficient SE",
-    `Coefficient_z-score` = "Coefficient z-score",
-    ldsr = "LDSR"
-  ) %>%
-  # Format small values in scientific notation with 2 decimal places
-  fmt_scientific(
-    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
-    decimals = 2
-  ) %>%
-  # Format other numeric columns with 3 decimal places
-  fmt_number(
-    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
-    decimals = 3,
-    use_seps = TRUE
-  ) %>%
-  # Customize table appearance
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3),
-    heading.align = "center",
-    column_labels.font.weight = "bold"
-  )
-```
-
-***
-
 ### MaxCPP {.tabset}
 
 ***
@@ -585,31 +519,31 @@ ldsr_tbl %>%
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
   separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
-  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd|adhd|ocd|ptsd"))) |>
+  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd|adhd|ocd"))) |>
   select(-Category, -suffix) |>
   relocate(cell_type, disorder) |>
   mutate(ldsr = if_else(`Coefficient_z-score` > 0,
                         -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
-  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD", "ADHD", "OCD", "PTSD")))
+  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD", "ADHD", "OCD")))
 
 # --- Custom colour palette
 custom_palette <- c(
-  "RG" = "#FF5959",
-  "ExN-UL" = "#00B6EB",
-  "InN" = "#3CBB75FF",
-  "ExN-DL" = "#CEE5FD",
-  "Endo-Peri" = "#B200ED",
-  "MG" = "#F58231",
-  "OPC" = "#FDE725FF"
+  'Glu-UL' = '#4363d8',
+  'Glu-DL' = '#00B6EB',
+  'NPC' = '#FF5959',
+  'GABA' = '#3CBB75FF',
+  'Endo-Peri' = '#B200ED',
+  'MG' = '#F58231',
+  'OPC' = '#FDE725FF'
 )
 
 # --- Assign main cluster to subclusters
 ldsr_tbl <- ldsr_tbl |>
   mutate(main_type = case_when(
-    str_detect(cell_type, "ExN-UL") ~ "ExN-UL",
-    str_detect(cell_type, "ExN-DL") ~ "ExN-DL",
-    str_detect(cell_type, "InN") ~ "InN",
-    str_detect(cell_type, "RG") ~ "RG",
+    str_detect(cell_type, "Glu-UL") ~ "Glu-UL",
+    str_detect(cell_type, "Glu-DL") ~ "Glu-DL",
+    str_detect(cell_type, "GABA") ~ "GABA",
+    str_detect(cell_type, "NPC") ~ "NPC",
     str_detect(cell_type, "OPC") ~ "OPC",
     str_detect(cell_type, "MG") ~ "MG",
     str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
@@ -618,10 +552,10 @@ ldsr_tbl <- ldsr_tbl |>
 
 # --- Specify y-axis order
 cell_order <- c(
-  "ExN-UL", grep("^ExN-UL", ldsr_tbl$cell_type, value = TRUE),
-  "ExN-DL", grep("^ExN-DL", ldsr_tbl$cell_type, value = TRUE),
-  "InN", grep("^InN", ldsr_tbl$cell_type, value = TRUE),
-  "RG", grep("^RG", ldsr_tbl$cell_type, value = TRUE),
+  "Glu-UL", grep("^Glu-UL", ldsr_tbl$cell_type, value = TRUE),
+  "Glu-DL", grep("^Glu-DL", ldsr_tbl$cell_type, value = TRUE),
+  "GABA", grep("^GABA", ldsr_tbl$cell_type, value = TRUE),
+  "NPC", grep("^NPC", ldsr_tbl$cell_type, value = TRUE),
   "OPC", "MG", "Endo-Peri"
 ) |> unique()
 
