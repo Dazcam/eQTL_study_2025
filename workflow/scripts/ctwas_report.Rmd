@@ -62,13 +62,12 @@ TODO:
 ### Correction
 
 ```{r, get_gene_lists_for correction, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
-cell_types <- c(
-  "ExN-UL", "ExN-DL", "RG", "InN", "Endo-Peri", "OPC", "MG",
-  "ExN-UL-0", "ExN-UL-1", "ExN-UL-2",
-  "ExN-DL-0", "ExN-DL-1", "ExN-DL-2", "ExN-DL-3",
-  "InN-0", "InN-1",
-  "RG-0", "RG-1", "RG-2", "RG-3"
-)
+cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
+                    "MG", "OPC", "Endo-Peri",
+                    "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+                    "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
+                    "GABA-0", "GABA-1", "GABA-2",
+                    "NPC-0", "NPC-1", "NPC-2")
 
 weights_root <- "../../results/12CTWAS/weights"
 
