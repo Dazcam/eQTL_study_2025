@@ -149,7 +149,7 @@ combined_data <- map_dfr(cell_types, read_rds_file)
 combined_data %>%
   # Optionally, round numeric columns for clarity
   mutate(
-    p_value = signif(p_value, 3),
+    p_value = signif(pi1, 3),
     mean_permuted_overlap = round(mean_permuted_overlap, 1),
     fold_enrichment = round(fold_enrichment, 2),
     peak_cell_type = str_remove(peak_cell_type, '_MACSpeaks')
@@ -806,7 +806,7 @@ read_enrich_tbl <- function(ct, ref_ct) {
   
   expPC <- expPC_map_all[[ct]]
   expPCref <- expPC_map_all[[ref_ct]]
-  
+  print(ct, '.vs', ref_ct)
   file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
                       expPC ,"_expPCref_", expPCref, "_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
@@ -820,7 +820,7 @@ read_enrich_tbl <- function(ct, ref_ct) {
 }
 
 # Generate all combinations
-combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, stringsAsFactors = FALSE)
+combinations <- expand.grid(cell_type = cell_types_L1, ref_cell_type = cell_types_L1, stringsAsFactors = FALSE)
 
 # Read all enrich tables
 pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
@@ -991,7 +991,7 @@ read_enrich_tbl <- function(ct, ref_ct) {
 }
 
 # Generate all combinations
-combinations <- expand.grid(cell_type = cell_types, ref_cell_type = fugita_cell_types, stringsAsFactors = FALSE)
+combinations <- expand.grid(cell_type = cell_types_L1, ref_cell_type = fugita_cell_types, stringsAsFactors = FALSE)
 
 # Read all enrich tables
 pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
