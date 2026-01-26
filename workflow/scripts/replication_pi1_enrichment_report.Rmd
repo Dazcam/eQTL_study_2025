@@ -886,15 +886,13 @@ pi1_enrich_tbl %>%
 ***
 
 ```{r, interal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
-# Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
-    
+  
   expPC <- expPC_map_all[[ct]]
-  expPCref <- expPC_map_all[[ref_ct]]
+  ref_expPC <- expPC_map_all[[ref_ct]]
   
   file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
-                      expPC ,"_expPCref_", expPCref, "_pi1_results_tbl.rds")
-  
+                      expPC, "_expPCref_", ref_expPC,"_pi1_results_tbl.rds")
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
     
@@ -915,38 +913,42 @@ read_pi1_results <- function(ct, ref_ct) {
 }
 
 # Generate all combinations
-combinations <- expand.grid(cell_type = cell_types_L1, ref_cell_type = cell_types_L1, stringsAsFactors = FALSE)
+combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, stringsAsFactors = FALSE)
 
 # Read all pi1 results
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
 
-# Pivot for plotting
-pi1_long <- pi1_result_tbl %>%
-  select(cell_type, ref_cell_type, pi1_forward, pi1_reverse) %>%
-  pivot_longer(cols = c(pi1_forward, pi1_reverse),
-               names_to = "direction", values_to = "pi1") %>%
-  mutate(direction = recode(direction,
-                            pi1_forward = "Forward",
-                            pi1_reverse = "Reverse"))
+# Prepare data for Forward only (upper triangle including diagonal)
+pi1_forward_tbl <- pi1_result_tbl %>%
+  select(query = cell_type, ref = ref_cell_type, pi1 = pi1_forward) %>%
+  mutate(
+    pi1 = ifelse(query == ref, 1.0, pi1),  # diagonal = 1.0
+    row_idx = match(query, cell_types),
+    col_idx = match(ref, cell_types)
+  ) %>%
+  filter(row_idx <= col_idx)  # upper triangle including diagonal (opposite direction)
 
-# Split the data by direction
-pi1_forward_tbl <- pi1_long %>% filter(direction == "Forward")
-pi1_reverse_tbl <- pi1_long %>% filter(direction == "Reverse")
+# Force factor levels for correct ordering
+pi1_int_tbl <- pi1_forward_tbl %>%
+  mutate(
+    query = factor(query, levels = cell_types),
+    ref = factor(ref, levels = cell_types)
+  )
 
-# Function to generate a heatmap
-plot_pi1_heatmap <- function(df, title) {
-  ggplot(df, aes(x = cell_type, y = ref_cell_type, fill = pi1)) +
-  geom_tile(color = "black", lwd = 1.1, linetype = 1) +
-  geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
-            color = "black", size = 3.5) +
-    scale_fill_viridis_c(
-    option = "C",
-    direction = 1,
-    name = expression(pi[1]),
-    na.value = "white"   # blanks appear white
-  ) +
+# Updated heatmap function
+plot_int_heatmap <- function(df) {
+  ggplot(df, aes(x = ref, y = query, fill = pi1)) +
+    geom_tile(color = "black", lwd = 1.1, linetype = 1) +
+    geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
+              color = "black", size = 3.5) +
+    scale_fill_gradientn(
+      colours = c("white", "yellow", "red"),
+      limits = c(0.5, 1.0),
+      na.value = "grey80",
+      name = expression(pi[1])
+    ) +
     coord_equal() +
-    labs(x = "Cell type", y = "Cell type (Ref)", title = title) +
+    labs(x = "Cell type (Ref)", y = "Cell type (Query)") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -955,12 +957,8 @@ plot_pi1_heatmap <- function(df, title) {
     )
 }
 
-# Generate heatmaps
-heatmap_forward <- plot_pi1_heatmap(pi1_forward_tbl, "Forward")
-heatmap_reverse <- plot_pi1_heatmap(pi1_reverse_tbl, "Reverse")
-
-# Combine side by side
-plot_grid(heatmap_forward, heatmap_reverse, ncol = 2)
+# Generate only the forward heatmap (no title)
+pi1_int_heatmap <- plot_int_heatmap(pi1_int_tbl)
 ```
 
 ***
@@ -1059,8 +1057,7 @@ read_pi1_results <- function(ct, ref_ct) {
   
   expPC <- expPC_map_all[[ct]]
   
-  file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", expPC,"_pi1_results_tbl.rds")
-  
+  file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", expPC ,"_pi1_results_tbl.rds")
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
     
@@ -1081,10 +1078,7 @@ read_pi1_results <- function(ct, ref_ct) {
 }
 
 # Generate all combinations
-combinations <- expand.grid(cell_type = cell_types, ref_cell_type = fugita_cell_types, stringsAsFactors = FALSE)
-
-# Read all enrich tables
-pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
+combinations <- expand.grid(cell_type = cell_types_sub, ref_cell_type = fugita_cell_types, stringsAsFactors = FALSE)
 
 # Read all pi1 results
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
@@ -1100,36 +1094,32 @@ pi1_long <- pi1_result_tbl %>%
 
 # Split the data by direction
 pi1_forward_tbl <- pi1_long %>% filter(direction == "Forward")
-pi1_reverse_tbl <- pi1_long %>% filter(direction == "Reverse")
+
 
 # Function to generate a heatmap
-plot_pi1_heatmap <- function(df, title) {
-  ggplot(df, aes(x = cell_type, y = ref_cell_type, fill = pi1)) +
-  geom_tile(color = "black", lwd = 1.1, linetype = 1) +
-  geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
-            color = "black", size = 3.5) +
-    scale_fill_viridis_c(
-    option = "C",
-    direction = 1,
-    name = expression(pi[1]),
-    na.value = "white"   # blanks appear white
-  ) +
+plot_fugita_heatmap <- function(df) {
+  ggplot(df, aes(x = ref_cell_type, y = cell_type, fill = pi1)) +
+    geom_tile(color = "black", lwd = 1.1, linetype = 1) +
+    geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
+              color = "black", size = 3.5) +
+    scale_fill_gradientn(
+      colours = c("white", "yellow", "red"),
+      limits = c(0, 1.0),
+      na.value = "grey80",
+      name = expression(pi[1])
+    ) +
     coord_equal() +
-    labs(x = "Cell type", y = "Cell type (Ref)", title = title) +
+    labs(x = "Cell type (Ref)", y = "Cell type (Query)") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
       axis.text.y = element_text(face = "bold"),
       panel.grid = element_blank()
-    )
+    ) 
 }
 
 # Generate heatmaps
-heatmap_forward <- plot_pi1_heatmap(pi1_forward_tbl, "Forward")
-heatmap_reverse <- plot_pi1_heatmap(pi1_reverse_tbl, "Reverse")
-
-# Combine side by side
-plot_grid(heatmap_forward, heatmap_reverse, ncol = 2)
+pi1_fugita_heatmap <- plot_fugita_heatmap(pi1_forward_tbl)
 ```
 
 ***
