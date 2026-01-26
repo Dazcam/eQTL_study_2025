@@ -886,7 +886,7 @@ pi1_enrich_tbl %>%
 
 ***
 
-```{r, interal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
+```{r, interal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5)}
 read_pi1_results <- function(ct, ref_ct) {
   
   expPC <- expPC_map_all[[ct]]
@@ -960,6 +960,7 @@ plot_int_heatmap <- function(df) {
 
 # Generate only the forward heatmap (no title)
 pi1_int_heatmap <- plot_int_heatmap(pi1_int_tbl)
+pi1_int_heatmap 
 ```
 
 ***
@@ -1052,7 +1053,7 @@ pi1_enrich_tbl %>%
 
 ***
 
-```{r, fugita_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
+```{r, fugita_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5)}
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
   
@@ -1121,6 +1122,7 @@ plot_fugita_heatmap <- function(df) {
 
 # Generate heatmaps
 pi1_fugita_heatmap <- plot_fugita_heatmap(pi1_forward_tbl)
+pi1_fugita_heatmap
 ```
 
 ***
@@ -1129,7 +1131,7 @@ pi1_fugita_heatmap <- plot_fugita_heatmap(pi1_forward_tbl)
 
 ***
 
-```{r, beta_correlation, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
+```{r, beta_correlation, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5)}
 paired_betas <- read_tsv(paste0(beta_dir, 'replication_beta_correlation.tsv')) |>
   separate(key, into = c('snp', 'gene')) |>
   left_join(gene_lookup) |>
