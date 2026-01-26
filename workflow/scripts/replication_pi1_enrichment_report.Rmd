@@ -49,6 +49,45 @@ custom_palette <- c(
   "MG" = "#F58231",
   "OPC" = "#FDE725FF"
 )
+
+cell_types <- c(
+  "Glu-UL", "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+  "Glu-DL", "Glu-DL-0", "Glu-DL-1", "Glu-DL-2", 
+  "NPC", "NPC-0", "NPC-1", "NPC-2", 
+  "GABA", "GABA-0", "GABA-1", "GABA-2",
+  "Endo-Peri",
+  "OPC",
+  "MG"
+)
+
+cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+
+# Exp PC map
+expPC_map_all <- c(
+  "Glu-UL"     = 50,
+  "Glu-DL"     = 40,
+  "GABA"       = 30,
+  "NPC"        = 30,
+  "MG"         = 30,
+  "OPC"        = 30,
+  "Endo-Peri"  = 30,
+  "Glu-UL-0"     = 30,
+  "Glu-UL-1"     = 50,
+  "Glu-UL-2"     = 40,
+  "Glu-DL-0"     = 40,
+  "Glu-DL-1"     = 40,
+  "Glu-DL-2"     = 30,
+  "GABA-0"       = 30,
+  "GABA-1"       = 40,
+  "GABA-2"       = 40,
+  "NPC-0"        = 50,
+  "NPC-1"        = 30,
+  "NPC-2"        = 20
+)
+
+gene_lookup <- read_tsv('../../resources/sheets/gene_lookup_hg38.tsv') |>
+  select(gene = ensembl_gene_id, symbol = external_gene_name)
+
 ```
 
 ## eQTL replication pipeline steps {.tabset}
@@ -98,42 +137,6 @@ Test direction:
 ***
 
 ```{r, ziffra_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
-#ziffra_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/06QTL-REPLICATION/ziffra/'
-cell_types <- c(
-  "Glu-UL", "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-  "Glu-DL", "Glu-DL-0", "Glu-DL-1", "Glu-DL-2", 
-  "NPC", "NPC-0", "NPC-1", "NPC-2", 
-  "GABA", "GABA-0", "GABA-1", "GABA-2",
-  "Endo-Peri",
-  "OPC",
-  "MG"
-)
-
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-
-# Exp PC map
-expPC_map_all <- c(
-  "Glu-UL"     = 50,
-  "Glu-DL"     = 40,
-  "GABA"       = 30,
-  "NPC"        = 30,
-  "MG"         = 30,
-  "OPC"        = 30,
-  "Endo-Peri"  = 30,
-  "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,
-  "Glu-UL-2"     = 40,
-  "Glu-DL-0"     = 40,
-  "Glu-DL-1"     = 40,
-  "Glu-DL-2"     = 30,
-  "GABA-0"       = 30,
-  "GABA-1"       = 40,
-  "GABA-2"       = 40,
-  "NPC-0"        = 50,
-  "NPC-1"        = 30,
-  "NPC-2"        = 20
-)
-
 # Create a function to read and add cell_type identifier (optional)
 read_rds_file <- function(cell_type) {
   
