@@ -121,7 +121,7 @@ expPC_map_all <- c(
   "OPC"        = 30,
   "Endo-Peri"  = 30,
   "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,
+  "Glu-UL-1"     = 50,®
   "Glu-UL-2"     = 40,
   "Glu-DL-0"     = 40,
   "Glu-DL-1"     = 40,
@@ -889,7 +889,7 @@ read_pi1_results <- function(ct, ref_ct) {
   expPCref <- expPC_map_all[[ref_ct]]
   
   file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
-                      expPC ,"_expPCref_", expPCref, "_pi1_enrich_tbl.rds")
+                      expPC ,"_expPCref_", expPCref, "_pi1_results_tbl.rds")
   
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
@@ -912,9 +912,6 @@ read_pi1_results <- function(ct, ref_ct) {
 
 # Generate all combinations
 combinations <- expand.grid(cell_type = cell_types_L1, ref_cell_type = cell_types_L1, stringsAsFactors = FALSE)
-
-# Read all enrich tables
-pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
 
 # Read all pi1 results
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
