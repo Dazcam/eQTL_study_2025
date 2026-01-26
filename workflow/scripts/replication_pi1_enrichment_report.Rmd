@@ -109,6 +109,8 @@ cell_types <- c(
   "MG"
 )
 
+cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+
 # Exp PC map
 expPC_map_all <- c(
   "Glu-UL"     = 50,
