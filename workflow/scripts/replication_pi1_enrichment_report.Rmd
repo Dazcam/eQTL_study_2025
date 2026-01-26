@@ -911,7 +911,7 @@ read_pi1_results <- function(ct, ref_ct) {
 }
 
 # Generate all combinations
-combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, stringsAsFactors = FALSE)
+combinations <- expand.grid(cell_type = cell_types_L1, ref_cell_type = cell_types_L1, stringsAsFactors = FALSE)
 
 # Read all enrich tables
 pi1_enrich_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_enrich_tbl)
