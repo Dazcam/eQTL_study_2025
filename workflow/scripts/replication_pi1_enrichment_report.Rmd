@@ -194,7 +194,7 @@ combined_data %>%
 
 ***
 
-```{r, ziffra_enrichments_secondary, echo = FALSE, message = FALSE, warning = FALSE}
+```{r, ziffra_enrichments_secondary, echo = FALSE, message = FALSE, warning = FALSE, eval=FALSE}
 read_rds_file <- function(cell_type) {
   
   expPC <- expPC_map_all[[cell_type]]
