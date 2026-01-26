@@ -30,6 +30,7 @@ library(glue)
 library(gt)
 library(tidyverse)
 library(cowplot)
+library(ggrepel)
 obrien_dir <- params$obrien_dir
 ziffra_dir <- params$ziffra_dir
 ziffra_indep_dir <- params$ziffra_indep_dir
