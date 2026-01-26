@@ -149,7 +149,7 @@ combined_data <- map_dfr(cell_types, read_rds_file)
 combined_data %>%
   # Optionally, round numeric columns for clarity
   mutate(
-    p_value = signif(pi1, 3),
+    p_value = signif(p_value, 3),
     mean_permuted_overlap = round(mean_permuted_overlap, 1),
     fold_enrichment = round(fold_enrichment, 2),
     peak_cell_type = str_remove(peak_cell_type, '_MACSpeaks')
