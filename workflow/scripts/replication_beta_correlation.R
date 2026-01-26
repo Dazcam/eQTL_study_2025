@@ -67,12 +67,8 @@ expPC_map_all <- c(
   "NPC-2"        = 20
 )
 
-
-exp_PCs <- 40
 gen_PCs <- 4
 norm_method <- 'quantile' 
-
-
 
 fugita_cell_types <- c('Ast', 'Exc', 'Inh', 'Oli', 'OPC', 'Mic', 'End')
 
@@ -82,9 +78,9 @@ my_data_list <- list()
 message('Loading sig.eQTL data ...\n')
 for (cell_type in cell_types) {
   
-  expPC <- expPC_map_all[[ct]]
+  expPC <- expPC_map_all[[cell_type]]
   
-  log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', gen_PCs, '_expPC_', exp_PCs, '/')
+  log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', gen_PCs, '_expPC_', expPC, '/')
   file_path <- paste0(log_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
   
   # Read the file
