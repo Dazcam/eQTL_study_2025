@@ -1053,7 +1053,7 @@ pi1_enrich_tbl %>%
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
   
-  expPC <- expPC_map_all[[cell_type]]
+  expPC <- expPC_map_all[[ct]]
   
   file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", expPC,"_pi1_results_tbl.rds")
   
