@@ -41,6 +41,7 @@ output <- as.character(snakemake@output[[1]])
 out_dir <- dirname(output)
 processed_weights_dir <- file.path(out_dir, 'processed_weights/')
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
+threads <- snakemake@threads
 
 # Read in data
 message("\nLoading data ...\n")
@@ -200,8 +201,6 @@ LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas()
 
 # FUSION weights
 message('Preprocessing FUSION weights for cTWAS ...')
-
-
   
 message("\nFirst check if cTWAS processed weight file already exists ... ")
 weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', 
@@ -229,7 +228,7 @@ if (file.exists(weights_file)) {
                                 filter_protein_coding_genes = FALSE,
                                 scale_predictdb_weights = FALSE,
                                 load_predictdb_LD = FALSE,
-                                ncore = 6)
+                                ncore = threads)
   
 }
 
@@ -385,8 +384,8 @@ ctwas_res <- ctwas_sumstats(z_snp,
                             group_prior_var_structure = "shared_all", 
                             min_nonSNP_PIP = 0.5,
                             min_abs_corr = 0.1, 
-                            ncore = 16, 
-                            ncore_LD = 16,
+                            ncore = threads, 
+                            ncore_LD = threads,
                             save_cor = TRUE,
                             cor_dir = cor_dir,
                             force_compute_cor = FALSE)
