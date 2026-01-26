@@ -808,7 +808,6 @@ read_enrich_tbl <- function(ct, ref_ct) {
   
   expPC <- expPC_map_all[[ct]]
   expPCref <- expPC_map_all[[ref_ct]]
-  print(ct, '.vs', ref_ct)
   file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
                       expPC ,"_expPCref_", expPCref, "_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
