@@ -121,7 +121,7 @@ expPC_map_all <- c(
   "OPC"        = 30,
   "Endo-Peri"  = 30,
   "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,®
+  "Glu-UL-1"     = 50,
   "Glu-UL-2"     = 40,
   "Glu-DL-0"     = 40,
   "Glu-DL-1"     = 40,
