@@ -1147,6 +1147,15 @@ paired_betas <- read_tsv(paste0(beta_dir, 'replication_beta_correlation.tsv')) |
   ungroup() |>
   distinct()
 
+cor_val <- cor(
+  paired_betas$beta_my,
+  paired_betas$beta_fugita,
+  use = "complete.obs",
+  method = "pearson"
+)
+
+cor_label <- sprintf("Pearson r = %.2f", cor_val)
+
 # Fit lm
 model <- lm(beta_my ~ beta_fugita, data = paired_betas)
 
