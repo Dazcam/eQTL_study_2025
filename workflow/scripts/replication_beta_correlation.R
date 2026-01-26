@@ -177,7 +177,7 @@ pooled_fugita
 
 # Join with your pooled data for paired betas
 paired_betas <- pooled_my %>%
-  GABAer_join(pooled_fugita, by = c('key')) %>%
+  inner_join(pooled_fugita, by = c('key')) %>%
   select(key, beta_my, beta_fugita)
 message('Number of overlapping SNP-gene pairs: ', nrow(paired_betas))
 message('Paired betas tbl:\n')
