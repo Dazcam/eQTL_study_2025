@@ -804,8 +804,8 @@ combined_plot
 ```{r, Internal_enrichments, echo = FALSE, message = FALSE, warning = FALSE}
 read_enrich_tbl <- function(ct, ref_ct) {
   
-  expPC <- expPC_map_all[[cell_type]]
-  expPCref <- expPC_map_all[[cell_type]]
+  expPC <- expPC_map_all[[ct]]
+  expPCref <- expPC_map_all[[ref_ct]]
   
   file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
                       expPC ,"_expPCref_", expPCref, "_pi1_enrich_tbl.rds")
@@ -884,8 +884,8 @@ pi1_enrich_tbl %>%
 # Function to read pi1 results
 read_pi1_results <- function(ct, ref_ct) {
     
-  expPC <- expPC_map_all[[cell_type]]
-  expPCref <- expPC_map_all[[cell_type]]
+  expPC <- expPC_map_all[[ct]]
+  expPCref <- expPC_map_all[[ref_ct]]
   
   file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
                       expPC ,"_expPCref_", expPCref, "_pi1_enrich_tbl.rds")
@@ -977,7 +977,7 @@ fugita_cell_types <- c('Ast', 'Exc', 'Inh', 'Oli', 'OPC', 'Mic', 'End')
 
 read_enrich_tbl <- function(ct, ref_ct) {
   
-    expPC <- expPC_map_all[[cell_type]]
+    expPC <- expPC_map_all[[ct]]
   
   file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", expPC, "_pi1_enrich_tbl.rds")
   if (file.exists(file_path)) {
