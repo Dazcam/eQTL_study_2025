@@ -154,7 +154,7 @@ read_rds_file <- function(cell_type) {
 # Read all files and bind rows
 combined_data <- map_dfr(cell_types, read_rds_file)
 
-dir.create(combined_data)
+dir.create(tbl_dir)
 write_tsv(combined_data, paste0(tbl_dir, "ziffra_overlaps_primary.tsv"))
 
 # Assume your data is in combined_data
