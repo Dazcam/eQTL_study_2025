@@ -14,6 +14,7 @@ params:
   fugita_dir: null
   internal_dir: null
   beta_dir: null
+  tbl_dir: null
   bmark_dir: null
 ---
 
@@ -40,6 +41,7 @@ bryois_dir <- params$bryois_dir
 fugita_dir <- params$fugita_dir
 internal_dir <- params$internal_dir
 beta_dir <- params$beta_dir
+tbl_dir <- params$tbl_dir
 
 custom_palette <- c(
   "RG" = "#FF5959",
@@ -193,6 +195,8 @@ combined_data %>%
     font = list(default_fonts())
   )
 
+dir.create(combined_data)
+write_tsv(combined_data, paste0(tbl_dir, "ziffra_overlaps_primary.tsv"))
 ```
 
 ***
