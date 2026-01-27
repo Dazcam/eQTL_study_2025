@@ -8,6 +8,7 @@ output:
 params:
   cell_types: null
   in_dir: null
+  tbl_dir: null
   p_smr: null
   p_heidi: null
   bmark_dir: null
@@ -33,6 +34,7 @@ library(cowplot)
 # Set variables from params
 cell_types <- params$cell_types
 in_dir <- params$in_dir
+tbl_dir <- params$tbl_dir
 p_smr <- as.numeric(params$p_smr)
 p_heidi <- as.numeric(params$p_heidi)
 bmark_dir <- params$bmark_dir
@@ -252,6 +254,12 @@ sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
    distinct()
+
+final_tbl <- all_sig_results |>
+  select(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
+         SNP = topSNP, A1, A2, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
+         `NSNP HEIDI` = nsnp_HEIDI)
+write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
