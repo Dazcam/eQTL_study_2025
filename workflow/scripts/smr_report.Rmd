@@ -255,7 +255,7 @@ sig_tbl <- all_sig_results |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
    distinct()
 
-final_tbl <- all_sig_results |>
+final_tbl <- sig_tbl |>
   select(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
          SNP = topSNP, A1, A2, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
          `NSNP HEIDI` = nsnp_HEIDI)
