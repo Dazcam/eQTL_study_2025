@@ -1135,6 +1135,8 @@ pi1_fugita_heatmap
 
 ### Beta correlation {.tabset}
 
+***
+
 ```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=5, fig.height=5, results='asis'}
 beta_files <- c(
   "All"    = "replication_beta_correlation.tsv",
@@ -1230,9 +1232,9 @@ beta_files <- file.path(beta_dir, beta_files)
 
 for (nm in names(beta_files)) {
 
-  cat("#### ", nm, "\n\n")
+  cat(" \n####", nm, "\n", sep = "")
 
-  print(
+  plot(
     make_beta_cor_plot(
       tbl_path   = beta_files[[nm]],
       gene_lookup = gene_lookup,
@@ -1240,7 +1242,7 @@ for (nm in names(beta_files)) {
     )
   )
 
-  cat("\n\n")
+  cat(" \n")
 }
 ```
 
