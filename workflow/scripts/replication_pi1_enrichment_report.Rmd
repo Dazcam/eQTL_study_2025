@@ -1135,8 +1135,6 @@ pi1_fugita_heatmap
 
 ### Beta correlation {.tabset}
 
-***
-
 ```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=5, fig.height=5, results='asis'}
 beta_files <- c(
   "All"    = "replication_beta_correlation.tsv",
