@@ -1137,12 +1137,12 @@ pi1_fugita_heatmap
 
 ***
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=5, fig.height=5, results='asis'}
+```{r, beta_corr, echo = FALSE, message = FALSE, warning = FALSE, fig.width=5, fig.height=5, results='asis'}
 beta_files <- c(
-  "All"    = "replication_beta_correlation.tsv",
-  "GABA"   = "GABA_beta_cor_single_tbl.tsv",
-  "Glu-DL" = "Glu-DL_beta_cor_single_tbl.tsv",
-  "Glu-UL" = "Glu-UL_beta_cor_single_tbl.tsv"
+  "All"    = paste0(beta_dir, "replication_beta_correlation.tsv"),
+  "GABA"   = paste0(beta_dir, "GABA_beta_cor_single_tbl.tsv"),
+  "Glu-DL" = paste0(beta_dir, "Glu-DL_beta_cor_single_tbl.tsv"),
+  "Glu-UL" = paste0(beta_dir, "Glu-UL_beta_cor_single_tbl.tsv")
 )
 
 make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
@@ -1227,14 +1227,11 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
     )
 }
 
-
-beta_files <- file.path(beta_dir, beta_files)
-
 for (nm in names(beta_files)) {
 
   cat(" \n####", nm, "\n", sep = "")
 
-  plot(
+  print(
     make_beta_cor_plot(
       tbl_path   = beta_files[[nm]],
       gene_lookup = gene_lookup,
@@ -1242,7 +1239,7 @@ for (nm in names(beta_files)) {
     )
   )
 
-  cat(" \n")
+  cat(" \n\n")
 }
 ```
 
