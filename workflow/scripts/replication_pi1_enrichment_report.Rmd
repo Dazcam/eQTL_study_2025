@@ -1133,7 +1133,11 @@ pi1_fugita_heatmap
 
 ***
 
-### Beta correlation
+### Beta correlation {.tabset}
+
+***
+
+#### All
 
 ***
 
@@ -1206,6 +1210,121 @@ beta_cor_plt <- ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
         axis.title   = element_text(face = "bold"),
         plot.margin  = margin(t = 20, r = 35, b = 30, l = 25, unit = "pt"))
 beta_cor_plt
+```
+
+***
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=5, fig.height=5}
+beta_dir <- "../results/06QTL-REPLICATION/beta_cor/"
+
+beta_files <- c(
+  "GABA"   = "GABA_beta_cor_single_tbl.tsv",
+  "Glu-DL" = "Glu-DL_beta_cor_single_tbl.tsv",
+  "Glu-UL" = "Glu-UL_beta_cor_single_tbl.tsv"
+)
+
+library(tidyverse)
+library(ggrepel)
+
+make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
+
+  paired_betas <- read_tsv(tbl_path, show_col_types = FALSE) |>
+    separate(key, into = c("snp", "gene")) |>
+    left_join(gene_lookup, by = "gene") |>
+    group_by(gene) |>
+    slice_max(abs(beta_my), n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    distinct()
+
+  ## Correlation
+  cor_val <- cor(
+    paired_betas$beta_my,
+    paired_betas$beta_fugita,
+    use = "complete.obs",
+    method = "pearson"
+  )
+
+  cor_label <- sprintf("Pearson r = %.2f", cor_val)
+
+  ## Linear model
+  model <- lm(beta_my ~ beta_fugita, data = paired_betas)
+
+  paired_betas <- paired_betas |>
+    mutate(
+      .resid = resid(model),
+      .dist  = abs(.resid),
+      discordant = sign(beta_my) != sign(beta_fugita) &
+                   !is.na(beta_my) & !is.na(beta_fugita),
+      label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol),
+      is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),
+      should_label = is_strong_outlier | discordant
+    )
+
+  ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
+    geom_point(alpha = 0.2, color = "grey70", size = 1.4) +
+    geom_point(
+      data = filter(paired_betas, is_strong_outlier & discordant),
+      color = "#d32f2f", size = 2, alpha = 0.5
+    ) +
+    geom_point(
+      data = filter(paired_betas, is_strong_outlier & !discordant),
+      color = "#1976d2", size = 2, alpha = 0.5
+    ) +
+    geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 0.9) +
+    geom_abline(
+      slope = 1, intercept = 0, linetype = "dashed",
+      color = "grey50", linewidth = 0.5
+    ) +
+    geom_text_repel(
+      data = filter(paired_betas, should_label),
+      aes(label = label_text),
+      size = 3.1,
+      fontface = "bold",
+      box.padding = 0.45,
+      point.padding = 0.5,
+      segment.color = "grey50",
+      segment.size = 0.25,
+      min.segment.length = 0,
+      max.overlaps = 25,
+      force = 1.5,
+      force_pull = 0.8,
+      direction = "both",
+      seed = 2025
+    ) +
+    annotate(
+      "text", x = Inf, y = Inf, label = cor_label,
+      hjust = 2.3, vjust = 3, size = 5, fontface = "bold"
+    ) +
+    labs(
+      title = title,
+      x = "Beta (Fujita)",
+      y = "Beta (eGenes)"
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      axis.title = element_text(face = "bold"),
+      plot.margin = margin(20, 35, 30, 25, unit = "pt")
+    )
+}
+
+
+beta_files <- file.path(beta_dir, beta_files)
+
+for (nm in names(beta_files)) {
+
+  cat("#### ", nm, "\n\n")
+
+  print(
+    make_beta_cor_plot(
+      tbl_path   = beta_files[[nm]],
+      gene_lookup = gene_lookup,
+      title       = paste("Beta correlation:", nm)
+    )
+  )
+
+  cat("\n\n")
+}
 ```
 
 ***
