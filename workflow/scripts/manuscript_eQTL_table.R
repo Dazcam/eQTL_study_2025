@@ -35,6 +35,7 @@ in_dir <- snakemake@params[["in_dir"]]
 out_file <- snakemake@output[[1]]
 
 norm_method <- 'quantile'
+genPC <- 4
 
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
                 "MG", "OPC", "Endo-Peri",
