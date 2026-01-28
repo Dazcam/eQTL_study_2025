@@ -34,6 +34,8 @@ allele_file <- snakemake@params[["allele_file"]]
 in_dir <- snakemake@params[["in_dir"]]
 out_file <- snakemake@output[[1]]
 
+norm_method <- 'quantile'
+
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
                 "MG", "OPC", "Endo-Peri",
                 "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
@@ -62,6 +64,7 @@ expPC_map <- c(
   "NPC-1"        = 30,
   "NPC-2"        = 20
 )
+
 
 # ----- 1. Load ATAC-seq Peaks (Ziffra 2021) -----
 message("Loading Ziffra peak data...")
