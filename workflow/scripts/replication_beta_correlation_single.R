@@ -52,13 +52,15 @@ celltype_map <- tibble(
 
 paired_results <- list()
 
-message('Loading sig.eQTL data ...\n')
 for (i in seq_len(nrow(celltype_map))) {
   
   my_ct <- celltype_map$my_cell[i]
   fu_ct <- celltype_map$fugita_cell[i]
   expPC <- expPC_map_all[[my_ct]]
   
+  message('\n\nGenerating beta cor table for', my_ct, ' and ', fu_ct,'\n')
+  
+  message('Loading sig.eQTL data for', my_ct,'\n')
   log_dir <- paste0(in_dir, my_ct, '_', norm_method, '_genPC_', gen_PCs, '_expPC_', expPC, '/')
   file_path <- paste0(log_dir, my_ct, '_', norm_method, '_perm.cis_qtl.txt.gz')
   
@@ -67,7 +69,7 @@ for (i in seq_len(nrow(celltype_map))) {
     filter(qval < 0.05) %>%
     select(snp = variant_id, gene = phenotype_id, beta = slope) %>%
     filter(str_detect(snp, "^rs"), str_detect(gene, "^ENSG"))
-  message('\nSig. eQTL in ', my_ct, ':', nrow(df_sig), '\n')
+  message('\nSig. eQTL in ', my_ct, ': ', nrow(df_sig), '\n')
   
   # Pool: for dup SNP-gene, keep largest abs(beta)
   pooled_my <- df_sig %>%
@@ -81,7 +83,7 @@ for (i in seq_len(nrow(celltype_map))) {
   message('Pooled sig. eQTL after dup rm : ', nrow(pooled_my))
   message('Any NAs in pooled sig. eQTL? ', anyNA(pooled_my))
   message('\nPooled sig. eQTL tbl:\n')
-  pooled_my
+  print(pooled_my)
 
   message('\nLoading Fugita data ...\n')
 
@@ -116,7 +118,7 @@ for (i in seq_len(nrow(celltype_map))) {
   message('\nFugita SNP-gene pairs after dup rm: ', nrow(pooled_fugita))
   message('Any NAs in pooled Fugita data? ', anyNA(pooled_fugita))
   message('\nPooled Fugita tbl:\n')
-  pooled_fugita
+  print(pooled_fugita)
 
   # Join with your pooled data for paired betas
   paired_betas <- pooled_my %>%
@@ -124,11 +126,13 @@ for (i in seq_len(nrow(celltype_map))) {
     select(key, beta_my, beta_fugita)
   paired_results[[my_ct]] <- paired_betas
   message('Number of overlapping SNP-gene pairs: ', nrow(paired_betas))
+  message('Any NAs in paired betas tbl? ', anyNA(paired_betas))
   message('Paired betas tbl:\n')
-  paired_betas
+  print(paired_betas)
   
-  message('Writing tbl to:', out_file)
-  write_tsv(paired_betas, paste0(out_dir, my_ct, ".tsv"))
+  message('Writing tbl to:', file.path(out_dir, paste0(my_ct, "_beta_cor_single_tbl.tsv")))
+  write_tsv(paired_betas, file.path(out_dir, paste0(my_ct, "_beta_cor_single_tbl.tsv")))
+                                    
   
 }
 
