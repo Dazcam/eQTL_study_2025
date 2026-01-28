@@ -1214,17 +1214,12 @@ beta_cor_plt
 
 ***
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=5, fig.height=5}
-beta_dir <- "../results/06QTL-REPLICATION/beta_cor/"
-
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=5, fig.height=5, results='asis'}
 beta_files <- c(
   "GABA"   = "GABA_beta_cor_single_tbl.tsv",
   "Glu-DL" = "Glu-DL_beta_cor_single_tbl.tsv",
   "Glu-UL" = "Glu-UL_beta_cor_single_tbl.tsv"
 )
-
-library(tidyverse)
-library(ggrepel)
 
 make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
 
