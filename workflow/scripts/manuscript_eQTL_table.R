@@ -30,7 +30,7 @@ library(GenomicRanges)
 library(openxlsx)
 
 peak_dir <- snakemake@params[["peak_dir"]]
-allele_file <- snakemake@params[["peak_dir"]]
+allele_file <- snakemake@params[["allele_file"]]
 in_dir <- snakemake@params[["in_dir"]]
 out_file <- snakemake@output[[1]]
 
