@@ -27,7 +27,7 @@ lookup_dir <- params$lookup_dir
 # lookup_dir <- '~/Desktop/eQTL_study_2025/resources/sheets/'
 # bmark_dir <- ''
 
-gwas <- c("scz", "bpd", "mdd", "adhd", "ocd", "ptsd")
+gwas <- c("scz", "bpd", "mdd", "adhd", "ocd")
 gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
