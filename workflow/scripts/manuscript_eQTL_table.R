@@ -85,7 +85,7 @@ pvar <- read_tsv(allele_file, comment = "#",
   dplyr::select(CHROM, POS, ID, REF, ALT)
 
 # ----- 3. Iterate through Cell Types and Build Table -----
-final_results_list <- list()
+final_excel_list <- list()
 
 for (cell_type in names(expPC_map)) {
   expPC <- expPC_map[[cell_type]]
@@ -141,14 +141,14 @@ for (cell_type in names(expPC_map)) {
     dplyr::select(cell_type, gene, SNP, ALT, REF, AF = af, 
                   slope, slope_se, p_value, In_Peak)
   
-  final_results_list[[cell_type]] <- eqtl_enriched
+  final_excel_list[[cell_type]] <- eqtl_enriched
   message("Processed ", cell_type, ": ", nrow(eqtl_enriched), " eQTLs")
 }
 
 # Combine and Export
 message("Writing to Excel file...")
 write.xlsx(final_excel_list, 
-           file = "Supplementary_Table_snEqtl_Results.xlsx", 
+           file = out_file, 
            overwrite = TRUE,
            headerStyle = createStyle(textDecoration = "bold"))
 
