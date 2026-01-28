@@ -113,6 +113,11 @@ for (cell_type in names(expPC_map)) {
   eqtl_enriched <- eqtl_tbl %>%
     inner_join(pvar, by = c("SNP" = "ID"))
   
+  message('Adding chr prefix to eQTL tbl ...')
+  eqtl_enriched <- eqtl_enriched %>%
+    mutate(CHROM = ifelse(!str_detect(CHROM, "chr"), paste0("chr", CHROM), CHROM)) %>% 
+    drop_na(CHROM, POS)
+  
   # Define SNP positions as GRanges for overlap check
   message('Converting to GRanges ...')
   snp_gr <- GRanges(
