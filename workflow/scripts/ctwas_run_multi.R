@@ -29,6 +29,7 @@ message('\n\nRunning causal TWAS ...')
 library(tidyverse)
 library(ctwas)
 
+
 # Input and output paths
 gwas <- snakemake@input[['gwas']] # From 07prep_gwas.smk
 weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat files
@@ -47,7 +48,7 @@ message("weights_dir loaded from: ", weights_dir)
 message("bim file loaded from: ", bim_file)
 message("cell_types: ", cell_types)
 message("Output will be saved to: ", output)
-message("Processed weights will be saved to: ", processed_weights_dir)
+message("Processed weights will be save to: ", processed_weights_dir)
 message("Correlation matrices will be saved to: ", cor_dir)
 
 # Prep GWAS
@@ -181,140 +182,50 @@ res <- create_snp_LD_map(region_metatable)
 snp_map <- res$snp_map
 LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas() later
 
-
-# Define QC function
-qc_ctwas_weights <- function(weights, z_snp, ld_threshold = 0.9999) {
-  
-  results <- vector("list", length(weights))
-  names(results) <- names(weights)
-  counter <- 1
-  total <- length(weights)
-  
-  for (gene_id in names(weights)) {
-    g <- weights[[gene_id]]
-    cat("Checking gene", counter, "of", total, ":", gene_id, "...\n")
-    counter <- counter + 1
-    
-    # ----------------------------------------------------
-    # 1. Basic structure checks
-    # ----------------------------------------------------
-    if (is.null(g$wgt) || !is.matrix(g$wgt)) {
-      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "wgt_not_matrix")
-      next
-    }
-    if (is.null(g$R_wgt)) {
-      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "R_wgt_NULL")
-      next
-    }
-    if (!is.matrix(g$R_wgt)) {
-      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "R_wgt_not_matrix")
-      next
-    }
-    
-    wgt <- as.matrix(g$wgt)
-    R <- as.matrix(g$R_wgt)
-    
-    # Must be numeric
-    if (!is.numeric(wgt) || !is.numeric(R)) {
-      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "non_numeric")
-      next
-    }
-    
-    # ----------------------------------------------------
-    # 2. Dimensionality checks
-    # ----------------------------------------------------
-    if (nrow(R) != ncol(R)) {
-      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "R_wgt_not_square")
-      next
-    }
-    if (nrow(wgt) != nrow(R)) {
-      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "dim_mismatch")
-      next
-    }
-    
-    # ----------------------------------------------------
-    # 3. SNP matching
-    # ----------------------------------------------------
-    snps <- rownames(wgt)
-    idx <- match(snps, z_snp$id)
-    if (any(is.na(idx))) {
-      results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "SNP_missing_in_z")
-      next
-    }
-    zvec <- z_snp$z[idx]
-    
-    # ----------------------------------------------------
-    # 4. Perfect LD detection
-    # ----------------------------------------------------
-    if (nrow(R) > 1) {
-      offdiag <- abs(R[upper.tri(R)])
-      if (any(offdiag > ld_threshold)) {
-        results[[gene_id]] <- list(id = gene_id, status = "FAIL", reason = "perfect_LD")
-        next
-      }
-    }
-    
-    # ----------------------------------------------------
-    # 5. Run the exact compute_gene_z math
-    # ----------------------------------------------------
-    res <- tryCatch({
-      storage.mode(wgt) <- "double"
-      storage.mode(R) <- "double"
-      storage.mode(zvec) <- "double"
-      
-      denom <- sqrt(as.numeric(t(wgt) %*% R %*% wgt))
-      num <- as.numeric(crossprod(wgt, zvec))
-      z <- num / denom
-      
-      if (!is.finite(z)) stop("computed z is not finite")
-      
-      list(id = gene_id, status = "PASS", z = z)
-    }, error = function(e) {
-      list(id = gene_id, status = "FAIL", reason = paste("compute_error:", conditionMessage(e)))
-    })
-    
-    results[[gene_id]] <- res
-  }
-  
-  # Convert list → tibble
-  qc_tbl <- tibble::tibble(
-    gene = names(results),
-    status = sapply(results, function(x) x$status),
-    reason = sapply(results, function(x) if ("reason" %in% names(x)) x$reason else NA_character_)
-  )
-  
-  return(qc_tbl)
-}
-
-
-
-
 # FUSION weights
 weights_list <- list()  # To hold combined weights
 message('Preprocessing FUSION weights for multi-group cTWAS ...')
 for (ct in cell_types) {
   message("\nProcessing weights for context: ", ct)
   
-  message("\nFirst check if cTWAS processed weight file already exists ... ")
-  output_orig_dir <- '../results/12CTWAS/output/'
-  weights_file <- str_glue(output_orig_dir, 'processed_weights/processed_weights_', ct, '_', gwas_trait, '.rds')
+  skip_pairs <- list(
+    "NPC" = c("adhd"),
+    "GABA-2" = c("ocd", "bpd", "adhd"),
+    "Glu-UL-2" = c("adhd", "ocd")
+  )
   
-  if (file.exists(weights_file)) {
+  if (ct %in% names(skip_pairs) && gwas_trait %in% skip_pairs[[ct]]) {
+    message(str_glue("Skipping problematic pair: {ct} - {gwas_trait}"))
+    next}
+  
+  
+  message("\nFirst check if cTWAS processed weight file already exists ... ")
+  weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', ct, '_', gwas_trait, '.rds')
+  weights_file_mult <- file.path(processed_weights_dir, str_glue('processed_weights_', ct, '_', gwas_trait, '.rds'))
+  
+  
+  if (file.exists(weights_file) || file.exists(weights_file_mult)) {
     message("Yes! Loading processed weight file ...")
-    ct_weights <- read_rds(weights_file)
+    
+    file_to_load <- if (file.exists(weights_file)) weights_file else weights_file_mult
+    
+    ct_weights <- read_rds(file_to_load)
+    weights_list <- c(weights_list, ct_weights)
+    
   } else {
+    
     message("No! Generating cTWAS ready weights ...")
     ct_weights_dir <- file.path(weights_dir, ct)
     
     ct_weights <- preprocess_weights(ct_weights_dir,
                                      region_info,
                                      gwas_snp_ids = z_snp$id,
-                                     snp_map = snp_map,
-                                     LD_map = LD_map,
+                                     snp_map = snp_map, # Need
+                                     LD_map = LD_map, # Need
                                      type = "expression",
                                      context = ct,
                                      weight_format = "FUSION",
-                                     fusion_method = "lasso",
+                                     fusion_method = "lasso", # Run Lasso for now
                                      fusion_genome_version = "b38",
                                      top_n_snps = NULL,
                                      drop_strand_ambig = TRUE,
@@ -322,35 +233,13 @@ for (ct in cell_types) {
                                      scale_predictdb_weights = FALSE,
                                      load_predictdb_LD = FALSE,
                                      ncore = 4)
+    
+    weights_list <- c(weights_list, ct_weights)
+  
   }
   
-  # Run QC
-  message("=== Running full gene-by-gene QC for context: ", ct, " before cTWAS ===")
-  qc_tbl <- qc_ctwas_weights(ct_weights, z_snp)
-  
-  message("\n=== QC Summary for ", ct, " ===")
-  print(qc_tbl %>% count(status, reason), n = Inf)
-  
-  failed_genes <- qc_tbl %>% filter(status == "FAIL") %>% pull(gene)
-  passed_genes <- qc_tbl %>% filter(status == "PASS") %>% pull(gene)
-  
-  message("\nDropping ", length(failed_genes), " genes failing QC in ", ct, ".")
-  message("Keeping ", length(passed_genes), " genes in ", ct, ".")
-  
-  ct_weights_clean <- ct_weights[passed_genes]
-  
-  # Save QC table
-  qc_file <- file.path(out_dir, paste0("ctwas_weight_qc_multi_", ct, "_", gwas_trait, ".tsv"))
-  readr::write_tsv(qc_tbl, qc_file)
-  message("QC report saved to: ", qc_file)
-  
-  # Overwrite processed file with cleaned version (important!)
-  write_rds(ct_weights_clean, weights_file)
-  message("Cleaned weights saved to: ", weights_file)
-  
-  # Only add the cleaned version to the list
-  weights_list <- c(weights_list, ct_weights_clean)
 }
+
 
 message('Writing multi-group cTWAS weights for plotting later ...')
 write_rds(weights_list, paste0(out_dir, 'processed_weights_multi_', gwas_trait, '.rds'))
