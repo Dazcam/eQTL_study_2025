@@ -100,7 +100,7 @@ for (cell_type in names(expPC_map)) {
   }
   
   # Load significant eQTL
-  message('Loading eQTL perm file for:', cell_type)
+  message('\nLoading eQTL perm file for:', cell_type)
   eqtl_tbl <- read_tsv(log_file, show_col_types = FALSE) %>%
     dplyr::filter(qval < 0.05) %>%
     dplyr::select(gene = phenotype_id, SNP = variant_id, af, 
