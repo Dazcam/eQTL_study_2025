@@ -1229,7 +1229,7 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
 
 for (nm in names(beta_files)) {
 
-  cat(" \n####", nm, "\n", sep = "")
+  cat(" \n#### ", nm, "\n", sep = "")
 
   print(
     make_beta_cor_plot(
