@@ -265,7 +265,7 @@ for (g in gwas) {
     font = list(default_fonts())
   )
   print(finemap_tbl)
-  results_multi_lst[[paste(g, ct, sep = "_")]] <- finemap_res
+  results_multi_lst[[g]] <- finemap_res
   }
     
 }
