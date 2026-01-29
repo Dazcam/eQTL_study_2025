@@ -66,6 +66,9 @@ expPC_map <- c(
   "NPC-2"        = 20
 )
 
+gene_lookup_file <- '../resources/sheets/gene_lookup_hg38.tsv'
+gene_lookup_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
+  select(ensembl_gene_id, external_gene_name)
 
 # ----- 1. Load ATAC-seq Peaks (Ziffra 2021) -----
 message("Loading Ziffra peak data...")
@@ -103,8 +106,8 @@ for (cell_type in names(expPC_map)) {
   message('\nLoading eQTL perm file for:', cell_type)
   eqtl_tbl <- read_tsv(log_file, show_col_types = FALSE) %>%
     dplyr::filter(qval < 0.05) %>%
-    dplyr::select(gene = phenotype_id, SNP = variant_id, af, 
-                  p_value = pval_nominal, slope, slope_se)
+    dplyr::select(ensembl_id = phenotype_id, SNP = variant_id, af, 
+                  p_value = pval_nominal, qval, slope, slope_se)
   
   if (nrow(eqtl_tbl) == 0) next
   
@@ -139,12 +142,13 @@ for (cell_type in names(expPC_map)) {
     # Optional: eqtl_enriched <- drop_na(eqtl_enriched) 
   }
   
-  # Add cell type label and reorder columns
+  # Add cell type label, gene symbol and reorder columns
   message('Munging tbl ...')
   eqtl_enriched <- eqtl_enriched %>%
     mutate(cell_type = !!cell_type) %>%
-    dplyr::select(cell_type, gene, SNP, ALT, REF, AF = af, 
-                  slope, slope_se, p_value, In_Peak)
+    inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
+    dplyr::select(cell_type, ensembl_id, symbol = external_gene_name, 
+                  SNP, REF, ALT,  AF = af, slope, slope_se, p_value, qval, In_Peak)
   
   final_excel_list[[cell_type]] <- eqtl_enriched
   message("Processed ", cell_type, ": ", nrow(eqtl_enriched), " eQTLs")
