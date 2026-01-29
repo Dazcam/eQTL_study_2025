@@ -32,7 +32,7 @@ library(ggrepel)
 
 # --- Set variables
 
-gwas <- snakemake@params[['in_dir']] 
+in_dir <- snakemake@params[['in_dir']] 
 out_file <- snakemake@output[[1]] 
 
 #in_dir <- "../results/05TENSORQTL/tensorqtl_perm/"
