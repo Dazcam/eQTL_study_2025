@@ -280,7 +280,7 @@ pi1_forward_tbl <- pi1_long %>%
   filter(direction == "Forward",
     (
       (ref_cell_type == "Exc" & (cell_type == "Glu-UL" | cell_type == "Glu-DL" | cell_type == "GABA")) |
-        (ref_cell_type == "Inh" (cell_type == "Glu-UL" | cell_type == "Glu-DL" | cell_type == "GABA"))
+        (ref_cell_type == "Inh" & (cell_type == "Glu-UL" | cell_type == "Glu-DL" | cell_type == "GABA"))
     )
   )
 
