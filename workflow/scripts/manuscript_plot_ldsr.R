@@ -171,9 +171,9 @@ final_plot <- plot_grid(
   rel_heights = c(0.4, 0.6)  # adjust if Level 2 has many more rows
 )
 
-# 1. PDF (best for publications: vector, scalable, crisp text)
+# 1. PDF 
 ggsave(
-  filename = paste0(out_file),
+  filename = out_file,
   plot = final_plot,
   width = 10,      # inches, good for full-page width in papers
   height = 6,     # adjust if needed (depends on number of subclusters)
@@ -182,9 +182,9 @@ ggsave(
   dpi = 300
 )
 
-# 2. High-resolution PNG (for quick viewing, presentations, or supplements)
+# 2. High-res PNG 
 # ggsave(
-#   filename = paste0(out_dir, "ldsr_stratified_levels_publication.png"),
+#   filename = out_file,
 #   plot = final_plot,
 #   width = 10,
 #   height = 6,
