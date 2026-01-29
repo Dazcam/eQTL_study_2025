@@ -9,6 +9,7 @@ params:
   in_dir: null
   bmark_dir: null
   lookup_dir: null
+  tbl_dir: null
 ---
 
 ***
@@ -16,24 +17,20 @@ params:
 ```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(gt)
 library(tidyverse)
-#library(ctwas)
-#library(EnsDb.Hsapiens.v86)
 library(cowplot)
+library(openxlsx)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
-lookup_dir <- params$lookup_dir 
-
-# in_dir <- '~/Desktop/test/ctwas/'
-# lookup_dir <- '~/Desktop/eQTL_study_2025/resources/sheets/'
-# bmark_dir <- ''
+lookup_dir <- params$lookup_dir
+tbl_dir <- params$tbl_dir
 
 gwas <- c("scz", "bpd", "mdd", "adhd", "ocd")
 gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
-#gwas_n <- 126849 # scz approx - need to pull from ctwas_run
 
-#ens_db <- EnsDb.Hsapiens.v86
+results_multi_lst <- list()
+results_single_lst <- list()
 ```
 
 ***
@@ -268,10 +265,117 @@ for (g in gwas) {
     font = list(default_fonts())
   )
   print(finemap_tbl)
-  
+  results_single_lst[[paste(g, ct, sep = "_")]] <- finemap_res
   }
     
 }
+
+openxlsx::write.xlsx(
+  x = results_single_lst,
+  file = file.path(tbl_dir, "ctwas_multi_tbl.xlsx"),
+  overwrite = TRUE
+)
+```
+
+***
+
+#### Single {.tabset}
+
+***
+
+#### Fine-mapping {.tabset}
+
+***
+
+```{r ctwas_fine_mapping_tbl_single, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+for (g in gwas) {
+  
+  cat("##### ", toupper(g), " \n\n")
+  
+  for (ct in cell_types) {
+  
+  cat("###### ", ct, " \n\n")
+
+  file <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
+  
+  if (!file.exists(file)) {
+    cat("**File does not exist:** ", basename(file), "\n\n")
+    next
+    }
+  
+  ctw_res  <- read_rds(file)
+  
+  if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
+
+    cat("**No finemapped genes (no credible sets identified)**\n\n")
+    next
+  }
+  
+  bf_factor <- per_cell_counts |>
+    dplyr::filter(cell_type == ct) |>
+    dplyr::pull(n_sig_genes)
+  
+  finemap_res <- as_tibble(ctw_res$finemap_res) |>
+    dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
+    separate(id, into = c('gene', 'id'), sep = "\\|") |>
+    separate(id, into = c('cell_type', 'id'), sep = "_") |>
+    left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+    mutate(pval = 2 * pnorm(-abs(z)),
+           pval_bf = pval * bf_factor) |>
+    mutate(pval_bf = pmin(pval_bf, 1)) |>
+    arrange(pval_bf) |>
+   # filter(pval_bf < 0.05) |>
+   # arrange(fdr) |>
+   # distinct(gene, .keep_all = TRUE) |>
+    mutate(across(c(pval, pval_bf, susie_pip), ~ signif(.x, 2)),
+           z = round(z, 2)) |>
+    dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
+  
+  if (nrow(finemap_res) == 0) {
+    cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
+} else {
+  finemap_tbl <- finemap_res |>
+    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
+    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
+    mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
+  gt() |>
+  tab_header(
+    title = md(paste0("**", toupper(g), "**")),
+    subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
+  ) |>
+  cols_label(
+    cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
+    pval = "P", pval_bf = "BF(P)", susie_pip = "PIP", cs = "CS",
+    gene_biotype = "Type", chr = "Chr"
+  ) |>
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
+  ) |>
+  opt_table_font(
+    font = list(default_fonts())
+  ) |>
+  tab_source_note(
+    source_note = md(
+      "See table in correction factor tab for the number of genes tested per cell type. This number was used as the BF correction factor in the single cTWAS analyses."
+    )
+  )
+  print(finemap_tbl)
+  
+  results_single_lst[[paste(g, ct, sep = "_")]] <- finemap_res
+  
+  }
+    
+  }
+  
+}
+
+openxlsx::write.xlsx(
+  x = results_single_lst,
+  file = file.path(tbl_dir, "ctwas_single_tbl.xlsx"),
+  overwrite = TRUE
+)
 ```
 
 ***
