@@ -279,8 +279,8 @@ pi1_long <- pi1_result_tbl %>%
 pi1_forward_tbl <- pi1_long %>% 
   filter(direction == "Forward",
     (
-      (ref_cell_type == "Exc" & (cell_type == "Glu-UL" | cell_type == "Glu-DL")) |
-        (ref_cell_type == "Inh" & cell_type == "GABA")
+      (ref_cell_type == "Exc" & (cell_type == "Glu-UL" | cell_type == "Glu-DL" | cell_type == "GABA")) |
+        (ref_cell_type == "Inh" (cell_type == "Glu-UL" | cell_type == "Glu-DL" | cell_type == "GABA"))
     )
   )
 
@@ -351,6 +351,10 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
       is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),
       should_label = is_strong_outlier | discordant
     )
+  
+  # Temp coe for troublshooting
+  tbl_dir <- '../results/13MANUSCRIPT_PLOTS_TABLES/tables/'
+  write_tsv(paired_betas, paste0(tbl_dir, gsub(" ", "_", title), '_beta_cor_pairs.tsv'))
   
   ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
     geom_point(alpha = 0.2, color = "grey70", size = 1.4) +
