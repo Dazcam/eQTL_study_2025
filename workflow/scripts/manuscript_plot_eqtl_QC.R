@@ -31,7 +31,6 @@ library(cowplot)
 library(ggrepel)
 
 # --- Set variables
-
 in_dir <- snakemake@params[['in_dir']] 
 out_file <- snakemake@output[[1]] 
 
