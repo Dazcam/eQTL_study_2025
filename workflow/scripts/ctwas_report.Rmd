@@ -279,24 +279,21 @@ openxlsx::write.xlsx(
 
 ***
 
-#### Single {.tabset}
+### Single (Fine_mapped only) {.tabset}
 
 ***
 
-#### Fine-mapping {.tabset}
-
-***
 
 ```{r ctwas_fine_mapping_tbl_single, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 for (g in gwas) {
   
-  cat("##### ", toupper(g), " \n\n")
+  cat("#### ", toupper(g), " \n\n")
   
   for (ct in cell_types) {
   
-  cat("###### ", ct, " \n\n")
+  cat("##### ", ct, " \n\n")
 
-  file <- paste0(in_dir, "ctwas_", ct, "_", g, "_ctwas.rds")
+  file <- paste0(in_dir, "output/ctwas_", ct, "_", g, "_ctwas.rds")
   
   if (!file.exists(file)) {
     cat("**File does not exist:** ", basename(file), "\n\n")
