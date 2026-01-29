@@ -265,13 +265,13 @@ for (g in gwas) {
     font = list(default_fonts())
   )
   print(finemap_tbl)
-  results_single_lst[[paste(g, ct, sep = "_")]] <- finemap_res
+  results_multi_lst[[paste(g, ct, sep = "_")]] <- finemap_res
   }
     
 }
 
 openxlsx::write.xlsx(
-  x = results_single_lst,
+  x = results_multi_lst,
   file = file.path(tbl_dir, "ctwas_multi_tbl.xlsx"),
   overwrite = TRUE
 )
