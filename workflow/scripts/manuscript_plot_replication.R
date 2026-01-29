@@ -400,9 +400,9 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
     )
 }
 
-beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, paste("Beta correlation:", nm))
-beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, paste("Beta correlation:", nm))
-beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, paste("Beta correlation:", nm))
+beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, "GABA vs. Inh")
+beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, "Glu-DL vs. Exc")
+beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, "Glu-UL vs. Exc")
 
 
 
