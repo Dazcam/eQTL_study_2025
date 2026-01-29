@@ -370,12 +370,14 @@ for (g in gwas) {
   }
   
 }
-results_single_lst <- results_single_lst[!sapply(results_single_lst, function(x) is.null(x) || nrow(x) == 0)]
-openxlsx::write.xlsx(
-  x = results_single_lst,
-  file = file.path(tbl_dir, "ctwas_single_tbl.xlsx"),
-  overwrite = TRUE
-  )
+
+# Not working yet
+# results_single_lst <- results_single_lst[!sapply(results_single_lst, function(x) is.null(x) || nrow(x) == 0)]
+# openxlsx::write.xlsx(
+#   x = results_single_lst,
+#   file = file.path(tbl_dir, "ctwas_single_tbl.xlsx"),
+#   overwrite = TRUE
+#   )
 ```
 
 ***
