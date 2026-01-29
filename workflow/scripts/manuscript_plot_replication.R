@@ -6,8 +6,10 @@
 
 # A: Pie chart of shared eGenes accross cell types
 # B: Internal Pi1 heatmap
-# C: Fetal vs. adult Pi1 heatmap
+# C: Fetal vs. adult Pi1 heatmap (only Glu and GABA only)
 # D: Fetal vs. adult beta correlation
+# E: 
+# F: 
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -273,8 +275,14 @@ pi1_long <- pi1_result_tbl %>%
                             pi1_forward = "Forward",
                             pi1_reverse = "Reverse"))
 
-# Split the data by direction
-pi1_forward_tbl <- pi1_long %>% filter(direction == "Forward")
+# Split the data by direction and filter to neurons only
+pi1_forward_tbl <- pi1_long %>% 
+  filter(direction == "Forward",
+    (
+      (ref_cell_type == "Exc" & (cell_type == "Glu-UL" | cell_type == "Glu-DL")) |
+        (ref_cell_type == "Inh" & cell_type == "GABA")
+    )
+  )
 
 
 # Function to generate a heatmap
@@ -303,82 +311,116 @@ plot_fugita_heatmap <- function(df) {
 pi1_fugita_heatmap <- plot_fugita_heatmap(pi1_forward_tbl)
 
 ### --- beta correlation plt -----
-paired_betas <- read_tsv(paste0(beta_dir, 'replication_beta_correlation.tsv')) |>
-  separate(key, into = c('snp', 'gene')) |>
-  left_join(gene_lookup) |>
-  group_by(gene) |>
-  slice_max(abs(beta_my), n = 1, with_ties = FALSE) |> # Drops from ~3.6K to ~1.7K
-  ungroup() |>
-  distinct()
+beta_files <- c(
+#  "All"    = paste0(beta_dir, "replication_beta_correlation.tsv"),
+  "GABA"   = paste0(beta_dir, "GABA_beta_cor_single_tbl.tsv"),
+  "Glu-DL" = paste0(beta_dir, "Glu-DL_beta_cor_single_tbl.tsv"),
+  "Glu-UL" = paste0(beta_dir, "Glu-UL_beta_cor_single_tbl.tsv")
+)
 
-# Fit lm
-model <- lm(beta_my ~ beta_fugita, data = paired_betas)
+make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
+  
+  paired_betas <- read_tsv(tbl_path, show_col_types = FALSE) |>
+    separate(key, into = c("snp", "gene")) |>
+    left_join(gene_lookup, by = "gene") |>
+    group_by(gene) |>
+    slice_max(abs(beta_my), n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    distinct()
+  
+  ## Correlation
+  cor_val <- cor(
+    paired_betas$beta_my,
+    paired_betas$beta_fugita,
+    use = "complete.obs",
+    method = "pearson"
+  )
+  
+  cor_label <- sprintf("Pearson r = %.2f", cor_val)
+  
+  ## Linear model
+  model <- lm(beta_my ~ beta_fugita, data = paired_betas)
+  
+  paired_betas <- paired_betas |>
+    mutate(
+      .resid = resid(model),
+      .dist  = abs(.resid),
+      discordant = sign(beta_my) != sign(beta_fugita) &
+        !is.na(beta_my) & !is.na(beta_fugita),
+      label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol),
+      is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),
+      should_label = is_strong_outlier | discordant
+    )
+  
+  ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
+    geom_point(alpha = 0.2, color = "grey70", size = 1.4) +
+    geom_point(
+      data = filter(paired_betas, is_strong_outlier & discordant),
+      color = "#d32f2f", size = 2, alpha = 0.5
+    ) +
+    geom_point(
+      data = filter(paired_betas, is_strong_outlier & !discordant),
+      color = "#1976d2", size = 2, alpha = 0.5
+    ) +
+    geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 0.9) +
+    geom_abline(
+      slope = 1, intercept = 0, linetype = "dashed",
+      color = "grey50", linewidth = 0.5
+    ) +
+    geom_text_repel(
+      data = filter(paired_betas, should_label),
+      aes(label = label_text),
+      size = 3.1,
+      fontface = "bold",
+      box.padding = 0.45,
+      point.padding = 0.5,
+      segment.color = "grey50",
+      segment.size = 0.25,
+      min.segment.length = 0,
+      max.overlaps = 25,
+      force = 1.5,
+      force_pull = 0.8,
+      direction = "both",
+      seed = 2025
+    ) +
+    annotate(
+      "text", x = Inf, y = Inf, label = cor_label,
+      hjust = 2.3, vjust = 3, size = 5, fontface = "bold"
+    ) +
+    labs(
+      title = title,
+      x = "Beta (Fujita)",
+      y = "Beta (eGenes)"
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      axis.title = element_text(face = "bold"),
+      plot.margin = margin(20, 35, 30, 25, unit = "pt")
+    )
+}
 
-# Calculate perpendicular-ish distance from line + absolute residual
-paired_betas <- paired_betas %>%
-  mutate(.resid = resid(model),.dist  = abs(.resid),
-         discordant = sign(beta_my) != sign(beta_fugita) & !is.na(beta_my) & !is.na(beta_fugita),
-         label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol),
-         
-         # Decide who deserves a label (adjust thresholds!)
-         is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),  # ~top 8%
-         should_label = is_strong_outlier | discordant)
-
-# How many labels will we actually try to show?
-n_labels <- sum(paired_betas$should_label, na.rm = TRUE)
-message("Number of points selected for labelling: ", n_labels)
-
-# Plot
-beta_cor_plt <- ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
-  geom_point(alpha = 0.2, color = "grey70", size = 1.4) +
-  geom_point(data = filter(paired_betas, is_strong_outlier & discordant), color = "#d32f2f", size = 2, alpha = 0.5) +
-  geom_point(data = filter(paired_betas, is_strong_outlier & !discordant),
-             color = "#1976d2", size = 2, alpha = 0.5) +   # blue for concordant strength) +
-  geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 0.9) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", 
-              color = "grey50", linewidth = 0.5) +
-  geom_text_repel(
-    data = filter(paired_betas, should_label),
-    aes(label = label_text),
-    size          = 3.1,
-    color         = "black",
-    fontface      = "bold",
-    box.padding   = 0.45,
-    point.padding = 0.5,
-    segment.color = "grey50",
-    segment.size  = 0.25,
-    min.segment.length = 0,
-    max.overlaps  = 25,             # ← increased from default 10
-    force         = 1.5,            # pull labels apart more aggressively
-    force_pull    = 0.8,
-    direction     = "both",
-    seed          = 2025            # for reproducibility of label placement
-  ) +
-  annotate("text", x = Inf, y = Inf, label = cor_label,
-           hjust = 2.3, vjust = 3, size = 5, fontface = "bold") +
-  labs(x = "Beta (Fujita)", y = "Beta (eGenes)",) +
-  theme_minimal(base_size = 13) +
-  theme(plot.title   = element_text(hjust = 0.5, face = "bold", size = 14),
-        axis.title   = element_text(face = "bold"),
-        plot.margin  = margin(t = 20, r = 35, b = 30, l = 25, unit = "pt"))
+beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, paste("Beta correlation:", nm))
+beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, paste("Beta correlation:", nm))
+beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, paste("Beta correlation:", nm))
 
 
 
 ### --- plot -----
 # Final plot
-final_plt <- plot_grid(pie_chart, pi1_int_heatmap, pi1_fugita_heatmap, beta_cor_plt, labels ='AUTO',
-                       ncol = 2, label_size = 20)
+final_plt <- plot_grid(pie_chart, pi1_int_heatmap, pi1_fugita_heatmap, 
+                       beta_gluUL_plt, beta_gluDL_plt, beta_gaba_plt, labels ='AUTO',
+                       ncol = 3, label_size = 20)
 
 ggsave(
-  filename = paste0(out_dir, "eqtl_replication_plt_publication.pdf"),
+  filename = out_file,
   plot = final_plt,
-  width = 12,      # inches, good for full-page width in papers
-  height = 12,     # adjust if needed (depends on number of subclusters)
+  width = 16,
+  height = 12,
   units = "in",
   device = "pdf",
   dpi = 300
 )
-
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
