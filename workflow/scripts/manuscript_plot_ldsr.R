@@ -74,8 +74,7 @@ ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')
   relocate(cell_type, disorder) |>
   mutate(ldsr = if_else(`Coefficient_z-score` > 0,
                         -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
-  mutate(cell_type = str_replace_all(cell_type, replacements),
-         level = if_else(str_detect(cell_type, "\\d"), 2L, 1L)) |>
+  mutate(level = if_else(str_detect(cell_type, "\\d"), 2L, 1L)) |>
   filter(disorder != 'PTSD') |>
   mutate(disorder = recode(disorder,
                            "SCZ" = "Schizophrenia",
