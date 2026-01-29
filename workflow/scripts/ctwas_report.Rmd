@@ -151,7 +151,7 @@ final_table |>
 for (g in gwas) {
   cat("##### ", toupper(g), " \n\n")
   
-  file <- paste0(in_dir, "ctwas_multi_", g, "_ctwas.rds")
+  file <- paste0(in_dir, "multi/ctwas_multi_", g, "_ctwas.rds")
   ctw_res  <- read_rds(file)
   # Process data
   z_gene <- as_tibble(ctw_res$z_gene) |>
@@ -214,7 +214,7 @@ for (g in gwas) {
 for (g in gwas) {
   cat("##### ", toupper(g), " \n\n")
   
-  file <- paste0(in_dir, "ctwas_multi_", g, "_ctwas.rds")
+  file <- paste0(in_dir, "multi/ctwas_multi_", g, "_ctwas.rds")
   ctw_res  <- read_rds(file)
   
   if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
