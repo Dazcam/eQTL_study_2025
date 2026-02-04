@@ -39,6 +39,7 @@ gen_PCs <- 4
 norm_method <- 'quantile' 
 p_smr <- 0.05
 p_heidi <- 0.01
+disorder <- 'scz'
 
 celltype_map <- tibble(
   my_cell     = c("Glu-UL", "Glu-DL", "GABA"),
