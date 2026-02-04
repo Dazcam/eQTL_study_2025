@@ -55,7 +55,7 @@ for (i in seq_len(nrow(celltype_map))) {
   message('\n\nGenerating beta cor table for ', my_ct, ' and ', fu_ct,'\n')
   
   message('Loading sig.eQTL data for', my_ct,'\n')
-  file_path <- file.path(in_dir, my_ct, paste0(cell_type, "_", disorder, ".smr"))
+  file_path <- file.path(in_dir, my_ct, paste0(my_ct, "_", disorder, ".smr"))
   
   # Read the file
   smr <- suppressMessages(read_tsv(file_path))
