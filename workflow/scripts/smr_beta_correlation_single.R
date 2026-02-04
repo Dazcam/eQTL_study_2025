@@ -40,12 +40,6 @@ norm_method <- 'quantile'
 p_smr <- 0.05
 p_heidi <- 0.01
 
-expPC_map_all <- c(
-  "Glu-UL" = 50,
-  "Glu-DL" = 40,
-  "GABA"   = 30
-)
-
 celltype_map <- tibble(
   my_cell     = c("Glu-UL", "Glu-DL", "GABA"),
   fugita_cell = c("Exc",    "Exc",    "Inh")
@@ -57,18 +51,21 @@ for (i in seq_len(nrow(celltype_map))) {
   
   my_ct <- celltype_map$my_cell[i]
   fu_ct <- celltype_map$fugita_cell[i]
-  expPC <- expPC_map_all[[my_ct]]
   
   message('\n\nGenerating beta cor table for ', my_ct, ' and ', fu_ct,'\n')
   
   message('Loading sig.eQTL data for', my_ct,'\n')
-  file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_", disorder, ".smr"))
+  file_path <- file.path(in_dir, my_ct, paste0(cell_type, "_", disorder, ".smr"))
   
   # Read the file
   smr <- suppressMessages(read_tsv(file_path))
   n_probes <- length(unique(smr$probeID))
   smr_sig <- smr |> filter(p_SMR < (p_smr / n_probes))
   smr_sig_heidi <- smr_sig |> filter(p_HEIDI > p_heidi)
+  
+  mesaage('n_probes: ', n_probes)
+  mesaage('Sig SNPs at p_SMR: ', smr_sig)
+  mesaage('Sig SNPs at p_SMR and non-sig HEIDI: ', smr_sig_heidi)
   
   df_sig <- smr_sig_heidi %>%
     select(snp = topSNP, gene = Gene, beta = b_eQTL) %>%
