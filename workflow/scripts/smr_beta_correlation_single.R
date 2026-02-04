@@ -8,16 +8,16 @@
 ## Info  ------------------------------------------------------------------------------
 
 ## Set up logging for Snakemake
-if (exists("snakemake")) {
-  log_smk <- function() {
-    if (exists("snakemake") && length(snakemake@log) != 0) {
-      log <- file(snakemake@log[[1]], open = "wt")
-      sink(log, append = TRUE)
-      sink(log, append = TRUE, type = "message")
-    }
-  }
-  log_smk()
-}
+# if (exists("snakemake")) {
+#   log_smk <- function() {
+#     if (exists("snakemake") && length(snakemake@log) != 0) {
+#       log <- file(snakemake@log[[1]], open = "wt")
+#       sink(log, append = TRUE)
+#       sink(log, append = TRUE, type = "message")
+#     }
+#   }
+#   log_smk()
+# }
 
 message("\n\nGenerating data for eQTL beta correlation analysis (single cell pairs) ...")
 
