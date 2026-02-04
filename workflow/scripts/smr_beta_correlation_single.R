@@ -7,17 +7,17 @@
 
 ## Info  ------------------------------------------------------------------------------
 
-## Set up logging for Snakemake
-# if (exists("snakemake")) {
-#   log_smk <- function() {
-#     if (exists("snakemake") && length(snakemake@log) != 0) {
-#       log <- file(snakemake@log[[1]], open = "wt")
-#       sink(log, append = TRUE)
-#       sink(log, append = TRUE, type = "message")
-#     }
-#   }
-#   log_smk()
-# }
+# Set up logging for Snakemake
+if (exists("snakemake")) {
+  log_smk <- function() {
+    if (exists("snakemake") && length(snakemake@log) != 0) {
+      log <- file(snakemake@log[[1]], open = "wt")
+      sink(log, append = TRUE)
+      sink(log, append = TRUE, type = "message")
+    }
+  }
+  log_smk()
+}
 
 message("\n\nGenerating data for eQTL beta correlation analysis (single cell pairs) ...")
 
@@ -64,9 +64,9 @@ for (i in seq_len(nrow(celltype_map))) {
   smr_sig <- smr |> filter(p_SMR < (p_smr / n_probes))
   smr_sig_heidi <- smr_sig |> filter(p_HEIDI > p_heidi)
   
-  mesaage('n_probes: ', n_probes)
-  mesaage('Sig SNPs at p_SMR: ', smr_sig)
-  mesaage('Sig SNPs at p_SMR and non-sig HEIDI: ', smr_sig_heidi)
+  message('n_probes: ', n_probes)
+  message('Sig SNPs at p_SMR: ', smr_sig)
+  message('Sig SNPs at p_SMR and non-sig HEIDI: ', smr_sig_heidi)
   
   df_sig <- smr_sig_heidi %>%
     select(snp = topSNP, gene = Gene, beta = b_eQTL) %>%
