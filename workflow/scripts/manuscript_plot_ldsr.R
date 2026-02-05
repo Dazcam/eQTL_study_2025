@@ -107,7 +107,7 @@ ldsr_tbl <- ldsr_tbl |>
 
 # --- Significance thresholds
 thresh_level1 <- -log10(0.05 / length(L1_cell_types)) 
-thresh_level2 <- -log10(0.05 / length(L1_cell_types))  
+thresh_level2 <- -log10(0.05 / length(L2_cell_types))  
 thresh_nominal <- -log10(0.05)
 
 # --- Base theme
@@ -140,7 +140,7 @@ plot_A <- ldsr_tbl |>
     x = expression(-log[10](P)),
     y = "Cell Type"
   ) +
-  coord_cartesian(xlim = c(0, 6))
+  coord_cartesian(xlim = c(0, 4))
 
 # --- Plot B: Level 2
 plot_B <- ldsr_tbl |>
@@ -159,7 +159,7 @@ plot_B <- ldsr_tbl |>
     x = expression(-log[10](P)),
     y = "Cell Type"
   ) +
-  coord_cartesian(xlim = c(0, 6))
+  coord_cartesian(xlim = c(0, 4))
 
 # --- Combine into final figure
 final_plot <- plot_grid(
