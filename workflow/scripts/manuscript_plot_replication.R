@@ -145,7 +145,7 @@ pie_chart <- ggplot(pie_dat,aes(ymax = ymax, ymin = ymin, xmax = 1,
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
         legend.box.margin = margin(t = -50, r = 0, b = 10, l = 0),
-        plot.margin = margin(t = 10, r = 10, b = 10, l = 10)) +
+        plot.margin = margin(t = 30, r = 30, b = 30, l = 30)) +
   geom_segment(
     data = connectors,
     aes(x = x_start,
@@ -385,12 +385,13 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
       direction = "both",
       seed = 2025
     ) +
-    annotate(
-      "text", x = Inf, y = Inf, label = cor_label,
-      hjust = 2.3, vjust = 3, size = 5
-    ) +
+    # annotate(
+    #   "text", x = Inf, y = Inf, label = cor_label,
+    #   hjust = 2.3, vjust = 3, size = 5
+    # ) +
     labs(
       title = title,
+      subtitle = cor_label,
       x = "Beta (Fujita)",
       y = "Beta (eGenes)"
     ) +
