@@ -145,7 +145,7 @@ pie_chart <- ggplot(pie_dat,aes(ymax = ymax, ymin = ymin, xmax = 1,
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
         legend.box.margin = margin(t = -50, r = 0, b = 10, l = 0),
-        plot.margin = margin(t = 5, r = 5, b = 5, l = 5)) +
+        plot.margin = margin(t = 10, r = 10, b = 10, l = 10)) +
   geom_segment(
     data = connectors,
     aes(x = x_start,
@@ -303,7 +303,8 @@ plot_fugita_heatmap <- function(df) {
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
       axis.text.y = element_text(face = "bold"),
-      panel.grid = element_blank()
+      panel.grid = element_blank(),
+      plot.margin = margin(50, 50, 50, 50, unit = "pt")
     ) 
 }
 
@@ -323,9 +324,6 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
   paired_betas <- read_tsv(tbl_path, show_col_types = FALSE) |>
     separate(key, into = c("snp", "gene")) |>
     left_join(gene_lookup, by = "gene") |>
-    # group_by(gene) |>
-    # slice_max(abs(beta_my), n = 1, with_ties = FALSE) |>
-    # ungroup() |>
     distinct()
   
   ## Correlation
@@ -347,9 +345,9 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
       .dist  = abs(.resid),
       discordant = sign(beta_my) != sign(beta_fugita) &
         !is.na(beta_my) & !is.na(beta_fugita),
-      label_text = ifelse(is.na(symbol) | symbol == "NA", "", symbol),
+      label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol),
       is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),
-      should_label = is_strong_outlier | discordant
+      should_label = is_strong_outlier & rank(-.dist, ties.method = "first") <= 8
     )
   
   # Temp code for troublshooting
@@ -389,7 +387,7 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
     ) +
     annotate(
       "text", x = Inf, y = Inf, label = cor_label,
-      hjust = 2.3, vjust = 3, size = 5, fontface = "bold"
+      hjust = 2.3, vjust = 3, size = 5
     ) +
     labs(
       title = title,
@@ -399,8 +397,7 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
     theme_minimal(base_size = 13) +
     theme(
       plot.title = element_text(hjust = 0.5, face = "bold"),
-      axis.title = element_text(face = "bold"),
-      plot.margin = margin(20, 35, 30, 25, unit = "pt")
+      plot.margin = margin(40, 40, 40, 25, unit = "pt")
     )
 }
 
