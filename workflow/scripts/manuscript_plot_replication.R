@@ -334,7 +334,7 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
     method = "pearson"
   )
   
-  cor_label <- sprintf("Pearson r = %.2f", cor_val)
+  cor_label <- sprintf("r = %.2f", cor_val)
   
   ## Linear model
   model <- lm(beta_my ~ beta_fugita, data = paired_betas)
@@ -398,7 +398,11 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
     theme_minimal(base_size = 13) +
     theme(
       plot.title = element_text(hjust = 0.5, face = "bold"),
-      plot.margin = margin(40, 40, 40, 25, unit = "pt")
+      plot.margin = margin(40, 40, 40, 25, unit = "pt"),
+      plot.subtitle = element_text(
+        hjust = 0.5,
+        size = 12
+      ),
     )
 }
 
