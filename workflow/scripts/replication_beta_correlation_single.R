@@ -58,7 +58,7 @@ for (i in seq_len(nrow(celltype_map))) {
   fu_ct <- celltype_map$fugita_cell[i]
   expPC <- expPC_map_all[[my_ct]]
   
-  message('\n\nGenerating beta cor table for', my_ct, ' and ', fu_ct,'\n')
+  message('\n\nGenerating beta cor table for ', my_ct, ' and ', fu_ct,'\n')
   
   message('Loading sig.eQTL data for', my_ct,'\n')
   log_dir <- paste0(in_dir, my_ct, '_', norm_method, '_genPC_', gen_PCs, '_expPC_', expPC, '/')
@@ -70,6 +70,8 @@ for (i in seq_len(nrow(celltype_map))) {
     select(snp = variant_id, gene = phenotype_id, beta = slope) %>%
     filter(str_detect(snp, "^rs"), str_detect(gene, "^ENSG"))
   message('\nSig. eQTL in ', my_ct, ': ', nrow(df_sig), '\n')
+  
+  write_tsv(df_sig, file.path(out_dir, paste0(my_ct, "_beta_cor_single_df_sig.tsv")))
   
   # Pool: for dup SNP-gene, keep largest abs(beta)
   pooled_my <- df_sig %>%
@@ -84,10 +86,11 @@ for (i in seq_len(nrow(celltype_map))) {
   message('Any NAs in pooled sig. eQTL? ', anyNA(pooled_my))
   message('\nPooled sig. eQTL tbl:\n')
   print(pooled_my)
-
-  message('\nLoading Fugita data ...\n')
+  
+  write_tsv(pooled_my, file.path(out_dir, paste0(my_ct, "_beta_cor_single_pooled_my.tsv")))
 
   
+  message('\nLoading Fugita data ...\n')
   fugita_path <- paste0(fugita_dir, 'celltype-eqtl-sumstats.', fu_ct,'.tsv')
   
   # Read the file
