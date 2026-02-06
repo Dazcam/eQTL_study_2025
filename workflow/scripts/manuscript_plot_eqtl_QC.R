@@ -161,18 +161,13 @@ eqtls_all <- eqtls_all |>
 density_plt <- ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
   geom_density() +
   geom_vline(xintercept = 0, linetype="dashed", color = "black") +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.6) +
   #scale_color_manual(values=custom_palette) +
   #scale_fill_manual(values=custom_palette) +
   scale_x_continuous(limits=c(-600,600), breaks=seq(-600,600,200)) +
   labs(x="Distance to TSS (kb)", y="Density") +
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.margin = unit(c(1, 1, 1, 1), "cm"),
-    panel.grid.minor = element_blank(),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    axis.text = element_text(color = "black"),
-    legend.position = "none",
-  )
+  base_theme +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
 
 # --- eQTL counts
 # need to pull these programatically from final object / or check
@@ -202,16 +197,11 @@ eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
   geom_col(width = 0.7, colour = 'black') +
   scale_fill_manual(values = custom_palette) +
   labs(x="Cell type", y="Number of eGenes") +
+  geom_vline(xintercept = 0, color = "black") +
   coord_flip() +
-  theme_minimal() +
-  theme(
-    plot.margin = unit(c(1, 1, 1, 1), "cm"),
-    panel.grid.minor = element_blank(),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    axis.text = element_text(color = "black"),
-    axis.title = element_text(face = "bold")
-  ) +
-  theme(legend.position = "none")
+  base_theme() +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        legend.position = "none")
 
 # --- Scatter plot
 scatter_dat <- egene_per_cell %>%
@@ -241,15 +231,11 @@ scatter_plt <- ggplot(scatter_dat, aes(x=n_cells, y=n)) +
   labs(x="Cell count", y="eGenes (FDR < 0.05)") +
   annotate("text", x = -Inf, y = Inf, label = cor_label,
            hjust = -0.2, vjust = 1.5, size = 3, fontface = "bold") +
-  theme_minimal(base_size = 12) +
+  base_theme +
   theme(
     plot.margin = unit(c(1, 1, 1, 1), "cm"),
     panel.grid.minor = element_blank(),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    axis.text = element_text(color = "black", size = 12),
-    axis.title = element_text(face = "bold", size =  14)
-  ) +
-  theme(legend.position = "none")
+    legend.position = "none")
 
 
 # --- Combined
