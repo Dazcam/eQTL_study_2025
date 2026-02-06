@@ -113,6 +113,7 @@ base_theme <- theme_minimal(base_size = 12) +
     panel.spacing.x = unit(2, "lines"),
   )
 
+
 # --- Density plot 
 for (cell_type in cell_types) {
   
@@ -166,12 +167,10 @@ density_plt <- ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
   labs(x="Distance to TSS (kb)", y="Density") +
   theme_minimal(base_size = 12) +
   theme(
-    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(colour = "black", fill = NA),
     plot.title = element_text(hjust = 0.5, face = "bold"),
     axis.text = element_text(color = "black"),
-    axis.title = element_text(face = "bold"),
     legend.position = "none",
   )
 
@@ -200,15 +199,14 @@ egene_per_cell <- gene_cell %>%
   
 
 eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
-  geom_col() +
+  geom_col(width = 0.7, colour = 'black') +
   scale_fill_manual(values = custom_palette) +
   labs(x="Cell type", y="Number of eGenes") +
   coord_flip() +
   theme_minimal() +
   theme(
-    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(colour = "black", fill = NA),
     plot.title = element_text(hjust = 0.5, face = "bold"),
     axis.text = element_text(color = "black"),
     axis.title = element_text(face = "bold")
@@ -243,11 +241,10 @@ scatter_plt <- ggplot(scatter_dat, aes(x=n_cells, y=n)) +
   labs(x="Cell count", y="eGenes (FDR < 0.05)") +
   annotate("text", x = -Inf, y = Inf, label = cor_label,
            hjust = -0.2, vjust = 1.5, size = 3, fontface = "bold") +
-  theme_minimal() +
+  theme_minimal(base_size = 12) +
   theme(
-    plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
+    plot.margin = unit(c(1, 1, 1, 1), "cm"),
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(colour = "black", fill = NA),
     plot.title = element_text(hjust = 0.5, face = "bold"),
     axis.text = element_text(color = "black", size = 12),
     axis.title = element_text(face = "bold", size =  14)
@@ -322,13 +319,14 @@ combined_plt <- ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fi
                                "unique_L2" = "Sub-cluster"),
                     breaks = c("unique_L1", "shared", "unique_L2")) +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
-  labs(x = "Proportion of eGenes found in cell types and sub-clusters",
+  labs(x = "Proportion of eGenes",
        y = NULL,
        fill = NULL) +
   theme_classic(base_size = 12) +
   theme(legend.position = "top",
         axis.text.y = element_text(face = "bold"),
-        axis.text.x = element_text(color = "black"))
+        axis.text.x = element_text(color = "black"),
+        plot.margin = unit(c(1, 1, 1, 1), "cm"))
 
 
 # Final plot
