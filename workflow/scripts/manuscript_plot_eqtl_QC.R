@@ -196,11 +196,10 @@ egene_per_cell <- gene_cell %>%
 eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
   geom_col(width = 0.7, colour = 'black') +
   scale_fill_manual(values = custom_palette) +
-  labs(x="Cell type", y="Number of eGenes") +
-  geom_vline(xintercept = 0, color = "black") +
+  labs(x="Cell Type", y="Number of eGenes") +
   coord_flip() +
   base_theme +
-  geom_vline(xintercept = 0, color = "black") 
+  geom_vline(xintercept = 0, color = "black") +
   theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
         legend.position = "none")
 
@@ -307,7 +306,7 @@ combined_plt <- ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fi
                     breaks = c("unique_L1", "shared", "unique_L2")) +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
   labs(x = "Proportion of eGenes",
-       y = NULL,
+       y = 'Cell Type',
        fill = NULL) +
   base_theme +
   theme(legend.position = "top",
