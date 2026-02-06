@@ -199,7 +199,7 @@ eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
   labs(x="Cell Type", y="Number of eGenes") +
   coord_flip() +
   base_theme +
-  geom_vline(xintercept = 0, color = "black") +
+  geom_hline(yintercept = 0, color = "black") +
   theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
         legend.position = "none")
 
