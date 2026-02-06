@@ -200,6 +200,7 @@ eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
   geom_vline(xintercept = 0, color = "black") +
   coord_flip() +
   base_theme +
+  geom_vline(xintercept = 0, color = "black") 
   theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
         legend.position = "none")
 
@@ -308,10 +309,8 @@ combined_plt <- ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fi
   labs(x = "Proportion of eGenes",
        y = NULL,
        fill = NULL) +
-  theme_classic(base_size = 12) +
+  base_theme +
   theme(legend.position = "top",
-        axis.text.y = element_text(face = "bold"),
-        axis.text.x = element_text(color = "black"),
         plot.margin = unit(c(1, 1, 1, 1), "cm"))
 
 
