@@ -350,9 +350,9 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL, label_genes 
       should_label = if (!is.null(label_genes)) label_text %in% label_genes else FALSE
     )
   
-  # Temp code for troublshooting
-  tbl_dir <- '../results/13MANUSCRIPT_PLOTS_TABLES/tables/'
-  write_tsv(paired_betas, paste0(tbl_dir, gsub(" ", "_", title), '_beta_cor_pairs.tsv'))
+  # Temp code for troubleshooting
+  # tbl_dir <- '../results/13MANUSCRIPT_PLOTS_TABLES/tables/'
+  # write_tsv(paired_betas, paste0(tbl_dir, gsub(" ", "_", title), '_beta_cor_pairs.tsv'))
  
   ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
     geom_point(alpha = 0.2, color = "grey70", size = 1.4) +
@@ -407,11 +407,11 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL, label_genes 
 }
 
 beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, 
-                                    "GABA vs. Inh", 'ABCC8 ')
+                                    "GABA vs. Inh", 'ABCC8')
 beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, 
                                      "Glu-DL vs. Exc", 'ABI3BP')
 beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, 
-                                     "Glu-UL vs. Exc", 'ABCC8 ')
+                                     "Glu-UL vs. Exc", 'ABCC8')
 
 
 
