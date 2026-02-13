@@ -319,7 +319,7 @@ beta_files <- c(
   "Glu-UL" = paste0(beta_dir, "Glu-UL_beta_cor_single_tbl.tsv")
 )
 
-make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
+make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL, label_genes = NULL) {
   
   paired_betas <- read_tsv(tbl_path, show_col_types = FALSE) |>
     separate(key, into = c("snp", "gene")) |>
@@ -346,8 +346,7 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
       discordant = sign(beta_my) != sign(beta_fugita) &
         !is.na(beta_my) & !is.na(beta_fugita),
       label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol),
-      is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),
-      should_label = is_strong_outlier & rank(-.dist, ties.method = "first") <= 8
+      should_label = if (!is.null(label_genes)) label_text %in% label_genes else FALSE
     )
   
   # Temp code for troublshooting
@@ -406,9 +405,12 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL) {
     )
 }
 
-beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, "GABA vs. Inh")
-beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, "Glu-DL vs. Exc")
-beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, "Glu-UL vs. Exc")
+beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, 
+                                    "GABA vs. Inh", "ABCC8")
+beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, 
+                                     "Glu-DL vs. Exc", "ABI3BP")
+beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, 
+                                     "Glu-UL vs. Exc", "ABCC8")
 
 
 
