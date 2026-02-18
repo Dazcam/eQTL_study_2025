@@ -7,9 +7,9 @@
 # A: Pie chart of shared eGenes accross cell types
 # B: Internal Pi1 heatmap
 # C: Fetal vs. adult Pi1 heatmap (only Glu and GABA only)
-# D: Fetal vs. adult beta correlation
-# E: 
-# F: 
+# D: Fetal vs. adult beta correlation 
+# E: Fetal vs. adult beta correlation
+# F: Fetal vs. adult beta correlation
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -319,7 +319,7 @@ beta_files <- c(
   "Glu-UL" = paste0(beta_dir, "Glu-UL_beta_cor_single_tbl.tsv")
 )
 
-make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL, label_genes = NULL) {
+make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = NULL) {
   
   paired_betas <- read_tsv(tbl_path, show_col_types = FALSE) |>
     separate(key, into = c("snp", "gene")) |>
@@ -390,10 +390,10 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL, label_genes 
     #   hjust = 2.3, vjust = 3, size = 5
     # ) +
     labs(
-      title = title,
+      title = element_blank(),
       subtitle = cor_label,
-      x = "Beta (Fujita)",
-      y = "Beta (eGenes)"
+      x = paste0("Beta (", ct[1], ")"),
+      y = paste0("Beta (", ct[2], ")")
     ) +
     theme_minimal(base_size = 13) +
     theme(
@@ -407,11 +407,11 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, title = NULL, label_genes 
 }
 
 beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, 
-                                    "GABA vs. Inh", 'ABCC8')
+                                    c("GABA", "Inh"), 'ABCC8')
 beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, 
-                                     "Glu-DL vs. Exc", 'ABI3BP')
+                                     c("Glu-DL", "Exc"), 'ABI3BP')
 beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, 
-                                     "Glu-UL vs. Exc", 'ABCC8')
+                                     c("Glu-UL", "Exc"), 'ABCC8')
 
 
 
