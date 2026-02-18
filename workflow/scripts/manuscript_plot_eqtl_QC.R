@@ -228,7 +228,7 @@ scatter_plt <- ggplot(scatter_dat, aes(x=n_cells, y=n)) +
     breaks = c(0, 1e5, 2e5, 3e5),
     labels = c("0", "100K", "200K", "300K")
   ) +
-  labs(x="Cell count", y="eGenes (FDR < 0.05)") +
+  labs(x="Nuclei count", y="eGenes (FDR < 0.05)") +
   annotate("text", x = -Inf, y = Inf, label = cor_label,
            hjust = -0.2, vjust = 1.5, size = 3, fontface = "bold") +
   base_theme +
