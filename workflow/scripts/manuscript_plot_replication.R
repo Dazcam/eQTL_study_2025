@@ -7,9 +7,9 @@
 # A: Pie chart of shared eGenes accross cell types
 # B: Internal Pi1 heatmap
 # C: Fetal vs. adult Pi1 heatmap (only Glu and GABA only)
-# D: Fetal vs. adult beta correlation 
-# E: Fetal vs. adult beta correlation
-# F: Fetal vs. adult beta correlation
+# D: Fetal vs. adult beta correlation 1
+# E: Fetal vs. adult beta correlation 2
+# F: Fetal vs. adult beta correlation 3
 
 ## Info  ------------------------------------------------------------------------------
 
