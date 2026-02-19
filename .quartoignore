@@ -1,3 +1,4 @@
-workflow/scripts/*Rmd
+workflow/**
+workflow/**/*.Rmd
 results/**
 resources/**
