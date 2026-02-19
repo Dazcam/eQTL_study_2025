@@ -1,13 +1,9 @@
 project:
   type: website
-  files:
-    - index.qmd
-    - setup.qmd
-    - pipelines/01-parse.qmd
-    - pipelines/02-scanpy.qmd
-    - pipelines/05-tensorqtl.qmd
-    - pipelines/13-visualization.qmd
   output-dir: docs
+  render:
+    - "*.qmd"
+    - "!workflow/scripts/*.Rmd"
 
 website:
   title: "Single-Cell eQTL Pipeline"
