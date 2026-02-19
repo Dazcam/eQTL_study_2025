@@ -99,7 +99,7 @@ geno_plt <- ggplot(variance, aes(x = PC, y = variance_explained)) +
 
 message('Saving Elbow plot ...')
 ggsave(
-  filename = paste0(out_dir, "genotype_elbow_plt.pdf"),
+  filename = paste0(out_dir, "/genotype_elbow_plt.pdf"),
   plot = geno_plt,
   width = 5,
   height = 5,
