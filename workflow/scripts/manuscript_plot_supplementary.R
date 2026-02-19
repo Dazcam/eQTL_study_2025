@@ -86,7 +86,8 @@ variance <- eigenval %>%
 geno_plt <- ggplot(variance, aes(x = PC, y = variance_explained)) +
   geom_line(color = "steelblue", linewidth = 1) +
   geom_point(color = "steelblue", size = 2) +
-  base_theme +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major.x = element_blank()) +
   labs(
     x = "Principal Component",
     y = "Variance Explained (%)",
@@ -218,8 +219,9 @@ expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
     y = "eGene count (FDR < 0.05)",
     color = "Cell Type"
   ) +
-  base_theme +
+  theme_minimal(base_size = 14) +
   theme(
+    panel.grid.major.x = element_blank(),
     plot.title = element_blank(),
     legend.position = "top",
     legend.title = element_blank(),
