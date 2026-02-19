@@ -50,7 +50,7 @@ custom_palette <- c(
   'OPC' = '#FDE725FF'
 )
 
-theme(
+base_theme <- theme(
   axis.text.y = element_text(size = 10),
   axis.text.x = element_text(size = 10),
   panel.grid.major.y = element_blank(),
