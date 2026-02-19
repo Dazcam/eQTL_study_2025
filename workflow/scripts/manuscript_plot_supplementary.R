@@ -35,6 +35,12 @@ expr_dir <- snakemake@params[['expr_dir']]
 out_file <- snakemake@output[[1]]
 out_dir <- dirname(out_file)
 
+message('Smk variables set to:')
+message('  geno_dir: ', geno_dir)
+message('  expr_dir: ', expr_dir)
+message('  out_dir: ', out_dir)
+message('  out_file (tracked by snakemake): ', out_file)
+
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
@@ -53,8 +59,10 @@ custom_palette <- c(
 base_theme <- theme(
   axis.text.y = element_text(size = 10),
   axis.text.x = element_text(size = 10),
-  panel.grid.major.y = element_blank(),
+  panel.grid.major.x = element_blank(),
   panel.grid.minor = element_blank(),
+  panel.background   = element_rect(fill = "white", colour = NA),
+  plot.background    = element_rect(fill = "white", colour = NA),
   strip.text = element_text(face = "bold"),
   legend.position = "none",
   plot.title = element_text(hjust = 0.5, face = "bold"),
@@ -62,11 +70,13 @@ base_theme <- theme(
 )
 
 # ----- Load data
+message('Loading eigenval file ...')
 eigenval <- read_table(paste0(geno_dir, "pca.eigenval"), col_names = "eigenval")
 
 
 # ----- Geno PC Elbow plt
 # Calc proportion and cumulative variance explained
+message('Generating Elbow plot ...')
 variance <- eigenval %>%
   mutate(PC = row_number(),
          variance_explained = eigenval / sum(eigenval) * 100,
@@ -87,6 +97,7 @@ geno_plt <- ggplot(variance, aes(x = PC, y = variance_explained)) +
     labels = seq(0, 10, by = 2)
   )
 
+message('Saving Elbow plot ...')
 ggsave(
   filename = paste0(out_dir, "genotype_elbow_plt.pdf"),
   plot = geno_plt,
@@ -98,6 +109,7 @@ ggsave(
 )
 
 # ----- eQTL expression PC plt
+message('Loading eQTL expression data ...')
 summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs, 
                            genPC = gen_PCs, norm_method = norm_methods) {
   # Generate all combinations of cell types and expPC values
@@ -195,6 +207,7 @@ summary_list <- summarise_logs(cell_types, expr_dir)
 summary_tbl <- bind_rows(summary_list)
 
 # Plot
+message('Generating expression PC plot ...')
 expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
        aes(x = expPC, y = qtl_fdr_0.05, color = cell_type, group = cell_type)) +
   geom_line(linewidth = 1) +
@@ -213,6 +226,7 @@ expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
     plot.margin = margin(10, 10, 10, 10)
   ) + ylim(0, 2100)
 
+message('Saving expression PC plot ...')
 ggsave(
   filename = out_file,
   plot = expr_plt,
