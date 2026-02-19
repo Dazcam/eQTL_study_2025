@@ -195,7 +195,7 @@ summary_list <- summarise_logs(cell_types, expr_dir)
 summary_tbl <- bind_rows(summary_list)
 
 # Plot
-expr_plt <- ggplot(df %>% filter(norm_methods == 'quantile'),
+expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
        aes(x = expPC, y = qtl_fdr_0.05, color = cell_type, group = cell_type)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
