@@ -15,15 +15,11 @@ website:
         contents:
           - index.qmd
           - setup.qmd
-      - section: "Primary Pipelines"
+      - section: "Snakemake Pipelines"
         contents:
           - pipelines/01-parse.qmd
           - pipelines/02-scanpy.qmd
-      - section: "Genotyping & eQTL"
-        contents:
           - pipelines/05-tensorqtl.qmd
-      - section: "Downstream Analysis"
-        contents:
           - pipelines/13-visualization.qmd
 
 format:
