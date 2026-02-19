@@ -1,0 +1,15 @@
+---
+title: "Project Overview"
+---
+
+# sn-eQTL Analysis Workflow
+
+This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+
+## Workflow Summary
+
+
+The pipeline is divided into 13 main modules:
+1. **01 Parse**: Raw data processing and alignment.
+2. **02 Scanpy**: Single-cell QC and clustering...
+(etc)
