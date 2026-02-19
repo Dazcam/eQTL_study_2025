@@ -1,0 +1,40 @@
+---
+title: "01: Parse Alignment"
+---
+
+## Overview
+The **Parse** pipeline handles the initial processing of combinatorial indexing single-cell data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.
+
+## Workflow Logic
+```{mermaid}
+graph TD
+    A[Get References] --> B[Create Ref Index]
+    C[Cat FASTQs] --> D[Run Split-Pipe]
+    B --> D
+    D --> E[Combine Plates]
+```
+
+##Key Rules
+Reference Preparation
+
+We download the genome and GTF files using wget.
+
+Note: We use localrules for get_refs to avoid overhead on the cluster.
+
+## Fastq Merging
+
+Because the data comes in multiple lanes, we concatenate them:
+
+Python
+#| code-summary: "View Concatenation Rule"
+rule cat_fqs:
+    # ... (paste your code here)
+
+Troubleshooting: Environment Clashes
+::: {.callout-important}
+
+Known Issue
+
+There is a clash between the snakemake environment and the spipe environment.
+Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the conda: directive.
+:::

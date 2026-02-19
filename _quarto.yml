@@ -1,0 +1,31 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Single-Cell eQTL Pipeline"
+  sidebar:
+    style: "floating"
+    search: true
+    contents:
+      - section: "Getting Started"
+        contents:
+          - index.qmd
+          - setup.qmd
+      - section: "Primary Pipelines"
+        contents:
+          - pipelines/01-parse.qmd
+          - pipelines/02-scanpy.qmd
+      - section: "Genotyping & eQTL"
+        contents:
+          - pipelines/05-tensorqtl.qmd
+      - section: "Downstream Analysis"
+        contents:
+          - pipelines/13-visualization.qmd
+
+format:
+  html:
+    theme: cosmo
+    code-fold: true   # Allows users to click to see the code
+    code-summary: "Show Snakemake Code"
+    toc: true
