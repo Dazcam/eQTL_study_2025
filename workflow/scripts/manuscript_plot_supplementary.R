@@ -62,7 +62,7 @@ theme(
 )
 
 # ----- Load data
-eigenval <- read_table(paste0(geno_dir, "pca.eigenval", col_names = "eigenval"))
+eigenval <- read_table(paste0(geno_dir, "pca.eigenval"), col_names = "eigenval")
 
 
 # ----- Geno PC Elbow plt
