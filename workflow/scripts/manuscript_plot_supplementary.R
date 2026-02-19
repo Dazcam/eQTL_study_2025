@@ -203,8 +203,7 @@ expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
   labs(
     x = "Expression PCs",
     y = "eGene count (FDR < 0.05)",
-    color = "Cell Type",
-    title = paste("No. of Sig. QTL by Expr PCs\nNorm method:", norm)
+    color = "Cell Type"
   ) +
   base_theme +
   theme(
