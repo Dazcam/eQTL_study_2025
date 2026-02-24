@@ -298,7 +298,7 @@ plot_fugita_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Cell type (Ref)", y = "Cell type (Query)") +
+    labs(x = "Cell type (Adult)", y = "Cell type (Prenatal)") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -350,19 +350,15 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
       should_label = if (!is.null(label_genes)) label_text %in% label_genes else FALSE
     )
   
-  # Temp code for troubleshooting
-  # tbl_dir <- '../results/13MANUSCRIPT_PLOTS_TABLES/tables/'
-  # write_tsv(paired_betas, paste0(tbl_dir, gsub(" ", "_", title), '_beta_cor_pairs.tsv'))
- 
   ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
-    geom_point(alpha = 0.2, color = "grey70", size = 1.4) +
+    geom_point(alpha = 0.2, color = "grey70", size = 1.8) +
     geom_point(
       data = filter(paired_betas, is_strong_outlier & discordant),
-      color = "#d32f2f", size = 2, alpha = 0.5
+      color = "#d32f2f", size = 3, alpha = 0.5
     ) +
     geom_point(
       data = filter(paired_betas, is_strong_outlier & !discordant),
-      color = "#1976d2", size = 2, alpha = 0.5
+      color = "#1976d2", size = 3, alpha = 0.5
     ) +
     geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 0.9) +
     geom_abline(
@@ -385,24 +381,19 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
       direction = "both",
       seed = 2025
     ) +
-    # annotate(
-    #   "text", x = Inf, y = Inf, label = cor_label,
-    #   hjust = 2.3, vjust = 3, size = 5
-    # ) +
+    annotate(
+      "text", x = Inf, y = Inf, label = cor_label,
+      hjust = 2.3, vjust = 3, size = 5
+    ) +
     labs(
       title = element_blank(),
       subtitle = cor_label,
-      x = paste0("Beta (", ct[1], ")"),
-      y = paste0("Beta (", ct[2], ")")
+      x = paste0("Beta (Adult ", ct[2], ")"),
+      y = paste0("Beta (Prenatal ", ct[1], ")")
     ) +
     theme_minimal(base_size = 13) +
     theme(
-      plot.title = element_text(hjust = 0.5, face = "bold"),
-      plot.margin = margin(40, 40, 40, 25, unit = "pt"),
-      plot.subtitle = element_text(
-        hjust = 0.5,
-        size = 12
-      ),
+      plot.margin = margin(30, 30, 30, 25, unit = "pt")
     )
 }
 
