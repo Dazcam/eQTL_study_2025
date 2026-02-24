@@ -147,8 +147,11 @@ for (cell_type in names(expPC_map)) {
   eqtl_enriched <- eqtl_enriched %>%
     mutate(cell_type = !!cell_type) %>%
     inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
-    dplyr::select(cell_type, ensembl_id, symbol = external_gene_name, 
-                  SNP, REF, ALT,  AF = af, slope, slope_se, p_value, qval, In_Peak)
+    mutate(CHROM = str_remove(CHROM, "^chr")) |>
+    dplyr::select(cell_type, ensembl_id, symbol = external_gene_name, CHROM, 
+                  SNP, POS, REF, ALT,  AF = af, slope, slope_se, p_value, qval, In_Peak)
+  
+  mesage('Any NAs in final tbl?', anyNA(eqtl_enriched))
   
   final_excel_list[[cell_type]] <- eqtl_enriched
   message("Processed ", cell_type, ": ", nrow(eqtl_enriched), " eQTLs")
