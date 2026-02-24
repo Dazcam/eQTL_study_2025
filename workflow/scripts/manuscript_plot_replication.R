@@ -33,7 +33,7 @@ library(tidyverse)
 library(cowplot)
 library(ggrepel)
 library(UpSetR)
-library(grid)
+library(ggplotify)
 
 # --- Set variables
 in_dir <- snakemake@params[['in_dir']]
@@ -166,24 +166,17 @@ gene_by_cell <- gene_cell %>%
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-# Upset Grob is not playing the game here
-upset_grob <- NULL  # safety
-
-# Open a null device to avoid X11/headless issues
-pdf(file = NULL)  # or use png(file = NULL) if pdf causes problems
-
-upset(
-  gene_by_cell,
-  nsets = length(cell_types),
-  order.by = "freq",
-  # mb.ratio = c(0.6, 0.4),
-  # text.scale = c(1.3, 1.3, 1.2, 1.2, 1.5, 1.2),
-  # point.size = 3.5,
-  # line.size = 0.8
-)
-
-upset_grob <- recordPlot()   # ← this is often more reliable than grid.grabExpr for base/grid plots
-dev.off()
+# Use as.ggplot to wrap the base plot function
+upset_plt <- as.ggplot(fill = "white") + 
+  as.grob(~upset(
+    gene_by_cell,
+    nsets = length(cell_types),
+    order.by = "freq",
+    # You can uncomment and adjust these now:
+    text.scale = c(1.5, 1.2, 1.2, 1.2, 1.5, 1.2),
+    point.size = 2,
+    line.size = 0.5
+  ))
 
 # --- Internal pi1 heatmap -----
 read_pi1_results <- function(ct, ref_ct) {
@@ -325,7 +318,7 @@ plot_fugita_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Cell type (Adult)", y = "Cell type (Prenatal)") +
+    labs(x = "Adult Cell Type Adult", y = "Prenatal Cell type") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -420,7 +413,7 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
     ) +
     theme_minimal(base_size = 13) +
     theme(
-      plot.margin = margin(30, 30, 30, 25, unit = "pt")
+      plot.margin = margin(10, 10, 10, 10, unit = "pt")
     )
 }
 
@@ -433,7 +426,7 @@ beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup,
 
 ### --- plot -----
 # Final plot
-top_row <- plot_grid(pie_chart, upset_grob, labels = c("A", "B"),
+top_row <- plot_grid(pie_chart, upset_plt, labels = c("A", "B"),
   label_size = 24, ncol = 2,rel_widths = c(1, 1.3))
 
 # Stack heatmaps
@@ -443,7 +436,7 @@ heatmaps_stacked <- plot_grid(
   ncol = 1,
   rel_heights = c(1, 0.8),   # C slightly taller
   labels = c("C", "D"),
-  label_size = 20,
+  label_size = 24,
   align = "v"
 )
 
@@ -453,7 +446,7 @@ betas_stacked <- plot_grid(
   ncol = 1,
   rel_heights = c(1,1,1),
   labels = c("E", "F", "G"),
-  label_size = 20
+  label_size = 24
 )
 
 # Bottom row: heatmaps + betas 
