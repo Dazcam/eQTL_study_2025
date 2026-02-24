@@ -63,6 +63,17 @@ expPC_map <- c(
   "Endo-Peri"  = 30
 )
 
+# Define custom color palette
+custom_palette <- c(
+  'Glu-UL' = '#4363d8',
+  'Glu-DL' = '#00B6EB',
+  'NPC' = '#FF5959',
+  'GABA' = '#3CBB75FF',
+  'Endo-Peri' = '#B200ED',
+  'MG' = '#F58231',
+  'OPC' = '#FDE725FF'
+)
+
 eqtl_list <- list()
 genPC <- 4
 norm_method <- 'quantile'
@@ -166,27 +177,57 @@ gene_by_cell <- gene_cell %>%
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-# Render to file first
+# ---- Derive intersection ordering EXACTLY as upset() does ----
+membership <- UpSetR:::Create_matrix(gene_by_cell)
+intersects <- UpSetR:::Get_intersections(membership)
+
+# apply same cutoff + ordering
+intersects <- intersects[intersects$freq >= 10, ]
+intersects <- intersects[order(-intersects$freq), ]
+
+# ---- Identify unique intersections ----
+intersection_cell <- apply(
+  intersects[, cell_types],
+  1,
+  function(x) {
+    if (sum(x) == 1) {
+      names(which(x == 1))
+    } else {
+      NA
+    }
+  }
+)
+
+# ---- Colour mapping ----
+bar_cols <- ifelse(
+  is.na(intersection_cell),
+  "grey40",
+  custom_palette[intersection_cell]
+)
+
+# ---- Render to PNG first (device-safe for Snakemake/pdf()) ----
 tmp_upset <- tempfile(fileext = ".png")
 
 png(tmp_upset, width = 2400, height = 2000, res = 300)
 
 upset(
   gene_by_cell,
-  nsets = length(cell_types),
-  order.by = "freq",
-  text.scale = c(1.5,1.2,1.2,1.2,1.5,1.2),
-  point.size = 2,
-  line.size = 0.5
+  nsets          = length(cell_types),
+  order.by       = "freq",
+  cutoff         = 10,
+  main.bar.color = bar_cols,
+  matrix.color   = bar_cols,
+  sets.bar.color = custom_palette[cell_types],
+  point.size     = 3.8,
+  line.size      = 1
 )
 
 dev.off()
 
-
-# Re-import as grob
+# ---- Re-import as grob for cowplot ----
 img <- png::readPNG(tmp_upset)
 
-upset_grob <- rasterGrob(
+upset_grob <- grid::rasterGrob(
   img,
   interpolate = TRUE
 )
@@ -256,7 +297,7 @@ plot_int_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Cell type (Ref)", y = "Cell type (Query)") +
+    labs(x = "Cell type", y = "Cell type") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -333,7 +374,7 @@ plot_fugita_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Adult Cell Type Adult", y = "Prenatal Cell type") +
+    labs(x = "Adult Cell Type", y = "Prenatal Cell type") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -418,13 +459,13 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
     ) +
     annotate(
       "text", x = Inf, y = Inf, label = cor_label,
-      hjust = 1.1, vjust = 0.2, size = 5
+      hjust = -0.1, vjust = 1.4, size = 5
     ) +
     labs(
       title = element_blank(),
       subtitle = element_blank(),
-      x = paste0("Beta (Adult ", ct[2], ")"),
-      y = paste0("Beta (Prenatal ", ct[1], ")")
+      x = substitute(beta ~ "(Adult" ~ x ~ ")", list(x = ct[2])),
+      y = substitute(beta ~ "(Prenatal" ~ x ~ ")", list(x = ct[1]))
     ) +
     theme_minimal(base_size = 13) +
     theme(
