@@ -5,11 +5,12 @@
 #--------------------------------------------------------------------------------------
 
 # A: Pie chart of shared eGenes accross cell types
-# B: Internal Pi1 heatmap
-# C: Fetal vs. adult Pi1 heatmap (only Glu and GABA only)
-# D: Fetal vs. adult beta correlation 1
-# E: Fetal vs. adult beta correlation 2
-# F: Fetal vs. adult beta correlation 3
+# B: Upset Plot
+# C: Internal Pi1 heatmap
+# D: Fetal vs. adult Pi1 heatmap (only Glu and GABA only)
+# E: Fetal vs. adult beta correlation 1
+# F: Fetal vs. adult beta correlation 2
+# G: Fetal vs. adult beta correlation 3
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -31,7 +32,7 @@ message("\n\nGenerating replication plot for the manuscript ...")
 library(tidyverse)
 library(cowplot)
 library(ggrepel)
-
+library(UpSetR)
 
 # --- Set variables
 in_dir <- snakemake@params[['in_dir']]
@@ -157,6 +158,14 @@ pie_chart <- ggplot(pie_dat,aes(ymax = ymax, ymin = ymin, xmax = 1,
     linewidth = 0.4,
     color = "black"
   )
+
+# --- Upset Plot ----
+gene_by_cell <- gene_cell %>%
+  pivot_wider(names_from = cell_type, values_from = cell_type,
+              values_fill = 0, values_fn = function(x) 1) %>%
+  column_to_rownames("phenotype_id")
+
+upset_plt <- upset(gene_by_cell, nsets = length(cell_types), order.by = "freq")
 
 # --- Internal pi1 heatmap -----
 read_pi1_results <- function(ct, ref_ct) {
@@ -408,9 +417,9 @@ beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup,
 
 ### --- plot -----
 # Final plot
-final_plt <- plot_grid(pie_chart, pi1_int_heatmap, pi1_fugita_heatmap, 
+final_plt <- plot_grid(pie_chart, upset_plt, pi1_int_heatmap, pi1_fugita_heatmap, 
                        beta_gluUL_plt, beta_gluDL_plt, beta_gaba_plt, labels ='AUTO',
-                       ncol = 3, label_size = 20)
+                       ncol = 3, label_size = 24)
 
 ggsave(
   filename = out_file,
