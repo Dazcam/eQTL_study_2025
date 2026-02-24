@@ -167,16 +167,16 @@ gene_by_cell <- gene_cell %>%
   column_to_rownames("phenotype_id")
 
 # Use as.ggplot to wrap the base plot function
-upset_plt <- as.ggplot(fill = "white") + 
+upset_plt <- as.ggplot(
   as.grob(~upset(
     gene_by_cell,
     nsets = length(cell_types),
     order.by = "freq",
-    # You can uncomment and adjust these now:
     text.scale = c(1.5, 1.2, 1.2, 1.2, 1.5, 1.2),
     point.size = 2,
     line.size = 0.5
   ))
+) + theme(plot.background = element_rect(fill = "white", color = NA))
 
 # --- Internal pi1 heatmap -----
 read_pi1_results <- function(ct, ref_ct) {
