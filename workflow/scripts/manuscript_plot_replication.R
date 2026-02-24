@@ -433,7 +433,7 @@ beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup,
 
 ### --- plot -----
 # Final plot
-top_row <- plot_grid(pie_chart, upset_plt, labels = c("A", "B"),
+top_row <- plot_grid(pie_chart, upset_grob, labels = c("A", "B"),
   label_size = 24, ncol = 2,rel_widths = c(1, 1.3))
 
 # Stack heatmaps
