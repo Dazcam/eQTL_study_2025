@@ -1,10 +1,12 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate eQTL supplementry table for manauscript
+#    Generate eQTL supplementary table for manuscript
 #
 #--------------------------------------------------------------------------------------
 
-# See bootRanges for SNP-Peak overlap: https://academic.oup.com/bioinformatics/article/39/5/btad190/7115835
+# For each cell type extract sig. eQTL
+# Add chr, position and allele info from genotype VCF
+# Check for OCR overlap of each eQTL in Ziffra union of OCRs file
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -20,7 +22,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\neQTL supplementry table for manauscript ...")
+message("\n\neQTL supplementry table for manuscript ...")
 
 # -------------------------------------------------------------------------------------
 
