@@ -29,7 +29,7 @@ message("\n\neQTL supplementary table for manuscript ...")
 
 library(tidyverse)
 library(openxlsx)
-g
+
 smr_dir <- snakemake@params[["smr_dir"]]
 eqtl_nom_dir <- snakemake@params[["eqtl_nom_dir"]]
 out_file <- snakemake@output[[1]]
@@ -50,7 +50,7 @@ sig_smr_list <- list()
 for (gwas in disorders) {
   
   message('Extracting sig. SMR eQTL for: ', gwas)
-  smr_tbl <- read_tsv(paste0(smr_dir, gwas, '_smk.tsv'),
+  smr_tbl <- read_tsv(paste0(smr_dir, gwas, '_smr.tsv'),
                       show_col_types = FALSE) |>
     select(Chr, Symbol, `Ensembl ID`, SNP, A1, A2) |>
     mutate(key = paste(SNP, `Ensembl ID`, sep = '_'),
