@@ -166,13 +166,24 @@ gene_by_cell <- gene_cell %>%
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-upset_plt <- grid.grabExpr({
-  upset(gene_by_cell, 
-        nsets = length(cell_types), 
-        order.by = "freq"
-        # add any other arguments you want: mb.ratio, nintersects, text.scale, etc.
-  )
-})
+# Upset Grob is not playing the game here
+upset_grob <- NULL  # safety
+
+# Open a null device to avoid X11/headless issues
+pdf(file = NULL)  # or use png(file = NULL) if pdf causes problems
+
+upset(
+  gene_by_cell,
+  nsets = length(cell_types),
+  order.by = "freq",
+  # mb.ratio = c(0.6, 0.4),
+  # text.scale = c(1.3, 1.3, 1.2, 1.2, 1.5, 1.2),
+  # point.size = 3.5,
+  # line.size = 0.8
+)
+
+upset_grob <- recordPlot()   # ← this is often more reliable than grid.grabExpr for base/grid plots
+dev.off()
 
 # --- Internal pi1 heatmap -----
 read_pi1_results <- function(ct, ref_ct) {
@@ -399,11 +410,11 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
     ) +
     annotate(
       "text", x = Inf, y = Inf, label = cor_label,
-      hjust = 2.3, vjust = 3, size = 5
+      hjust = 1.1, vjust = 0.2, size = 5
     ) +
     labs(
       title = element_blank(),
-      subtitle = cor_label,
+      subtitle = element_blank(),
       x = paste0("Beta (Adult ", ct[2], ")"),
       y = paste0("Beta (Prenatal ", ct[1], ")")
     ) +
@@ -424,24 +435,40 @@ beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup,
 # Final plot
 top_row <- plot_grid(pie_chart, upset_plt, labels = c("A", "B"),
   label_size = 24, ncol = 2,rel_widths = c(1, 1.3))
+
+# Stack heatmaps
+heatmaps_stacked <- plot_grid(
+  pi1_int_heatmap, #+ theme(plot.margin = margin(5,10,5,5,"pt")),
+  pi1_fugita_heatmap, #+ theme(plot.margin = margin(5,10,5,5,"pt")),
+  ncol = 1,
+  rel_heights = c(1, 0.8),   # C slightly taller
+  labels = c("C", "D"),
+  label_size = 20,
+  align = "v"
+)
+
+# Stack betas 
+betas_stacked <- plot_grid(
+  beta_gluUL_plt, beta_gluDL_plt, beta_gaba_plt,
+  ncol = 1,
+  rel_heights = c(1,1,1),
+  labels = c("E", "F", "G"),
+  label_size = 20
+)
+
+# Bottom row: heatmaps + betas 
 bottom_row <- plot_grid(
-  pi1_int_heatmap, 
-  pi1_fugita_heatmap,
-  plot_grid(beta_gluUL_plt, beta_gluDL_plt, beta_gaba_plt, 
-            ncol = 1,
-            labels = c("E", "F", "G"),
-            label_size = 20,
-            rel_heights = c(1,1,1)), 
-  labels = c("C", "D", ""),
-  label_size = 24,
-  ncol = 3,
-  rel_widths = c(1, 1, 0.9)
+  heatmaps_stacked,
+  betas_stacked,
+  ncol = 2,
+  rel_widths = c(1.1, 0.9), 
+  align = "h"
 )
 final_plt <- plot_grid(
   top_row,
   bottom_row,
   ncol = 1,
-  rel_heights = c(1, 1.4)            # give bottom more vertical space (tune this)
+  rel_heights = c(1, 1.4)     
 )
 
 ggsave(
