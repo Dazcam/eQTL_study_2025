@@ -33,7 +33,7 @@ library(tidyverse)
 library(cowplot)
 library(ggrepel)
 library(UpSetR)
-library(ggplotify)
+library(grid)
 
 # --- Set variables
 in_dir <- snakemake@params[['in_dir']]
@@ -167,7 +167,7 @@ gene_by_cell <- gene_cell %>%
   column_to_rownames("phenotype_id")
 
 # Try function
-upset_func <- function() {
+upset_grob <- grid.grabExpr(
   upset(
     gene_by_cell,
     nsets = length(cell_types),
@@ -176,11 +176,9 @@ upset_func <- function() {
     point.size = 2,
     line.size = 0.5
   )
-}
+)
 
-# Use ggplotify to capture the output of that function
-upset_plt <- as.ggplot(as.grob(upset_func)) + 
-  theme(plot.background = element_rect(fill = "white", color = NA))
+upset_plt <- ggplotify::as.ggplot(upset_grob)
 
 # --- Internal pi1 heatmap -----
 read_pi1_results <- function(ct, ref_ct) {
