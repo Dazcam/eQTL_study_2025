@@ -165,7 +165,13 @@ gene_by_cell <- gene_cell %>%
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-upset_plt <- upset(gene_by_cell, nsets = length(cell_types), order.by = "freq")
+upset_plt <- grid.grabExpr({
+  upset(gene_by_cell, 
+        nsets = length(cell_types), 
+        order.by = "freq"
+        # add any other arguments you want: mb.ratio, nintersects, text.scale, etc.
+  )
+})
 
 # --- Internal pi1 heatmap -----
 read_pi1_results <- function(ct, ref_ct) {
@@ -413,19 +419,35 @@ beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup,
 beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, 
                                      c("Glu-UL", "Exc"), 'ABCC8')
 
-
-
 ### --- plot -----
 # Final plot
-final_plt <- plot_grid(pie_chart, upset_plt, pi1_int_heatmap, pi1_fugita_heatmap, 
-                       beta_gluUL_plt, beta_gluDL_plt, beta_gaba_plt, labels ='AUTO',
-                       ncol = 3, label_size = 24)
+top_row <- plot_grid(pie_chart, upset_plt, labels = c("A", "B"),
+  label_size = 24, ncol = 2,rel_widths = c(1, 1.3))
+bottom_row <- plot_grid(
+  pi1_int_heatmap, 
+  pi1_fugita_heatmap,
+  plot_grid(beta_gluUL_plt, beta_gluDL_plt, beta_gaba_plt, 
+            ncol = 1,
+            labels = c("E", "F", "G"),
+            label_size = 20,
+            rel_heights = c(1,1,1)), 
+  labels = c("C", "D", ""),
+  label_size = 24,
+  ncol = 3,
+  rel_widths = c(1, 1, 0.9)
+)
+final_plt <- plot_grid(
+  top_row,
+  bottom_row,
+  ncol = 1,
+  rel_heights = c(1, 1.4)            # give bottom more vertical space (tune this)
+)
 
 ggsave(
   filename = out_file,
   plot = final_plt,
   width = 16,
-  height = 12,
+  height = 14,
   units = "in",
   device = "pdf",
   dpi = 300
