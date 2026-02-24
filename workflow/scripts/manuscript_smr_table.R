@@ -86,10 +86,10 @@ for (cell_type in cell_types) {
   }
 
 # How many cell types have the eQTL for each row
-sig_smr_tbl <- sig_smr_tbl |>
-  mutate(
-    n_cell_types_with_eqtl = rowSums(!is.na(select(., all_of(cell_types))))
-  )
+# sig_smr_tbl <- sig_smr_tbl |>
+#   mutate(
+#     n_cell_types_with_eqtl = rowSums(!is.na(select(., all_of(cell_types))))
+#   )
 
 # ── Export ───────────────────────────────────────────────────────────────────────
 message("Writing to Excel file...")
