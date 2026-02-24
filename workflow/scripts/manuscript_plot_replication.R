@@ -177,15 +177,36 @@ gene_by_cell <- gene_cell %>%
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-# ---- Derive intersection ordering EXACTLY as upset() does ----
-membership <- UpSetR:::Create_matrix(gene_by_cell)
-intersects <- UpSetR:::Get_intersections(membership)
+# -----------------------------
+# Compute intersection counts
+# -----------------------------
 
-# apply same cutoff + ordering
+# ensure matrix
+mat <- as.matrix(gene_by_cell)
+
+# get all unique intersection patterns
+patterns <- unique(mat)
+
+# count frequency of each pattern
+pattern_freq <- apply(patterns, 1, function(p) {
+  sum(apply(mat, 1, function(row) all(row == p)))
+})
+
+# build intersection table
+intersects <- as.data.frame(patterns)
+intersects$freq <- pattern_freq
+
+# remove empty intersection (all zeros)
+intersects <- intersects[rowSums(intersects[, cell_types]) > 0, ]
+
+# apply cutoff and ordering (exactly like upset)
 intersects <- intersects[intersects$freq >= 10, ]
 intersects <- intersects[order(-intersects$freq), ]
 
-# ---- Identify unique intersections ----
+# -----------------------------
+# Identify unique intersections
+# -----------------------------
+
 intersection_cell <- apply(
   intersects[, cell_types],
   1,
@@ -198,14 +219,20 @@ intersection_cell <- apply(
   }
 )
 
-# ---- Colour mapping ----
+# -----------------------------
+# Colour mapping
+# -----------------------------
+
 bar_cols <- ifelse(
   is.na(intersection_cell),
   "grey40",
   custom_palette[intersection_cell]
 )
 
-# ---- Render to PNG first (device-safe for Snakemake/pdf()) ----
+# -----------------------------
+# Render safely to PNG
+# -----------------------------
+
 tmp_upset <- tempfile(fileext = ".png")
 
 png(tmp_upset, width = 2400, height = 2000, res = 300)
@@ -224,7 +251,10 @@ upset(
 
 dev.off()
 
-# ---- Re-import as grob for cowplot ----
+# -----------------------------
+# Re-import for cowplot
+# -----------------------------
+
 img <- png::readPNG(tmp_upset)
 
 upset_grob <- grid::rasterGrob(
