@@ -166,16 +166,29 @@ gene_by_cell <- gene_cell %>%
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-# Try function
-upset_grob <- grid.grabExpr(
-  upset(
-    gene_by_cell,
-    nsets = length(cell_types),
-    order.by = "freq",
-    text.scale = c(1.5, 1.2, 1.2, 1.2, 1.5, 1.2),
-    point.size = 2,
-    line.size = 0.5
-  )
+# Render to file first
+tmp_upset <- tempfile(fileext = ".png")
+
+png(tmp_upset, width = 2400, height = 2000, res = 300)
+
+upset(
+  gene_by_cell,
+  nsets = length(cell_types),
+  order.by = "freq",
+  text.scale = c(1.5,1.2,1.2,1.2,1.5,1.2),
+  point.size = 2,
+  line.size = 0.5
+)
+
+dev.off()
+
+
+# Re-import as grob
+img <- png::readPNG(tmp_upset)
+
+upset_grob <- rasterGrob(
+  img,
+  interpolate = TRUE
 )
 
 upset_plt <- ggplotify::as.ggplot(upset_grob)
