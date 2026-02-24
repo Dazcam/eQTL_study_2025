@@ -33,6 +33,7 @@ library(tidyverse)
 library(cowplot)
 library(ggrepel)
 library(UpSetR)
+library(grid)
 
 # --- Set variables
 in_dir <- snakemake@params[['in_dir']]
