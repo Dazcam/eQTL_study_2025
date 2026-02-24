@@ -177,62 +177,7 @@ gene_by_cell <- gene_cell %>%
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-# -----------------------------
-# Compute intersection counts
-# -----------------------------
-
-# ensure matrix
-mat <- as.matrix(gene_by_cell)
-
-# get all unique intersection patterns
-patterns <- unique(mat)
-
-# count frequency of each pattern
-pattern_freq <- apply(patterns, 1, function(p) {
-  sum(apply(mat, 1, function(row) all(row == p)))
-})
-
-# build intersection table
-intersects <- as.data.frame(patterns)
-intersects$freq <- pattern_freq
-
-# remove empty intersection (all zeros)
-intersects <- intersects[rowSums(intersects[, cell_types]) > 0, ]
-
-# apply cutoff and ordering (exactly like upset)
-intersects <- intersects[intersects$freq >= 10, ]
-intersects <- intersects[order(-intersects$freq), ]
-
-# -----------------------------
-# Identify unique intersections
-# -----------------------------
-
-intersection_cell <- apply(
-  intersects[, cell_types],
-  1,
-  function(x) {
-    if (sum(x) == 1) {
-      names(which(x == 1))
-    } else {
-      NA
-    }
-  }
-)
-
-# -----------------------------
-# Colour mapping
-# -----------------------------
-
-bar_cols <- ifelse(
-  is.na(intersection_cell),
-  "grey40",
-  custom_palette[intersection_cell]
-)
-
-# -----------------------------
-# Render safely to PNG
-# -----------------------------
-
+# Render to PNG 
 tmp_upset <- tempfile(fileext = ".png")
 
 png(tmp_upset, width = 2400, height = 2000, res = 300)
@@ -242,8 +187,6 @@ upset(
   nsets          = length(cell_types),
   order.by       = "freq",
   cutoff         = 10,
-  main.bar.color = bar_cols,
-  matrix.color   = bar_cols,
   sets.bar.color = custom_palette[cell_types],
   point.size     = 3.8,
   line.size      = 1
@@ -251,10 +194,7 @@ upset(
 
 dev.off()
 
-# -----------------------------
-# Re-import for cowplot
-# -----------------------------
-
+# Re-import as grob for cowplot
 img <- png::readPNG(tmp_upset)
 
 upset_grob <- grid::rasterGrob(
