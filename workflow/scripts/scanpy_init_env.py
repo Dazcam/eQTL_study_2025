@@ -30,7 +30,7 @@ def initialize_env(plate):
     
     def setup_logging(plate):
         if os.path.exists('/scratch/'):
-            root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
+            root_dir = '/scratch/SCWF00021/eQTL_study_2025/'
         else:
             root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
 
@@ -78,7 +78,7 @@ def initialize_env(plate):
     # Set thread environment variable if on a specific system
     if os.path.exists('/scratch/'):
         os.environ['OMP_NUM_THREADS'] = '16'
-        root_dir = '/scratch/c.c1477909/eQTL_study_2025/'
+        root_dir = '/scratch/SCWF00021/eQTL_study_2025/'
     else:
         root_dir = '/Users/darren/Desktop/eQTL_study_2025/'
 
