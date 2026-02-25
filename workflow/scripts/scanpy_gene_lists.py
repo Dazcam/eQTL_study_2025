@@ -42,7 +42,7 @@ final_genes = [
     "CUX2", "SATB2",            # Upper layer ExN
     "TLE4",                     # Deep layer ExN
     "GAD1",                     # Radial glia    
-    "GLI3", "PAX6",             # InN                                    
+    "GLI2", "PAX6",             # InN                                    
     "PDGFRA",                   # OPCs                    
     "C3",                       # MG
     "FN1"                       # Endothelial cells   

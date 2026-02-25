@@ -577,7 +577,9 @@ def plot_celltype_and_gene_features(
     extra_height=3.0,
     ncols=3,
     cmap_name="light_dark_blue",
-    umap_palette=None
+    umap_palette=None,
+    vmin = 0,
+    vmax = 'p99',
 ):
     """
     Create a publication-style figure with:
@@ -610,12 +612,10 @@ def plot_celltype_and_gene_features(
     """
     # ── Custom fetaure plot colormap 
     if cmap_name == "light_dark_blue":
-        cmap = LinearSegmentedColormap.from_list(
+        cmap_name = LinearSegmentedColormap.from_list(
             "light_dark_blue",
             ["#f7fbff", "#08306b"]
         )
-    else:
-        raise ValueError(f"Unsupported cmap_name: {cmap_name}. Currently only 'light_dark_blue' is implemented.")
 
     # ── Layout calculations 
     n_genes = len(final_genes)
@@ -671,9 +671,9 @@ def plot_celltype_and_gene_features(
             adata,
             color=gene,
             ax=ax,
-            vmin=0,
-            vmax="p99",
-            cmap=cmap,
+            vmin=vmin,
+            vmax=vmax,
+            cmap=cmap_name,
             frameon=False,
             title=gene,
             show=False
