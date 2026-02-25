@@ -257,7 +257,7 @@ pi1_square_tbl <- pi1_result_tbl %>%
     # Use the specific Forward result for every unique combination provided by expand.grid
     pi1_final = ifelse(cell_type == ref_cell_type, 1.0, pi1_forward)
   ) %>%
-  select(query = cell_type, ref = ref_cell_type, pi1 = pi1_final) %>%
+  select(ref = cell_type, query = ref_cell_type, pi1 = pi1_final) %>%
   mutate(
     # rev() ensures the first cell type is at the top (standard matrix view)
     query = factor(query, levels = rev(cell_types)), 
@@ -273,7 +273,7 @@ pi1_square_tbl <- pi1_result_tbl %>%
 
 # Updated heatmap function
 plot_int_heatmap <- function(df) {
-  ggplot(df, aes(x = ref, y = query, fill = pi1)) +
+  ggplot(df, aes(x = query, y = ref, fill = pi1)) +
     geom_tile(color = "black", lwd = 1.1, linetype = 1) +
     geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
               color = "black", size = 3.5) +
@@ -284,7 +284,7 @@ plot_int_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Cell type", y = "Cell type") +
+    labs(x = "Cell type (Query)", y = "Cell type (Reference)") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
