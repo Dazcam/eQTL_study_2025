@@ -688,8 +688,6 @@ def plot_celltype_and_gene_features(
     
     return fig
 
-
-
 def plot_gene_read_distribution(adata):
     """
     Plots the distribution of total reads per gene in an AnnData object.

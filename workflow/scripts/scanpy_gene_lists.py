@@ -45,7 +45,8 @@ final_genes = [
     "GLI2", "PAX6",             # InN                                    
     "PDGFRA",                   # OPCs                    
     "C3",                       # MG
-    "FN1"                       # Endothelial cells   
+    "FN1",                       # Endothelial cells   
+    "POU3F2", "EPHA3", "TENM4"
 ]
 
 big_gene_list = [
