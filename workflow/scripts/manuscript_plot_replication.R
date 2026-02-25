@@ -180,7 +180,7 @@ gene_by_cell <- gene_cell %>%
 # Render to PNG 
 tmp_upset <- tempfile(fileext = ".png")
 
-png(tmp_upset, width = 2400, height = 1800, res = 300)
+png(tmp_upset, width = 2800, height = 1800, res = 300)
 
 upset(
   gene_by_cell,
@@ -193,7 +193,7 @@ upset(
   # text.scale: c(intersection size title, intersection size tick labels, 
   #               set size title, set size tick labels, 
   #               set names, numbers above bars)
-  text.scale     = c(1.8, 1.5, 1.5, 1.5, 1.8, 1.5)
+  text.scale     = c(2.5, 2, 1.8, 1.8, 2.5, 1.8)
 )
 
 dev.off()
