@@ -180,16 +180,17 @@ gene_by_cell <- gene_cell %>%
 # Render to PNG 
 tmp_upset <- tempfile(fileext = ".png")
 
-png(tmp_upset, width = 2400, height = 2000, res = 300)
+png(tmp_upset, width = 2400, height = 1800, res = 300)
 
 upset(
   gene_by_cell,
   nsets          = length(cell_types),
   order.by       = "freq",
-  cutoff         = 10,
+  nintersects    = 20,
   sets.bar.color = custom_palette[cell_types],
   point.size     = 3.8,
-  line.size      = 1
+  line.size      = 1,
+  text.scale     = c(1.3, 1.3, 1, 1, 1.5, 1) # Optional: improves readability
 )
 
 dev.off()
@@ -202,7 +203,10 @@ upset_grob <- grid::rasterGrob(
   interpolate = TRUE
 )
 
-upset_plt <- ggplotify::as.ggplot(upset_grob)
+upset_plt <- ggplotify::as.ggplot(upset_grob) +
+  theme(
+    plot.margin = margin(t = 40, r = 10, b = 40, l = 10, unit = "pt")
+  )
 
 # --- Internal pi1 heatmap -----
 read_pi1_results <- function(ct, ref_ct) {
@@ -237,22 +241,40 @@ combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, 
 # Read all pi1 results
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
 
-# Prepare data for Forward only (upper triangle including diagonal)
-pi1_forward_tbl <- pi1_result_tbl %>%
-  select(query = cell_type, ref = ref_cell_type, pi1 = pi1_forward) %>%
-  mutate(
-    pi1 = ifelse(query == ref, 1.0, pi1),  # diagonal = 1.0
-    row_idx = match(query, cell_types),
-    col_idx = match(ref, cell_types)
-  ) %>%
-  filter(row_idx <= col_idx)  # upper triangle including diagonal (opposite direction)
+# # Prepare data for Forward only (upper triangle including diagonal)
+# pi1_forward_tbl <- pi1_result_tbl %>%
+#   select(query = cell_type, ref = ref_cell_type, pi1 = pi1_forward) %>%
+#   mutate(
+#     pi1 = ifelse(query == ref, 1.0, pi1),  # diagonal = 1.0
+#     row_idx = match(query, cell_types),
+#     col_idx = match(ref, cell_types)
+#   ) %>%
+#   filter(row_idx <= col_idx)  # upper triangle including diagonal (opposite direction)
 
-# Force factor levels for correct ordering
-pi1_int_tbl <- pi1_forward_tbl %>%
+pi1_square_tbl <- pi1_result_tbl %>%
   mutate(
-    query = factor(query, levels = cell_types),
+    # Logic: 
+    # If same cell type -> 1.0
+    # If upper triangle -> use forward pi1
+    # If lower triangle -> use reverse pi1 (or mapping logic below)
+    pi1_final = case_when(
+      cell_type == ref_cell_type ~ 1.0,
+      match(cell_type, cell_types) < match(ref_cell_type, cell_types) ~ pi1_forward,
+      TRUE ~ pi1_reverse
+    )
+  ) %>%
+  select(query = cell_type, ref = ref_cell_type, pi1 = pi1_final) %>%
+  mutate(
+    query = factor(query, levels = rev(cell_types)), # rev() keeps the order standard for Y-axis
     ref = factor(ref, levels = cell_types)
   )
+
+# Force factor levels for correct ordering
+# pi1_int_tbl <- pi1_forward_tbl %>%
+#   mutate(
+#     query = factor(query, levels = cell_types),
+#     ref = factor(ref, levels = cell_types)
+#   )
 
 # Updated heatmap function
 plot_int_heatmap <- function(df) {
@@ -277,7 +299,7 @@ plot_int_heatmap <- function(df) {
 }
 
 # Generate only the forward heatmap (no title)
-pi1_int_heatmap <- plot_int_heatmap(pi1_int_tbl)
+pi1_int_heatmap <- plot_int_heatmap(pi1_square_tbl)
 
 
 # --- Fugita pi1 heatmap -----
@@ -429,17 +451,17 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
     ) +
     annotate(
       "text", x = Inf, y = Inf, label = cor_label,
-      hjust = -0.1, vjust = 1.4, size = 5
+      hjust = -0.3, vjust = 1.8, size = 5
     ) +
     labs(
-      title = element_blank(),
-      subtitle = element_blank(),
-      x = substitute(beta ~ "(Adult" ~ x ~ ")", list(x = ct[2])),
-      y = substitute(beta ~ "(Prenatal" ~ x ~ ")", list(x = ct[1]))
+      x = substitute("Adult" ~ x ~ beta, list(x = ct[2])),
+      y = substitute("Prenatal" ~ x ~ beta, list(x = ct[1]))
     ) +
     theme_minimal(base_size = 13) +
     theme(
-      plot.margin = margin(10, 10, 10, 10, unit = "pt")
+      plot.margin = margin(20, 40, 20, 40, unit = "pt"),
+      title = element_blank(),
+      subtitle = element_blank(),
     )
 }
 
