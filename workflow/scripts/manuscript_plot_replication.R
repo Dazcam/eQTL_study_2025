@@ -193,7 +193,7 @@ upset(
   # text.scale: c(intersection size title, intersection size tick labels, 
   #               set size title, set size tick labels, 
   #               set names, numbers above bars)
-  text.scale     = c(2.2, 2, 1.8, 1.8, 2, 1.7)
+  text.scale     = c(2.2, 2, 1.8, 1.8, 1.8, 1.7)
 )
 
 dev.off()
