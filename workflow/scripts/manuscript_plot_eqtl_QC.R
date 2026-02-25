@@ -8,6 +8,7 @@
 # B: Cell counts vs. eGenes
 # C: Proportion of eGene sharing across L1 and L2 cell types (main 4 cell types)
 # D: eQTL distance to TSS denisty plots
+# F: eQTL in OCR Enrichment plot
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -32,6 +33,7 @@ library(ggrepel)
 
 # --- Set variables
 in_dir <- snakemake@params[['in_dir']] 
+ziffra_dir <- snakemake@params[['ziffra_dir']] 
 out_file <- snakemake@output[[1]] 
 
 #in_dir <- "../results/05TENSORQTL/tensorqtl_perm/"
@@ -312,16 +314,71 @@ combined_plt <- ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fi
   theme(legend.position = "top",
         plot.margin = unit(c(1, 1, 1, 1), "cm"))
 
+# --- Ziffra
+ziffra_tbl <- read_tsv(paste0(ziffra_dir, 'ziffra_overlaps_primary.tsv')) |>
+  mutate(clean_peak = str_replace_all(peak_cell_type, "_MACSpeaks", ""),
+         test = paste(eqtl_cell_type, clean_peak, sep = ' in '))
+  
+
+# --- Specify y-axis order
+cell_order <- c(
+  "Glu-UL",   sort(grep("^Glu-UL-",  ziffra_tbl$test, value = TRUE)),
+  "Glu-DL",   sort(grep("^Glu-DL-",  ziffra_tbl$test, value = TRUE)),
+  "GABA",     sort(grep("^GABA-",    ziffra_tbl$test, value = TRUE)),
+  "NPC",      sort(grep("^NPC-",     ziffra_tbl$test, value = TRUE)),
+  "OPC", "MG", "Endo-Peri"
+) |> unique()
+
+# --- Assign main cluster to subclusters
+ziffra_tbl <- ziffra_tbl |>
+  mutate(test = factor(test, levels = rev(cell_order))) |>
+  mutate(main_type = case_when(
+    str_detect(test, "Glu-UL") ~ "Glu-UL",
+    str_detect(test, "Glu-DL") ~ "Glu-DL",
+    str_detect(test, "GABA") ~ "GABA",
+    str_detect(test, "NPC") ~ "NPC",
+    str_detect(test, "OPC") ~ "OPC",
+    str_detect(test, "MG") ~ "MG",
+    str_detect(test, "Endo-Peri") ~ "Endo-Peri",
+    TRUE ~ test
+  ))
+
+# --- Base theme
+base_theme <- theme_minimal(base_size = 12) +
+  theme(
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    panel.spacing.x = unit(2, "lines"),
+  )
+
+ziffra_plt <- ziffra_tbl |>
+  ggplot(aes(x = fold_enrichment, y = test, fill = main_type)) +  
+  geom_col(width = 0.7, colour = 'black') +
+  theme_minimal(base_size = 12) +
+  geom_vline(xintercept = 0, color = "black", linewidth = 0.6) +
+#  geom_vline(xintercept = 1, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = 1, linetype = "dotted", color = "black") +
+  scale_fill_manual(values = custom_palette) +
+  labs(
+    x = "Fold Enrichment",
+    y = "Enrichment Test"
+  ) +
+  coord_cartesian(xlim = c(0, 7))
 
 # Final plot
-final_plt <- plot_grid(eqtl_cnt_plt, scatter_plt, combined_plt, density_plt, labels ='AUTO',
-                       ncol = 2, label_size = 20)
+final_plt <- plot_grid(eqtl_cnt_plt, scatter_plt, combined_plt, density_plt, ziffra_plt,
+                       labels ='AUTO', ncol = 2, label_size = 20)
 
 ggsave(
   filename = out_file,
   plot = final_plt,
   width = 8,  
-  height = 8,     
+  height = 12,     
   units = "in",
   device = "pdf",
   dpi = 300
