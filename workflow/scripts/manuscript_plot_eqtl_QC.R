@@ -322,11 +322,13 @@ ziffra_tbl <- read_tsv(paste0(ziffra_dir, 'ziffra_overlaps_primary.tsv')) |>
 
 # --- Specify y-axis order
 cell_order <- c(
-  "Glu-UL",   sort(grep("^Glu-UL-",  ziffra_tbl$test, value = TRUE)),
-  "Glu-DL",   sort(grep("^Glu-DL-",  ziffra_tbl$test, value = TRUE)),
-  "GABA",     sort(grep("^GABA-",    ziffra_tbl$test, value = TRUE)),
-  "NPC",      sort(grep("^NPC-",     ziffra_tbl$test, value = TRUE)),
-  "OPC", "MG", "Endo-Peri"
+  sort(grep("^Glu-UL",  ziffra_tbl$test, value = TRUE)),
+  sort(grep("^Glu-DL",  ziffra_tbl$test, value = TRUE)),
+  sort(grep("^GABA",    ziffra_tbl$test, value = TRUE)),
+  sort(grep("^NPC",     ziffra_tbl$test, value = TRUE)),
+  sort(grep("^OPC",       ziffra_tbl$test, value = TRUE)),
+  sort(grep("^MG",       ziffra_tbl$test, value = TRUE)),
+  sort(grep("^MG",       ziffra_tbl$test, value = TRUE))
 ) |> unique()
 
 # --- Assign main cluster to subclusters
@@ -344,18 +346,6 @@ ziffra_tbl <- ziffra_tbl |>
   ))
 
 # --- Base theme
-base_theme <- theme_minimal(base_size = 12) +
-  theme(
-    axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(size = 10),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold"),
-    legend.position = "none",
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    panel.spacing.x = unit(2, "lines"),
-  )
-
 ziffra_plt <- ziffra_tbl |>
   ggplot(aes(x = fold_enrichment, y = test, fill = main_type)) +  
   geom_col(width = 0.7, colour = 'black') +
@@ -368,7 +358,11 @@ ziffra_plt <- ziffra_tbl |>
     x = "Fold Enrichment",
     y = "Enrichment Test"
   ) +
-  coord_cartesian(xlim = c(0, 7))
+  coord_cartesian(xlim = c(0, 7)) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
 
 # Final plot
 final_plt <- plot_grid(eqtl_cnt_plt, scatter_plt, combined_plt, density_plt, ziffra_plt,
