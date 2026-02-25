@@ -189,8 +189,11 @@ upset(
   nintersects    = 20,
   sets.bar.color = custom_palette[cell_types],
   point.size     = 3.8,
-  line.size      = 1.5,
-  text.scale     = c(1.3, 1.3, 1, 1, 1.5, 1) # Optional: improves readability
+  line.size      = 2,
+  # text.scale: c(intersection size title, intersection size tick labels, 
+  #               set size title, set size tick labels, 
+  #               set names, numbers above bars)
+  text.scale     = c(1.8, 1.5, 1.5, 1.5, 1.8, 1.5)
 )
 
 dev.off()
@@ -205,7 +208,7 @@ upset_grob <- grid::rasterGrob(
 
 upset_plt <- ggplotify::as.ggplot(upset_grob) +
   theme(
-    plot.margin = margin(t = 40, r = 10, b = 40, l = 10, unit = "pt")
+    plot.margin = margin(t = 40, r = 0, b = 40, l = 0, unit = "pt")
   )
 
 # --- Internal pi1 heatmap -----
@@ -445,8 +448,8 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
       seed = 2025
     ) +
     annotate(
-      "text", x = Inf, y = Inf, label = cor_label,
-      hjust = -0.3, vjust = 1.8, size = 5
+      "text", x = -1.25, y = Inf, label = cor_label,
+      hjust = 0, vjust = 1.8, size = 5
     ) +
     labs(
       x = substitute("Adult" ~ x ~ beta, list(x = ct[2])),
