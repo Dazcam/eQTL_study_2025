@@ -189,7 +189,7 @@ upset(
   nintersects    = 20,
   sets.bar.color = custom_palette[cell_types],
   point.size     = 3.8,
-  line.size      = 1,
+  line.size      = 1.5,
   text.scale     = c(1.3, 1.3, 1, 1, 1.5, 1) # Optional: improves readability
 )
 
@@ -251,21 +251,16 @@ pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, r
 #   ) %>%
 #   filter(row_idx <= col_idx)  # upper triangle including diagonal (opposite direction)
 
+# 1. Prepare the full square data without manual mirroring
 pi1_square_tbl <- pi1_result_tbl %>%
   mutate(
-    # Logic: 
-    # If same cell type -> 1.0
-    # If upper triangle -> use forward pi1
-    # If lower triangle -> use reverse pi1 (or mapping logic below)
-    pi1_final = case_when(
-      cell_type == ref_cell_type ~ 1.0,
-      match(cell_type, cell_types) < match(ref_cell_type, cell_types) ~ pi1_forward,
-      TRUE ~ pi1_reverse
-    )
+    # Use the specific Forward result for every unique combination provided by expand.grid
+    pi1_final = ifelse(cell_type == ref_cell_type, 1.0, pi1_forward)
   ) %>%
   select(query = cell_type, ref = ref_cell_type, pi1 = pi1_final) %>%
   mutate(
-    query = factor(query, levels = rev(cell_types)), # rev() keeps the order standard for Y-axis
+    # rev() ensures the first cell type is at the top (standard matrix view)
+    query = factor(query, levels = rev(cell_types)), 
     ref = factor(ref, levels = cell_types)
   )
 
@@ -457,9 +452,12 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
       x = substitute("Adult" ~ x ~ beta, list(x = ct[2])),
       y = substitute("Prenatal" ~ x ~ beta, list(x = ct[1]))
     ) +
+    coord_cartesian(clip = "off") +
     theme_minimal(base_size = 13) +
     theme(
-      plot.margin = margin(20, 40, 20, 40, unit = "pt"),
+      plot.margin = margin(25, 50, 22, 50, unit = "pt"),
+      axis.title.x = element_text(margin = margin(t = 10)),
+      axis.title.y = element_text(margin = margin(r = 10)),
       title = element_blank(),
       subtitle = element_blank(),
     )
