@@ -354,14 +354,15 @@ ziffra_plt <- ziffra_tbl |>
   geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
   scale_fill_manual(values = custom_palette) +
   labs(
-    x = "Fold Enrichment",
-    y = "Enrichment Test"
+    x = "Enrichment Test",
+    y = "Fold Enrichment"
   ) +
   coord_cartesian(xlim = c(0, 7)) +
   theme(
-    panel.grid.major.y = element_blank(),
+    panel.grid.major.x = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position = "none",
   )
 
 # --- Combine A-D into a 2x2 grid
@@ -386,8 +387,8 @@ final_plt <- plot_grid(
 ggsave(
   filename = out_file,
   plot = final_plt,
-  width = 8,  
-  height = 12,     
+  width = 10,  
+  height = 14,     
   units = "in",
   device = "pdf",
   dpi = 300
