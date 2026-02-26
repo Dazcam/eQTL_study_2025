@@ -103,7 +103,7 @@ cell_order <- c(
 )
 
 # --- Base theme
-base_theme <- theme_minimal(base_size = 12) +
+base_theme <- theme_minimal(base_size = 14) +
   theme(
     axis.text.y = element_text(size = 10),
     axis.text.x = element_text(size = 10),
@@ -348,7 +348,7 @@ ziffra_tbl <- ziffra_tbl |>
 ziffra_plt <- ziffra_tbl |>
   ggplot(aes(x = test, y = fold_enrichment, fill = main_type)) +  
   geom_col(width = 0.7, colour = 'black') +
-  theme_minimal(base_size = 12) +
+  theme_minimal(base_size = 14) +
   geom_hline(yintercept = 0, color = "black", linewidth = 0.6) +
 #  geom_vline(yintercept = 1, linetype = "dashed", color = "black") +
   geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
@@ -363,6 +363,7 @@ ziffra_plt <- ziffra_tbl |>
     panel.grid.minor = element_blank(),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
     legend.position = "none",
+    plot.margin = margin(t = 10, r = 50, b = 60, l = 50)
   )
 
 # --- Combine A-D into a 2x2 grid
