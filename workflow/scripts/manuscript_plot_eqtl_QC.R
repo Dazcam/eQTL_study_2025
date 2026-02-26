@@ -361,7 +361,7 @@ ziffra_plt <- ziffra_tbl |>
     panel.grid.minor = element_blank(),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
     legend.position = "none",
-    plot.margin = margin(t = 10, r = 60, b = 60, l = 50)
+    plot.margin = margin(t = 10, r = 60, b = 10, l = 50)
   )
 
 # --- Combine A-D into a 2x2 grid
