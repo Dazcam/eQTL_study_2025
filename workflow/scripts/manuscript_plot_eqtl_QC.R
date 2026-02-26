@@ -319,7 +319,6 @@ ziffra_tbl <- read_tsv(paste0(ziffra_dir, 'ziffra_overlaps_primary.tsv')) |>
   mutate(clean_peak = str_replace_all(peak_cell_type, "_MACSpeaks", ""),
          test = paste(eqtl_cell_type, clean_peak, sep = ' in '))
   
-
 # --- Specify y-axis order
 cell_order <- c(
   sort(grep("^Glu-UL",  ziffra_tbl$test, value = TRUE)),
@@ -328,7 +327,7 @@ cell_order <- c(
   sort(grep("^NPC",     ziffra_tbl$test, value = TRUE)),
   sort(grep("^OPC",       ziffra_tbl$test, value = TRUE)),
   sort(grep("^MG",       ziffra_tbl$test, value = TRUE)),
-  sort(grep("^MG",       ziffra_tbl$test, value = TRUE))
+  sort(grep("^Endo-",       ziffra_tbl$test, value = TRUE))
 ) |> unique()
 
 # --- Assign main cluster to subclusters
@@ -347,11 +346,11 @@ ziffra_tbl <- ziffra_tbl |>
 
 # --- Base theme
 ziffra_plt <- ziffra_tbl |>
-  ggplot(aes(x = fold_enrichment, y = test, fill = main_type)) +  
+  ggplot(aes(x = test, y = fold_enrichment, fill = main_type)) +  
   geom_col(width = 0.7, colour = 'black') +
   theme_minimal(base_size = 12) +
-  geom_vline(xintercept = 0, color = "black", linewidth = 0.6) +
-#  geom_vline(xintercept = 1, linetype = "dashed", color = "black") +
+  geom_vline(yintercept = 0, color = "black", linewidth = 0.6) +
+#  geom_vline(yintercept = 1, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 1, linetype = "dotted", color = "black") +
   scale_fill_manual(values = custom_palette) +
   labs(
@@ -361,12 +360,28 @@ ziffra_plt <- ziffra_tbl |>
   coord_cartesian(xlim = c(0, 7)) +
   theme(
     panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank()
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
   )
 
-# Final plot
-final_plt <- plot_grid(eqtl_cnt_plt, scatter_plt, combined_plt, density_plt, ziffra_plt,
-                       labels ='AUTO', ncol = 2, label_size = 20)
+# --- Combine A-D into a 2x2 grid
+top_rows <- plot_grid(
+  eqtl_cnt_plt, scatter_plt, 
+  combined_plt, density_plt, 
+  labels = c('A', 'B', 'C', 'D'), 
+  ncol = 2, 
+  label_size = 24
+)
+
+# --- Final assembly: Top rows + Ziffra on bottom
+final_plt <- plot_grid(
+  top_rows, 
+  ziffra_plt, 
+  labels = c('', 'E'), # Label E for the bottom plot
+  ncol = 1, 
+  rel_heights = c(2, 1), # Adjust this ratio to give Ziffra more/less vertical space
+  label_size = 24
+)
 
 ggsave(
   filename = out_file,
