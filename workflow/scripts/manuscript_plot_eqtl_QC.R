@@ -349,9 +349,9 @@ ziffra_plt <- ziffra_tbl |>
   ggplot(aes(x = test, y = fold_enrichment, fill = main_type)) +  
   geom_col(width = 0.7, colour = 'black') +
   theme_minimal(base_size = 12) +
-  geom_vline(yintercept = 0, color = "black", linewidth = 0.6) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.6) +
 #  geom_vline(yintercept = 1, linetype = "dashed", color = "black") +
-  geom_vline(xintercept = 1, linetype = "dotted", color = "black") +
+  geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
   scale_fill_manual(values = custom_palette) +
   labs(
     x = "Fold Enrichment",
