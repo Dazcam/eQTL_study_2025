@@ -357,7 +357,7 @@ ziffra_plt <- ziffra_tbl |>
     x = "Enrichment Test",
     y = "Fold Enrichment"
   ) +
-  coord_cartesian(xlim = c(0, 7)) +
+  coord_cartesian(ylim = c(0, 7)) +
   theme(
     panel.grid.major.x = element_blank(),
     panel.grid.minor = element_blank(),
