@@ -109,7 +109,7 @@ for (cell_type in names(expPC_map)) {
   eqtl_tbl <- read_tsv(log_file, show_col_types = FALSE) %>%
     dplyr::filter(qval < 0.05) %>%
     dplyr::select(ensembl_id = phenotype_id, SNP = variant_id, af, 
-                  p_value = pval_nominal, qval, slope, slope_se)
+                  pval_nominal, pval_beta, qval, slope, slope_se)
   
   if (nrow(eqtl_tbl) == 0) next
   
@@ -151,7 +151,8 @@ for (cell_type in names(expPC_map)) {
     inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
     mutate(CHROM = str_remove(CHROM, "^chr")) |>
     dplyr::select(cell_type, ensembl_id, symbol = external_gene_name, CHROM, 
-                  SNP, POS, REF, ALT,  AF = af, slope, slope_se, p_value, qval, In_Peak)
+                  SNP, POS, REF, ALT,  AF = af, slope, slope_se, pval_nominal, 
+                  pval_beta, qval, In_Peak)
   
   message('Any NAs in final tbl?', anyNA(eqtl_enriched))
   
