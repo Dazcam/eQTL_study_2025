@@ -42,6 +42,10 @@ message('  out_dir: ', out_dir)
 message('  out_file (tracked by snakemake): ', out_file)
 
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+                   "Glu-DL-0", "Glu-DL-1", "Glu-DL-2", 
+                   "NPC-0", "NPC-1", "NPC-2", 
+                   "GABA-0", "GABA-1", "GABA-2")
 exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- 'quantile'
@@ -54,6 +58,21 @@ custom_palette <- c(
   'Endo-Peri' = '#B200ED',
   'MG' = '#F58231',
   'OPC' = '#FDE725FF'
+)
+
+custom_palette_L2 <- c(
+  "NPC-0" = '#FF5959',
+  "NPC-1" = '#FF5959',
+  "NPC-2" = '#FF5959',
+  "Glu-UL-0" = '#4363d8',
+  "Glu-UL-1" = '#4363d8',
+  "Glu-UL-2" = '#4363d8',
+  "Glu-DL-0" = '#00B6EB',
+  "Glu-DL-1" = '#00B6EB',
+  "Glu-DL-2" = '#00B6EB',
+  "GABA-0" = '#3CBB75FF',
+  "GABA-1" = '#3CBB75FF',
+  "GABA-2" = '#3CBB75FF'
 )
 
 base_theme <- theme(
@@ -204,12 +223,15 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
   return(summary_list)
 }
 
-summary_list <- summarise_logs(cell_types, expr_dir)
-summary_tbl <- bind_rows(summary_list)
+summary_L1_list <- summarise_logs(cell_types, expr_dir)
+summary_L1_tbl <- bind_rows(summary_L1_list)
+
+summary_L2_list <- summarise_logs(cell_types_L2, expr_dir)
+summary_L2_tbl <- bind_rows(summary_L2_list)
 
 # Plot
-message('Generating expression PC plot ...')
-expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
+message('Generating expression L1 PC plot ...')
+expr_L1_plt <- ggplot(summary_L1_tbl %>% filter(norm_methods == 'quantile'),
        aes(x = expPC, y = qtl_fdr_0.05, color = cell_type, group = cell_type)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
@@ -217,7 +239,7 @@ expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
   labs(
     x = "Expression PCs",
     y = "eGene count (FDR < 0.05)",
-    color = "Cell Type"
+    color = "Level 1 Cell Type"
   ) +
   theme_minimal(base_size = 14) +
   theme(
@@ -228,11 +250,37 @@ expr_plt <- ggplot(summary_tbl %>% filter(norm_methods == 'quantile'),
     plot.margin = margin(10, 10, 10, 10)
   ) + ylim(0, 2100)
 
+# Plot level 2
+message('Generating expression L2 PC plot ...')
+expr_L2_plt <- ggplot(summary_L2_tbl %>% filter(norm_methods == 'quantile'),
+                   aes(x = expPC, y = qtl_fdr_0.05, color = cell_type, group = cell_type)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_color_manual(values = custom_palette_L2) +
+  labs(
+    x = "Expression PCs",
+    y = "eGene count (FDR < 0.05)",
+    color = "Level 2 Cell Type"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    plot.title = element_blank(),
+    legend.position = "top",
+    legend.title = element_blank(),
+    plot.margin = margin(10, 10, 10, 10)
+  ) + ylim(0, 2100)
+
+# Combine plots
+final_plt <- plot_grid(expr_L1_plt, expr_L2_plt, labels = 'AUTO', 
+                       ncol = 2, label_size = 24)
+
+
 message('Saving expression PC plot ...')
 ggsave(
   filename = out_file,
   plot = expr_plt,
-  width = 5,
+  width = 10,
   height = 5,
   units = "in",
   device = "pdf",
