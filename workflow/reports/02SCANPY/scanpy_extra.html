@@ -7511,7 +7511,7 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=67741b41">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7a2477b3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7521,7 +7521,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_parameters" id="cell-id=fa450716">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell celltag_parameters" id="cell-id=b7efa091">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7554,7 +7554,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs celltag_injected-parameters" id="cell-id=ba8c8bb5">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs celltag_injected-parameters" id="cell-id=f0f55826">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7570,7 +7570,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=baa8e06b">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=84313d37">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7580,7 +7580,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=453a89f9">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=dddbafba">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7592,25 +7592,22 @@ a.anchor-link {
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">'/scratch/'</span><span class="p">):</span>
-    <span class="n">root_dir</span> <span class="o">=</span> <span class="s1">'/scratch/c.c1477909/eQTL_study_2025/'</span>
+    <span class="n">root_dir</span> <span class="o">=</span> <span class="s1">'/scratch/SCWF00021/eQTL_study_2025/'</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="n">root_dir</span> <span class="o">=</span> <span class="s1">'/Users/darren/Desktop/eQTL_study_2025/'</span>
         
 <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">root_dir</span> <span class="o">+</span> <span class="s1">'workflow/scripts/'</span><span class="p">)</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">init_env</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">anndata_utils</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">gene_lists</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-
-<span class="c1"># Set variables</span>
-<span class="n">resolutions</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">]</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">scanpy_init_env</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scanpy_utils</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scanpy_gene_lists</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f0d71fd3">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=fa4eca20">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7620,7 +7617,7 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3a0edf72">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=1bff5bcc">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7632,31 +7629,25 @@ a.anchor-link {
 <span class="n">logger</span><span class="p">,</span> <span class="n">root_dir</span><span class="p">,</span> <span class="n">sheets_dir</span><span class="p">,</span> <span class="n">plate_path</span><span class="p">,</span> <span class="n">scanpy_dir</span><span class="p">,</span> <span class="n">report_dir</span> <span class="o">=</span> <span class="n">initialize_env</span><span class="p">(</span><span class="n">plate</span><span class="p">)</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Loading L1 data ..."</span><span class="p">)</span>
-<span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">scanpy_dir</span> <span class="o">+</span> <span class="s1">'adata_clusters.h5ad'</span><span class="p">)</span>
-
-<span class="n">cluster_anns</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">'0'</span><span class="p">:</span> <span class="s1">'ExN-UL'</span><span class="p">,</span>
-    <span class="s1">'1'</span><span class="p">:</span> <span class="s1">'ExN-DL'</span><span class="p">,</span>
-    <span class="s1">'2'</span><span class="p">:</span> <span class="s1">'RG'</span><span class="p">,</span>
-    <span class="s1">'3'</span><span class="p">:</span> <span class="s1">'InN'</span><span class="p">,</span>
-    <span class="s1">'4'</span><span class="p">:</span> <span class="s1">'Endo-Peri'</span><span class="p">,</span>
-    <span class="s1">'5'</span><span class="p">:</span> <span class="s1">'OPC'</span><span class="p">,</span>
-    <span class="s1">'6'</span><span class="p">:</span> <span class="s1">'MG'</span>
-<span class="p">}</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">scanpy_dir</span> <span class="o">+</span> <span class="s1">'adata_clusters_v3.h5ad'</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="s1">'cell_type'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Creating 'cell_type' column from leiden_harmony_0.1 ..."</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Creating 'cell_type' column from leiden_harmony_0.2 ..."</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="s1">'leiden_harmony_0.1'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">"Column 'leiden_harmony_0.1' not found in adata.obs"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">'leiden_harmony_0.2'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s2">"Column 'leiden_harmony_0.2' not found in adata.obs"</span><span class="p">)</span>
 
     <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'cell_type'</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'leiden_harmony_0.1'</span><span class="p">]</span>
+        <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'leiden_harmony_0.2'</span><span class="p">]</span>
         <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
         <span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">cluster_anns</span><span class="p">)</span>
     <span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"'cell_type' column already exists — using existing values"</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Unmapped L1 cells:"</span><span class="p">,</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'cell_type'</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"L1 cell_type counts:"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'cell_type'</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">())</span>
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Ranking L1 differentially expressed genes ..."</span><span class="p">)</span>
 <span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span>
@@ -7668,6 +7659,10 @@ a.anchor-link {
 
 <span class="n">result</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">'L1_DE'</span><span class="p">]</span>
 <span class="n">groups</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">'names'</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"L1 raw exists:"</span><span class="p">,</span> <span class="n">adata</span><span class="o">.</span><span class="n">raw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"First logFC values:"</span><span class="p">,</span>
+      <span class="n">result</span><span class="p">[</span><span class="s1">'logfoldchanges'</span><span class="p">][</span><span class="n">groups</span><span class="p">[</span><span class="mi">0</span><span class="p">]][:</span><span class="mi">5</span><span class="p">])</span>
 
 <span class="n">gene_tables</span> <span class="o">=</span> <span class="p">{}</span>
 
@@ -7689,7 +7684,7 @@ a.anchor-link {
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Processing L2 subclusters ..."</span><span class="p">)</span>
 <span class="n">subcluster_dir</span> <span class="o">=</span> <span class="n">scanpy_dir</span> <span class="o">+</span> <span class="s1">'subclustering/'</span>
 
-<span class="n">cell_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'ExN-UL'</span><span class="p">,</span> <span class="s1">'ExN-DL'</span><span class="p">,</span> <span class="s1">'RG'</span><span class="p">,</span> <span class="s1">'InN'</span><span class="p">]</span>
+<span class="n">cell_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Glu-UL'</span><span class="p">,</span> <span class="s1">'Glu-DL'</span><span class="p">,</span> <span class="s1">'NPC'</span><span class="p">,</span> <span class="s1">'GABA'</span><span class="p">]</span>
 
 <span class="k">for</span> <span class="n">cell_type</span> <span class="ow">in</span> <span class="n">cell_types</span><span class="p">:</span>
 
@@ -7713,6 +7708,12 @@ a.anchor-link {
 
     <span class="n">result</span> <span class="o">=</span> <span class="n">adata_sub</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">'L2_DE'</span><span class="p">]</span>
     <span class="n">subclusters</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">'names'</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"L2 raw exists:"</span><span class="p">,</span> <span class="n">adata_sub</span><span class="o">.</span><span class="n">raw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">first_subcl</span> <span class="o">=</span> <span class="n">subclusters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"First L2 logFC values:"</span><span class="p">,</span>
+      <span class="n">result</span><span class="p">[</span><span class="s1">'logfoldchanges'</span><span class="p">][</span><span class="n">first_subcl</span><span class="p">][:</span><span class="mi">5</span><span class="p">])</span>
 
     <span class="k">for</span> <span class="n">subcl</span> <span class="ow">in</span> <span class="n">subclusters</span><span class="p">:</span>
         <span class="n">gene_tables</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">subcl</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
@@ -7728,7 +7729,8 @@ a.anchor-link {
 
 
 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Writing Excel workbook ..."</span><span class="p">)</span>
-<span class="n">output_path</span> <span class="o">=</span> <span class="n">report_dir</span> <span class="o">+</span> <span class="s2">"ranked_genes_L1_and_L2_clusters.xlsx"</span>
+<span class="n">table_dir</span> <span class="o">=</span> <span class="s2">"../results/13MANUSCRIPT_PLOTS_TABLES/tables/"</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">+</span> <span class="s2">"diff_exp_genes_L1_and_L2_clusters.xlsx"</span>
 
 <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
     <span class="k">for</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">gene_tables</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -7748,14 +7750,14 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,622 - INFO - Plate variable detected: extra
+<pre>2026-02-27 10:41:20,815 - INFO - Plate variable detected: extra
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,623 - INFO - Processing plate: extra
+<pre>2026-02-27 10:41:20,816 - INFO - Processing plate: extra
 </pre>
 </div>
 </div>
@@ -7861,70 +7863,81 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,810 - INFO - Script initialized. Root directory: /scratch/c.c1477909/eQTL_study_2025/
+<pre>2026-02-27 10:41:21,187 - INFO - Script initialized. Root directory: /scratch/SCWF00021/eQTL_study_2025/
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,811 - INFO - Parse directory: /scratch/c.c1477909/eQTL_study_2025/results/01PARSE/
+<pre>2026-02-27 10:41:21,188 - INFO - Parse directory: /scratch/SCWF00021/eQTL_study_2025/results/01PARSE/
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,813 - INFO - Scanpy directory: /scratch/c.c1477909/eQTL_study_2025/results/02SCANPY/
+<pre>2026-02-27 10:41:21,188 - INFO - Scanpy directory: /scratch/SCWF00021/eQTL_study_2025/results/02SCANPY/
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,815 - INFO - Scanpy directory exists: True
+<pre>2026-02-27 10:41:21,188 - INFO - Scanpy directory exists: True
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,816 - INFO - Sheets directory: /scratch/c.c1477909/eQTL_study_2025/resources/sheets/
+<pre>2026-02-27 10:41:21,189 - INFO - Sheets directory: /scratch/SCWF00021/eQTL_study_2025/resources/sheets/
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,818 - INFO - plate_dir set to: /scratch/c.c1477909/eQTL_study_2025/results/01PARSE/combine_extra/all-sample/DGE_filtered/
+<pre>2026-02-27 10:41:21,189 - INFO - plate_dir set to: /scratch/SCWF00021/eQTL_study_2025/results/01PARSE/combine_extra/all-sample/DGE_filtered/
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:36:01,819 - INFO - Loading L1 data ...
+<pre>2026-02-27 10:41:21,189 - INFO - Loading L1 data ...
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:40:24,932 - INFO - Creating 'cell_type' column from leiden_harmony_0.1 ...
+<pre>2026-02-27 10:43:34,402 - INFO - Creating 'cell_type' column from leiden_harmony_0.2 ...
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:40:25,215 - INFO - Ranking L1 differentially expressed genes ...
+<pre>2026-02-27 10:43:34,475 - INFO - Ranking L1 differentially expressed genes ...
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>ranking genes
+<pre>Unmapped L1 cells: 0
+L1 cell_type counts:
+cell_type
+Glu-UL       271180
+Glu-DL       136070
+GABA         128017
+NPC          103598
+Endo-Peri     19842
+OPC           13734
+MG             7297
+Name: count, dtype: int64
+ranking genes
 </pre>
 </div>
 </div>
@@ -7938,13 +7951,6 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>WARNING: It seems you use rank_genes_groups on the raw count data. Please logarithmize your data before calling rank_genes_groups.
-</pre>
-</div>
-</div>
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>    consider 'cell_type' groups:
 </pre>
 </div>
@@ -7952,7 +7958,7 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>    with sizes: [ 20160 200545 359823 154155   7406  13797 178642]
+<pre>    with sizes: [ 19842 128017 136070 271180   7297 103598  13734]
 </pre>
 </div>
 </div>
@@ -7964,28 +7970,36 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
     'scores', sorted np.recarray to be indexed by group ids
     'logfoldchanges', sorted np.recarray to be indexed by group ids
     'pvals', sorted np.recarray to be indexed by group ids
-    'pvals_adj', sorted np.recarray to be indexed by group ids (0:02:35)
+    'pvals_adj', sorted np.recarray to be indexed by group ids (0:27:23)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>L1 raw exists: False
+First logFC values: [nan nan nan nan nan]
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:43:05,502 - INFO - Processing L2 subclusters ...
+<pre>2026-02-27 11:10:58,484 - INFO - Processing L2 subclusters ...
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:43:05,504 - INFO - Loading L2 data for ExN-UL ...
+<pre>2026-02-27 11:10:58,486 - INFO - Loading L2 data for Glu-UL ...
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:46:30,958 - INFO - Ranking L2 DE genes for ExN-UL ...
+<pre>2026-02-27 11:11:49,259 - INFO - Ranking L2 DE genes for Glu-UL ...
 </pre>
 </div>
 </div>
@@ -8013,7 +8027,7 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>    with sizes: [142531 125275  92017]
+<pre>    with sizes: [123028  87340  60812]
 </pre>
 </div>
 </div>
@@ -8025,21 +8039,29 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
     'scores', sorted np.recarray to be indexed by group ids
     'logfoldchanges', sorted np.recarray to be indexed by group ids
     'pvals', sorted np.recarray to be indexed by group ids
-    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:32)
+    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:17)
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:47:09,062 - INFO - Loading L2 data for ExN-DL ...
+<pre>2026-02-27 11:12:06,617 - INFO - Loading L2 data for Glu-DL ...
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>L2 raw exists: True
+First L2 logFC values: [6.8847523 2.3500648 1.8676736 9.827206  5.0739894]
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:48:17,619 - INFO - Ranking L2 DE genes for ExN-DL ...
+<pre>2026-02-27 11:12:24,861 - INFO - Ranking L2 DE genes for Glu-DL ...
 </pre>
 </div>
 </div>
@@ -8067,7 +8089,7 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>    with sizes: [71047 52050 50457 26991]
+<pre>    with sizes: [49120 44808 42142]
 </pre>
 </div>
 </div>
@@ -8079,21 +8101,29 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
     'scores', sorted np.recarray to be indexed by group ids
     'logfoldchanges', sorted np.recarray to be indexed by group ids
     'pvals', sorted np.recarray to be indexed by group ids
-    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:23)
+    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:06)
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:48:42,546 - INFO - Loading L2 data for RG ...
+<pre>2026-02-27 11:12:31,658 - INFO - Loading L2 data for NPC ...
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>L2 raw exists: True
+First L2 logFC values: [7.877487  3.9069154 3.6165736 9.6883335 3.288575 ]
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:49:15,006 - INFO - Ranking L2 DE genes for RG ...
+<pre>2026-02-27 11:12:43,716 - INFO - Ranking L2 DE genes for NPC ...
 </pre>
 </div>
 </div>
@@ -8121,7 +8151,7 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>    with sizes: [81114 40164 33657 23707]
+<pre>    with sizes: [33789 32047 17799 15648  4110   205]
 </pre>
 </div>
 </div>
@@ -8133,21 +8163,29 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
     'scores', sorted np.recarray to be indexed by group ids
     'logfoldchanges', sorted np.recarray to be indexed by group ids
     'pvals', sorted np.recarray to be indexed by group ids
-    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:19)
+    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:09)
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:49:36,138 - INFO - Loading L2 data for InN ...
+<pre>2026-02-27 11:12:52,859 - INFO - Loading L2 data for GABA ...
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>L2 raw exists: True
+First L2 logFC values: [7.3382883 8.872845  8.443461  4.3       5.228565 ]
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:50:01,412 - INFO - Ranking L2 DE genes for InN ...
+<pre>2026-02-27 11:13:23,522 - INFO - Ranking L2 DE genes for GABA ...
 </pre>
 </div>
 </div>
@@ -8175,7 +8213,7 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>    with sizes: [67519 61457 15741  4617  4371   450]
+<pre>    with sizes: [59350 47255 20371  1041]
 </pre>
 </div>
 </div>
@@ -8187,21 +8225,29 @@ This is the <code>init_notebook_mode</code> cell from ITables v2.2.4<br/>
     'scores', sorted np.recarray to be indexed by group ids
     'logfoldchanges', sorted np.recarray to be indexed by group ids
     'pvals', sorted np.recarray to be indexed by group ids
-    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:20)
+    'pvals_adj', sorted np.recarray to be indexed by group ids (0:00:09)
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:50:23,661 - INFO - Writing Excel workbook ...
+<pre>2026-02-27 11:13:33,108 - INFO - Writing Excel workbook ...
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>L2 raw exists: True
+First L2 logFC values: [25.723337  20.779404   6.571668   3.8937798  5.6520014]
 </pre>
 </div>
 </div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
-<pre>2025-12-17 11:51:18,381 - INFO - All done.
+<pre>2026-02-27 11:14:01,703 - INFO - All done.
 </pre>
 </div>
 </div>
@@ -8213,906 +8259,6 @@ An exception has occurred, use %tb to see the full traceback.
 
 <span class="ansi-red-fg">SystemExit</span><span class="ansi-red-fg">:</span> 0
 </pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f98f60e4">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Load-Data">Load Data<a class="anchor-link" href="#Load-Data">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=f8a17c8e">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Initialize the environment and get all paths and logger</span>
-<span class="n">logger</span><span class="p">,</span> <span class="n">root_dir</span><span class="p">,</span> <span class="n">sheets_dir</span><span class="p">,</span> <span class="n">plate_path</span><span class="p">,</span> <span class="n">scanpy_dir</span><span class="p">,</span> <span class="n">report_dir</span> <span class="o">=</span> <span class="n">initialize_env</span><span class="p">(</span><span class="n">plate</span><span class="p">)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Loading data ..."</span><span class="p">)</span>
-<span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">scanpy_dir</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">'adata_clusters.h5ad'</span><span class="p">)</span>
-
-<span class="c1"># Code for loading subcluster data</span>
-<span class="c1"># subcluster_dir = scanpy_dir + 'subclustering/'  </span>
-<span class="c1"># pseudobulk_dir = os.path.join(scanpy_dir, 'pseudobulk')</span>
-<span class="c1"># cell_types = ['ExN-UL', 'ExN-DL', 'RG', 'InN']</span>
-<span class="c1"># subsets = []</span>
-<span class="c1"># for cell_type in cell_types:</span>
-<span class="c1">#     file_path = os.path.join(subcluster_dir, f'adata_{cell_type}_subclusters.h5ad')</span>
-<span class="c1">#     if not os.path.exists(file_path):</span>
-<span class="c1">#         raise FileNotFoundError(f"Missing saved file: {file_path}")</span>
-<span class="c1">#     subset_adata = sc.read(file_path)</span>
-<span class="c1">#     logger.info(f"Loaded {cell_type}: {subset_adata.n_obs} cells, {subset_adata.n_vars} genes")</span>
-<span class="c1">#     subsets.append((subset_adata, cell_type))</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7f3e523a">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Pull-out-key-metrics-for-clusters">Pull out key metrics for clusters<a class="anchor-link" href="#Pull-out-key-metrics-for-clusters">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=86c1dcbd">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="o">.</span><span class="n">to_adata</span><span class="p">()</span>
-<span class="c1"># Total number of nuclei (assuming one per cell)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Total number of nuclei: </span><span class="si">{</span><span class="n">adata</span><span class="o">.</span><span class="n">n_obs</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-<span class="c1"># Median number of nuclei per sample</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Median nuclei per sample: </span><span class="si">{</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'sample'</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">median</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-<span class="c1"># Median number of reads per cell (assuming adata.X is count matrix; handles sparse/dense)</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Median reads per cell: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">A1</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> 
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=0e872b21">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Setting cluster IDs ..."</span><span class="p">)</span>
-<span class="c1"># Set cluster names</span>
-<span class="n">cluster_anns</span> <span class="o">=</span> <span class="p">{</span>
-    
-    <span class="s1">'0'</span><span class="p">:</span> <span class="s1">'ExN-UL'</span><span class="p">,</span>
-    <span class="s1">'1'</span><span class="p">:</span> <span class="s1">'ExN-DL'</span><span class="p">,</span>
-    <span class="s1">'2'</span><span class="p">:</span> <span class="s1">'RG'</span><span class="p">,</span>
-    <span class="s1">'3'</span><span class="p">:</span> <span class="s1">'InN'</span><span class="p">,</span>
-    <span class="s1">'4'</span><span class="p">:</span> <span class="s1">'Endo-Peri'</span><span class="p">,</span>
-    <span class="s1">'5'</span><span class="p">:</span> <span class="s1">'OPC'</span><span class="p">,</span>
-    <span class="s1">'6'</span><span class="p">:</span> <span class="s1">'MG'</span>
-<span class="p">}</span>
-
-<span class="n">custom_palette</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">'RG'</span><span class="p">:</span> <span class="s1">'#FF5959'</span><span class="p">,</span>
-    <span class="s1">'ExN-UL'</span><span class="p">:</span> <span class="s1">'#00B6EB'</span><span class="p">,</span>
-    <span class="s1">'InN'</span><span class="p">:</span> <span class="s1">'#3CBB75FF'</span><span class="p">,</span>
-    <span class="s1">'ExN-DL'</span><span class="p">:</span> <span class="s1">'#CEE5FD'</span><span class="p">,</span>
-    <span class="s1">'Endo-Peri'</span><span class="p">:</span> <span class="s1">'#B200ED'</span><span class="p">,</span>
-    <span class="s1">'MG'</span><span class="p">:</span> <span class="s1">'#F58231'</span><span class="p">,</span>
-    <span class="s1">'OPC'</span><span class="p">:</span> <span class="s1">'#FDE725FF'</span>
-<span class="p">}</span>
-
-<span class="c1"># Create a new column in adata.obs with cell type names</span>
-<span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'cell_type'</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s1">'leiden_harmony_0.1'</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">cluster_anns</span><span class="p">)</span>
-
-<span class="c1"># Check the new column</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[[</span><span class="s1">'leiden_harmony_0.1'</span><span class="p">,</span> <span class="s1">'cell_type'</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=a5e6d435">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Test-Vlns">Test Vlns<a class="anchor-link" href="#Test-Vlns">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=2b00fea1">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1">### Check vlnplot</span>
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Testing vlns ..."</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Does raw exist: </span><span class="si">{</span><span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-
-<span class="c1"># Annotations appear to work better when raw data is removed</span>
-<span class="n">adata</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="kc">None</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=25c631d2">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Plotting Violins ..."</span><span class="p">)</span>
-<span class="n">gene_sets</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">"Nowak_fig4"</span><span class="p">,</span> <span class="n">Nowakowski_Fig4A_genes</span><span class="p">),</span> 
-             <span class="p">(</span><span class="s2">"Poulio_fig1c"</span><span class="p">,</span> <span class="n">Pouliodakis_fig1c_genes</span><span class="p">),</span> 
-             <span class="p">(</span><span class="s2">"Camer_PFC"</span><span class="p">,</span> <span class="n">pfc_features</span><span class="p">),</span> 
-             <span class="p">(</span><span class="s2">"ExNs"</span><span class="p">,</span> <span class="n">exN_genes</span><span class="p">),</span> 
-             <span class="p">(</span><span class="s2">"InNs"</span><span class="p">,</span> <span class="n">inN_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Oligos"</span><span class="p">,</span> <span class="n">olig_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"OPCs"</span><span class="p">,</span> <span class="n">opc_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"RGs"</span><span class="p">,</span> <span class="n">r_glia_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Cyc-Pro"</span><span class="p">,</span> <span class="n">cyc_pro_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"IPC"</span><span class="p">,</span> <span class="n">ipc_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Small-Pops"</span><span class="p">,</span> <span class="n">small_populations</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"General"</span><span class="p">,</span> <span class="n">general_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Claire"</span><span class="p">,</span> <span class="n">claire_genes</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Ex_1_BioloPsych"</span><span class="p">,</span> <span class="n">ExN_1</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Ex_3_BioloPsych"</span><span class="p">,</span> <span class="n">ExN_3</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Extra_mus"</span><span class="p">,</span> <span class="n">extra_from_mouse</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"Nick_genes"</span><span class="p">,</span> <span class="n">nick_genes</span><span class="p">)]</span>
-
-<span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Plotting Violins ..."</span><span class="p">)</span>
-<span class="n">final_genes</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"PLXNA4"</span><span class="p">,</span> <span class="s2">"SATB2"</span><span class="p">,</span> <span class="s2">"CUX2"</span><span class="p">,</span>          <span class="c1"># UL Excitatory cortical neurons</span>
-    <span class="s2">"BCL11B"</span><span class="p">,</span> <span class="s2">"TLE4"</span><span class="p">,</span>                   <span class="c1"># DL Excitatory cortical neurons</span>
-    <span class="s2">"GRIK3"</span><span class="p">,</span> <span class="s2">"SORCS1"</span><span class="p">,</span> <span class="s2">"SLC1A3"</span><span class="p">,</span>        <span class="c1"># Additional Ns</span>
-    <span class="s2">"GAD1"</span><span class="p">,</span> <span class="s2">"GAD2"</span><span class="p">,</span> <span class="s2">"ERBB4"</span><span class="p">,</span>            <span class="c1"># GABAergic inhibitory neurons</span>
-    <span class="s2">"GLI3"</span><span class="p">,</span> <span class="s2">"GLI2"</span><span class="p">,</span>                     <span class="c1"># Radial glia</span>
-    <span class="s2">"COL4A1"</span><span class="p">,</span> <span class="s2">"FN1"</span><span class="p">,</span> <span class="s2">"LAMA4"</span><span class="p">,</span>           <span class="c1"># Endothelial/vascular cells</span>
-    <span class="s2">"PDGFRA"</span><span class="p">,</span> <span class="s2">"SOX6"</span><span class="p">,</span>                   <span class="c1"># Oligodendrocyte progenitor cells</span>
-    <span class="s2">"C3"</span><span class="p">,</span> <span class="s2">"INPP5D"</span><span class="p">,</span>                     <span class="c1"># Microglia</span>
-<span class="p">]</span>
-
-<span class="n">gene_sets</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">"Final gene list"</span><span class="p">,</span> <span class="n">final_genes</span><span class="p">)]</span>
-
-<span class="c1"># Plotting UMAPs with res harmony 0.1</span>
-<span class="c1">#fig = plot_filtered_violin(</span>
-<span class="c1">#    adata, </span>
-<span class="c1">#    gene_sets, </span>
-<span class="c1">#    groupby_base="leiden_harmony", </span>
-<span class="c1">#    resolutions=[resolutions[0]], </span>
-<span class="c1">#    clustering_algorithm="Leiden (harmony)")</span>
-<span class="c1">#plt.show()  # Display the figure</span>
-
-<span class="n">obs_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'leiden_harmony_0.1'</span><span class="p">,</span> <span class="s1">'leiden_harmony_0.2'</span><span class="p">,</span> <span class="s1">'leiden_harmony_0.3'</span><span class="p">]</span>
-<span class="n">plot_umap_grid</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">obs_columns</span><span class="p">,</span> <span class="n">grid_size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span> <span class="n">save_path</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=4000ee94">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Plot-violins-using-standard-scale">Plot violins using standard scale<a class="anchor-link" href="#Plot-violins-using-standard-scale">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=595a969c">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_filtered_violin</span><span class="p">(</span>
-    <span class="n">adata</span><span class="p">,</span> 
-    <span class="n">gene_sets</span><span class="p">,</span>  <span class="c1"># Gene sets are now a list of tuples (name, gene_set)</span>
-    <span class="n">groupby_base</span><span class="p">,</span> 
-    <span class="n">resolutions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
-    <span class="n">row_palette</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
-    <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
-    <span class="n">clustering_algorithm</span><span class="o">=</span><span class="s2">"Leiden"</span><span class="p">,</span>  <span class="c1"># Optional: Add clustering algorithm to title</span>
-    <span class="o">**</span><span class="n">kwargs</span>
-<span class="p">):</span>
-<span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    Plot stacked violin plots for multiple gene sets, ignoring missing genes and reporting missing ones,</span>
-<span class="sd">    with support for multiple resolutions in a multi-panel format.</span>
-<span class="sd">    </span>
-<span class="sd">    Parameters:</span>
-<span class="sd">        adata (AnnData): The AnnData object containing the data.</span>
-<span class="sd">        gene_sets (list of tuples): List of tuples where each tuple is (name, gene_set).</span>
-<span class="sd">        groupby_base (str): Base name of the groupby key (e.g., 'leiden').</span>
-<span class="sd">        resolutions (list, optional): List of resolutions for which to plot violin plots. Default is None.</span>
-<span class="sd">        row_palette (list or dict, optional): Color palette for rows. Default is None.</span>
-<span class="sd">        swap_axes (bool, optional): Whether to swap axes. Default is True.</span>
-<span class="sd">        clustering_algorithm (str, optional): Clustering algorithm used (e.g., "Leiden").</span>
-<span class="sd">        **kwargs: Additional keyword arguments passed to `sc.pl.stacked_violin`.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        - A tuple (fig, axes) containing the figure and axes objects.</span>
-<span class="sd">    """</span>
-
-    <span class="c1"># Suppress warnings</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">)</span>
-    <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">MatplotlibDeprecationWarning</span><span class="p">)</span>
-
-    <span class="c1"># Suppress matplotlib/seaborn logs</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"matplotlib"</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"seaborn"</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
-
-    <span class="c1"># Separate valid and missing genes for each gene set</span>
-    <span class="n">valid_gene_sets</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">missing_gene_sets</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">gene_set</span> <span class="ow">in</span> <span class="n">gene_sets</span><span class="p">:</span>
-        <span class="n">valid_genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">gene</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">gene_set</span> <span class="k">if</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var_names</span> <span class="ow">or</span> <span class="n">gene</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">raw</span><span class="p">,</span> <span class="s1">'var_names'</span><span class="p">,</span> <span class="p">[])]</span>
-        <span class="n">missing_genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">gene</span> <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">gene_set</span> <span class="k">if</span> <span class="n">gene</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_genes</span><span class="p">]</span>
-        
-        <span class="n">valid_gene_sets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">valid_genes</span><span class="p">)</span>
-        <span class="n">missing_gene_sets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">missing_genes</span><span class="p">)</span>
-
-        <span class="c1"># Report missing genes for each gene set</span>
-        <span class="k">if</span> <span class="n">missing_genes</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Genes not found in dataset for gene set </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_genes</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-    
-    <span class="c1"># Check if any valid gene set exists</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">valid_gene_sets</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">"None of the genes in the provided gene sets are present in the dataset."</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span>
-
-    <span class="c1"># Default to a single resolution if none are provided</span>
-    <span class="k">if</span> <span class="n">resolutions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">resolutions</span> <span class="o">=</span> <span class="p">[</span><span class="s2">""</span><span class="p">]</span>
-    
-    <span class="c1"># Calculate number of rows and columns for the subplots grid</span>
-    <span class="n">num_plots</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_sets</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">resolutions</span><span class="p">)</span>
-    <span class="n">num_cols</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Adjust based on your layout preference</span>
-    <span class="n">num_rows</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_plots</span> <span class="o">+</span> <span class="n">num_cols</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="n">num_cols</span>  <span class="c1"># Ceiling division</span>
-    
-    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">num_rows</span><span class="p">,</span> <span class="n">num_cols</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="n">num_cols</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span> <span class="n">num_rows</span> <span class="o">*</span> <span class="mi">5</span><span class="p">))</span>
-    
-    <span class="c1"># Flatten axes array for easy indexing</span>
-    <span class="n">axes</span> <span class="o">=</span> <span class="n">axes</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
-
-    <span class="c1"># Temporarily suppress the specific warning inside the function</span>
-    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
-        <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>  <span class="c1"># Suppress all UserWarnings</span>
-        
-        <span class="c1"># Loop through resolutions and plot each gene set</span>
-        <span class="n">plot_idx</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">resolutions</span><span class="p">:</span>
-            <span class="n">groupby</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">groupby_base</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">res</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">res</span> <span class="k">else</span> <span class="n">groupby_base</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Generating plots for resolution: </span><span class="si">{</span><span class="n">res</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">res</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'default'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">gene_set_tuple</span><span class="p">,</span> <span class="n">valid_genes</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">gene_sets</span><span class="p">,</span> <span class="n">valid_gene_sets</span><span class="p">)):</span>
-                <span class="n">name</span><span class="p">,</span> <span class="n">gene_set</span> <span class="o">=</span> <span class="n">gene_set_tuple</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Plotting gene set </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">valid_genes</span><span class="p">)</span><span class="si">}</span><span class="s2"> genes out of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">gene_set</span><span class="p">)</span><span class="si">}</span><span class="s2"> provided."</span><span class="p">)</span>
-                
-                <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">plot_idx</span><span class="p">]</span>
-                <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">stacked_violin</span><span class="p">(</span>
-                    <span class="n">adata</span><span class="p">,</span> 
-                    <span class="n">valid_genes</span><span class="p">,</span> 
-                    <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> 
-                    <span class="n">row_palette</span><span class="o">=</span><span class="n">row_palette</span><span class="p">,</span> 
-                    <span class="n">swap_axes</span><span class="o">=</span><span class="n">swap_axes</span><span class="p">,</span> 
-                    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> 
-                    <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Suppress inline plotting</span>
-                    <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span><span class="p">,</span>  <span class="c1"># Standardize by variance</span>
-                <span class="c1">#    use_raw=False,  # Use raw data if available</span>
-                    <span class="o">**</span><span class="n">kwargs</span>
-                <span class="p">)</span>
-                
-                <span class="c1"># Set title with gene set name and resolution</span>
-                <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> - </span><span class="si">{</span><span class="n">clustering_algorithm</span><span class="si">}</span><span class="s1"> - Resolution </span><span class="si">{</span><span class="n">res</span><span class="si">}</span><span class="s1">'</span> <span class="k">if</span> <span class="n">res</span> <span class="k">else</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1"> - </span><span class="si">{</span><span class="n">clustering_algorithm</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
-                <span class="n">plot_idx</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="c1"># Hide unused subplots (if any)</span>
-        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">plot_idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">)):</span>
-            <span class="n">axes</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">'off'</span><span class="p">)</span>
-
-        <span class="c1"># Rotate the legend and position it above the plot</span>
-        <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">[:</span><span class="n">plot_idx</span><span class="p">]:</span>  <span class="c1"># Only apply to axes that have a plot</span>
-            <span class="n">legend</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_legend</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">legend</span><span class="p">:</span>
-                <span class="n">legend</span><span class="o">.</span><span class="n">set_bbox_to_anchor</span><span class="p">((</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">))</span>  <span class="c1"># Position legend above the plot area</span>
-                <span class="n">legend</span><span class="o">.</span><span class="n">set_loc</span><span class="p">(</span><span class="s2">"center"</span><span class="p">)</span>
-                <span class="n">legend</span><span class="o">.</span><span class="n">set_frame_on</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">legend</span><span class="o">.</span><span class="n">get_texts</span><span class="p">():</span>
-                    <span class="n">label</span><span class="o">.</span><span class="n">set_rotation</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># No rotation, keeping legend horizontally aligned</span>
-
-    <span class="c1"># Adjust layout to avoid overlap</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-
-    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span>  <span class="c1"># Return both figure and axes for further customization</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=d70dabb4">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Plotting UMAPs with harmony resolutions - using standard scale</span>
-<span class="n">fig</span> <span class="o">=</span> <span class="n">plot_filtered_violin</span><span class="p">(</span>
-    <span class="n">adata</span><span class="p">,</span> 
-    <span class="n">gene_sets</span><span class="p">,</span> 
-    <span class="n">groupby_base</span><span class="o">=</span><span class="s2">"leiden_harmony"</span><span class="p">,</span> 
-    <span class="n">resolutions</span><span class="o">=</span><span class="n">resolutions</span><span class="p">,</span> 
-    <span class="n">clustering_algorithm</span><span class="o">=</span><span class="s2">"Leiden (harmony)"</span><span class="p">)</span>
-<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>  <span class="c1"># Display the figure</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=74bf2d9c">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Plot-rank-gene-groups-for-harmony-resolutions">Plot rank gene groups for harmony resolutions<a class="anchor-link" href="#Plot-rank-gene-groups-for-harmony-resolutions">¶</a></h2>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=42bb80c9">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Res-0.1">Res 0.1<a class="anchor-link" href="#Res-0.1">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=0e227a70">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">"t-test_ov"</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="s2">"leiden_harmony_0.1"</span><span class="p">):</span>
-    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>  <span class="c1"># 3-column layout</span>
-
-    <span class="c1"># Dotplot</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_dotplot</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Mean expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="c1"># Stacked Violin</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_stacked_violin</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Median expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="c1"># Matrixplot</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_matrixplot</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Mean expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=83d57e43">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Res-0.2">Res 0.2<a class="anchor-link" href="#Res-0.2">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=1fcfe3fa">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">"t-test_ov"</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="s2">"leiden_harmony_0.2"</span><span class="p">):</span>
-    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>  <span class="c1"># 3-column layout</span>
-
-    <span class="c1"># Dotplot</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_dotplot</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Mean expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="c1"># Stacked Violin</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_stacked_violin</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Median expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="c1"># Matrixplot</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_matrixplot</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Mean expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1dd66fd2">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Res-0.3">Res 0.3<a class="anchor-link" href="#Res-0.3">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=07f56561">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">"t-test_ov"</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="s2">"leiden_harmony_0.3"</span><span class="p">):</span>
-    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>  <span class="c1"># 3-column layout</span>
-
-    <span class="c1"># Dotplot</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_dotplot</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Mean expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="c1"># Stacked Violin</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_stacked_violin</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Median expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="c1"># Matrixplot</span>
-    <span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_matrixplot</span><span class="p">(</span>
-        <span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span><span class="o">=</span><span class="n">n_genes</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="n">groupby</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">swap_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">standard_scale</span><span class="o">=</span><span class="s1">'var'</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">:</span>
-        <span class="n">cb</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">collections</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">colorbar</span>
-        <span class="n">adjust_colorbar</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="s2">"Mean expression</span><span class="se">\n</span><span class="s2">in group"</span><span class="p">)</span>
-
-    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=d35ae4bf">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Test-DE-Genes">Test DE Genes<a class="anchor-link" href="#Test-DE-Genes">¶</a></h2>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=7aee7f1e">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Res-0.1">Res 0.1<a class="anchor-link" href="#Res-0.1">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=a98b22c2">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Ranking differentially expressed genes with scale..."</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s1">'leiden_harmony_0.1'</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">'t-test_overestim_var'</span><span class="p">,</span> <span class="n">key_added</span> <span class="o">=</span> <span class="s2">"t-test_ov"</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span> <span class="n">sharey</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="s2">"t-test_ov"</span><span class="p">)</span>
-<span class="n">plot_rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">"t-test_ov"</span><span class="p">,</span> <span class="n">groupby</span> <span class="o">=</span> <span class="s2">"leiden_harmony_0.1"</span><span class="p">)</span>
-
-<span class="c1"># Save genes to file</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">'t-test_ov'</span><span class="p">]</span>
-<span class="n">groups</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">'names'</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span>  <span class="c1"># unique Leiden cluster IDs</span>
-
-<span class="c1"># Write to Excel, one cluster per sheet</span>
-<span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">report_dir</span> <span class="o">+</span> <span class="s2">"ranked_genes_leiden_harmony_0.1.xlsx"</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
-            <span class="s2">"gene"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"names"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"logfoldchanges"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"logfoldchanges"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"pvals"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"pvals"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"pvals_adj"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"pvals_adj"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"scores"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"scores"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-        <span class="p">})</span>
-
-        <span class="n">sheet_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"cluster_</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">"</span>
-        <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=2bc6fc72">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Res-0.2">Res 0.2<a class="anchor-link" href="#Res-0.2">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=f7191561">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Ranking differentially expressed genes with scale..."</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s1">'leiden_harmony_0.2'</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">'t-test_overestim_var'</span><span class="p">,</span> <span class="n">key_added</span> <span class="o">=</span> <span class="s2">"t-test_ov"</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span> <span class="n">sharey</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="s2">"t-test_ov"</span><span class="p">)</span>
-<span class="n">plot_rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">"t-test_ov"</span><span class="p">,</span> <span class="n">groupby</span> <span class="o">=</span> <span class="s2">"leiden_harmony_0.2"</span><span class="p">)</span>
-
-<span class="c1"># Save genes to file</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">'t-test_ov'</span><span class="p">]</span>
-<span class="n">groups</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">'names'</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span>  <span class="c1"># unique Leiden cluster IDs</span>
-
-<span class="c1"># Write to Excel, one cluster per sheet</span>
-<span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">report_dir</span> <span class="o">+</span> <span class="s2">"ranked_genes_leiden_harmony_0.2.xlsx"</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
-            <span class="s2">"gene"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"names"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"logfoldchanges"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"logfoldchanges"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"pvals"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"pvals"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"pvals_adj"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"pvals_adj"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"scores"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"scores"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-        <span class="p">})</span>
-
-        <span class="n">sheet_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"cluster_</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">"</span>
-        <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=afa64185">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Res-0.3">Res 0.3<a class="anchor-link" href="#Res-0.3">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=38307611">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Ranking differentially expressed genes with scale..."</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">tl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="s1">'leiden_harmony_0.3'</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">'t-test_overestim_var'</span><span class="p">,</span> <span class="n">key_added</span> <span class="o">=</span> <span class="s2">"t-test_ov"</span><span class="p">)</span>
-<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span> <span class="n">sharey</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="s2">"t-test_ov"</span><span class="p">)</span>
-<span class="n">plot_rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">"t-test_ov"</span><span class="p">,</span> <span class="n">groupby</span> <span class="o">=</span> <span class="s2">"leiden_harmony_0.3"</span><span class="p">)</span>
-
-<span class="c1"># Save genes to file</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s1">'t-test_ov'</span><span class="p">]</span>
-<span class="n">groups</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">'names'</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span>  <span class="c1"># unique Leiden cluster IDs</span>
-
-<span class="c1"># Write to Excel, one cluster per sheet</span>
-<span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">report_dir</span> <span class="o">+</span> <span class="s2">"ranked_genes_leiden_harmony_0.3.xlsx"</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
-            <span class="s2">"gene"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"names"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"logfoldchanges"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"logfoldchanges"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"pvals"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"pvals"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"pvals_adj"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"pvals_adj"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-            <span class="s2">"scores"</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">"scores"</span><span class="p">][</span><span class="n">group</span><span class="p">],</span>
-        <span class="p">})</span>
-
-        <span class="n">sheet_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"cluster_</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2">"</span>
-        <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=f6d7fd16">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Test-dotplot">Test dotplot<a class="anchor-link" href="#Test-dotplot">¶</a></h3>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=cd85e930">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups_dotplot</span><span class="p">(</span>
-    <span class="n">adata</span><span class="p">,</span>
-    <span class="n">n_genes</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
-    <span class="n">key</span><span class="o">=</span><span class="s2">"t-test_ov"</span><span class="p">,</span>
-    <span class="n">values_to_plot</span><span class="o">=</span><span class="s2">"logfoldchanges"</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">'bwr'</span><span class="p">,</span>
-   <span class="c1">#vmin=-4,</span>
-    <span class="c1">#vmax=4,</span>
-    <span class="c1">#min_logfoldchange=3,</span>
-    <span class="n">colorbar_title</span><span class="o">=</span><span class="s1">'log fold change'</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1bf18eea">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Final-genes-plots">Final genes plots<a class="anchor-link" href="#Final-genes-plots">¶</a></h1>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=95beac31">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1">#final_genes = [</span>
-<span class="c1">#    "SATB2", "CUX2",                    # Excitatory cortical neurons</span>
-<span class="c1">#    "GRIK3", "SORCS1",                  # ExNs (could be InNs)</span>
-<span class="c1">#    "ERBB4",                            # GABAergic inhibitory neurons</span>
-<span class="c1">#    "GLI3", "GLI2",                     # Radial glia</span>
-<span class="c1">#    "COL4A1", "FN1",                    # Endothelial/vascular cells</span>
-<span class="c1">#    "PDGFRA", "SOX6",                   # Oligodendrocyte progenitor cells</span>
-<span class="c1">#    "C3", "INPP5D",                     # Microglia</span>
-<span class="c1">#]</span>
-
-
-<span class="c1">#gene_sets = [("Final gene list", final_genes)]</span>
-<span class="c1"># This uses raw</span>
-<span class="c1">#fig = plot_filtered_violin(</span>
-<span class="c1">#    adata, </span>
-<span class="c1">#    gene_sets, </span>
-<span class="c1">#    groupby_base="leiden_harmony", </span>
-<span class="c1">#    resolutions=[resolutions[0]], </span>
-<span class="c1">#    clustering_algorithm="Leiden (harmony)")</span>
-<span class="c1">#plt.show()  # Display the figure</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=ade29b9d">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1">#gene_sets = [("Nick_genes", nick_genes)]</span>
-
-<span class="c1"># This uses raw</span>
-<span class="c1">#fig = plot_filtered_violin(</span>
-<span class="c1">#    adata, </span>
-<span class="c1">#    gene_sets, </span>
-<span class="c1">#    groupby_base="leiden_harmony", </span>
-<span class="c1">#    resolutions=[resolutions[0]], </span>
-<span class="c1">#    clustering_algorithm="Leiden (harmony)")</span>
-<span class="c1">#plt.show()  # Display the figure</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=49851b1c">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1">#logger.info("Setting cluster IDs ...")</span>
-<span class="c1"># Set cluster names</span>
-<span class="c1">#cluster_anns = {</span>
-    
-<span class="c1">#    '0': 'ExN-1-UL',</span>
-<span class="c1">#    '1': 'ExN-2-DL',</span>
-<span class="c1">#    '2': 'RG',</span>
-<span class="c1">#    '3': 'InN-1',</span>
-<span class="c1">#    '4': 'Endo-Peri',</span>
-<span class="c1">#    '5': 'OPC',</span>
-<span class="c1">#    '6': 'MG',</span>
-<span class="c1">#    '7': 'InN-2'</span>
-<span class="c1">#}</span>
-
-<span class="c1">#custom_palette = {</span>
-<span class="c1">#    'RG': '#FF5959',</span>
-<span class="c1">#    'ExN-1-UL': '#00B6EB',</span>
-<span class="c1">#    'InN-1': '#3CBB75FF',</span>
-<span class="c1">#    'ExN-2-DL': '#CEE5FD',</span>
-<span class="c1">#    'Endo-Peri': '#B200ED',</span>
-<span class="c1">#    'MG': '#F58231',</span>
-<span class="c1">#    'OPC': '#FDE725FF',</span>
-<span class="c1">#    'InN-2': "#2A9633FF"</span>
-<span class="c1">#}</span>
-
-<span class="c1"># Create a new column in adata.obs with cell type names</span>
-<span class="c1">#adata.obs['cell_type'] = adata.obs['leiden_harmony_0.1'].map(cluster_anns)</span>
-
-<span class="c1"># Check the new column</span>
-<span class="c1">#print(adata.obs[['leiden_harmony_0.1', 'cell_type']].head())</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=2156dc46">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Assign colors to Scanpy (must match the order of unique cell types)</span>
-<span class="c1">#logger.info(f"Creating UMAP with cell types ...")</span>
-<span class="c1">#sc.pl.umap(</span>
-<span class="c1">#        adata,</span>
-<span class="c1">#        color='cell_type',</span>
-<span class="c1">#        add_outline=True,</span>
-<span class="c1">#        legend_loc="on data",</span>
-<span class="c1">#        legend_fontsize=12,</span>
-<span class="c1">#        legend_fontoutline=4,</span>
-<span class="c1">#        title='',</span>
-<span class="c1">#        palette=custom_palette,</span>
-<span class="c1">#    )</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=7e1598cd">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1">#expressed_genes = extract_expressed_genes(adata, cell_type_col='cell_type')</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e96a9422">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1">#gtf_file = root_dir + "resources/refs/Homo_sapiens.GRCh38.113.gtf.gz"</span>
-<span class="c1">#gene_windows = get_gene_windows(expressed_genes, gtf_file, window_size=500000, output_dir= '~/Desktop/gene_windows')</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=6ca17507">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="c1">#geno_prefix = "path/to/genotypes"</span>
-<span class="c1">#ld_ref_bim = "path/to/ldref.hg38.bim"</span>
-<span class="c1">#snp_data = extract_snps_per_gene(gene_windows, geno_prefix, ld_ref_bim)</span>
-</pre></div>
 </div>
 </div>
 </div>
