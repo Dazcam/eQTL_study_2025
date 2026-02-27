@@ -60,19 +60,41 @@ custom_palette <- c(
   'OPC' = '#FDE725FF'
 )
 
+# custom_palette_L2 <- c(
+#   "NPC-0" = '#FF5959',
+#   "NPC-1" = '#FF5959',
+#   "NPC-2" = '#FF5959',
+#   "Glu-UL-0" = '#4363d8',
+#   "Glu-UL-1" = '#4363d8',
+#   "Glu-UL-2" = '#4363d8',
+#   "Glu-DL-0" = '#00B6EB',
+#   "Glu-DL-1" = '#00B6EB',
+#   "Glu-DL-2" = '#00B6EB',
+#   "GABA-0" = '#3CBB75FF',
+#   "GABA-1" = '#3CBB75FF',
+#   "GABA-2" = '#3CBB75FF'
+# )
+
 custom_palette_L2 <- c(
-  "NPC-0" = '#FF5959',
-  "NPC-1" = '#FF5959',
-  "NPC-2" = '#FF5959',
-  "Glu-UL-0" = '#4363d8',
-  "Glu-UL-1" = '#4363d8',
-  "Glu-UL-2" = '#4363d8',
-  "Glu-DL-0" = '#00B6EB',
-  "Glu-DL-1" = '#00B6EB',
-  "Glu-DL-2" = '#00B6EB',
-  "GABA-0" = '#3CBB75FF',
-  "GABA-1" = '#3CBB75FF',
-  "GABA-2" = '#3CBB75FF'
+  # NPCs
+  "NPC-0"    = "#E6194B", # Red
+  "NPC-1"    = "#F032E6", # Magenta
+  "NPC-2"    = "#FABEBE", # Pink
+  
+  # Glu-UL
+  "Glu-UL-0" = "#4363D8", # Blue
+  "Glu-UL-1" = "#911EB4", # Purple
+  "Glu-UL-2" = "#9A6324", # Brown
+  
+  # Glu-DL
+  "Glu-DL-0" = "#42D4F4", # Cyan
+  "Glu-DL-1" = "#469990", # Teal
+  "Glu-DL-2" = "#FFE119", # Yellow
+  
+  # GABA
+  "GABA-0"   = "#3CB44B", # Green
+  "GABA-1"   = "#F58231", # Orange
+  "GABA-2"   = "#BFEF45"  # Lime
 )
 
 base_theme <- theme(
