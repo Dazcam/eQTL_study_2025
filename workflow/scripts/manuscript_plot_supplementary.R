@@ -278,7 +278,7 @@ final_plt <- plot_grid(expr_L1_plt, expr_L2_plt, labels = 'AUTO',
 
 message('Saving expression PC plot ...')
 ggsave(
-  filename = out_file,
+  filename = final_file,
   plot = expr_plt,
   width = 10,
   height = 5,
