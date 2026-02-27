@@ -77,25 +77,31 @@ custom_palette <- c(
 
 custom_palette_L2 <- c(
   # NPCs
-  "NPC-0"    = "#E6194B", # Red
-  "NPC-1"    = "#F032E6", # Magenta
-  "NPC-2"    = "#FABEBE", # Pink
+  "NPC-0"    = '#e6194b', # Red
+  "NPC-1"    = '#ffd8b1', # Magenta
+  "NPC-2"    = '#800000', # Pink
   
   # Glu-UL
-  "Glu-UL-0" = "#4363D8", # Blue
+  "Glu-UL-0" = '#4363d8', # Blue
   "Glu-UL-1" = "#911EB4", # Purple
   "Glu-UL-2" = "#9A6324", # Brown
   
   # Glu-DL
-  "Glu-DL-0" = "#42D4F4", # Cyan
-  "Glu-DL-1" = "#469990", # Teal
+  "Glu-DL-0" = '#46f0f0', # Cyan
+  "Glu-DL-1" = '#008080', # Teal
   "Glu-DL-2" = "#FFE119", # Yellow
   
   # GABA
   "GABA-0"   = "#3CB44B", # Green
   "GABA-1"   = "#F58231", # Orange
-  "GABA-2"   = "#BFEF45"  # Lime
+  "GABA-2"   = '#f032e6'  # Lime
 )
+
+# '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
+# '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', 
+# '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', 
+# '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', 
+# '#ffffff', '#000000'
 
 base_theme <- theme(
   axis.text.y = element_text(size = 10),
