@@ -1,5 +1,5 @@
 ---
-title: "Stratified Linkage Disequibibrium Regression"
+title: "SLDSR"
 ---
 
 # sn-eQTL Analysis Workflow
