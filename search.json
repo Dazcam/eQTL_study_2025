@@ -198,28 +198,6 @@
     ]
   },
   {
-    "objectID": "pipelines/01-parse.html#overview",
-    "href": "pipelines/01-parse.html#overview",
-    "title": "01: Parse Alignment",
-    "section": "",
-    "text": "The Parse pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.",
-    "crumbs": [
-      "Alignment",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#requirements",
-    "href": "pipelines/01-parse.html#requirements",
-    "title": "01: Parse Alignment",
-    "section": "Requirements",
-    "text": "Requirements\n\nParse split-pipe software and virtual environment: I used v1.3.1\n\nA sample list for each plate\nInput fastq files\nGenome references: I used ENSEMBL release 113\nA json file listing where lane- and sublibrary-specific fastqs are located. See create_parse_json.py which generates a json file to gather these files to pass to the job.",
-    "crumbs": [
-      "Alignment",
-      "01: Parse Alignment"
-    ]
-  },
-  {
     "objectID": "pipelines/01-parse.html#sublibraries-and-samples",
     "href": "pipelines/01-parse.html#sublibraries-and-samples",
     "title": "01: Parse Alignment",
@@ -242,8 +220,8 @@
     ]
   },
   {
-    "objectID": "pipelines/01-parse.html#workflow-logic",
-    "href": "pipelines/01-parse.html#workflow-logic",
+    "objectID": "pipelines/01-parse.html#workflow-logic-1",
+    "href": "pipelines/01-parse.html#workflow-logic-1",
     "title": "01: Parse Alignment",
     "section": "Workflow Logic",
     "text": "Workflow Logic\n\n\n\n\n\ngraph TD\n    A[Get References] --&gt; B[Create Ref Index]\n    C[Cat FASTQs] --&gt; D[Run Split-Pipe]\n    B --&gt; D\n    D --&gt; E[Combine Plates]\n\n\n\n\n\n\n##Key Rules Reference Preparation\nWe download the genome and GTF files using wget.\nNote: We use localrules for get_refs to avoid overhead on the cluster.",
