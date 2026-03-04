@@ -42,12 +42,14 @@ Fix: The spipe-1.3.1 environment is manually activated within the shell block of
 ### Requirements
 
 
-+ `Software`: [Parse](https://www.parsebiosciences.com) `split-pipe` software we used v1.3.1
-+ `Conda environment`: Parse `split-pipe` software and virtual environment: I used v1.3.1
-+ `Input files`: demultiplexed fastq files 
-+ `Genome references`: We used [ENSEMBL release 113](https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/) 
-+ A `sample list` (for each plate)
-+ A `json file` listing where lane- and sublibrary-specific fastqs are located. Use `scripts/create_parse_json.py` to generate this. 
+| Category | Requirement |
+| :--- | :--- |
+| **Software** | Parse `split-pipe` v1.3.1 |
+| **Environment** | `spipe-1.3.1` |
+| **Reference** | ENSEMBL Release 113 (hg38) |
+| **Inputs** | Demultiplexed FASTQs, Sample List |
+| **Metadata** | JSON path map (via `scripts/create_parse_json.py`) |
+| **Disk Space** | ~3-5 TB per plate (Scratch) |
 
 ***
 
