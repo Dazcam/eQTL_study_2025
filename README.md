@@ -7,7 +7,7 @@ This project was carried out in the Division of Psychological Medicine and Clini
 ***
 
 <p align="center">
-  <img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="800">
+  <img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="600">
 </p>
 
 ***
