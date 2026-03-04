@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>01: Parse Alignment – Single-Cell eQTL Pipeline</title>
+<title>Parse Alignment – Single-Cell eQTL Pipeline</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -84,7 +84,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Alignment</a></li><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">01: Parse Alignment</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Alignment</a></li><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Parse Alignment</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -144,7 +144,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/01-parse.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">01: Parse Alignment</span></a>
+ <span class="menu-text">Parse Alignment</span></a>
   </div>
 </li>
       </ul>
@@ -278,10 +278,9 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
   <li><a href="#requirements" id="toc-requirements" class="nav-link" data-scroll-target="#requirements">Requirements</a></li>
-  <li><a href="#sublibraries-and-samples" id="toc-sublibraries-and-samples" class="nav-link" data-scroll-target="#sublibraries-and-samples">Sublibraries and samples</a></li>
-  <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources">Resources</a></li>
-  <li><a href="#workflow-logic-1" id="toc-workflow-logic-1" class="nav-link" data-scroll-target="#workflow-logic-1">Workflow Logic</a></li>
-  <li><a href="#fastq-merging" id="toc-fastq-merging" class="nav-link" data-scroll-target="#fastq-merging">Fastq Merging</a></li>
+  <li><a href="#library-composition-throughput" id="toc-library-composition-throughput" class="nav-link" data-scroll-target="#library-composition-throughput">Library Composition &amp; Throughput</a></li>
+  <li><a href="#resource-management-strategy" id="toc-resource-management-strategy" class="nav-link" data-scroll-target="#resource-management-strategy">Resource Management Strategy</a></li>
+  <li><a href="#compute-profile" id="toc-compute-profile" class="nav-link" data-scroll-target="#compute-profile">Compute profile</a></li>
   <li><a href="#known-issue" id="toc-known-issue" class="nav-link" data-scroll-target="#known-issue">Known Issue</a></li>
   </ul>
 </nav>
@@ -289,9 +288,9 @@ ul.task-list li input[type="checkbox"] {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Alignment</a></li><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">01: Parse Alignment</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Alignment</a></li><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Parse Alignment</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">01: Parse Alignment</h1>
+<h1 class="title">Parse Alignment</h1>
 </div>
 
 
@@ -310,10 +309,12 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>The <strong>Parse</strong> pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.</p>
+<p>This pipeline performs combinatorial indexing processing using the Parse Biosciences split-pipe (v1.3.1) software. It orchestrates the transition from raw FASTQ multiplexed libraries to a Digital Gene Expression (DGE) matrix.</p>
+<hr>
 </section>
 <section id="workflow-logic" class="level3">
 <h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<p>The pipeline follows a tiered execution strategy to manage heavy I/O and storage constraints.</p>
 <div class="cell" data-layout-align="default">
 <div class="cell-output-display">
 <div>
@@ -324,6 +325,9 @@ ul.task-list li input[type="checkbox"] {
     C[cat_fqs] --&gt; D[run_parse]
     B --&gt; D
     D --&gt; E[run_parse_combine]
+
+    style D fill:#f96,stroke:#333
+    style E fill:#f96,stroke:#333
 </pre>
 </div>
 <p></p></figure><p></p>
@@ -331,99 +335,73 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <ol type="1">
-<li><code>get_refs</code>: Download the hg38 reference files</li>
-<li><code>make_ref</code>: Use Parse <code>split-pipe</code> software to get ref files Parse ready</li>
-<li><code>cat_fqs</code>: Combine fastq files per sublibrary (across lanes), per read (R1, R2)</li>
-<li><code>run_parse</code>: Align reads for each sublibrary</li>
-<li><code>run_parse_combine</code>: Combine aligned sublibraries into single Parse output file</li>
+<li><code>get_refs</code>: Download the hg38 reference files (Ensembl Release 113).</li>
+<li><code>make_ref</code>: Prepares genome indices for split-pipe.</li>
+<li><code>cat_fqs</code>: Combine fastq files per sublibrary (across lanes), per read (R1, R2).</li>
+<li><code>run_parse</code>: Core alignment and barcode demultiplexing.</li>
+<li><code>run_parse_combine</code>: Aggregates sublibraries into a unified plate-level DGE.</li>
 </ol>
+<hr>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Environment Clash Workaround</p>
+<p>There was a conflict between the Snakemake YAML parser and the spipe environment. Fix: The spipe-1.3.1 environment is manually activated within the shell block of the rule rather than via the Snakemake conda: directive.</p>
+</div>
+</div>
 </section>
 <section id="requirements" class="level3">
 <h3 class="anchored" data-anchor-id="requirements">Requirements</h3>
 <ul>
-<li>Software: <a href="https://www.parsebiosciences.com">Parse</a> <code>split-pipe</code> software we used v1.3.1</li>
-<li>Conda environment: Parse <code>split-pipe</code> software and virtual environment: I used v1.3.1</li>
-<li>Input files: demultiplexed fastq files</li>
-<li>Genome references: We used <a href="https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/">ENSEMBL release 113</a></li>
-<li>A sample list (for each plate)</li>
-<li>A <code>json</code> file listing where lane- and sublibrary-specific fastqs are located. See <code>create_parse_json.py</code> which generates a json file to gather these files to pass to the job.</li>
+<li><code>Software</code>: <a href="https://www.parsebiosciences.com">Parse</a> <code>split-pipe</code> software we used v1.3.1</li>
+<li><code>Conda environment</code>: Parse <code>split-pipe</code> software and virtual environment: I used v1.3.1</li>
+<li><code>Input files</code>: demultiplexed fastq files</li>
+<li><code>Genome references</code>: We used <a href="https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/">ENSEMBL release 113</a></li>
+<li>A <code>sample list</code> (for each plate)</li>
+<li>A <code>json file</code> listing where lane- and sublibrary-specific fastqs are located. Use <code>scripts/create_parse_json.py</code> to generate this.</li>
 </ul>
+<hr>
 </section>
-<section id="sublibraries-and-samples" class="level2">
-<h2 class="anchored" data-anchor-id="sublibraries-and-samples">Sublibraries and samples</h2>
-<p>We initially generated gene expresion data for 150 samples.</p>
+<section id="library-composition-throughput" class="level3">
+<h3 class="anchored" data-anchor-id="library-composition-throughput">Library Composition &amp; Throughput</h3>
+<p>We processed 150 samples across three sequencing plates:</p>
 <ul>
-<li>Parse data generates up to 16 sublibraries per plate. In this project we split our data over three plates.
-<ul>
-<li>Run 1: 15 sublibraries (sublibrary 1 was dropped as it was substandard)</li>
-<li>Run 2: 16 sublibraries</li>
-<li>Run 3: 12 sublibraries (sublibraries 7, 9, 13 and 16 were excluded due to low concentration of input material remaining)</li>
-</ul></li>
-<li>For each sublibrary there were 24 fastq files:
-<ul>
-<li>4 fastq files (1 per lane) per run, for each read</li>
-<li>4 lanes X 3 runs X 2 reads = 24 fastq files per sublibrary</li>
-<li>These files were concatenated to a single file per read. Each sublibraries total size was around 350-400Gs.</li>
-</ul></li>
+<li>Sublibraries: 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12).</li>
+<li>FASTQ Depth: Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads).</li>
+<li>Data Volume: ~3.0 TB of final raw output (~1 TB per plate).</li>
 </ul>
+<hr>
 </section>
-<section id="resources" class="level2">
-<h2 class="anchored" data-anchor-id="resources">Resources</h2>
-<p>This is a resource and memory intensive process. It requires 3-5T of disk space per plate.</p>
-<p>Due to the size of the input fastq files per sublibrary, and the expansion of the output files created during alignment, I couldn’t run more than 3 jobs at a time. Simultaneously holding unmerged and concatenated fastqs and the aligned output files in the scratch directory simultaneously wasn’t possible as it blew my storage limit (5T). Thus I did the fastq transfer from neurocluster to Hawk and the fastq concatenation in a single step. This meant that I/O transfering was a bit of a bottleneck, but it was the lesser of two evils. The final ouput file sizes were:</p>
+<section id="resource-management-strategy" class="level3">
+<h3 class="anchored" data-anchor-id="resource-management-strategy">Resource Management Strategy</h3>
+<p>To navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:</p>
 <ul>
-<li>Plate 1: ~1.03 T</li>
-<li>Plate 2: ~0.97 T</li>
-<li>Plate 3: ~1.00 T</li>
-<li>Total: ~3.0T</li>
-<li>Average single sublibary: ~70-80 GB</li>
-<li>43 (check again) sublibraries total</li>
+<li>Concurrency Control: Restricted to 3 parallel jobs to prevent storage overflow.</li>
+<li>I/O Optimization: Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency.</li>
+<li>Cleanup Logic: Intermediate merged FASTQs were deleted immediately upon successful alignment.</li>
+<li>HPC Allocation: Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk.</li>
 </ul>
-<p>Due to restrictive memory quota, I used the following strategies to get the data thorugh:</p>
+<hr>
+</section>
+<section id="compute-profile" class="level3">
+<h3 class="anchored" data-anchor-id="compute-profile">Compute profile</h3>
 <ul>
-<li>I ran each plate individually (<code>run_parse</code>) in batches of 3 sublibraries at a time, <code>jobs: 3</code> in the profile/config.yaml.</li>
-<li>I tapered the priority of each snakemake job to favour later rules.</li>
-<li>Immediately removed merged fastqs for each sublibrary immediately after output files were generated to reduce memory footprint.</li>
-<li>Temporarily moved each batch aligned files to a project directory on neurocluseter to create space for the next batch of files.</li>
-<li>Note: Once <code>parse_combine</code> is run the final output for each plate is ~1G.</li>
-<li><code>run_parse and run_parse_combine</code> rules required:
-<ul>
-<li><code>resources: threads = 32, mem_mb = 360000, time="10-0:00:00"</code></li>
-<li>I ran this on the DPMCN node, <code>--partition=c_compute_neuro1</code>. Queuing on Hawk for such a resource intensive job was prohibitive.</li>
-</ul></li>
+<li>Threads: 32</li>
+<li>Memory: 360 GB</li>
+<li>Walltime: 10 Days</li>
 </ul>
+<hr>
 </section>
-<section id="workflow-logic-1" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-logic-1">Workflow Logic</h2>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">graph TD
-    A[Get References] --&gt; B[Create Ref Index]
-    C[Cat FASTQs] --&gt; D[Run Split-Pipe]
-    B --&gt; D
-    D --&gt; E[Combine Plates]
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-<p>##Key Rules Reference Preparation</p>
-<p>We download the genome and GTF files using wget.</p>
-<p>Note: We use localrules for get_refs to avoid overhead on the cluster.</p>
-</section>
-<section id="fastq-merging" class="level2">
-<h2 class="anchored" data-anchor-id="fastq-merging">Fastq Merging</h2>
-<p>Because the data comes in multiple lanes, we concatenate them:</p>
-<p>Python #| code-summary: “View Concatenation Rule” rule cat_fqs: # … (paste your code here)</p>
-<p>Troubleshooting: Environment Clashes ::: {.callout-important}</p>
-</section>
-<section id="known-issue" class="level2">
-<h2 class="anchored" data-anchor-id="known-issue">Known Issue</h2>
-<p>There wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the <code>conda:</code> directive. :::</p>
+<section id="known-issue" class="level3">
+<h3 class="anchored" data-anchor-id="known-issue">Known Issue</h3>
+<p>There wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate <code>spipe-1.3.1</code> within the shell block rather than using the <code>conda</code> directive.</p>
 
 
 </section>
