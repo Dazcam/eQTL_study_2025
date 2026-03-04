@@ -12,7 +12,17 @@ This project was carried out in the Division of Psychological Medicine and Clini
 
 ***
 
-## **GWAS Data**
+Data Processing & Pipeline Documentation
+
+The raw data in this project were processed through a modular suite of 13 Snakemake pipelines.
+
+Comprehensive documentation for each stage—including technical requirements, HPC resource profiles etc. is available at our documentation site:
+
+👉 [View the Pipeline Documentation](https://dazcam.github.io/eQTL_study_2025/)
+
+***
+
+### **GWAS Data**
 
 GWAS data were accessed from the following:
 
