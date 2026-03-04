@@ -14,6 +14,11 @@ website:
       - icon: github
         href: https://github.com/Dazcam/eQTL_study_2025
         aria-label: GitHub
+  page-navigation: true
+  back-to-top-navigation: true
+  margin-header: |
+    [![](https://img.shields.io/badge/Snakemake-v8.x-brightgreen)](https://snakemake.github.io)
+    [![](https://img.shields.io/badge/Scanpy-v1.10-blue)](https://scanpy.readthedocs.io)
   sidebar:
     style: "floating"
     search: true
@@ -40,7 +45,15 @@ website:
 
 format:
   html:
-    theme: darkly
+    theme: 
+      - darkly
+      - custom.scss
+      mainfont: "Inter"
+      fontsize: 1.05rem
+      linkcolor: "#3498db"
+      code-block-bg: true
+      code-block-border-left: "#2c3e50"
+      highlight-style: github
     code-fold: true   # Allows users to click to see the code
     code-summary: "Show Snakemake Code"
     toc: true
