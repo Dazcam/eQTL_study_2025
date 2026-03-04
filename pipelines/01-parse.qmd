@@ -1,12 +1,16 @@
 ---
-title: "01: Parse Alignment"
+title: "Parse Alignment"
 ---
 
 ### Overview
 
-The **Parse** pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.
+This pipeline performs combinatorial indexing processing using the Parse Biosciences split-pipe (v1.3.1) software. It orchestrates the transition from raw FASTQ multiplexed libraries to a Digital Gene Expression (DGE) matrix.
+
+***
 
 ### Workflow Logic
+
+The pipeline follows a tiered execution strategy to manage heavy I/O and storage constraints.
 
 ```{mermaid}
 graph TD
@@ -14,92 +18,69 @@ graph TD
     C[cat_fqs] --> D[run_parse]
     B --> D
     D --> E[run_parse_combine]
+
+    style D fill:#f96,stroke:#333
+    style E fill:#f96,stroke:#333
 ```
 
-1. `get_refs`: Download the hg38 reference files
-2. `make_ref`: Use Parse `split-pipe` software to get ref files Parse ready
-3. `cat_fqs`: Combine fastq files per sublibrary (across lanes), per read (R1, R2)
-4. `run_parse`: Align reads for each sublibrary 
-5. `run_parse_combine`: Combine aligned sublibraries into single Parse output file
+1. `get_refs`: Download the hg38 reference files (Ensembl Release 113).
+2. `make_ref`: Prepares genome indices for split-pipe.
+3. `cat_fqs`: Combine fastq files per sublibrary (across lanes), per read (R1, R2).
+4. `run_parse`: Core alignment and barcode demultiplexing.
+5. `run_parse_combine`: Aggregates sublibraries into a unified plate-level DGE.
+
+***
+
+::: {.callout-warning}
+
+Environment Clash Workaround
+
+There was a conflict between the Snakemake YAML parser and the spipe environment.
+Fix: The spipe-1.3.1 environment is manually activated within the shell block of the rule rather than via the Snakemake conda: directive.
+:::
 
 ### Requirements
 
-+ Software: [Parse](https://www.parsebiosciences.com) `split-pipe` software we used v1.3.1
-+ Conda environment: Parse `split-pipe` software and virtual environment: I used v1.3.1
-+ Input files: demultiplexed fastq files 
-+ Genome references: We used [ENSEMBL release 113](https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/) 
-+ A sample list (for each plate)
-+ A `json` file listing where lane- and sublibrary-specific fastqs are located. See `create_parse_json.py` which generates a json file to gather these files to pass to the job.
 
-## Sublibraries and samples
++ `Software`: [Parse](https://www.parsebiosciences.com) `split-pipe` software we used v1.3.1
++ `Conda environment`: Parse `split-pipe` software and virtual environment: I used v1.3.1
++ `Input files`: demultiplexed fastq files 
++ `Genome references`: We used [ENSEMBL release 113](https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/) 
++ A `sample list` (for each plate)
++ A `json file` listing where lane- and sublibrary-specific fastqs are located. Use `scripts/create_parse_json.py` to generate this. 
 
-We initially generated gene expresion data for 150 samples. 
+***
 
-+ Parse data generates up to 16 sublibraries per plate. In this project we split our data over three plates.
-    + Run 1: 15 sublibraries (sublibrary 1 was dropped as it was substandard)
-    + Run 2: 16 sublibraries
-    + Run 3: 12 sublibraries (sublibraries 7, 9, 13 and 16 were excluded due to low concentration of input material remaining)
+### Library Composition & Throughput
 
-+ For each sublibrary there were 24 fastq files:
-	+ 4 fastq files (1 per lane) per run, for each read 
-	+ 4 lanes X 3 runs X 2 reads = 24 fastq files per sublibrary
-	+ These files were concatenated to a single file per read. Each sublibraries total size was around 350-400Gs. 
+We processed 150 samples across three sequencing plates:
 
-## Resources
++ Sublibraries: 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12).
++ FASTQ Depth: Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads).
++ Data Volume: ~3.0 TB of final raw output (~1 TB per plate).
 
-This is a resource and memory intensive process. It requires 3-5T of disk space per plate. 
+***
 
-Due to the size of the input fastq files per sublibrary, and the expansion of the output files created during alignment, I couldn't run more than 3 jobs at a time. Simultaneously holding unmerged and concatenated fastqs and the aligned output files in the scratch directory simultaneously wasn't possible as it blew my storage limit (5T). Thus I did the fastq transfer from neurocluster to Hawk and the fastq concatenation in a single step. This meant that I/O transfering was a bit of a bottleneck, but it was the lesser of two evils. The final ouput file sizes were:
+### Resource Management Strategy
 
-+ Plate 1: ~1.03 T
-+ Plate 2: ~0.97 T
-+ Plate 3: ~1.00 T
-+ Total: ~3.0T
-+ Average single sublibary: ~70-80 GB
-+ 43 (check again) sublibraries total
+To navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:
 
-Due to restrictive memory quota, I used the following strategies to get the data thorugh:
++ Concurrency Control: Restricted to 3 parallel jobs to prevent storage overflow.
++ I/O Optimization: Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency.
++ Cleanup Logic: Intermediate merged FASTQs were deleted immediately upon successful alignment.
++ HPC Allocation: Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk.
 
-+ I ran each plate individually (`run_parse`) in batches of 3 sublibraries at a time, `jobs: 3` in the profile/config.yaml.
-+ I tapered the priority of each snakemake job to favour later rules.
-+ Immediately removed merged fastqs for each sublibrary immediately after output files were generated to reduce memory footprint.
-+ Temporarily moved each batch aligned files to a project directory on neurocluseter to create space for the next batch of files.
-+ Note: Once `parse_combine` is run the final output for each plate is ~1G.
-+ `run_parse and run_parse_combine` rules required: 
-	+ `resources: threads = 32, mem_mb = 360000, time="10-0:00:00"`
-	+ I ran this on the DPMCN node, `--partition=c_compute_neuro1`. Queuing on Hawk for such a resource intensive job was prohibitive.
+***
 
-## Workflow Logic
+### Compute profile
 
-```{mermaid}
-graph TD
-    A[Get References] --> B[Create Ref Index]
-    C[Cat FASTQs] --> D[Run Split-Pipe]
-    B --> D
-    D --> E[Combine Plates]
-```
++ Threads: 32
++ Memory: 360 GB
++ Walltime: 10 Days
 
-##Key Rules
-Reference Preparation
+*** 
 
-We download the genome and GTF files using wget.
-
-Note: We use localrules for get_refs to avoid overhead on the cluster.
-
-## Fastq Merging
-
-Because the data comes in multiple lanes, we concatenate them:
-
-Python
-#| code-summary: "View Concatenation Rule"
-rule cat_fqs:
-    # ... (paste your code here)
-
-Troubleshooting: Environment Clashes
-::: {.callout-important}
-
-## Known Issue
+### Known Issue
 
 There wass a clash between the snakemake environment and the spipe environment.
-Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the `conda:` directive.
-:::
+Workaround: We manually activate `spipe-1.3.1` within the shell block rather than using the `conda` directive.
