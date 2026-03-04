@@ -4,7 +4,9 @@ title: "Project Overview"
 
 # sn-eQTL Analysis Workflow
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+<p align="center">
+  <img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="400">
+</p>
 
 ### Workflow Summary
 
