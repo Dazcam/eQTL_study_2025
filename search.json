@@ -46,45 +46,45 @@
   {
     "objectID": "pipelines/10-SMR.html",
     "href": "pipelines/10-SMR.html",
-    "title": "Summary Mendelian Randomisation",
+    "title": "SMR",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Summary Mendelian Randomisation"
+      "SMR"
     ]
   },
   {
     "objectID": "pipelines/10-SMR.html#workflow-summary",
     "href": "pipelines/10-SMR.html#workflow-summary",
-    "title": "Summary Mendelian Randomisation",
+    "title": "SMR",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Summary Mendelian Randomisation"
+      "SMR"
     ]
   },
   {
     "objectID": "pipelines/08-susie.html",
     "href": "pipelines/08-susie.html",
-    "title": "SuSiE",
+    "title": "SuSiE finemapping",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "SuSiE"
+      "SuSiE finemapping"
     ]
   },
   {
     "objectID": "pipelines/08-susie.html#workflow-summary",
     "href": "pipelines/08-susie.html#workflow-summary",
-    "title": "SuSiE",
+    "title": "SuSiE finemapping",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "SuSiE"
+      "SuSiE finemapping"
     ]
   },
   {
@@ -244,45 +244,67 @@
   {
     "objectID": "pipelines/09-SLDSR.html",
     "href": "pipelines/09-SLDSR.html",
-    "title": "Stratified Linkage Disequibibrium Regression",
+    "title": "SLDSR",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Stratified Linkage Disequibibrium Regression"
+      "SLDSR"
     ]
   },
   {
     "objectID": "pipelines/09-SLDSR.html#workflow-summary",
     "href": "pipelines/09-SLDSR.html#workflow-summary",
-    "title": "Stratified Linkage Disequibibrium Regression",
+    "title": "SLDSR",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Stratified Linkage Disequibibrium Regression"
+      "SLDSR"
     ]
   },
   {
     "objectID": "pipelines/11-TWAS-weights.html",
     "href": "pipelines/11-TWAS-weights.html",
-    "title": "Generate TWAS weights - FUSION",
+    "title": "TWAS weights",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Generate TWAS weights - FUSION"
+      "TWAS weights"
     ]
   },
   {
     "objectID": "pipelines/11-TWAS-weights.html#workflow-summary",
     "href": "pipelines/11-TWAS-weights.html#workflow-summary",
-    "title": "Generate TWAS weights - FUSION",
+    "title": "TWAS weights",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Generate TWAS weights - FUSION"
+      "TWAS weights"
+    ]
+  },
+  {
+    "objectID": "pipelines/13-visualization.html",
+    "href": "pipelines/13-visualization.html",
+    "title": "Visualisation",
+    "section": "",
+    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "crumbs": [
+      "Pipelines",
+      "Visualisation"
+    ]
+  },
+  {
+    "objectID": "pipelines/13-visualization.html#workflow-summary",
+    "href": "pipelines/13-visualization.html#workflow-summary",
+    "title": "Visualisation",
+    "section": "",
+    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "crumbs": [
+      "Pipelines",
+      "Visualisation"
     ]
   }
 ]
