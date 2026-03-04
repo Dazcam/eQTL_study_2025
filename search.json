@@ -50,142 +50,46 @@
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/07-prep-GWAS.html",
-    "href": "pipelines/07-prep-GWAS.html",
-    "title": "Prep GWAS",
+    "objectID": "pipelines/08-susie.html",
+    "href": "pipelines/08-susie.html",
+    "title": "SuSiE",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/07-prep-GWAS.html#workflow-summary",
-    "href": "pipelines/07-prep-GWAS.html#workflow-summary",
-    "title": "Prep GWAS",
+    "objectID": "pipelines/08-susie.html#workflow-summary",
+    "href": "pipelines/08-susie.html#workflow-summary",
+    "title": "SuSiE",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/03-geno-pre.html",
-    "href": "pipelines/03-geno-pre.html",
-    "title": "Genotype QC pre-imputation",
+    "objectID": "pipelines/06-qtl-replication.html",
+    "href": "pipelines/06-qtl-replication.html",
+    "title": "eQTL replication",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/03-geno-pre.html#workflow-summary",
-    "href": "pipelines/03-geno-pre.html#workflow-summary",
-    "title": "Genotype QC pre-imputation",
+    "objectID": "pipelines/06-qtl-replication.html#workflow-summary",
+    "href": "pipelines/06-qtl-replication.html#workflow-summary",
+    "title": "eQTL replication",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/01-parse.html",
-    "href": "pipelines/01-parse.html",
-    "title": "01: Parse Alignment",
-    "section": "",
-    "text": "The Parse pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#overview",
-    "href": "pipelines/01-parse.html#overview",
-    "title": "01: Parse Alignment",
-    "section": "",
-    "text": "The Parse pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#requirements",
-    "href": "pipelines/01-parse.html#requirements",
-    "title": "01: Parse Alignment",
-    "section": "Requirements",
-    "text": "Requirements\n\nParse split-pipe software and virtual environment: I used v1.3.1\n\nA sample list for each plate\nInput fastq files\nGenome references: I used ENSEMBL release 113\nA json file listing where lane- and sublibrary-specific fastqs are located. See create_parse_json.py which generates a json file to gather these files to pass to the job.",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#sublibraries-and-samples",
-    "href": "pipelines/01-parse.html#sublibraries-and-samples",
-    "title": "01: Parse Alignment",
-    "section": "Sublibraries and samples",
-    "text": "Sublibraries and samples\nWe initially generated gene expresion data for 150 samples.\n\nParse data generates up to 16 sublibraries per plate. In this project we split our data over three plates.\n\nRun 1: 15 sublibraries (sublibrary 1 was dropped as it was substandard)\nRun 2: 16 sublibraries\nRun 3: 12 sublibraries (sublibraries 7, 9, 13 and 16 were excluded due to low concentration of input material remaining)\n\nFor each sublibrary there were 24 fastq files:\n\n4 fastq files (1 per lane) per run, for each read\n4 lanes X 3 runs X 2 reads = 24 fastq files per sublibrary\nThese files were concatenated to a single file per read. Each sublibraries total size was around 350-400Gs.",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#resources",
-    "href": "pipelines/01-parse.html#resources",
-    "title": "01: Parse Alignment",
-    "section": "Resources",
-    "text": "Resources\nThis is a resource and memory intensive process. It requires 3-5T of disk space per plate.\nDue to the size of the input fastq files per sublibrary, and the expansion of the output files created during alignment, I couldn’t run more than 3 jobs at a time. Simultaneously holding unmerged and concatenated fastqs and the aligned output files in the scratch directory simultaneously wasn’t possible as it blew my storage limit (5T). Thus I did the fastq transfer from neurocluster to Hawk and the fastq concatenation in a single step. This meant that I/O transfering was a bit of a bottleneck, but it was the lesser of two evils. The final ouput file sizes were:\n\nPlate 1: ~1.03 T\nPlate 2: ~0.97 T\nPlate 3: ~1.00 T\nTotal: ~3.0T\nAverage single sublibary: ~70-80 GB\n43 (check again) sublibraries total\n\nDue to restrictive memory quota, I used the following strategies to get the data thorugh:\n\nI ran each plate individually (run_parse) in batches of 3 sublibraries at a time, jobs: 3 in the profile/config.yaml.\nI tapered the priority of each snakemake job to favour later rules.\nImmediately removed merged fastqs for each sublibrary immediately after output files were generated to reduce memory footprint.\nTemporarily moved each batch aligned files to a project directory on neurocluseter to create space for the next batch of files.\nNote: Once parse_combine is run the final output for each plate is ~1G.\nrun_parse and run_parse_combine rules required:\n\nresources: threads = 32, mem_mb = 360000, time=\"10-0:00:00\"\nI ran this on the DPMCN node, --partition=c_compute_neuro1. Queuing on Hawk for such a resource intensive job was prohibitive.",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#workflow-logic",
-    "href": "pipelines/01-parse.html#workflow-logic",
-    "title": "01: Parse Alignment",
-    "section": "Workflow Logic",
-    "text": "Workflow Logic\n\n\n\n\n\ngraph TD\n    A[Get References] --&gt; B[Create Ref Index]\n    C[Cat FASTQs] --&gt; D[Run Split-Pipe]\n    B --&gt; D\n    D --&gt; E[Combine Plates]\n\n\n\n\n\n\n##Key Rules Reference Preparation\nWe download the genome and GTF files using wget.\nNote: We use localrules for get_refs to avoid overhead on the cluster.",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#fastq-merging",
-    "href": "pipelines/01-parse.html#fastq-merging",
-    "title": "01: Parse Alignment",
-    "section": "Fastq Merging",
-    "text": "Fastq Merging\nBecause the data comes in multiple lanes, we concatenate them:\nPython #| code-summary: “View Concatenation Rule” rule cat_fqs: # … (paste your code here)\nTroubleshooting: Environment Clashes ::: {.callout-important}",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "pipelines/01-parse.html#known-issue",
-    "href": "pipelines/01-parse.html#known-issue",
-    "title": "01: Parse Alignment",
-    "section": "Known Issue",
-    "text": "Known Issue\nThere wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the conda: directive. :::",
-    "crumbs": [
-      "Snakemake Pipelines",
-      "01: Parse Alignment"
-    ]
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
+    "objectID": "pipelines/04-geno-post.html",
+    "href": "pipelines/04-geno-post.html",
     "title": "Project Overview",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Getting Started",
-      "Project Overview"
-    ]
+    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "index.html#workflow-summary",
-    "href": "index.html#workflow-summary",
+    "objectID": "pipelines/04-geno-post.html#workflow-summary",
+    "href": "pipelines/04-geno-post.html#workflow-summary",
     "title": "Project Overview",
     "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Getting Started",
-      "Project Overview"
-    ]
+    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
     "objectID": "pipelines/02-scanpy.html",
@@ -276,30 +180,140 @@
     ]
   },
   {
-    "objectID": "pipelines/04-geno-post.html",
-    "href": "pipelines/04-geno-post.html",
+    "objectID": "index.html",
+    "href": "index.html",
     "title": "Project Overview",
+    "section": "",
+    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "crumbs": [
+      "Getting Started",
+      "Project Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#workflow-summary",
+    "href": "index.html#workflow-summary",
+    "title": "Project Overview",
+    "section": "",
+    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "crumbs": [
+      "Getting Started",
+      "Project Overview"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html",
+    "href": "pipelines/01-parse.html",
+    "title": "01: Parse Alignment",
+    "section": "",
+    "text": "The Parse pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html#overview",
+    "href": "pipelines/01-parse.html#overview",
+    "title": "01: Parse Alignment",
+    "section": "",
+    "text": "The Parse pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html#requirements",
+    "href": "pipelines/01-parse.html#requirements",
+    "title": "01: Parse Alignment",
+    "section": "Requirements",
+    "text": "Requirements\n\nParse split-pipe software and virtual environment: I used v1.3.1\n\nA sample list for each plate\nInput fastq files\nGenome references: I used ENSEMBL release 113\nA json file listing where lane- and sublibrary-specific fastqs are located. See create_parse_json.py which generates a json file to gather these files to pass to the job.",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html#sublibraries-and-samples",
+    "href": "pipelines/01-parse.html#sublibraries-and-samples",
+    "title": "01: Parse Alignment",
+    "section": "Sublibraries and samples",
+    "text": "Sublibraries and samples\nWe initially generated gene expresion data for 150 samples.\n\nParse data generates up to 16 sublibraries per plate. In this project we split our data over three plates.\n\nRun 1: 15 sublibraries (sublibrary 1 was dropped as it was substandard)\nRun 2: 16 sublibraries\nRun 3: 12 sublibraries (sublibraries 7, 9, 13 and 16 were excluded due to low concentration of input material remaining)\n\nFor each sublibrary there were 24 fastq files:\n\n4 fastq files (1 per lane) per run, for each read\n4 lanes X 3 runs X 2 reads = 24 fastq files per sublibrary\nThese files were concatenated to a single file per read. Each sublibraries total size was around 350-400Gs.",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html#resources",
+    "href": "pipelines/01-parse.html#resources",
+    "title": "01: Parse Alignment",
+    "section": "Resources",
+    "text": "Resources\nThis is a resource and memory intensive process. It requires 3-5T of disk space per plate.\nDue to the size of the input fastq files per sublibrary, and the expansion of the output files created during alignment, I couldn’t run more than 3 jobs at a time. Simultaneously holding unmerged and concatenated fastqs and the aligned output files in the scratch directory simultaneously wasn’t possible as it blew my storage limit (5T). Thus I did the fastq transfer from neurocluster to Hawk and the fastq concatenation in a single step. This meant that I/O transfering was a bit of a bottleneck, but it was the lesser of two evils. The final ouput file sizes were:\n\nPlate 1: ~1.03 T\nPlate 2: ~0.97 T\nPlate 3: ~1.00 T\nTotal: ~3.0T\nAverage single sublibary: ~70-80 GB\n43 (check again) sublibraries total\n\nDue to restrictive memory quota, I used the following strategies to get the data thorugh:\n\nI ran each plate individually (run_parse) in batches of 3 sublibraries at a time, jobs: 3 in the profile/config.yaml.\nI tapered the priority of each snakemake job to favour later rules.\nImmediately removed merged fastqs for each sublibrary immediately after output files were generated to reduce memory footprint.\nTemporarily moved each batch aligned files to a project directory on neurocluseter to create space for the next batch of files.\nNote: Once parse_combine is run the final output for each plate is ~1G.\nrun_parse and run_parse_combine rules required:\n\nresources: threads = 32, mem_mb = 360000, time=\"10-0:00:00\"\nI ran this on the DPMCN node, --partition=c_compute_neuro1. Queuing on Hawk for such a resource intensive job was prohibitive.",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html#workflow-logic",
+    "href": "pipelines/01-parse.html#workflow-logic",
+    "title": "01: Parse Alignment",
+    "section": "Workflow Logic",
+    "text": "Workflow Logic\n\n\n\n\n\ngraph TD\n    A[Get References] --&gt; B[Create Ref Index]\n    C[Cat FASTQs] --&gt; D[Run Split-Pipe]\n    B --&gt; D\n    D --&gt; E[Combine Plates]\n\n\n\n\n\n\n##Key Rules Reference Preparation\nWe download the genome and GTF files using wget.\nNote: We use localrules for get_refs to avoid overhead on the cluster.",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html#fastq-merging",
+    "href": "pipelines/01-parse.html#fastq-merging",
+    "title": "01: Parse Alignment",
+    "section": "Fastq Merging",
+    "text": "Fastq Merging\nBecause the data comes in multiple lanes, we concatenate them:\nPython #| code-summary: “View Concatenation Rule” rule cat_fqs: # … (paste your code here)\nTroubleshooting: Environment Clashes ::: {.callout-important}",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/01-parse.html#known-issue",
+    "href": "pipelines/01-parse.html#known-issue",
+    "title": "01: Parse Alignment",
+    "section": "Known Issue",
+    "text": "Known Issue\nThere wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the conda: directive. :::",
+    "crumbs": [
+      "Snakemake Pipelines",
+      "01: Parse Alignment"
+    ]
+  },
+  {
+    "objectID": "pipelines/03-geno-pre.html",
+    "href": "pipelines/03-geno-pre.html",
+    "title": "Genotype QC pre-imputation",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/04-geno-post.html#workflow-summary",
-    "href": "pipelines/04-geno-post.html#workflow-summary",
-    "title": "Project Overview",
+    "objectID": "pipelines/03-geno-pre.html#workflow-summary",
+    "href": "pipelines/03-geno-pre.html#workflow-summary",
+    "title": "Genotype QC pre-imputation",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/06-qtl-replication.html",
-    "href": "pipelines/06-qtl-replication.html",
-    "title": "eQTL replication",
+    "objectID": "pipelines/07-prep-GWAS.html",
+    "href": "pipelines/07-prep-GWAS.html",
+    "title": "Prep GWAS",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
   {
-    "objectID": "pipelines/06-qtl-replication.html#workflow-summary",
-    "href": "pipelines/06-qtl-replication.html#workflow-summary",
-    "title": "eQTL replication",
+    "objectID": "pipelines/07-prep-GWAS.html#workflow-summary",
+    "href": "pipelines/07-prep-GWAS.html#workflow-summary",
+    "title": "Prep GWAS",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)"
   },
