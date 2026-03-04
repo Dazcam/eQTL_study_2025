@@ -1,15 +1,34 @@
 ---
-title: "Prep GWAS"
+title: "Prepare GWAS"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This pipeline 
+
+***
+
+### Workflow Logic
+
+
 
 ## Workflow Summary
 
+1. `get_hg38_refs`: Download SLDSR hg38 reference files
+2. `get_hg19_refs`: Download SLDSR hg38 reference files
+3. `make_annot_maxCPP`: Generate MaxCPP annotation files from SuSiE output
+4. `lift_hapmap3_snps`: Lift Hapmap 3 reference SNPs to hg38
+5. `ldsr_ld_scores_hg38`: Generate LD score files for each cell type
+6. `ldsr_strat_hg38_bl_v12`: Run stratified LD score regression with baseline version 1.2
+7. `ldsr_report`: Summarise SLDSR score results per cell type
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+
+### GWAS Data
+
+GWAS data were accessed from the following locations:
+
++ [Schizophrenia](https://figshare.com/ndownloader/files/34517828)
++ [Bipolar Disorder](https://figshare.com/ndownloader/files/49760772) 
++ [Major Depressive Disorder](https://figshare.com/ndownloader/files/51487022)
++ [ADHD](https://figshare.com/ndownloader/files/40036684)
++ [OCD](https://figshare.com/ndownloader/files/53357735)
