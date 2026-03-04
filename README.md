@@ -20,6 +20,8 @@ Comprehensive documentation for each stage—including technical requirements, H
 
 👉 [View the Pipeline Documentation](https://dazcam.github.io/eQTL_study_2025/)
 
+![Docs Build Status](https://github.com/Dazcam/eQTL_study_2025/actions/workflows/publish.yml/badge.svg)
+
 ***
 
 ### **GWAS Data**
