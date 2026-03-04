@@ -48,12 +48,12 @@ format:
     theme: 
       - darkly
       - custom.scss
-      mainfont: "Inter"
-      fontsize: 1.05rem
-      linkcolor: "#3498db"
-      code-block-bg: true
-      code-block-border-left: "#2c3e50"
-      highlight-style: github
-    code-fold: true   # Allows users to click to see the code
+    mainfont: "Inter"
+    fontsize: 1.05rem
+    linkcolor: "#3498db"
+    code-block-bg: true
+    code-block-border-left: "#2c3e50"
+    highlight-style: github
+    code-fold: true
     code-summary: "Show Snakemake Code"
     toc: true
