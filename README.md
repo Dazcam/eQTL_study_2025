@@ -6,7 +6,7 @@ This project was carried out in the Division of Psychological Medicine and Clini
 
 ***
 
-![infopgraphic](pipelines/images/eQTL_infographic.pdf)
+[infographic](pipelines/images/eQTL_infographic.pdf)
 
 ***
 
