@@ -377,25 +377,93 @@ Warning
 <section id="library-composition-throughput" class="level3">
 <h3 class="anchored" data-anchor-id="library-composition-throughput">Library Composition &amp; Throughput</h3>
 <p>We processed 150 samples across three sequencing plates:</p>
-<div class="line-block"><strong>Sublibraries</strong> | 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12) |<br>
-<strong>FASTQ info</strong> | Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads) |<br>
-<strong>Data Volume</strong> | ~3.0 TB of final raw output (~1 TB per plate) |</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Sublibraries</strong></td>
+<td style="text-align: left;">43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>FASTQ info</strong></td>
+<td style="text-align: left;">Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Data Volume</strong></td>
+<td style="text-align: left;">~3.0 TB of final raw output (~1 TB per plate)</td>
+</tr>
+</tbody>
+</table>
 <hr>
 </section>
 <section id="resource-management-strategy" class="level3">
 <h3 class="anchored" data-anchor-id="resource-management-strategy">Resource Management Strategy</h3>
 <p>To navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:</p>
-<div class="line-block"><strong>Concurrency Control</strong> | Restricted to 3 parallel jobs to prevent storage overflow |<br>
-<strong>I/O Optimization</strong> | Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency |<br>
-<strong>Cleanup Logic</strong> | Intermediate merged FASTQs were deleted immediately upon successful alignment |<br>
-<strong>HPC Allocation</strong> | Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk |</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Concurrency Control</strong></td>
+<td style="text-align: left;">Restricted to 3 parallel jobs to prevent storage overflow</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>I/O Optimization</strong></td>
+<td style="text-align: left;">Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Cleanup Logic</strong></td>
+<td style="text-align: left;">Intermediate merged FASTQs were deleted immediately upon successful alignment</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>HPC Allocation</strong></td>
+<td style="text-align: left;">Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk</td>
+</tr>
+</tbody>
+</table>
 <hr>
 </section>
 <section id="compute-profile" class="level3">
 <h3 class="anchored" data-anchor-id="compute-profile">Compute profile</h3>
-<div class="line-block"><strong>Threads</strong> | 32 |<br>
-<strong>Memory</strong> | 360 GB |<br>
-<strong>Walltime</strong> | 10 Days |</div>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Resource</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Threads</strong></td>
+<td style="text-align: left;">32</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Memory</strong></td>
+<td style="text-align: left;">360 GB</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Walltime</strong></td>
+<td style="text-align: left;">10 Days</td>
+</tr>
+</tbody>
+</table>
 <hr>
 </section>
 <section id="known-issue" class="level3">
