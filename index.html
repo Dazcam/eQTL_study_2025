@@ -259,7 +259,9 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="sn-eqtl-analysis-workflow" class="level1">
 <h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
+<p align="center">
+<img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="400">
+</p>
 <section id="workflow-summary" class="level3">
 <h3 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h3>
 <p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: snRNAseq QC and clustering 3. <strong>03 Genotyping (pre-imputation)</strong>: Genotype QC and harmonisation for TOPMED imputation 4. <strong>04 Genotyping (post-imputation)</strong>: Genotype QC post-imputation 5. <strong>05 TensorQTL</strong>: eQTL Discovery and QC 6. <strong>06 eQTL replication</strong>: pi1 Testing etc. 7. <strong>07 Prep GWAS</strong>: Download and munge GWAS data for downstream applications 8. <strong>08 SuSiE finemapping</strong>: Generate finemapped SNPs for MaxCPP annotation 9. <strong>09 S-LDSR</strong>: Run Stratified LDSR 10. <strong>10 SMR</strong>: Run Summary Mendelian Randomisation 11. <strong>11 TWAS-weights</strong>: Generate TWAS weights for cTWAS 12. <strong>12 cTWAS</strong>: Run Causal TWAS 13. <strong>12 Visualisation</strong>: Generate figures and tables for manuscript</p>
