@@ -211,23 +211,23 @@
   {
     "objectID": "pipelines/07-prep-GWAS.html",
     "href": "pipelines/07-prep-GWAS.html",
-    "title": "Prep GWAS",
+    "title": "Prepare GWAS",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "text": "This pipeline",
     "crumbs": [
       "Pipelines",
-      "Prep GWAS"
+      "Prepare GWAS"
     ]
   },
   {
     "objectID": "pipelines/07-prep-GWAS.html#workflow-summary",
     "href": "pipelines/07-prep-GWAS.html#workflow-summary",
-    "title": "Prep GWAS",
-    "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "title": "Prepare GWAS",
+    "section": "Workflow Summary",
+    "text": "Workflow Summary\n\nget_hg38_refs: Download SLDSR hg38 reference files\nget_hg19_refs: Download SLDSR hg38 reference files\nmake_annot_maxCPP: Generate MaxCPP annotation files from SuSiE output\nlift_hapmap3_snps: Lift Hapmap 3 reference SNPs to hg38\nldsr_ld_scores_hg38: Generate LD score files for each cell type\nldsr_strat_hg38_bl_v12: Run stratified LD score regression with baseline version 1.2\nldsr_report: Summarise SLDSR score results per cell type\n\n\nGWAS Data\nGWAS data were accessed from the following locations:\n\nSchizophrenia\nBipolar Disorder\nMajor Depressive Disorder\nADHD\nOCD",
     "crumbs": [
       "Pipelines",
-      "Prep GWAS"
+      "Prepare GWAS"
     ]
   },
   {
