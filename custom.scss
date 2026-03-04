@@ -1,0 +1,34 @@
+/*-- scss:defaults --*/
+
+// 1. Professional Fonts
+// Inter is the gold standard for tech docs; Serif for headers adds "Nature" journal vibes
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@700&display=swap');
+
+$font-family-sans-serif: "Inter", sans-serif;
+$presentation-heading-font: "Playfair Display", serif;
+
+// 2. Sophisticated Color Palette (Deep Navy & Slate)
+$primary: #2c3e50;
+$navbar-bg: #ffffff;
+$navbar-fg: #2c3e50;
+$link-color: #3498db;
+
+// 3. Global Table Styling
+$table-cell-padding-y: 0.75rem;
+$table-border-color: #eaeff2;
+$table-head-bg: #f8f9fa;
+
+/*-- scss:rules --*/
+
+// Make table headers look "Engineering Grade"
+table thead th {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05rem;
+  border-bottom: 2px solid $primary;
+}
+
+// Add a subtle border to the sidebar for structure
+.quarto-sidebar {
+  border-right: 1px solid #eee;
+}
