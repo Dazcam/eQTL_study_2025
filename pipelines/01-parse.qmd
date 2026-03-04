@@ -2,17 +2,34 @@
 title: "01: Parse Alignment"
 ---
 
-## Overview
+### Overview
 
 The **Parse** pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.
 
-## Requirements
+### Workflow Logic
 
-+ Parse `split-pipe` software and virtual environment: I used v1.3.1
-	+ A sample list for each plate
-	+ Input fastq files
-	+ Genome references: I used ENSEMBL release 113 
-	+ A `json` file listing where lane- and sublibrary-specific fastqs are located. See `create_parse_json.py` which generates a json file to gather these files to pass to the job.
+```{mermaid}
+graph TD
+    A[get_refs] --> B[make_ref]
+    C[cat_fqs] --> D[run_parse]
+    B --> D
+    D --> E[run_parse_combine]
+```
+
+1. `get_refs`: Download the hg38 reference files
+2. `make_ref`: Use Parse `split-pipe` software to get ref files Parse ready
+3. `cat_fqs`: Combine fastq files per sublibrary (across lanes), per read (R1, R2)
+4. `run_parse`: Align reads for each sublibrary 
+5. `run_parse_combine`: Combine aligned sublibraries into single Parse output file
+
+### Requirements
+
++ Software: [Parse](https://www.parsebiosciences.com) `split-pipe` software we used v1.3.1
++ Conda environment: Parse `split-pipe` software and virtual environment: I used v1.3.1
++ Input files: demultiplexed fastq files 
++ Genome references: We used [ENSEMBL release 113](https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/) 
++ A sample list (for each plate)
++ A `json` file listing where lane- and sublibrary-specific fastqs are located. See `create_parse_json.py` which generates a json file to gather these files to pass to the job.
 
 ## Sublibraries and samples
 
