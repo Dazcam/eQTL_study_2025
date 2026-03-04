@@ -1,5 +1,5 @@
 ---
-title: "Generate TWAS weights - FUSION"
+title: "TWAS weights"
 ---
 
 # sn-eQTL Analysis Workflow
