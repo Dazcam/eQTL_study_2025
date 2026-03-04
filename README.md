@@ -12,27 +12,16 @@ This project was carried out in the Division of Psychological Medicine and Clini
 
 ***
 
-Data Processing & Pipeline Documentation
+### Data Processing & Pipeline Documentation
 
 The raw data in this project were processed through a modular suite of 13 Snakemake pipelines.
 
 Comprehensive documentation for each stage—including technical requirements, HPC resource profiles etc. is available at our documentation site:
 
-👉 [View the Pipeline Documentation](https://dazcam.github.io/eQTL_study_2025/)
++ [View the Pipeline Documentation](https://dazcam.github.io/eQTL_study_2025/)
 
 ![Docs Build Status](https://github.com/Dazcam/eQTL_study_2025/actions/workflows/publish.yml/badge.svg)
 
-***
-
-### **GWAS Data**
-
-GWAS data were accessed from the following:
-
-+ [Schizophrenia](https://figshare.com/ndownloader/files/34517828)
-+ [Bipolar Disorder](https://figshare.com/ndownloader/files/49760772) 
-+ [Major Depressive Disorder](https://figshare.com/ndownloader/files/51487022)
-+ [ADHD](https://figshare.com/ndownloader/files/40036684)
-+ [OCD](https://figshare.com/ndownloader/files/53357735)
 
 ***
 
