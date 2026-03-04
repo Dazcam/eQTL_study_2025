@@ -2,97 +2,57 @@
 title: "scRNAseq analysis"
 ---
 
+***
+
 ### Overview
 
-The **Parse** pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.
+This pipeline transitions raw count matrices into biologically annotated cell clusters using Scanpy. We employ robust quality control and an iterative clustering strategy (Rounds 1-3) to progressively refine the level 1 cell clusters. We additionally generate fine-grained subclusters for well represented level 1 subclusters and genenerte pseudobulk counts for all level 1 and level 2 cell populations.
+
+***
 
 ### Workflow Logic
 
 ```{mermaid}
 graph TD
-    A[get_refs] --> B[make_ref]
-    C[cat_fqs] --> D[run_parse]
-    B --> D
-    D --> E[run_parse_combine]
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+
+    A[(Plate 1-3 H5AD)] --> B(scanpy_qc)
+    B --> C{Clustering R1}
+    C --> D{Clustering R2}
+    D --> E{Clustering R3}
+    E --> F[scanpy_annotation]
+    E --> G[scanpy_pseudobulk]
+    E --> H[scanpy_subclustering]
+    
+    class A,B,C,D,E,F,G,H snazzy
+    style F fill:#e1f5fe,stroke:#01579b
+    style G fill:#e1f5fe,stroke:#01579b
 ```
 
-1. `get_refs`: Download the hg38 reference files
-2. `make_ref`: Use Parse `split-pipe` software to get ref files Parse ready
-3. `cat_fqs`: Combine fastq files per sublibrary (across lanes), per read (R1, R2)
-4. `run_parse`: Align reads for each sublibrary 
-5. `run_parse_combine`: Combine aligned sublibraries into single Parse output file
+1. `scanpy_qc`: Per-plate quality control (Mito %, Gene/UMI counts).
+2. `Iterative Clustering`: Three rounds of dimensionality reduction (PCA/UMAP) and Leiden clustering to identify and remove doublet-driven or low-3. quality clusters.
+3. `scanpy_annotation`: Expert-led cell-type labeling.
+4. `scanpy_pseudobulk`: Aggregates single-cell data into pseudo-replicates for eQTL mapping.
 
-### Requirements
+***
 
-+ Software: [Parse](https://www.parsebiosciences.com) `split-pipe` software we used v1.3.1
-+ Conda environment: Parse `split-pipe` software and virtual environment: I used v1.3.1
-+ Input files: demultiplexed fastq files 
-+ Genome references: We used [ENSEMBL release 113](https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/) 
-+ A sample list (for each plate)
-+ A `json` file listing where lane- and sublibrary-specific fastqs are located. See `create_parse_json.py` which generates a json file to gather these files to pass to the job.
+::: {.callout-note}
 
-### Sublibraries and samples
+Per-rule Jupyter notebook
 
-We initially generated gene expresion data for 150 samples. 
+Every rule produces a static HTML report with summary QC output.
+:::
 
-+ Parse data generates up to 16 sublibraries per plate. In this project we split our data over three plates.
-    + Run 1: 15 sublibraries (sublibrary 1 was dropped as it was substandard)
-    + Run 2: 16 sublibraries
-    + Run 3: 12 sublibraries (sublibraries 7, 9, 13 and 16 were excluded due to low concentration of input material remaining)
-
-+ For each sublibrary there were 24 fastq files:
-	+ 4 fastq files (1 per lane) per run, for each read 
-	+ 4 lanes X 3 runs X 2 reads = 24 fastq files per sublibrary
-	+ These files were concatenated to a single file per read. Each sublibraries total size was around 350-400Gs. 
+***
 
 ### Resources
 
-This is a resource and memory intensive process. It requires 3-5T of disk space per plate. 
+| Rule | Threads | RAM (MB) | Walltime | Logic |
+| :--- | :---: | :---: | :---: | :--- |
+| `scanpy_qc` | 16 | 160,000 | 3h | Per-plate parallel execution |
+| `scanpy_clustering (1-3)` | 16 | 380,000 | 3d | Iterative cluster refinement |
+| `scanpy_annotation` | 10 | 200,000 | 1h | Cell-type labeling |
+| `scanpy_pseudobulk` | 10 | 100,000 | 1d | Sum-aggregation for eQTL |
+| `scanpy_subclustering` | 8 | 80,000 | 2h | Generate suscluster populations |
 
-Due to the size of the input fastq files per sublibrary, and the expansion of the output files created during alignment, I couldn't run more than 3 jobs at a time. Simultaneously holding unmerged and concatenated fastqs and the aligned output files in the scratch directory simultaneously wasn't possible as it blew my storage limit (5T). Thus I did the fastq transfer from neurocluster to Hawk and the fastq concatenation in a single step. This meant that I/O transfering was a bit of a bottleneck, but it was the lesser of two evils. The final ouput file sizes were:
-
-+ Plate 1: ~1.03 T
-+ Plate 2: ~0.97 T
-+ Plate 3: ~1.00 T
-+ Total: ~3.0T
-+ Average single sublibary: ~70-80 GB
-+ 43 (check again) sublibraries total
-
-Due to restrictive memory quota, I used the following strategies to get the data thorugh:
-
-+ I ran each plate individually (`run_parse`) in batches of 3 sublibraries at a time, `jobs: 3` in the profile/config.yaml.
-+ I tapered the priority of each snakemake job to favour later rules.
-+ Immediately removed merged fastqs for each sublibrary immediately after output files were generated to reduce memory footprint.
-+ Temporarily moved each batch aligned files to a project directory on neurocluseter to create space for the next batch of files.
-+ Note: Once `parse_combine` is run the final output for each plate is ~1G.
-+ `run_parse and run_parse_combine` rules required: 
-	+ `resources: threads = 32, mem_mb = 360000, time="10-0:00:00"`
-	+ I ran this on the DPMCN node, `--partition=c_compute_neuro1`. Queuing on Hawk for such a resource intensive job was prohibitive.
-
-
-
-##Key Rules
-Reference Preparation
-
-We download the genome and GTF files using wget.
-
-Note: We use localrules for get_refs to avoid overhead on the cluster.
-
-## Fastq Merging
-
-Because the data comes in multiple lanes, we concatenate them:
-
-Python
-#| code-summary: "View Concatenation Rule"
-rule cat_fqs:
-    # ... (paste your code here)
-
-Troubleshooting: Environment Clashes
-::: {.callout-important}
-
-## Known Issue
-
-There wass a clash between the snakemake environment and the spipe environment.
-Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the `conda:` directive.
-:::
-
+***
