@@ -2,26 +2,31 @@
 title: "Project Overview"
 ---
 
+***
+
 # sn-eQTL Analysis Workflow
 
 <p align="center">
   <img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="400">
 </p>
 
+*** 
+
 ### Workflow Summary
 
 The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: snRNAseq QC and clustering
-3. **03 Genotyping (pre-imputation)**: Genotype QC and harmonisation for TOPMED imputation
-4. **04 Genotyping (post-imputation)**: Genotype QC post-imputation
-5. **05 TensorQTL**: eQTL Discovery and QC
-6. **06 eQTL replication**: pi1 Testing etc.
-7. **07 Prep GWAS**: Download and munge GWAS data for downstream applications
-8. **08 SuSiE finemapping**: Generate finemapped SNPs for MaxCPP annotation
-9. **09 S-LDSR**: Run Stratified LDSR
-10. **10 SMR**: Run Summary Mendelian Randomisation
-11. **11 TWAS-weights**: Generate TWAS weights for cTWAS
-12. **12 cTWAS**: Run Causal TWAS
-13. **12 Visualisation**: Generate figures and tables for manuscript
+1. `01 Parse`: Raw data processing and alignment.
+2. `02 Scanpy`: snRNAseq QC and clustering
+3. `03 Genotyping (pre-imputation)`: Genotype QC and harmonisation for TOPMED imputation
+4. `04 Genotyping (post-imputation)`: Genotype QC post-imputation
+5. `05 TensorQTL`: eQTL Discovery and QC
+6. `06 eQTL replication`: pi1 Testing etc.
+7. `07 Prep GWAS`: Download and munge GWAS data for downstream applications
+8. `08 SuSiE finemapping`: Generate finemapped SNPs for MaxCPP annotation
+9. `09 S-LDSR`: Run Stratified LDSR
+10. `10 SMR`: Run Summary Mendelian Randomisation
+11. `11 TWAS-weights`: Generate TWAS weights for cTWAS
+12. `12 cTWAS`: Run Causal TWAS
+13. `12 Visualisation`: Generate figures and tables for manuscript
 
+***
