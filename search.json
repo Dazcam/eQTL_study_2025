@@ -112,23 +112,23 @@
   {
     "objectID": "pipelines/04-geno-post.html",
     "href": "pipelines/04-geno-post.html",
-    "title": "Project Overview",
+    "title": "Genotype QC pre-imputation",
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Project Overview"
+      "Genotype QC pre-imputation"
     ]
   },
   {
     "objectID": "pipelines/04-geno-post.html#workflow-summary",
     "href": "pipelines/04-geno-post.html#workflow-summary",
-    "title": "Project Overview",
+    "title": "Genotype QC pre-imputation",
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
       "Pipelines",
-      "Project Overview"
+      "Genotype QC pre-imputation"
     ]
   },
   {
@@ -206,6 +206,28 @@
     "crumbs": [
       "Pipelines",
       "Genotype QC pre-imputation"
+    ]
+  },
+  {
+    "objectID": "pipelines/05-tensorqtl.html",
+    "href": "pipelines/05-tensorqtl.html",
+    "title": "eQTL Discovery",
+    "section": "",
+    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "crumbs": [
+      "Pipelines",
+      "eQTL Discovery"
+    ]
+  },
+  {
+    "objectID": "pipelines/05-tensorqtl.html#workflow-summary",
+    "href": "pipelines/05-tensorqtl.html#workflow-summary",
+    "title": "eQTL Discovery",
+    "section": "",
+    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "crumbs": [
+      "Pipelines",
+      "eQTL Discovery"
     ]
   },
   {
