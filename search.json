@@ -136,29 +136,7 @@
     "href": "pipelines/02-scanpy.html",
     "title": "scRNAseq analysis",
     "section": "",
-    "text": "The Parse pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.",
-    "crumbs": [
-      "Pipelines",
-      "scRNAseq analysis"
-    ]
-  },
-  {
-    "objectID": "pipelines/02-scanpy.html#fastq-merging",
-    "href": "pipelines/02-scanpy.html#fastq-merging",
-    "title": "scRNAseq analysis",
-    "section": "Fastq Merging",
-    "text": "Fastq Merging\nBecause the data comes in multiple lanes, we concatenate them:\nPython #| code-summary: “View Concatenation Rule” rule cat_fqs: # … (paste your code here)\nTroubleshooting: Environment Clashes ::: {.callout-important}",
-    "crumbs": [
-      "Pipelines",
-      "scRNAseq analysis"
-    ]
-  },
-  {
-    "objectID": "pipelines/02-scanpy.html#known-issue",
-    "href": "pipelines/02-scanpy.html#known-issue",
-    "title": "scRNAseq analysis",
-    "section": "Known Issue",
-    "text": "Known Issue\nThere wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the conda: directive. :::",
+    "text": "Overview\nThis pipeline transitions raw count matrices into biologically annotated cell clusters using Scanpy. We employ robust quality control and an iterative clustering strategy (Rounds 1-3) to progressively refine the level 1 cell clusters. We additionally generate fine-grained subclusters for well represented level 1 subclusters and genenerte pseudobulk counts for all level 1 and level 2 cell populations.\n\n\n\nWorkflow Logic\n\n\n\n\n\ngraph TD\n    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;\n\n    A[(Plate 1-3 H5AD)] --&gt; B(scanpy_qc)\n    B --&gt; C{Clustering R1}\n    C --&gt; D{Clustering R2}\n    D --&gt; E{Clustering R3}\n    E --&gt; F[scanpy_annotation]\n    E --&gt; G[scanpy_pseudobulk]\n    E --&gt; H[scanpy_subclustering]\n    \n    class A,B,C,D,E,F,G,H snazzy\n    style F fill:#e1f5fe,stroke:#01579b\n    style G fill:#e1f5fe,stroke:#01579b\n\n\n\n\n\n\n\nscanpy_qc: Per-plate quality control (Mito %, Gene/UMI counts).\nIterative Clustering: Three rounds of dimensionality reduction (PCA/UMAP) and Leiden clustering to identify and remove doublet-driven or low-3. quality clusters.\nscanpy_annotation: Expert-led cell-type labeling.\nscanpy_pseudobulk: Aggregates single-cell data into pseudo-replicates for eQTL mapping.\n\n\n\n\n\n\n\n\nNote\n\n\n\nPer-rule Jupyter notebook\nEvery rule produces a static HTML report with summary QC output.\n\n\n\n\n\nResources\n\n\n\n\n\n\n\n\n\n\nRule\nThreads\nRAM (MB)\nWalltime\nLogic\n\n\n\n\nscanpy_qc\n16\n160,000\n3h\nPer-plate parallel execution\n\n\nscanpy_clustering (1-3)\n16\n380,000\n3d\nIterative cluster refinement\n\n\nscanpy_annotation\n10\n200,000\n1h\nCell-type labeling\n\n\nscanpy_pseudobulk\n10\n100,000\n1d\nSum-aggregation for eQTL\n\n\nscanpy_subclustering\n8\n80,000\n2h\nGenerate suscluster populations",
     "crumbs": [
       "Pipelines",
       "scRNAseq analysis"
