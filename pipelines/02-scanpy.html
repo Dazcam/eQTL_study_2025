@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>02: scRNAseq analysis in Scanpy – Single-Cell eQTL Pipeline</title>
+<title>scRNAseq analysis – Single-Cell eQTL Pipeline</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -84,7 +84,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">snRNAseq and Genotype QC</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">02: scRNAseq analysis in Scanpy</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">snRNAseq and Genotype QC</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">scRNAseq analysis</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -161,7 +161,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/02-scanpy.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">02: scRNAseq analysis in Scanpy</span></a>
+ <span class="menu-text">scRNAseq analysis</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -276,10 +276,10 @@ ul.task-list li input[type="checkbox"] {
    
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
   <li><a href="#requirements" id="toc-requirements" class="nav-link" data-scroll-target="#requirements">Requirements</a></li>
   <li><a href="#sublibraries-and-samples" id="toc-sublibraries-and-samples" class="nav-link" data-scroll-target="#sublibraries-and-samples">Sublibraries and samples</a></li>
   <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources">Resources</a></li>
-  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
   <li><a href="#fastq-merging" id="toc-fastq-merging" class="nav-link" data-scroll-target="#fastq-merging">Fastq Merging</a></li>
   <li><a href="#known-issue" id="toc-known-issue" class="nav-link" data-scroll-target="#known-issue">Known Issue</a></li>
   </ul>
@@ -288,9 +288,9 @@ ul.task-list li input[type="checkbox"] {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">snRNAseq and Genotype QC</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">02: scRNAseq analysis in Scanpy</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">snRNAseq and Genotype QC</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">scRNAseq analysis</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">02: scRNAseq analysis in Scanpy</h1>
+<h1 class="title">scRNAseq analysis</h1>
 </div>
 
 
@@ -307,24 +307,49 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="overview" class="level2">
-<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
 <p>The <strong>Parse</strong> pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.</p>
 </section>
-<section id="requirements" class="level2">
-<h2 class="anchored" data-anchor-id="requirements">Requirements</h2>
+<section id="workflow-logic" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    A[get_refs] --&gt; B[make_ref]
+    C[cat_fqs] --&gt; D[run_parse]
+    B --&gt; D
+    D --&gt; E[run_parse_combine]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<ol type="1">
+<li><code>get_refs</code>: Download the hg38 reference files</li>
+<li><code>make_ref</code>: Use Parse <code>split-pipe</code> software to get ref files Parse ready</li>
+<li><code>cat_fqs</code>: Combine fastq files per sublibrary (across lanes), per read (R1, R2)</li>
+<li><code>run_parse</code>: Align reads for each sublibrary</li>
+<li><code>run_parse_combine</code>: Combine aligned sublibraries into single Parse output file</li>
+</ol>
+</section>
+<section id="requirements" class="level3">
+<h3 class="anchored" data-anchor-id="requirements">Requirements</h3>
 <ul>
-<li>Parse <code>split-pipe</code> software and virtual environment: I used v1.3.1
-<ul>
-<li>A sample list for each plate</li>
-<li>Input fastq files</li>
-<li>Genome references: I used ENSEMBL release 113</li>
+<li>Software: <a href="https://www.parsebiosciences.com">Parse</a> <code>split-pipe</code> software we used v1.3.1</li>
+<li>Conda environment: Parse <code>split-pipe</code> software and virtual environment: I used v1.3.1</li>
+<li>Input files: demultiplexed fastq files</li>
+<li>Genome references: We used <a href="https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/">ENSEMBL release 113</a></li>
+<li>A sample list (for each plate)</li>
 <li>A <code>json</code> file listing where lane- and sublibrary-specific fastqs are located. See <code>create_parse_json.py</code> which generates a json file to gather these files to pass to the job.</li>
-</ul></li>
 </ul>
 </section>
-<section id="sublibraries-and-samples" class="level2">
-<h2 class="anchored" data-anchor-id="sublibraries-and-samples">Sublibraries and samples</h2>
+<section id="sublibraries-and-samples" class="level3">
+<h3 class="anchored" data-anchor-id="sublibraries-and-samples">Sublibraries and samples</h3>
 <p>We initially generated gene expresion data for 150 samples.</p>
 <ul>
 <li>Parse data generates up to 16 sublibraries per plate. In this project we split our data over three plates.
@@ -341,8 +366,8 @@ ul.task-list li input[type="checkbox"] {
 </ul></li>
 </ul>
 </section>
-<section id="resources" class="level2">
-<h2 class="anchored" data-anchor-id="resources">Resources</h2>
+<section id="resources" class="level3">
+<h3 class="anchored" data-anchor-id="resources">Resources</h3>
 <p>This is a resource and memory intensive process. It requires 3-5T of disk space per plate.</p>
 <p>Due to the size of the input fastq files per sublibrary, and the expansion of the output files created during alignment, I couldn’t run more than 3 jobs at a time. Simultaneously holding unmerged and concatenated fastqs and the aligned output files in the scratch directory simultaneously wasn’t possible as it blew my storage limit (5T). Thus I did the fastq transfer from neurocluster to Hawk and the fastq concatenation in a single step. This meant that I/O transfering was a bit of a bottleneck, but it was the lesser of two evils. The final ouput file sizes were:</p>
 <ul>
@@ -366,25 +391,6 @@ ul.task-list li input[type="checkbox"] {
 <li>I ran this on the DPMCN node, <code>--partition=c_compute_neuro1</code>. Queuing on Hawk for such a resource intensive job was prohibitive.</li>
 </ul></li>
 </ul>
-</section>
-<section id="workflow-logic" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h2>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">graph TD
-    A[Get References] --&gt; B[Create Ref Index]
-    C[Cat FASTQs] --&gt; D[Run Split-Pipe]
-    B --&gt; D
-    D --&gt; E[Combine Plates]
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
 <p>##Key Rules Reference Preparation</p>
 <p>We download the genome and GTF files using wget.</p>
 <p>Note: We use localrules for get_refs to avoid overhead on the cluster.</p>
