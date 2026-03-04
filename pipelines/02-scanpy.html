@@ -252,11 +252,7 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
-  <li><a href="#requirements" id="toc-requirements" class="nav-link" data-scroll-target="#requirements">Requirements</a></li>
-  <li><a href="#sublibraries-and-samples" id="toc-sublibraries-and-samples" class="nav-link" data-scroll-target="#sublibraries-and-samples">Sublibraries and samples</a></li>
   <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources">Resources</a></li>
-  <li><a href="#fastq-merging" id="toc-fastq-merging" class="nav-link" data-scroll-target="#fastq-merging">Fastq Merging</a></li>
-  <li><a href="#known-issue" id="toc-known-issue" class="nav-link" data-scroll-target="#known-issue">Known Issue</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/02-scanpy.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -282,9 +278,11 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<hr>
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>The <strong>Parse</strong> pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.</p>
+<p>This pipeline transitions raw count matrices into biologically annotated cell clusters using Scanpy. We employ robust quality control and an iterative clustering strategy (Rounds 1-3) to progressively refine the level 1 cell clusters. We additionally generate fine-grained subclusters for well represented level 1 subclusters and genenerte pseudobulk counts for all level 1 and level 2 cell populations.</p>
+<hr>
 </section>
 <section id="workflow-logic" class="level3">
 <h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
@@ -294,10 +292,19 @@ ul.task-list li input[type="checkbox"] {
 <p></p><figure class="figure"><p></p>
 <div>
 <pre class="mermaid mermaid-js">graph TD
-    A[get_refs] --&gt; B[make_ref]
-    C[cat_fqs] --&gt; D[run_parse]
-    B --&gt; D
-    D --&gt; E[run_parse_combine]
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+
+    A[(Plate 1-3 H5AD)] --&gt; B(scanpy_qc)
+    B --&gt; C{Clustering R1}
+    C --&gt; D{Clustering R2}
+    D --&gt; E{Clustering R3}
+    E --&gt; F[scanpy_annotation]
+    E --&gt; G[scanpy_pseudobulk]
+    E --&gt; H[scanpy_subclustering]
+    
+    class A,B,C,D,E,F,G,H snazzy
+    style F fill:#e1f5fe,stroke:#01579b
+    style G fill:#e1f5fe,stroke:#01579b
 </pre>
 </div>
 <p></p></figure><p></p>
@@ -305,80 +312,86 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <ol type="1">
-<li><code>get_refs</code>: Download the hg38 reference files</li>
-<li><code>make_ref</code>: Use Parse <code>split-pipe</code> software to get ref files Parse ready</li>
-<li><code>cat_fqs</code>: Combine fastq files per sublibrary (across lanes), per read (R1, R2)</li>
-<li><code>run_parse</code>: Align reads for each sublibrary</li>
-<li><code>run_parse_combine</code>: Combine aligned sublibraries into single Parse output file</li>
+<li><code>scanpy_qc</code>: Per-plate quality control (Mito %, Gene/UMI counts).</li>
+<li><code>Iterative Clustering</code>: Three rounds of dimensionality reduction (PCA/UMAP) and Leiden clustering to identify and remove doublet-driven or low-3. quality clusters.</li>
+<li><code>scanpy_annotation</code>: Expert-led cell-type labeling.</li>
+<li><code>scanpy_pseudobulk</code>: Aggregates single-cell data into pseudo-replicates for eQTL mapping.</li>
 </ol>
-</section>
-<section id="requirements" class="level3">
-<h3 class="anchored" data-anchor-id="requirements">Requirements</h3>
-<ul>
-<li>Software: <a href="https://www.parsebiosciences.com">Parse</a> <code>split-pipe</code> software we used v1.3.1</li>
-<li>Conda environment: Parse <code>split-pipe</code> software and virtual environment: I used v1.3.1</li>
-<li>Input files: demultiplexed fastq files</li>
-<li>Genome references: We used <a href="https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/">ENSEMBL release 113</a></li>
-<li>A sample list (for each plate)</li>
-<li>A <code>json</code> file listing where lane- and sublibrary-specific fastqs are located. See <code>create_parse_json.py</code> which generates a json file to gather these files to pass to the job.</li>
-</ul>
-</section>
-<section id="sublibraries-and-samples" class="level3">
-<h3 class="anchored" data-anchor-id="sublibraries-and-samples">Sublibraries and samples</h3>
-<p>We initially generated gene expresion data for 150 samples.</p>
-<ul>
-<li>Parse data generates up to 16 sublibraries per plate. In this project we split our data over three plates.
-<ul>
-<li>Run 1: 15 sublibraries (sublibrary 1 was dropped as it was substandard)</li>
-<li>Run 2: 16 sublibraries</li>
-<li>Run 3: 12 sublibraries (sublibraries 7, 9, 13 and 16 were excluded due to low concentration of input material remaining)</li>
-</ul></li>
-<li>For each sublibrary there were 24 fastq files:
-<ul>
-<li>4 fastq files (1 per lane) per run, for each read</li>
-<li>4 lanes X 3 runs X 2 reads = 24 fastq files per sublibrary</li>
-<li>These files were concatenated to a single file per read. Each sublibraries total size was around 350-400Gs.</li>
-</ul></li>
-</ul>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Per-rule Jupyter notebook</p>
+<p>Every rule produces a static HTML report with summary QC output.</p>
+</div>
+</div>
+<hr>
 </section>
 <section id="resources" class="level3">
 <h3 class="anchored" data-anchor-id="resources">Resources</h3>
-<p>This is a resource and memory intensive process. It requires 3-5T of disk space per plate.</p>
-<p>Due to the size of the input fastq files per sublibrary, and the expansion of the output files created during alignment, I couldn’t run more than 3 jobs at a time. Simultaneously holding unmerged and concatenated fastqs and the aligned output files in the scratch directory simultaneously wasn’t possible as it blew my storage limit (5T). Thus I did the fastq transfer from neurocluster to Hawk and the fastq concatenation in a single step. This meant that I/O transfering was a bit of a bottleneck, but it was the lesser of two evils. The final ouput file sizes were:</p>
-<ul>
-<li>Plate 1: ~1.03 T</li>
-<li>Plate 2: ~0.97 T</li>
-<li>Plate 3: ~1.00 T</li>
-<li>Total: ~3.0T</li>
-<li>Average single sublibary: ~70-80 GB</li>
-<li>43 (check again) sublibraries total</li>
-</ul>
-<p>Due to restrictive memory quota, I used the following strategies to get the data thorugh:</p>
-<ul>
-<li>I ran each plate individually (<code>run_parse</code>) in batches of 3 sublibraries at a time, <code>jobs: 3</code> in the profile/config.yaml.</li>
-<li>I tapered the priority of each snakemake job to favour later rules.</li>
-<li>Immediately removed merged fastqs for each sublibrary immediately after output files were generated to reduce memory footprint.</li>
-<li>Temporarily moved each batch aligned files to a project directory on neurocluseter to create space for the next batch of files.</li>
-<li>Note: Once <code>parse_combine</code> is run the final output for each plate is ~1G.</li>
-<li><code>run_parse and run_parse_combine</code> rules required:
-<ul>
-<li><code>resources: threads = 32, mem_mb = 360000, time="10-0:00:00"</code></li>
-<li>I ran this on the DPMCN node, <code>--partition=c_compute_neuro1</code>. Queuing on Hawk for such a resource intensive job was prohibitive.</li>
-</ul></li>
-</ul>
-<p>##Key Rules Reference Preparation</p>
-<p>We download the genome and GTF files using wget.</p>
-<p>Note: We use localrules for get_refs to avoid overhead on the cluster.</p>
-</section>
-<section id="fastq-merging" class="level2">
-<h2 class="anchored" data-anchor-id="fastq-merging">Fastq Merging</h2>
-<p>Because the data comes in multiple lanes, we concatenate them:</p>
-<p>Python #| code-summary: “View Concatenation Rule” rule cat_fqs: # … (paste your code here)</p>
-<p>Troubleshooting: Environment Clashes ::: {.callout-important}</p>
-</section>
-<section id="known-issue" class="level2">
-<h2 class="anchored" data-anchor-id="known-issue">Known Issue</h2>
-<p>There wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the <code>conda:</code> directive. :::</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM (MB)</th>
+<th style="text-align: center;">Walltime</th>
+<th style="text-align: left;">Logic</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>scanpy_qc</code></td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">160,000</td>
+<td style="text-align: center;">3h</td>
+<td style="text-align: left;">Per-plate parallel execution</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scanpy_clustering (1-3)</code></td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">380,000</td>
+<td style="text-align: center;">3d</td>
+<td style="text-align: left;">Iterative cluster refinement</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scanpy_annotation</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">200,000</td>
+<td style="text-align: center;">1h</td>
+<td style="text-align: left;">Cell-type labeling</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>scanpy_pseudobulk</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">100,000</td>
+<td style="text-align: center;">1d</td>
+<td style="text-align: left;">Sum-aggregation for eQTL</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>scanpy_subclustering</code></td>
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">80,000</td>
+<td style="text-align: center;">2h</td>
+<td style="text-align: left;">Generate suscluster populations</td>
+</tr>
+</tbody>
+</table>
+<hr>
 
 
 </section>
