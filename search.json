@@ -28,7 +28,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Causal TWAS"
     ]
   },
@@ -39,7 +39,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Causal TWAS"
     ]
   },
@@ -50,7 +50,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Summary Mendelian Randomisation"
     ]
   },
@@ -61,7 +61,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Summary Mendelian Randomisation"
     ]
   },
@@ -72,7 +72,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "SuSiE"
     ]
   },
@@ -83,7 +83,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "SuSiE"
     ]
   },
@@ -94,7 +94,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "eQTL Mapping and QC",
+      "Pipelines",
       "eQTL replication"
     ]
   },
@@ -105,7 +105,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "eQTL Mapping and QC",
+      "Pipelines",
       "eQTL replication"
     ]
   },
@@ -116,7 +116,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "snRNAseq and Genotype QC",
+      "Pipelines",
       "Project Overview"
     ]
   },
@@ -127,7 +127,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "snRNAseq and Genotype QC",
+      "Pipelines",
       "Project Overview"
     ]
   },
@@ -138,7 +138,7 @@
     "section": "",
     "text": "The Parse pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.",
     "crumbs": [
-      "snRNAseq and Genotype QC",
+      "Pipelines",
       "scRNAseq analysis"
     ]
   },
@@ -149,7 +149,7 @@
     "section": "Fastq Merging",
     "text": "Fastq Merging\nBecause the data comes in multiple lanes, we concatenate them:\nPython #| code-summary: “View Concatenation Rule” rule cat_fqs: # … (paste your code here)\nTroubleshooting: Environment Clashes ::: {.callout-important}",
     "crumbs": [
-      "snRNAseq and Genotype QC",
+      "Pipelines",
       "scRNAseq analysis"
     ]
   },
@@ -160,7 +160,7 @@
     "section": "Known Issue",
     "text": "Known Issue\nThere wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the conda: directive. :::",
     "crumbs": [
-      "snRNAseq and Genotype QC",
+      "Pipelines",
       "scRNAseq analysis"
     ]
   },
@@ -180,9 +180,9 @@
     "href": "pipelines/01-parse.html",
     "title": "Parse Alignment",
     "section": "",
-    "text": "Overview\nThis pipeline performs combinatorial indexing processing using the Parse Biosciences split-pipe (v1.3.1) software. It orchestrates the transition from raw FASTQ multiplexed libraries to a Digital Gene Expression (DGE) matrix.\n\n\n\nWorkflow Logic\nThe pipeline follows a tiered execution strategy to manage heavy I/O and storage constraints.\n\n\n\n\n\ngraph TD\n    A[get_refs] --&gt; B[make_ref]\n    C[cat_fqs] --&gt; D[run_parse]\n    B --&gt; D\n    D --&gt; E[run_parse_combine]\n\n    style D fill:#f96,stroke:#333\n    style E fill:#f96,stroke:#333\n\n\n\n\n\n\n\nget_refs: Download the hg38 reference files (Ensembl Release 113).\nmake_ref: Prepares genome indices for split-pipe.\ncat_fqs: Combine fastq files per sublibrary (across lanes), per read (R1, R2).\nrun_parse: Core alignment and barcode demultiplexing.\nrun_parse_combine: Aggregates sublibraries into a unified plate-level DGE.\n\n\n\n\n\n\n\n\nWarning\n\n\n\nEnvironment Clash Workaround\nThere was a conflict between the Snakemake YAML parser and the spipe environment. Fix: The spipe-1.3.1 environment is manually activated within the shell block of the rule rather than via the Snakemake conda: directive.\n\n\n\n\nRequirements\n\nSoftware: Parse split-pipe software we used v1.3.1\nConda environment: Parse split-pipe software and virtual environment: I used v1.3.1\nInput files: demultiplexed fastq files\nGenome references: We used ENSEMBL release 113\nA sample list (for each plate)\nA json file listing where lane- and sublibrary-specific fastqs are located. Use scripts/create_parse_json.py to generate this.\n\n\n\n\nLibrary Composition & Throughput\nWe processed 150 samples across three sequencing plates:\n\nSublibraries: 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12).\nFASTQ Depth: Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads).\nData Volume: ~3.0 TB of final raw output (~1 TB per plate).\n\n\n\n\nResource Management Strategy\nTo navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:\n\nConcurrency Control: Restricted to 3 parallel jobs to prevent storage overflow.\nI/O Optimization: Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency.\nCleanup Logic: Intermediate merged FASTQs were deleted immediately upon successful alignment.\nHPC Allocation: Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk.\n\n\n\n\nCompute profile\n\nThreads: 32\nMemory: 360 GB\nWalltime: 10 Days\n\n\n\n\nKnown Issue\nThere wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the conda directive.",
+    "text": "Overview\nThis pipeline performs combinatorial indexing processing using the Parse Biosciences split-pipe (v1.3.1) software. It orchestrates the transition from raw FASTQ multiplexed libraries to a Digital Gene Expression (DGE) matrix.\n\n\n\nWorkflow Logic\nThe pipeline follows a tiered execution strategy to manage heavy I/O and storage constraints.\n\n\n\n\n\ngraph TD\n    A[get_refs] --&gt; B[make_ref]\n    C[cat_fqs] --&gt; D[run_parse]\n    B --&gt; D\n    D --&gt; E[run_parse_combine]\n\n    style D fill:#f96,stroke:#333\n    style E fill:#f96,stroke:#333\n\n\n\n\n\n\n\nget_refs: Download the hg38 reference files (Ensembl Release 113).\nmake_ref: Prepares genome indices for split-pipe.\ncat_fqs: Combine fastq files per sublibrary (across lanes), per read (R1, R2).\nrun_parse: Core alignment and barcode demultiplexing.\nrun_parse_combine: Aggregates sublibraries into a unified plate-level DGE.\n\n\n\n\n\n\n\n\nWarning\n\n\n\nEnvironment Clash Workaround\nThere was a conflict between the Snakemake YAML parser and the spipe environment. Fix: The spipe-1.3.1 environment is manually activated within the shell block of the rule rather than via the Snakemake conda: directive.\n\n\n\n\nRequirements\n\n\n\nCategory\nRequirement\n\n\n\n\nSoftware\nParse split-pipe v1.3.1\n\n\nEnvironment\nspipe-1.3.1\n\n\nReference\nENSEMBL Release 113 (hg38)\n\n\nInputs\nDemultiplexed FASTQs, Sample List\n\n\nMetadata\nJSON path map (via scripts/create_parse_json.py)\n\n\nDisk Space\n~3-5 TB per plate (Scratch)\n\n\n\n\n\n\nLibrary Composition & Throughput\nWe processed 150 samples across three sequencing plates:\n\nSublibraries: 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12).\nFASTQ Depth: Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads).\nData Volume: ~3.0 TB of final raw output (~1 TB per plate).\n\n\n\n\nResource Management Strategy\nTo navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:\n\nConcurrency Control: Restricted to 3 parallel jobs to prevent storage overflow.\nI/O Optimization: Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency.\nCleanup Logic: Intermediate merged FASTQs were deleted immediately upon successful alignment.\nHPC Allocation: Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk.\n\n\n\n\nCompute profile\n\nThreads: 32\nMemory: 360 GB\nWalltime: 10 Days\n\n\n\n\nKnown Issue\nThere wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the conda directive.",
     "crumbs": [
-      "Alignment",
+      "Pipelines",
       "Parse Alignment"
     ]
   },
@@ -193,7 +193,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "snRNAseq and Genotype QC",
+      "Pipelines",
       "Genotype QC pre-imputation"
     ]
   },
@@ -204,7 +204,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "snRNAseq and Genotype QC",
+      "Pipelines",
       "Genotype QC pre-imputation"
     ]
   },
@@ -215,7 +215,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Prep GWAS"
     ]
   },
@@ -226,7 +226,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Prep GWAS"
     ]
   },
@@ -237,7 +237,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Stratified Linkage Disequibibrium Regression"
     ]
   },
@@ -248,7 +248,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Stratified Linkage Disequibibrium Regression"
     ]
   },
@@ -259,7 +259,7 @@
     "section": "",
     "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Generate TWAS weights - FUSION"
     ]
   },
@@ -270,7 +270,7 @@
     "section": "",
     "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
     "crumbs": [
-      "Downstream Analyses",
+      "Pipelines",
       "Generate TWAS weights - FUSION"
     ]
   }
