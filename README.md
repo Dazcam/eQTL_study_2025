@@ -6,6 +6,10 @@ This project was carried out in the Division of Psychological Medicine and Clini
 
 ***
 
+![infopgraphic](pipelines/images/eQTL_infographic.pdf)
+
+***
+
 ## **GWAS Data**
 
 GWAS data were accessed from the following:
