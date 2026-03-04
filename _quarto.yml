@@ -15,28 +15,20 @@ website:
         contents:
           - index.qmd
           - setup.qmd
-      - section: "Alignment"
+      - section: "Pipelines"
         contents: 
           - pipelines/01-parse.qmd
-      - section: "snRNAseq and Genotype QC"
-        contents: 
           - pipelines/02-scanpy.qmd
           - pipelines/03-geno-pre.qmd
           - pipelines/04-geno-post.qmd
-      - section: "eQTL Mapping and QC"
-        contents:
           - pipelines/05-tensorqtl.qmd
           - pipelines/06-qtl-replication.qmd
-      - section: "Downstream Analyses"
-        contents:
           - pipelines/07-prep-GWAS.qmd
           - pipelines/08-susie.qmd
           - pipelines/09-SLDSR.qmd
           - pipelines/10-SMR.qmd
           - pipelines/11-TWAS-weights.qmd
           - pipelines/12-cTWAS.qmd
-      - section: "Manuscript results"
-        contents:
           - pipelines/13-visualization.qmd
 
 format:
