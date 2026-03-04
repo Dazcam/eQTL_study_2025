@@ -1,5 +1,5 @@
 ---
-title: "Project Overview"
+title: "Genotype QC pre-imputation"
 ---
 
 # sn-eQTL Analysis Workflow
