@@ -1,5 +1,5 @@
 ---
-title: "Summary Mendelian Randomisation"
+title: "SMR"
 ---
 
 # sn-eQTL Analysis Workflow
