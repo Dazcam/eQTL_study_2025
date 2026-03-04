@@ -19,6 +19,9 @@ graph TD
     B --> D
     D --> E[run_parse_combine]
 
+    style A fill:#f96,stroke:#333
+    style B fill:#f96,stroke:#333
+    style C fill:#f96,stroke:#333
     style D fill:#f96,stroke:#333
     style E fill:#f96,stroke:#333
 ```
@@ -39,7 +42,9 @@ There was a conflict between the Snakemake YAML parser and the spipe environment
 Fix: The spipe-1.3.1 environment is manually activated within the shell block of the rule rather than via the Snakemake conda: directive.
 :::
 
-### Requirements
+***
+
+### Technical Requirements
 
 
 | Category | Requirement |
@@ -57,9 +62,9 @@ Fix: The spipe-1.3.1 environment is manually activated within the shell block of
 
 We processed 150 samples across three sequencing plates:
 
-+ Sublibraries: 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12).
-+ FASTQ Depth: Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads).
-+ Data Volume: ~3.0 TB of final raw output (~1 TB per plate).
+| **Sublibraries** | 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12) |
+| **FASTQ info** | Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads) |
+| **Data Volume** | ~3.0 TB of final raw output (~1 TB per plate) |
 
 ***
 
@@ -67,18 +72,18 @@ We processed 150 samples across three sequencing plates:
 
 To navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:
 
-+ Concurrency Control: Restricted to 3 parallel jobs to prevent storage overflow.
-+ I/O Optimization: Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency.
-+ Cleanup Logic: Intermediate merged FASTQs were deleted immediately upon successful alignment.
-+ HPC Allocation: Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk.
+| **Concurrency Control** | Restricted to 3 parallel jobs to prevent storage overflow |
+| **I/O Optimization** | Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency |
+| **Cleanup Logic** | Intermediate merged FASTQs were deleted immediately upon successful alignment |
+| **HPC Allocation** | Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk |
 
 ***
 
 ### Compute profile
 
-+ Threads: 32
-+ Memory: 360 GB
-+ Walltime: 10 Days
+| **Threads** | 32 |
+| **Memory** | 360 GB |
+| **Walltime** | 10 Days |
 
 *** 
 
