@@ -1,20 +1,37 @@
 ---
-title: "02: scRNAseq analysis in Scanpy"
+title: "scRNAseq analysis"
 ---
 
-## Overview
+### Overview
 
 The **Parse** pipeline handles the initial processing of combinatorial indexing single-cell gene expression data. It takes raw FASTQs and outputs a Digital Gene Expression (DGE) matrix.
 
-## Requirements
+### Workflow Logic
 
-+ Parse `split-pipe` software and virtual environment: I used v1.3.1
-	+ A sample list for each plate
-	+ Input fastq files
-	+ Genome references: I used ENSEMBL release 113 
-	+ A `json` file listing where lane- and sublibrary-specific fastqs are located. See `create_parse_json.py` which generates a json file to gather these files to pass to the job.
+```{mermaid}
+graph TD
+    A[get_refs] --> B[make_ref]
+    C[cat_fqs] --> D[run_parse]
+    B --> D
+    D --> E[run_parse_combine]
+```
 
-## Sublibraries and samples
+1. `get_refs`: Download the hg38 reference files
+2. `make_ref`: Use Parse `split-pipe` software to get ref files Parse ready
+3. `cat_fqs`: Combine fastq files per sublibrary (across lanes), per read (R1, R2)
+4. `run_parse`: Align reads for each sublibrary 
+5. `run_parse_combine`: Combine aligned sublibraries into single Parse output file
+
+### Requirements
+
++ Software: [Parse](https://www.parsebiosciences.com) `split-pipe` software we used v1.3.1
++ Conda environment: Parse `split-pipe` software and virtual environment: I used v1.3.1
++ Input files: demultiplexed fastq files 
++ Genome references: We used [ENSEMBL release 113](https://www.ensembl.info/2024/10/18/ensembl-113-has-been-released/) 
++ A sample list (for each plate)
++ A `json` file listing where lane- and sublibrary-specific fastqs are located. See `create_parse_json.py` which generates a json file to gather these files to pass to the job.
+
+### Sublibraries and samples
 
 We initially generated gene expresion data for 150 samples. 
 
@@ -28,7 +45,7 @@ We initially generated gene expresion data for 150 samples.
 	+ 4 lanes X 3 runs X 2 reads = 24 fastq files per sublibrary
 	+ These files were concatenated to a single file per read. Each sublibraries total size was around 350-400Gs. 
 
-## Resources
+### Resources
 
 This is a resource and memory intensive process. It requires 3-5T of disk space per plate. 
 
@@ -52,15 +69,7 @@ Due to restrictive memory quota, I used the following strategies to get the data
 	+ `resources: threads = 32, mem_mb = 360000, time="10-0:00:00"`
 	+ I ran this on the DPMCN node, `--partition=c_compute_neuro1`. Queuing on Hawk for such a resource intensive job was prohibitive.
 
-## Workflow Logic
 
-```{mermaid}
-graph TD
-    A[Get References] --> B[Create Ref Index]
-    C[Cat FASTQs] --> D[Run Split-Pipe]
-    B --> D
-    D --> E[Combine Plates]
-```
 
 ##Key Rules
 Reference Preparation
@@ -86,3 +95,4 @@ Troubleshooting: Environment Clashes
 There wass a clash between the snakemake environment and the spipe environment.
 Workaround: We manually activate spipe-1.3.1 within the shell block rather than using the `conda:` directive.
 :::
+
