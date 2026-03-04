@@ -1,8 +1,0 @@
-variable	count	samples
-Low Counts	3	14160, 18011, 14159
-Not Genotyped	11	17086, 18184_FC, 15135, 15237, 1118, 11834, 16385, 14160, 18011, 14159, 15248
-Single Cluster	1	11834
-Duplicate Sample	1	14493
-Flipped Sex	1	14473
-Missing Age	3	17086, 17630, 15611
-Ambiguous Sex	3	14706, 16438, 13901
