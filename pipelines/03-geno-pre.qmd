@@ -35,6 +35,53 @@ graph TD
     style N fill:#e1f5fe,stroke:#01579b
 ```
 
+```{mermaid}
+graph LR
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+
+    A[Raw PED/MAP] --> B(convert_raw)
+    B --> C(add_sex_to_fam)
+    C --> D(rm_dup_sample)
+    D --> E(check_het)
+    D --> F{GenotypeQCtoHRC}
+    G[1000G PGEN] --> F
+    F --> H(cat_genotypes)
+    H --> I(rm_maf_ambig)
+    I --> J(rm_rare_snps)
+    J --> K(split_chrs)
+    K --> L[Final HG38 VCFs]
+    K --> M(gather_stats)
+    M --> N[QC Report]
+    
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
+    style L fill:#e1f5fe,stroke:#01579b
+    style N fill:#e1f5fe,stroke:#01579b
+```
+
+::: {style="width: 70%; margin: auto;"}
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+
+    A[Raw PED/MAP] --> B(convert_raw)
+    B --> C(add_sex_to_fam)
+    C --> D(rm_dup_sample)
+    D --> E(check_het)
+    D --> F{GenotypeQCtoHRC}
+    G[1000G PGEN] --> F
+    F --> H(cat_genotypes)
+    H --> I(rm_maf_ambig)
+    I --> J(rm_rare_snps)
+    J --> K(split_chrs)
+    K --> L[Final HG38 VCFs]
+    K --> M(gather_stats)
+    M --> N[QC Report]
+    
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
+    style L fill:#e1f5fe,stroke:#01579b
+    style N fill:#e1f5fe,stroke:#01579b
+:::
+
 
 ::: {.callout-note}
 
