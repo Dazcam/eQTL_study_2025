@@ -70,6 +70,9 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 </head>
@@ -251,10 +254,8 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
-  <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
-  </ul></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-architecture" id="toc-workflow-architecture" class="nav-link" data-scroll-target="#workflow-architecture">Workflow Architecture</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/03-geno-pre.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -280,15 +281,47 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>The pre-imputation pipeline prepares raw micro-array genotyping data for the TOPMed Imputation Server. The workflow encompasses file format conversion, sample-level QC (sex-check, heterozygosity, and duplicates), and SNP-level QC (MAF and strand ambiguity), culminating in a chromosome-split VCF set aligned to hg38.</p>
+<hr>
 </section>
+<section id="workflow-architecture" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-architecture">Workflow Architecture</h3>
+<p>This pipeline utilizes a mix of PLINK 1.9/2.0, BCFTools, and the specialized GenotypeQCtoHRC R suite.</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+
+    A[Raw PED/MAP] --&gt; B(convert_raw)
+    B --&gt; C(add_sex_to_fam)
+    C --&gt; D(rm_dup_sample)
+    D --&gt; E(check_het)
+    D --&gt; F{GenotypeQCtoHRC}
+    G[1000G PGEN] --&gt; F
+    F --&gt; H(cat_genotypes)
+    H --&gt; I(rm_maf_ambig)
+    I --&gt; J(rm_rare_snps)
+    J --&gt; K(split_chrs)
+    K --&gt; L[Final HG38 VCFs]
+    K --&gt; M(gather_stats)
+    M --&gt; N[QC Report]
+    
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
+    style L fill:#e1f5fe,stroke:#01579b
+    style N fill:#e1f5fe,stroke:#01579b
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
