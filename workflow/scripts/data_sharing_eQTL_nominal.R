@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate eQTL permutation file for data sharing
+#    Generate eQTL nominal file for data sharing
 #
 #--------------------------------------------------------------------------------------
 
@@ -74,24 +74,22 @@ pvar <- read_tsv(allele_file, comment = "#",
 # ----- 2. Iterate through Cell Types and build tbl for each cell type -----
 for (cell_type in names(expPC_map)) {
   
-  message('Generating eQTL perm file for: ', cell_type)
+  message('Generating eQTL nominal file for: ', cell_type)
   
   expPC <- expPC_map[[cell_type]]
   
   # Path construction
-  log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
-  log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
+  log_file <- paste0(in_dir, cell_type, '/', cell_type, '_nom.cis_qtl_pairs.tsv')
   
   if (!file.exists(log_file)) {
     warning("File not found for: ", cell_type)
     next
   }
   
-  # Load significant eQTL - we want all all top eQTL here not just FDR sig.
-  message('\nLoading eQTL perm file for:', cell_type)
+  # Load all nominal eQTL 
+  message('\nLoading eQTL nominal file for:', cell_type)
   eqtl_tbl <- read_tsv(log_file, show_col_types = FALSE) %>%
-    dplyr::select(ensembl_id = phenotype_id, SNP = variant_id, af, 
-                  pval_nominal, pval_beta, qval, slope, slope_se)
+    dplyr::rename(ensembl_id = phenotype_id, SNP = variant_id)
   
   if (nrow(eqtl_tbl) == 0) next
   
@@ -118,14 +116,13 @@ for (cell_type in names(expPC_map)) {
     inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
     mutate(CHROM = str_remove(CHROM, "^chr")) |>
     dplyr::select(ensembl_id, symbol = external_gene_name, CHROM, 
-                  SNP, POS, REF, ALT,  AF = af, slope, slope_se, pval_nominal, 
-                  pval_beta, qval)
+                  SNP, POS, REF, ALT,  AF = af, slope, slope_se, pval_nominal)
   
   message('Any NAs in final tbl?', anyNA(eqtl_enriched))
   message("Processed ", cell_type, ": ", nrow(eqtl_enriched), " eQTLs")
   
   message('Writing file ...')
-  write_tsv(eqtl_enriched, paste0(out_dir, cell_type, '_cis_eQTL_perm.tsv.gz'))
+  write_tsv(eqtl_enriched, paste0(out_dir, cell_type, '_cis_eQTL_nominal.tsv.gz'))
   
 }
 
