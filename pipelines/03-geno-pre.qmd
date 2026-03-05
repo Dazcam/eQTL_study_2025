@@ -36,3 +36,34 @@ graph TD
 ```
 
 
+::: {.callout-note}
+
+We primarily used the [GenotypeQCtoHRC](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC) software suite 
+for the bulk of the pre-imputation genotype QC. Clone the package into `../results/03GENOTYPES-PRE/GenotypeQCtoHRC/`.
+As the package uses `R targets` for job scheduling, all ouputs are generated relative to the repos `HOME` directory. 
+So you need to `cd` into the local repo first. The shell script in the `genotype_qc2hrc` rule handles this. Some 
+additional references and packages are also required - see the GenotypeQCtoHRC documentation for details.
+
+:::
+
+***
+
+### Resources
+
+Most rules require minimal resource. Except:
+
+| Rule | Threads | RAM (GB) | Walltime |
+| :--- | :---: | :---: | :---: | :--- |
+| `genotype_qc2hrc` | 10 | 100 | 5h | 
+
+***
+
+### Technical Requirements
+
+| Category | Requirement |
+| :--- | :---: | 
+| Primary tools | PLINK (v1.9 & v2.0), BCFtools (v1.16), GenotypeQCtoHRC | 
+| Containers | genotype-qc2hrc, R_eqtl (Singularity | 
+
+***
+***
