@@ -169,18 +169,7 @@
     "href": "pipelines/03-geno-pre.html",
     "title": "Genotype QC pre-imputation",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Pipelines",
-      "Genotype QC pre-imputation"
-    ]
-  },
-  {
-    "objectID": "pipelines/03-geno-pre.html#workflow-summary",
-    "href": "pipelines/03-geno-pre.html#workflow-summary",
-    "title": "Genotype QC pre-imputation",
-    "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "text": "Overview\nThe pre-imputation pipeline prepares raw micro-array genotyping data for the TOPMed Imputation Server. The workflow encompasses file format conversion, sample-level QC (sex-check, heterozygosity, and duplicates), and SNP-level QC (MAF and strand ambiguity), culminating in a chromosome-split VCF set aligned to hg38.\n\n\n\nWorkflow Architecture\nThis pipeline utilizes a mix of PLINK 1.9/2.0, BCFTools, and the specialized GenotypeQCtoHRC R suite.\n\n\n\n\n\ngraph TD\n    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;\n\n    A[Raw PED/MAP] --&gt; B(convert_raw)\n    B --&gt; C(add_sex_to_fam)\n    C --&gt; D(rm_dup_sample)\n    D --&gt; E(check_het)\n    D --&gt; F{GenotypeQCtoHRC}\n    G[1000G PGEN] --&gt; F\n    F --&gt; H(cat_genotypes)\n    H --&gt; I(rm_maf_ambig)\n    I --&gt; J(rm_rare_snps)\n    J --&gt; K(split_chrs)\n    K --&gt; L[Final HG38 VCFs]\n    K --&gt; M(gather_stats)\n    M --&gt; N[QC Report]\n    \n    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy\n    style L fill:#e1f5fe,stroke:#01579b\n    style N fill:#e1f5fe,stroke:#01579b\n\n\n\n\n\n\n\n\n\n\n Back to top",
     "crumbs": [
       "Pipelines",
       "Genotype QC pre-imputation"
