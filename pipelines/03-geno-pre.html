@@ -322,6 +322,57 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph LR
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+
+    A[Raw PED/MAP] --&gt; B(convert_raw)
+    B --&gt; C(add_sex_to_fam)
+    C --&gt; D(rm_dup_sample)
+    D --&gt; E(check_het)
+    D --&gt; F{GenotypeQCtoHRC}
+    G[1000G PGEN] --&gt; F
+    F --&gt; H(cat_genotypes)
+    H --&gt; I(rm_maf_ambig)
+    I --&gt; J(rm_rare_snps)
+    J --&gt; K(split_chrs)
+    K --&gt; L[Final HG38 VCFs]
+    K --&gt; M(gather_stats)
+    M --&gt; N[QC Report]
+    
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
+    style L fill:#e1f5fe,stroke:#01579b
+    style N fill:#e1f5fe,stroke:#01579b
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<div style="width: 70%; margin: auto;">
+<p>graph TD classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;</p>
+<pre><code>A[Raw PED/MAP] --&gt; B(convert_raw)
+B --&gt; C(add_sex_to_fam)
+C --&gt; D(rm_dup_sample)
+D --&gt; E(check_het)
+D --&gt; F{GenotypeQCtoHRC}
+G[1000G PGEN] --&gt; F
+F --&gt; H(cat_genotypes)
+H --&gt; I(rm_maf_ambig)
+I --&gt; J(rm_rare_snps)
+J --&gt; K(split_chrs)
+K --&gt; L[Final HG38 VCFs]
+K --&gt; M(gather_stats)
+M --&gt; N[QC Report]
+
+class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
+style L fill:#e1f5fe,stroke:#01579b
+style N fill:#e1f5fe,stroke:#01579b</code></pre>
+</div>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
