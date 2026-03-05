@@ -256,6 +256,8 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#workflow-architecture" id="toc-workflow-architecture" class="nav-link" data-scroll-target="#workflow-architecture">Workflow Architecture</a></li>
+  <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources">Resources</a></li>
+  <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/03-geno-pre.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -320,6 +322,72 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>We primarily used the <a href="https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC">GenotypeQCtoHRC</a> software suite for the bulk of the pre-imputation genotype QC. Clone the package into <code>../results/03GENOTYPES-PRE/GenotypeQCtoHRC/</code>. As the package uses <code>R targets</code> for job scheduling, all ouputs are generated relative to the repos <code>HOME</code> directory. So you need to <code>cd</code> into the local repo first. The shell script in the <code>genotype_qc2hrc</code> rule handles this. Some additional references and packages are also required - see the GenotypeQCtoHRC documentation for details.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="resources" class="level3">
+<h3 class="anchored" data-anchor-id="resources">Resources</h3>
+<p>Most rules require minimal resource. Except:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM (GB)</th>
+<th style="text-align: center;">Walltime</th>
+<th style="text-align: left;"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>genotype_qc2hrc</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;">5h</td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="technical-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 44%">
+<col style="width: 55%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: center;">Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Primary tools</td>
+<td style="text-align: center;">PLINK (v1.9 &amp; v2.0), BCFtools (v1.16), GenotypeQCtoHRC</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Containers</td>
+<td style="text-align: center;">genotype-qc2hrc, R_eqtl (Singularity</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<hr>
 
 
 </section>
