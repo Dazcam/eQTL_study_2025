@@ -12,6 +12,7 @@ The pre-imputation pipeline prepares raw micro-array genotyping data for the TOP
 
 This pipeline utilizes a mix of PLINK 1.9/2.0, BCFTools, and the specialized GenotypeQCtoHRC R suite.
 
+```{mermaid}
 graph TD
     classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
 
@@ -32,5 +33,6 @@ graph TD
     class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
     style L fill:#e1f5fe,stroke:#01579b
     style N fill:#e1f5fe,stroke:#01579b
+```
 
 
