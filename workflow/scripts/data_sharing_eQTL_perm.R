@@ -63,7 +63,8 @@ expPC_map <- c(
 
 gene_lookup_file <- '../resources/sheets/gene_lookup_hg38.tsv'
 gene_lookup_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
-  select(ensembl_gene_id, external_gene_name)
+  select(ensembl_gene_id, external_gene_name) |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
 
 # ----- 1. Load Genotype Metadata (pvar) for alleles -----
 message("Loading pvar file...")
