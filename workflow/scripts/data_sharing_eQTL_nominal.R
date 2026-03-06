@@ -104,6 +104,11 @@ for (cell_type in names(expPC_map)) {
   
   if (nrow(eqtl_tbl) == 0) next
   
+  if (nrow(eqtl_tbl |> filter(SNP == '.')) > 0)
+    message("Removing varaints ID = '.'. ", nrow(eqtl_tbl |> filter(SNP == '.')), " SNPs in total.")
+  
+  message('Gene count: ', nrow(eqtl_tbl))
+  
   # Cross-ref with pvar for REF/ALT and Coordinates
   message('Adding alleles ...')
   
