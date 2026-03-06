@@ -63,7 +63,8 @@ expPC_map <- c(
 
 gene_lookup_file <- '../resources/sheets/gene_lookup_hg38.tsv'
 gene_lookup_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
-  select(ensembl_gene_id, external_gene_name)
+  select(ensembl_gene_id, external_gene_name) |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
 
 # ----- 1. Load Genotype Metadata (pvar) for alleles -----
 message("Loading pvar file...")
@@ -73,8 +74,6 @@ pvar <- read_tsv(allele_file, comment = "#",
 
 # ----- 2. Iterate through Cell Types and build tbl for each cell type -----
 for (cell_type in names(expPC_map)) {
-  
-  message('Generating eQTL nominal file for: ', cell_type)
   
   expPC <- expPC_map[[cell_type]]
   
@@ -87,7 +86,7 @@ for (cell_type in names(expPC_map)) {
   }
   
   # Load all nominal eQTL 
-  message('\nLoading eQTL nominal file for:', cell_type)
+  message('\nLoading eQTL nominal file for: ', cell_type)
   eqtl_tbl <- read_tsv(log_file, show_col_types = FALSE) %>%
     dplyr::rename(ensembl_id = phenotype_id, SNP = variant_id)
   
@@ -111,14 +110,14 @@ for (cell_type in names(expPC_map)) {
                    ". This usually means SNP IDs don't match between TensorQTL and PVAR."))}
   
   # Add cell type label, gene symbol and reorder columns
-  message('Munginging tbl ...')
+  message('Munging tbl ...')
   eqtl_enriched <- eqtl_enriched %>%
     inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
     mutate(CHROM = str_remove(CHROM, "^chr")) |>
     dplyr::select(ensembl_id, symbol = external_gene_name, CHROM, 
                   SNP, POS, REF, ALT,  AF = af, slope, slope_se, pval_nominal)
   
-  message('Any NAs in final tbl?', anyNA(eqtl_enriched))
+  message('Any NAs in final tbl? ', anyNA(eqtl_enriched))
   message("Processed ", cell_type, ": ", nrow(eqtl_enriched), " eQTLs")
   
   message('Writing file ...')
