@@ -72,6 +72,17 @@ pvar <- read_tsv(allele_file, comment = "#",
                  col_names = c("CHROM", "POS", "ID", "REF", "ALT", "INFO")) %>%
   dplyr::select(CHROM, POS, ID, REF, ALT)
 
+dup_snps <- pvar |>
+  count(ID) |>
+  filter(n > 1) |>
+  write_tsv(paste0(out_dir, "duplicated_pvar_snp_counts_nominal.tsv"))
+
+message("Duplicate SNP IDs in pvar: ", nrow(dup_snps))
+
+message("Dropping SNP duplicates in pvar ...")
+pvar <- pvar %>%
+  distinct(ID, .keep_all = TRUE)
+
 # ----- 2. Iterate through Cell Types and build tbl for each cell type -----
 for (cell_type in names(expPC_map)) {
   
