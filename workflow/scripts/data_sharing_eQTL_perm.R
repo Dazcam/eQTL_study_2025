@@ -109,7 +109,7 @@ for (cell_type in names(expPC_map)) {
   if (nrow(eqtl_tbl |> filter(SNP == '.')) > 0) {
     message("Removing varaints ID = '.'. ", nrow(eqtl_tbl |> filter(SNP == '.')), " SNPs in total.")
     eqtl_tbl <- eqtl_tbl |> 
-      filter(SNP == '.')}
+      filter(SNP != '.')}
     
   message('Gene count: ', nrow(eqtl_tbl))
   
