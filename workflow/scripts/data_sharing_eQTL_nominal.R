@@ -69,8 +69,9 @@ gene_lookup_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
 # ----- 1. Load Genotype Metadata (pvar) for alleles -----
 message("Loading pvar file...")
 pvar <- read_tsv(allele_file, comment = "#", 
-                 col_names = c("CHROM", "POS", "ID", "REF", "ALT", "INFO")) %>%
-  dplyr::select(CHROM, POS, ID, REF, ALT)
+                 col_names = c("CHROM", "POS", "ID", "REF", "ALT", "INFO")) |> 
+  dplyr::select(CHROM, POS, ID, REF, ALT) |> 
+  filter(ID != '.')
 
 dup_snps <- pvar |>
   count(ID) |>
@@ -80,7 +81,7 @@ dup_snps <- pvar |>
 message("Duplicate SNP IDs in pvar: ", nrow(dup_snps))
 
 message("Dropping SNP duplicates in pvar ...")
-pvar <- pvar %>%
+pvar <- pvar |>
   distinct(ID, .keep_all = TRUE)
 
 # ----- 2. Iterate through Cell Types and build tbl for each cell type -----
@@ -98,7 +99,7 @@ for (cell_type in names(expPC_map)) {
   
   # Load all nominal eQTL 
   message('\nLoading eQTL nominal file for: ', cell_type)
-  eqtl_tbl <- read_tsv(log_file, show_col_types = FALSE) %>%
+  eqtl_tbl <- read_tsv(log_file, show_col_types = FALSE) |>
     dplyr::rename(ensembl_id = phenotype_id, SNP = variant_id)
   
   if (nrow(eqtl_tbl) == 0) next
@@ -108,7 +109,7 @@ for (cell_type in names(expPC_map)) {
   
   rows_before <- nrow(eqtl_tbl)
   
-  eqtl_enriched <- eqtl_tbl %>%
+  eqtl_enriched <- eqtl_tbl |>
     inner_join(pvar, by = c("SNP" = "ID"))
   
   rows_after <- nrow(eqtl_enriched)
@@ -123,8 +124,8 @@ for (cell_type in names(expPC_map)) {
   }
   
   message('Adding chr prefix to eQTL tbl ...')
-  eqtl_enriched <- eqtl_enriched %>%
-    mutate(CHROM = ifelse(!str_detect(CHROM, "chr"), paste0("chr", CHROM), CHROM)) %>% 
+  eqtl_enriched <- eqtl_enriched |>
+    mutate(CHROM = ifelse(!str_detect(CHROM, "chr"), paste0("chr", CHROM), CHROM)) |> 
     drop_na(CHROM, POS)
   
   # NA check
@@ -139,7 +140,7 @@ for (cell_type in names(expPC_map)) {
   
   rows_before <- nrow(eqtl_enriched)
   
-  eqtl_enriched <- eqtl_enriched %>%
+  eqtl_enriched <- eqtl_enriched |>
     inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
     mutate(CHROM = str_remove(CHROM, "^chr")) |>
     dplyr::select(ensembl_id, symbol = external_gene_name, CHROM, 
@@ -172,8 +173,8 @@ for (cell_type in names(expPC_map)) {
   }
   
   # Ensure no duplicated gene-SNP pairs
-  dup_pairs <- eqtl_enriched %>%
-    count(ensembl_id, SNP) %>%
+  dup_pairs <- eqtl_enriched |>
+    count(ensembl_id, SNP) |>
     filter(n > 1)
   
   if (nrow(dup_pairs) > 0) {
