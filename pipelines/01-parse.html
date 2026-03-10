@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -256,11 +291,11 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
+  <li><a href="#fastq-manifest" id="toc-fastq-manifest" class="nav-link" data-scroll-target="#fastq-manifest">FASTQ Manifest</a></li>
   <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
-  <li><a href="#library-composition-throughput" id="toc-library-composition-throughput" class="nav-link" data-scroll-target="#library-composition-throughput">Library Composition &amp; Throughput</a></li>
-  <li><a href="#resource-management-strategy" id="toc-resource-management-strategy" class="nav-link" data-scroll-target="#resource-management-strategy">Resource Management Strategy</a></li>
-  <li><a href="#compute-profile" id="toc-compute-profile" class="nav-link" data-scroll-target="#compute-profile">Compute profile</a></li>
-  <li><a href="#known-issue" id="toc-known-issue" class="nav-link" data-scroll-target="#known-issue">Known Issue</a></li>
+  <li><a href="#library-composition" id="toc-library-composition" class="nav-link" data-scroll-target="#library-composition">Library Composition</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
+  <li><a href="#storage-management" id="toc-storage-management" class="nav-link" data-scroll-target="#storage-management">Storage Management</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/01-parse.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -288,7 +323,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>This pipeline performs combinatorial indexing processing using the Parse Biosciences split-pipe (v1.3.1) software. It orchestrates the transition from raw FASTQ multiplexed libraries to a Digital Gene Expression (DGE) matrix.</p>
+<p>This pipeline processes raw multiplexed FASTQ libraries from the Parse Biosciences SPLiT-seq protocol into per-plate Digital Gene Expression (DGE) matrices. It handles reference building, multi-lane FASTQ concatenation, per-sublibrary alignment and barcode demultiplexing, and final plate-level combination.</p>
 <hr>
 </section>
 <section id="workflow-logic" class="level3">
@@ -316,12 +351,38 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
+<p>OR?</p>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[ENSEMBL hg38 FA + GTF] --&gt; B(get_refs)
+    B --&gt; C(mk_ref)
+    D[samples_plateN.json] --&gt; E(cat_fqs)
+    C --&gt; F(run_parse)
+    E --&gt; F
+    F --&gt; G(run_parse_combine)
+    G --&gt; H[(Plate DGE Matrix)]
+
+    class A,B,C,D,E,F,G snazzy
+    class H out
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
 <ol type="1">
-<li><code>get_refs</code>: Download the hg38 reference files (Ensembl Release 113).</li>
-<li><code>make_ref</code>: Prepares genome indices for split-pipe.</li>
-<li><code>cat_fqs</code>: Combine fastq files per sublibrary (across lanes), per read (R1, R2).</li>
-<li><code>run_parse</code>: Core alignment and barcode demultiplexing.</li>
-<li><code>run_parse_combine</code>: Aggregates sublibraries into a unified plate-level DGE.</li>
+<li><code>get_refs</code>: Downloads the Ensembl GRCh38 release 113 FASTA and GTF from the Ensembl FTP.</li>
+<li><code>make_ref</code>: Builds a split-pipe genome index from the reference files.</li>
+<li><code>cat_fqs</code>: Concatenates per-lane FASTQ files for each sublibrary into single R1 and R2 files.</li>
+<li><code>run_parse</code>: Runs <code>split-pipe --mode all</code> on each sublibrary: barcode error correction, read trimming, genome alignment, and DGE generation.</li>
+<li><code>run_parse_combine</code>: Aggregates all sublibraries from a plate into a unified plate-level DGE matrix using</li>
 </ol>
 <hr>
 <div class="callout callout-style-default callout-warning callout-titled">
@@ -334,15 +395,32 @@ Warning
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Environment Clash Workaround</p>
-<p>There was a conflict between the Snakemake YAML parser and the spipe environment. Fix: The spipe-1.3.1 environment is manually activated within the shell block of the rule rather than via the Snakemake conda: directive.</p>
+<p><strong>Environment clash workaround</strong></p>
+<p>There is an irresolvable conflict between the Snakemake YAML parser and the <code>spipe-1.3.1</code> conda environment (both use <code>yaml</code> and <code>dir</code> internally). The workaround is to activate the spipe environment manually with <code>source activate spipe-1.3.1</code> inside the shell block of each rule, rather than using the Snakemake <code>conda:</code> directive.</p>
 </div>
 </div>
+<hr>
+</section>
+<section id="fastq-manifest" class="level3">
+<h3 class="anchored" data-anchor-id="fastq-manifest">FASTQ Manifest</h3>
+<p>FASTQ paths are not hardcoded. Instead, <code>create_parse_json.py</code> crawls the raw sequencing directories and produces a per-plate JSON manifest (e.g.&nbsp;<code>config/samples_plate3.json</code>) mapping each sample ID to its R1/R2 file lists across all lanes and runs. Snakemake reads this at runtime:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>MERGE_FQ <span class="op">=</span> json.load(<span class="bu">open</span>(config[<span class="st">'MERGE_FQ_JSON'</span>]))</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>ALL_SAMPLES <span class="op">=</span> <span class="bu">sorted</span>(MERGE_FQ.keys())</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>rule cat_fqs:</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span>:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        r1 <span class="op">=</span> <span class="kw">lambda</span> wildcards: MERGE_FQ[wildcards.sample][<span class="st">'R1'</span>],</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        r2 <span class="op">=</span> <span class="kw">lambda</span> wildcards: MERGE_FQ[wildcards.sample][<span class="st">'R2'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Update <code>MERGE_FQ_JSON</code> in <code>config/config.yaml</code> to point to the correct plate manifest before running.</p>
 <hr>
 </section>
 <section id="technical-requirements" class="level3">
 <h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
 <table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Category</th>
@@ -364,13 +442,9 @@ Warning
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Inputs</strong></td>
-<td style="text-align: left;">Demultiplexed FASTQs, Sample List</td>
+<td style="text-align: left;">Per-lane demultiplexed FASTQs; JSON manifest; Sample List</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Metadata</strong></td>
-<td style="text-align: left;">JSON path map (via <code>scripts/create_parse_json.py</code>)</td>
-</tr>
-<tr class="even">
 <td style="text-align: left;"><strong>Disk Space</strong></td>
 <td style="text-align: left;">~3-5 TB per plate (Scratch)</td>
 </tr>
@@ -378,101 +452,89 @@ Warning
 </table>
 <hr>
 </section>
-<section id="library-composition-throughput" class="level3">
-<h3 class="anchored" data-anchor-id="library-composition-throughput">Library Composition &amp; Throughput</h3>
+<section id="library-composition" class="level3">
+<h3 class="anchored" data-anchor-id="library-composition">Library Composition</h3>
 <p>We processed 150 samples across three sequencing plates:</p>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
-</colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Category</th>
-<th style="text-align: left;">Details</th>
+<th style="text-align: left;">Detail</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;"><strong>Sublibraries</strong></td>
-<td style="text-align: left;">43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12)</td>
+<td style="text-align: left;"><strong>Plates</strong></td>
+<td style="text-align: left;">3 (Plate 1: 15 sublibraries, Plate 2: 16, Plate 3: 12)</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>FASTQ info</strong></td>
-<td style="text-align: left;">Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads)</td>
+<td style="text-align: left;"><strong>FASTQs per sublibrary</strong></td>
+<td style="text-align: left;">24 files (4 lanes × 3 runs × 2 reads)</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Data Volume</strong></td>
-<td style="text-align: left;">~3.0 TB of final raw output (~1 TB per plate)</td>
+<td style="text-align: left;"><strong>Total raw data</strong></td>
+<td style="text-align: left;">~3.0 TB (~1 TB per plate)</td>
 </tr>
 </tbody>
 </table>
 <hr>
 </section>
-<section id="resource-management-strategy" class="level3">
-<h3 class="anchored" data-anchor-id="resource-management-strategy">Resource Management Strategy</h3>
-<p>To navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:</p>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 50%">
-<col style="width: 50%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Category</th>
-<th style="text-align: left;">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;"><strong>Concurrency Control</strong></td>
-<td style="text-align: left;">Restricted to 3 parallel jobs to prevent storage overflow</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>I/O Optimization</strong></td>
-<td style="text-align: left;">Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"><strong>Cleanup Logic</strong></td>
-<td style="text-align: left;">Intermediate merged FASTQs were deleted immediately upon successful alignment</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><strong>HPC Allocation</strong></td>
-<td style="text-align: left;">Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk</td>
-</tr>
-</tbody>
-</table>
-<hr>
-</section>
-<section id="compute-profile" class="level3">
-<h3 class="anchored" data-anchor-id="compute-profile">Compute profile</h3>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
 <table class="caption-top table">
 <thead>
 <tr class="header">
-<th style="text-align: left;">Category</th>
-<th style="text-align: left;">Resource</th>
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM</th>
+<th style="text-align: center;">Walltime</th>
+<th style="text-align: left;">Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;"><strong>Threads</strong></td>
-<td style="text-align: left;">32</td>
+<td style="text-align: left;"><code>get_refs</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">1h</td>
+<td style="text-align: left;">Local rule; wget</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><strong>Memory</strong></td>
-<td style="text-align: left;">360 GB</td>
+<td style="text-align: left;"><code>mk_ref</code></td>
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">64 GB</td>
+<td style="text-align: center;">1d</td>
+<td style="text-align: left;">One-time index build</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><strong>Walltime</strong></td>
-<td style="text-align: left;">10 Days</td>
+<td style="text-align: left;"><code>cat_fqs</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: left;">Local rule; shell cat</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>run_parse</code></td>
+<td style="text-align: center;">32</td>
+<td style="text-align: center;">360 GB</td>
+<td style="text-align: center;">10d</td>
+<td style="text-align: left;">Per sublibrary</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>run_parse_combine</code></td>
+<td style="text-align: center;">32</td>
+<td style="text-align: center;">360 GB</td>
+<td style="text-align: center;">3d</td>
+<td style="text-align: left;">Per plate</td>
 </tr>
 </tbody>
 </table>
 <hr>
 </section>
-<section id="known-issue" class="level3">
-<h3 class="anchored" data-anchor-id="known-issue">Known Issue</h3>
-<p>There wass a clash between the snakemake environment and the spipe environment. Workaround: We manually activate <code>spipe-1.3.1</code> within the shell block rather than using the <code>conda</code> directive.</p>
+<section id="storage-management" class="level3">
+<h3 class="anchored" data-anchor-id="storage-management">Storage Management</h3>
+<p>To stay within the 5 TB scratch quota, intermediate merged FASTQs are declared <code>temp()</code> in Snakemake and deleted immediately on successful alignment. The <code>cat_fqs</code> and <code>run_parse</code> rules are therefore chained tightly and concurrency is restricted to avoid simultaneous accumulation of multiple large merged FASTQ sets.</p>
+<hr>
 
 
 </section>
