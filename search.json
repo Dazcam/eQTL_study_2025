@@ -110,25 +110,13 @@
   {
     "objectID": "pipelines/12-cTWAS.html",
     "href": "pipelines/12-cTWAS.html",
-    "title": "Causal TWAS",
+    "title": "12 · Causal TWAS (cTWAS)",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "text": "Overview\nThis pipeline runs cTWAS (causal Transcriptome-Wide Association Study) to jointly model gene expression and GWAS variants, distinguishing genes with direct evidence of causal effects on disease from those with only indirect (LD-mediated) associations. It uses the FUSION weights generated in pipeline 11 and GWAS summary statistics from pipeline 07.\n\n\n\nWorkflow Logic\n\n\n\n\n\ngraph TD\n    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;\n    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;\n\n    A[1000G hg38 PLINK files] --&gt; B(create_ld_matrices)\n    C[FUSION .pos + .wgt.RDat files] --&gt; D(copy_fusion_weights)\n    D --&gt; E(run_ctwas)\n    B --&gt; E\n    F[GWAS hg38 TSV] --&gt; E\n    G[SMR 1000G BIM] --&gt; E\n    E --&gt; H(ctwas_report)\n\n    class A,B,C,D,E,F,G snazzy\n    class H out\n\n\n\n\n\n\n\ncreate_ld_matrices: Pre-computes LD matrices and variant information files from the 1000G hg38 PLINK reference panel. These are shared across all cell types and GWAS, so this rule runs once.\ncopy_fusion_weights: Copies only genuine (non-zero-byte) FUSION weight files from pipeline 11 into a clean per-cell-type directory. Zero-byte stub files — created for genes where FUSION found insufficient heritability — cause ctwas::preprocess_weights() to crash, so they must be excluded before cTWAS runs.\nrun_ctwas: Runs the full cTWAS analysis for each cell type × GWAS combination using ctwas_run.R. Fits the cTWAS mixture model, estimates prior probabilities for SNP and gene effects, and outputs posterior inclusion probabilities (PIPs) for all genes.\nctwas_report: Renders an RMarkdown HTML report summarising cTWAS gene discoveries across cell types and GWAS traits, including locus plots where available.\n\n\n\n\n\n\n\n\nNote\n\n\n\nStub file filtering\nFUSION produces zero-byte .wgt.RDat files for genes it skips (insufficient cis-SNP heritability). The copy_fusion_weights rule filters these out by reading the .pos file — which only lists genes with real weight files — and copying only those files:\nawk 'NR&gt;1 {print $2}' {input} | \\\nwhile read wgt; do\n    cp -v {params.src_dir}/\"$wgt\" {params.dest_dir}/\ndone\nThis ensures cTWAS only sees valid weight files and avoids preprocess_weights() errors.\n\n\n\n\n\nKey Config Parameters\n# cTWAS uses the SMR 1000G reference BIM for variant information\n# LD matrices are computed from ldsr_hg38_refs plink files\n# GWAS input: hg38 TSV (not munged sumstats)\nThe run_ctwas rule is parameterised by cell_type and gwas wildcards, producing one output RDS per combination.\n\n\n\nTechnical Requirements\n\n\n\n\n\n\n\nCategory\nDetail\n\n\n\n\nSoftware\ncTWAS R package\n\n\nContainer\ntwas.sif (all rules; contains cTWAS + FUSION dependencies)\n\n\nInput\nFUSION .wgt.RDat weights + .pos files (11-TWAS-weights); GWAS hg38 TSVs (07-prep-GWAS); SMR 1000G BIM (10-SMR)\n\n\nOutput\nPer-cell-type × GWAS cTWAS .rds result files; HTML report\n\n\n\n\n\n\nResource Profile\n\n\n\nRule\nThreads\nRAM\nWalltime\n\n\n\n\ncreate_ld_matrices\n5\n20 GB\n3d\n\n\ncopy_fusion_weights\n1\n5 GB\n30 min\n\n\nrun_ctwas\n6\n96 GB\n3d\n\n\nctwas_report\n1\n10 GB\n1h\n\n\n\n\n\n\nRun Composition\n\n\n\nPhase\nJobs\nDimensions\n\n\n\n\ncreate_ld_matrices\n1\nOnce\n\n\ncopy_fusion_weights\n20\n20 cell types\n\n\nrun_ctwas\n120\n20 cell types × 6 GWAS\n\n\n\n\n\n\n\n Back to top",
     "crumbs": [
       "Overview",
       "TWAS",
-      "Causal TWAS"
-    ]
-  },
-  {
-    "objectID": "pipelines/12-cTWAS.html#workflow-summary",
-    "href": "pipelines/12-cTWAS.html#workflow-summary",
-    "title": "Causal TWAS",
-    "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Overview",
-      "TWAS",
-      "Causal TWAS"
+      "12 · Causal TWAS (cTWAS)"
     ]
   },
   {
@@ -326,25 +314,13 @@
   {
     "objectID": "pipelines/11-TWAS-weights.html",
     "href": "pipelines/11-TWAS-weights.html",
-    "title": "TWAS weights",
+    "title": "11 · TWAS Weights (FUSION)",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "text": "Overview\nThis pipeline computes gene expression prediction models (TWAS weights) for all expressed genes across each cell type using the FUSION framework. These weights encode the heritable component of gene expression and are used as input to cTWAS (pipeline 12). Weight models are trained using LASSO, elastic net, and top-1 SNP methods with GEMMA cross-validation.\n\n\n\nWorkflow Logic\n\n\n\n\n\ngraph TD\n    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;\n    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;\n\n    A[Pseudobulk BED quantile] --&gt; B(prep_exp_data)\n    C[Final VCF] --&gt; D(convert_vcf)\n    E[1000G hg38 BIM files] --&gt; F(get_ldref_snplist)\n    G[TensorQTL covariates] --&gt; H(prepare_covar)\n    B --&gt; I(compute_weights)\n    D --&gt; I\n    F --&gt; I\n    H --&gt; I\n    J(get_gemma) --&gt; I\n    I --&gt; K(make_pos_file)\n    K --&gt; L(twas_weights_report)\n\n    class A,B,C,D,E,F,G,H,I,J,K snazzy\n    class L out\n\n\n\n\n\n\n\nget_gemma: Downloads the GEMMA v0.98.5 binary (required by FUSION for heritability estimation via mixed model).\nprep_exp_data: Converts the quantile-normalised pseudobulk expression matrix into PLINK-compatible format and generates a gene coordinate file (chr, start, end, gene_id).\nconvert_vcf: Converts the final filtered VCF to PLINK2 BED format.\nget_ldref_snplist: Extracts all SNP IDs present across the 1000G hg38 BIM files to define the LD reference SNP universe for cis-window extraction.\nprepare_covar: Reformats TensorQTL covariate files (genotype PC 4, expression PC 40, quantile normalisation) for FUSION input.\ncompute_weights: The core rule — iterates over all expressed genes in a cell type, extracts cis-window genotypes (±500 kb from TSS), and runs FUSION.compute_weights.R for each gene. Models tested: top1, lasso, enet. Empty weight files (genes skipped due to insufficient cis-SNPs or heritability) are created as zero-byte stubs to satisfy Snakemake tracking.\nmake_pos_file: Scans the weights directory for successfully computed .wgt.RDat files and generates a FUSION .pos index file listing each gene and its weight file path.\ntwas_weights_report: Renders an HTML report summarising weight computation success rates and model performance across cell types.\n\n\n\n\n\n\n\n\nNote\n\n\n\nGene-level batching inside a single rule\nRather than one Snakemake job per gene (which would require thousands of jobs), compute_weights loops over all genes in a single SLURM job per cell type, processing them sequentially in a shell while loop reading from the coordinate file. Intermediate per-gene cis-genotype files are removed after each gene to manage scratch disk usage.\nwhile read CHR START END GENE; do\n    # Extract cis SNPs with plink2\n    # Run FUSION.compute_weights.R\n    # Touch stub if weight file absent\n    rm -rf $WORKDIR   # Clean up immediately\ndone &lt; &lt;(tail -n +2 $COORD)\n\n\n\n\n\n\n\n\n\nNote\n\n\n\nStub file handling\nFUSION skips genes with low cis-SNP heritability (h² p-value &gt; 0.01). For these genes, an empty .wgt.RDat stub is created so Snakemake considers the gene processed. The downstream copy_fusion_weights rule in pipeline 12 filters out zero-byte stubs before passing weights to cTWAS.\n\n\n\n\n\nTechnical Requirements\n\n\n\n\n\n\n\nCategory\nDetail\n\n\n\n\nSoftware\nFUSION FUSION.compute_weights.R; GEMMA v0.98.5; GCTA\n\n\nContainer\ntwas.sif (compute_weights); r_eqtl.sif (prepare_covar); seurat5f.sif (prep_exp_data)\n\n\nEnv modules\nplink/2.0 (convert_vcf, get_ldref_snplist)\n\n\nInput\nPseudobulk BED (02-scanpy); final VCF (04-geno-post); TensorQTL covariates (05-tensorqtl)\n\n\nOutput\nPer-gene .wgt.RDat files; per-cell-type .pos index; HTML report\n\n\n\n\n\n\nResource Profile\n\n\n\n\n\n\n\n\n\n\nRule\nThreads\nRAM\nWalltime\nNotes\n\n\n\n\nprep_exp_data\n1\n5 GB\n1h\nPer cell type\n\n\nconvert_vcf\n1\n5 GB\n1h\nOnce\n\n\nprepare_covar\n1\n5 GB\n1h\nPer cell type\n\n\ncompute_weights\n1\n50 GB\nvariable\nPer cell type; hours–days depending on gene count\n\n\nmake_pos_file\n1\n5 GB\n30 min\nPer cell type\n\n\n\n\n\n\n\n Back to top",
     "crumbs": [
       "Overview",
       "TWAS",
-      "TWAS weights"
-    ]
-  },
-  {
-    "objectID": "pipelines/11-TWAS-weights.html#workflow-summary",
-    "href": "pipelines/11-TWAS-weights.html#workflow-summary",
-    "title": "TWAS weights",
-    "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Overview",
-      "TWAS",
-      "TWAS weights"
+      "11 · TWAS Weights (FUSION)"
     ]
   },
   {
