@@ -1,15 +1,111 @@
 ---
-title: "SLDSR"
+title: "09 · Stratified LD Score Regression (S-LDSR)"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This pipeline uses [Stratified LD Score Regression](https://github.com/bulik/ldsc) (S-LDSR) to test whether cell-type-specific eQTL loci (defined by SuSiE fine-mapping) are enriched for the heritability of five neuropsychiatric GWAS traits. It generates cell-type-specific LD score annotations from SuSiE credible sets, computes LD scores against hg38 reference panels, and runs stratified regression against munged GWAS summary statistics.
 
-## Workflow Summary
+---
 
+### Workflow Logic
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A(get_hg38_refs) --> C(lift_hapmap3_snps)
+    B(get_hg19_refs) --> C
+    A --> D(ldsr_ld_scores_hg38)
+    C --> D
+    E[SuSiE credible sets] --> F(make_annot)
+    F --> D
+    G[Munged GWAS .sumstats.gz] --> H(ldsr_strat_hg38_bl_v12)
+    D --> H
+    A --> H
+    H --> I(ldsr_strat_summary)
+    I --> J(ldsr_report)
+
+    class A,B,C,D,E,F,G,H,I snazzy
+    class J out
+```
+
+1. `get_hg38_refs`: Downloads the S-LDSR hg38 reference panel (1000 Genomes baseline v1.2 LD scores, weights, frequency files, BIM files).
+2. `get_hg19_refs`: Downloads the corresponding hg19 reference panel (required for HapMap3 SNP liftover).
+3. `lift_hapmap3_snps`: Lifts the HapMap3 SNP list from hg19 to hg38 coordinates using CrossMap, producing the SNP set used for LD score computation.
+4. `make_annot`: For each cell type and chromosome, converts SuSiE credible set SNPs into LDSR-compatible binary annotation files — one for **MaxCPP** (highest-PIP SNP per credible set) and one for **CS95** (all SNPs in 95% credible sets).
+5. `ldsr_ld_scores_hg38`: Computes stratified LD scores for each cell type × annotation type × chromosome combination against the 1000 Genomes hg38 BIM reference.
+6. `ldsr_strat_hg38_bl_v12`: Runs stratified regression (cell-type annotation + baseline v1.2 model) for each cell type × annotation × GWAS combination.
+7. `ldsr_strat_summary`: Aggregates all `.results` files into a single summary TSV per annotation type.
+8. `ldsr_report`: Renders an RMarkdown HTML report of enrichment coefficients and p-values across all cell types and traits.
+
+---
+
+::: {.callout-note}
+**LDSR environment activation**
+
+LDSC requires Python 2.7, which is incompatible with the Snakemake environment. Both the `ldsr_ld_scores_hg38` and `ldsr_strat_hg38_bl_v12` rules activate the `ldsr` conda environment via an eval hook inside the shell block:
+
+```bash
+eval "$(/apps/languages/miniforge3/24.3.0-0/bin/conda shell.bash hook)"
+conda activate ldsr
+```
+:::
+
+---
+
+::: {.callout-note}
+**Coordinate consistency**
+
+All analyses use hg38 reference panels throughout. GWAS summary statistics aligned to hg19 were lifted to hg38 in the `07-prep-GWAS` pipeline, so no further coordinate conversion is required here.
+:::
+
+---
+
+### Annotation Types
+
+| Annotation | Definition | Biological rationale |
+| :--- | :--- | :--- |
+| **MaxCPP** | Single SNP with maximum cumulative posterior probability per cell type | Fine-mapped eQTL signal; high specificity |
+| **CS95** | All SNPs in 95% credible sets per cell type | Broader fine-mapped window; higher sensitivity |
+
+---
+
+### Run Composition
+
+The pipeline fans out across four dimensions simultaneously:
+
+| Phase | Jobs | Dimensions |
+| :--- | :---: | :--- |
+| `make_annot` | 880 | 20 cell types × 2 annot types × 22 chr |
+| `ldsr_ld_scores_hg38` | 880 | 20 × 2 × 22 |
+| `ldsr_strat_hg38_bl_v12` | 240 | 20 × 2 × 6 GWAS |
+
+The SLURM profile's `jobs: 500` cap and `qos=maxjobs500` ensure all 880 annotation/LD score jobs complete in parallel without queue saturation.
+
+---
+
+### Technical Requirements
+
+| Category | Detail |
+| :--- | :--- |
+| **Software** | LDSC v1.0.1 |
+| **Environment** | `ldsr` conda (Python 2.7) |
+| **Container** | `r_eqtl.sif` (make_annot, report); `ubuntu_22.04.sif` (HapMap3 liftover) |
+| **Reference** | 1000G hg38 baseline v1.2; hg38 plink BIM files; HapMap3 SNP list |
+| **Input** | SuSiE credible sets (08-susie); munged GWAS (07-prep-GWAS) |
+| **Output** | Per-cell-type enrichment `.results` files; summary TSV; HTML report |
+
+---
+
+### Resource Profile
+
+Individual jobs are lightweight; the pipeline derives its throughput from parallelism:
+
+| Rule | Threads | RAM | Walltime |
+| :--- | :---: | :---: | :---: |
+| `make_annot` | 1 | 5 GB | 30 min |
+| `ldsr_ld_scores_hg38` | 1 | 10 GB | 1h |
+| `ldsr_strat_hg38_bl_v12` | 1 | 10 GB | 1h |
+| `ldsr_report` | 1 | 10 GB | 30 min |
