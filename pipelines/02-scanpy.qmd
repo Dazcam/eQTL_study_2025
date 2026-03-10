@@ -2,57 +2,84 @@
 title: "scRNAseq analysis"
 ---
 
-***
+---
 
 ### Overview
 
-This pipeline transitions raw count matrices into biologically annotated cell clusters using Scanpy. We employ robust quality control and an iterative clustering strategy (Rounds 1-3) to progressively refine the level 1 cell clusters. We additionally generate fine-grained subclusters for well represented level 1 subclusters and genenerte pseudobulk counts for all level 1 and level 2 cell populations.
+This pipeline transitions raw per-plate DGE matrices (H5AD format) into biologically annotated cell clusters and pseudobulk expression
+matrices ready for eQTL mapping. Analysis is implemented in a series of Jupyter notebooks executed non-interactively by [Papermill]
+(https://papermill.readthedocs.io/), with each rule producing a rendered HTML report alongside the notebook output.
 
-***
+---
 
 ### Workflow Logic
 
 ```{mermaid}
 graph TD
     classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
 
-    A[(Plate 1-3 H5AD)] --> B(scanpy_qc)
-    B --> C{Clustering R1}
-    C --> D{Clustering R2}
-    D --> E{Clustering R3}
-    E --> F[scanpy_annotation]
-    E --> G[scanpy_pseudobulk]
-    E --> H[scanpy_subclustering]
-    
-    class A,B,C,D,E,F,G,H snazzy
-    style F fill:#e1f5fe,stroke:#01579b
-    style G fill:#e1f5fe,stroke:#01579b
+    A[(Plate 1–3 H5AD)] --> B(scanpy_qc)
+    B --> C(scanpy_clustering)
+    C --> D(scanpy_subclustering)
+    C --> E(scanpy_annotation)
+    C --> F(scanpy_cell_label_and_pseudobulk)
+
+    class A,B,C,D,E,F snazzy
 ```
 
-1. `scanpy_qc`: Per-plate quality control (Mito %, Gene/UMI counts).
-2. `Iterative Clustering`: Three rounds of dimensionality reduction (PCA/UMAP) and Leiden clustering to identify and remove doublet-driven or low-3. quality clusters.
-3. `scanpy_annotation`: Expert-led cell-type labeling.
-4. `scanpy_pseudobulk`: Aggregates single-cell data into pseudo-replicates for eQTL mapping.
+1. `scanpy_qc`: Per-plate quality control — filters cells by mitochondrial read fraction, minimum gene count, and UMI count thresholds. Runs in parallel across the three plates.
+2. `scanpy_clustering`: Iterative dimensionality reduction and clustering across three sequential rounds. Each round performs PCA, UMAP, and Leiden graph clustering at increasing resolution, with manual inspection between rounds to remove low-quality or doublet-enriched clusters.
+3. `scanpy_subclustering`: Generates fine-grained subclusters for the four most abundant level-1 populations (ExN-UL, ExN-DL, InN, RG), producing the 13 subtype labels used for eQTL mapping.
+4. `scanpy_annotation`: Expert-guided cell-type labelling using canonical marker gene expression.
+5. `scanpy_cell_label_and_pseudobulk`: Transfers final cell labels, then sum-aggregates single-cell counts per donor per cell type to produce pseudobulk matrices for TensorQTL.
 
-***
+---
 
 ::: {.callout-note}
+**Notebook execution pattern**
 
-Per-rule Jupyter notebook
+Every rule uses [Papermill](https://papermill.readthedocs.io/) to execute the notebook non-interactively, passing a `plate` parameter to parameterise the run. The executed notebook is then converted to HTML by `jupyter nbconvert` for QC review:
 
-Every rule produces a static HTML report with summary QC output.
+```bash
+papermill {input.nb} {params.nb_out} -p plate {wildcards.plate}
+jupyter nbconvert --to html {params.nb_out} --output {params.html_out}
+```
 :::
 
-***
+---
 
-### Resources
+### Technical Requirements
 
-| Rule | Threads | RAM (MB) | Walltime | Logic |
+| Category | Detail |
+| :--- | :--- |
+| **Environment** | `eqtl_study` conda (Scanpy 1.10, Papermill, Jupyter) |
+| **Container** | — (conda only for this pipeline) |
+| **Key packages** | `scanpy`, `anndata`, `leidenalg`, `umap-learn`, `scrublet`, `doubletdetection` |
+| **Input** | Per-plate H5AD from `01-parse` (`combine_{plate}/all-sample/DGE_filtered/anndata.h5ad`) |
+| **Output** | Annotated AnnData object; per-cell-type pseudobulk BED files |
+
+---
+
+### Cell Types Produced
+
+| Level | Labels |
+| :--- | :--- |
+| **Level 1 (broad)** | Glu-UL, Glu-DL, NPC, GABA, Endo-Peri, OPC, MG |
+| **Level 2 (subtypes)** | Glu-UL-0/1/2, Glu-DL-0/1/2, GABA-0/1/2, NPC-0/1/2 |
+
+All 19 labels are propagated automatically through the downstream pipelines via the `cell_types` list in `config/config.yaml`.
+
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime | Notes |
 | :--- | :---: | :---: | :---: | :--- |
-| `scanpy_qc` | 16 | 160,000 | 3h | Per-plate parallel execution |
-| `scanpy_clustering (1-3)` | 16 | 380,000 | 3d | Iterative cluster refinement |
-| `scanpy_annotation` | 10 | 200,000 | 1h | Cell-type labeling |
-| `scanpy_pseudobulk` | 10 | 100,000 | 1d | Sum-aggregation for eQTL |
-| `scanpy_subclustering` | 8 | 80,000 | 2h | Generate suscluster populations |
+| `scanpy_qc` | 16 | 160 GB | 3h | Per-plate parallel execution |
+| `scanpy_clustering` | 16 | 380 GB | 3d | Full dataset; iterative |
+| `scanpy_subclustering` | 16 | 380 GB | 3d | Subsets of clustering output |
+| `scanpy_annotation` | 10 | 200 GB | 3d | Interactive-style notebook |
+| `scanpy_cell_label_and_pseudobulk` | 10 | 100 GB | 3d | Sum aggregation per donor/cell type |
 
-***
+---
