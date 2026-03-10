@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>eQTL Discovery – sc-eQTL Atlas</title>
+<title>05 · TensorQTL eQTL Discovery – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,41 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -74,6 +109,9 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 <meta property="og:title" content="sc-eQTL Atlas — Developing Human Brain">
@@ -355,7 +393,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Discovery</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">05 · TensorQTL eQTL Discovery</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -456,7 +494,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/05-tensorqtl.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">eQTL Discovery</span></a>
+ <span class="menu-text">05 · TensorQTL eQTL Discovery</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -541,10 +579,13 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
-  <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
-  </ul></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
+  <li><a href="#wildcard-structure" id="toc-wildcard-structure" class="nav-link" data-scroll-target="#wildcard-structure">Wildcard Structure</a></li>
+  <li><a href="#key-config-parameters" id="toc-key-config-parameters" class="nav-link" data-scroll-target="#key-config-parameters">Key Config Parameters</a></li>
+  <li><a href="#output-files" id="toc-output-files" class="nav-link" data-scroll-target="#output-files">Output Files</a></li>
+  <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/05-tensorqtl.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -552,9 +593,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Discovery</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">05 · TensorQTL eQTL Discovery</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">eQTL Discovery</h1>
+<h1 class="title">05 · TensorQTL eQTL Discovery</h1>
 </div>
 
 
@@ -571,15 +612,259 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>This pipeline performs cell-type-specific cis eQTL mapping using <a href="https://github.com/broadinstitute/tensorqtl">TensorQTL</a>, a GPU-accelerated implementation of the FastQTL permutation framework. It runs four mapping modes (nominal, permutation, independent, and trans) across all 19 cell types, preceded by expression and covariate preparation steps.</p>
+<hr>
 </section>
+<section id="workflow-logic" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[Pseudobulk BED + PCA covariates] --&gt; B(prep_tensorQTL_input)
+    B --&gt; C(zip_pblk_cnts)
+    B --&gt; D(split_covariates)
+    E[Final VCF] --&gt; F(convert_genotypes)
+    C --&gt; G(tensorqtl_nom)
+    D --&gt; G
+    F --&gt; G
+    C --&gt; H(tensorqtl_perm)
+    D --&gt; H
+    F --&gt; H
+    H --&gt; I(tensorqtl_independent)
+    C --&gt; I
+    D --&gt; I
+    F --&gt; I
+    C --&gt; J(tensorqtl_trans)
+    D --&gt; J
+    F --&gt; J
+    H --&gt; K(tensorqtl_report)
+    I --&gt; K
+    J --&gt; K
+
+    class A,B,C,D,E,F,G,H,I,J,K snazzy
+    class G,H,I,J out
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<ol type="1">
+<li><code>prep_tensorQTL_input</code>: Prepares per-cell-type normalised pseudobulk expression matrices (BED format) and covariate files. Applies batch correction (ComBat on post-conception week), merges genotype PCs and expression PCs, and normalises counts (quantile normalisation). Runs via <code>tensorqtl_prep_input_files.R</code> in the <code>r_eqtl</code> container.</li>
+<li><code>zip_pblk_cnts</code>: bgzip-compresses and tabix-indexes the expression BED file required by TensorQTL.</li>
+<li><code>convert_genotypes</code>: Converts the final filtered VCF to PLINK2 PGEN format.</li>
+<li><code>split_covariates</code>: Generates covariate files for each combination of genotype PC count and expression PC count, enabling parameter sweep optimisation.</li>
+<li><code>tensorqtl_nom</code>: Nominal pass — computes all SNP–gene association p-values within a 500 kb cis window. Output stored as per-chromosome Parquet files.</li>
+<li><code>tensorqtl_perm</code>: Permutation pass — fits an adaptive permutation model (1,000–10,000 permutations) per gene to derive empirical p-values and FDR-corrected eGene calls.</li>
+<li><code>tensorqtl_independent</code>: Stepwise conditional analysis on permutation pass results to identify independent secondary eQTL signals per gene.</li>
+<li><code>tensorqtl_trans</code>: Trans eQTL mapping — genome-wide SNP–gene associations.</li>
+<li><code>tensorqtl_report</code>: Renders an RMarkdown HTML summary of eQTL discovery results across all cell types.</li>
+</ol>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>GPU acceleration</strong></p>
+<p>TensorQTL runs inside the <code>tensorqtl.sif</code> Singularity container and uses PyTorch for GPU-accelerated matrix operations during permutation testing. The permutation pass is the most computationally intensive step; GPU acceleration reduces runtime from days to hours per cell type.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="wildcard-structure" class="level3">
+<h3 class="anchored" data-anchor-id="wildcard-structure">Wildcard Structure</h3>
+<p>Each TensorQTL job is parameterised by four wildcards, enabling full factorial exploration of analysis parameters:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Wildcard</th>
+<th style="text-align: left;">Values</th>
+<th style="text-align: left;">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>cell_type</code></td>
+<td style="text-align: left;">19 (7 broad + 12 subtypes)</td>
+<td style="text-align: left;">Cell population</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>norm_method</code></td>
+<td style="text-align: left;"><code>quantile</code></td>
+<td style="text-align: left;">Expression normalisation</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>geno_pc</code></td>
+<td style="text-align: left;"><code>4</code></td>
+<td style="text-align: left;">Genotype PCs as covariates</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>exp_pc</code></td>
+<td style="text-align: left;"><code>40</code></td>
+<td style="text-align: left;">Expression PCs as covariates</td>
+</tr>
+</tbody>
+</table>
+<p>Additional values can be uncommented in <code>config/config.yaml</code> (e.g.&nbsp;<code>exp_pcs: [10,20,30,40,50]</code>) to run a full covariate optimisation sweep.</p>
+<hr>
+</section>
+<section id="key-config-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="key-config-parameters">Key Config Parameters</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tensorQTL</span><span class="kw">:</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">window</span><span class="kw">:</span><span class="at"> </span><span class="dv">500000</span><span class="co">       # Cis window (bp either side of TSS)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">perm_min</span><span class="kw">:</span><span class="at"> </span><span class="dv">1000</span><span class="co">       # Minimum permutations per gene</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">perm_max</span><span class="kw">:</span><span class="at"> </span><span class="dv">10000</span><span class="co">      # Maximum permutations per gene</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">geno_pcs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span><span class="co">          # Genotype PCs included as covariates</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">exp_pcs</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="dv">40</span><span class="kw">]</span><span class="co">        # Expression PCs included as covariates</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">norm_methods</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">"quantile"</span><span class="kw">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<hr>
+</section>
+<section id="output-files" class="level3">
+<h3 class="anchored" data-anchor-id="output-files">Output Files</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: left;">Output format</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>tensorqtl_nom</code></td>
+<td style="text-align: left;"><code>.cis_qtl_pairs.{chr}.parquet</code></td>
+<td style="text-align: left;">All nominal cis associations</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>tensorqtl_perm</code></td>
+<td style="text-align: left;"><code>.cis_qtl.txt.gz</code></td>
+<td style="text-align: left;">Top eQTL per gene + empirical p-values</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>tensorqtl_independent</code></td>
+<td style="text-align: left;"><code>.cis_independent_qtl.txt.gz</code></td>
+<td style="text-align: left;">Conditionally independent signals</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>tensorqtl_trans</code></td>
+<td style="text-align: left;"><code>.trans_qtl_pairs.txt.gz</code></td>
+<td style="text-align: left;">Trans associations</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="technical-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>eQTL tool</strong></td>
+<td style="text-align: left;">TensorQTL (PyTorch GPU backend)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Container</strong></td>
+<td style="text-align: left;"><code>tensorqtl.sif</code> (eQTL runs); <code>r_eqtl.sif</code> (input prep); <code>gtex_eqtl.sif</code> (bgzip/tabix); <code>seurat5f.sif</code> (report)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Env modules</strong></td>
+<td style="text-align: left;"><code>plink/2.0</code> (genotype conversion)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">Pseudobulk BED (from 02-scanpy); filtered VCF + PCA covariates (from 04-geno-post)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM</th>
+<th style="text-align: center;">Walltime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>prep_tensorQTL_input</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">6 GB</td>
+<td style="text-align: center;">5h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>zip_pblk_cnts</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>split_covariates</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">6 GB</td>
+<td style="text-align: center;">5h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>tensorqtl_nom</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">100 GB</td>
+<td style="text-align: center;">5h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>tensorqtl_perm</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">100 GB</td>
+<td style="text-align: center;">5h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>tensorqtl_independent</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">100 GB</td>
+<td style="text-align: center;">5h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>tensorqtl_trans</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">100 GB</td>
+<td style="text-align: center;">5h</td>
+</tr>
+</tbody>
+</table>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
