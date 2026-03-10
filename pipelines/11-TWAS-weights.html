@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>TWAS weights – sc-eQTL Atlas</title>
+<title>11 · TWAS Weights (FUSION) – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,41 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -74,6 +109,9 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 <meta property="og:title" content="sc-eQTL Atlas — Developing Human Brain">
@@ -355,7 +393,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS weights</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">11 · TWAS Weights (FUSION)</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -514,13 +552,13 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/11-TWAS-weights.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">TWAS weights</span></a>
+ <span class="menu-text">11 · TWAS Weights (FUSION)</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/12-cTWAS.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Causal TWAS</span></a>
+ <span class="menu-text">12 · Causal TWAS (cTWAS)</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -541,10 +579,10 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
-  <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
-  </ul></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
+  <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/11-TWAS-weights.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -552,9 +590,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS weights</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">11 · TWAS Weights (FUSION)</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">TWAS weights</h1>
+<h1 class="title">11 · TWAS Weights (FUSION)</h1>
 </div>
 
 
@@ -571,15 +609,187 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>This pipeline computes gene expression prediction models (TWAS weights) for all expressed genes across each cell type using the <a href="http://gusevlab.org/projects/fusion/">FUSION</a> framework. These weights encode the heritable component of gene expression and are used as input to cTWAS (pipeline 12). Weight models are trained using LASSO, elastic net, and top-1 SNP methods with GEMMA cross-validation.</p>
+<hr>
 </section>
+<section id="workflow-logic" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[Pseudobulk BED quantile] --&gt; B(prep_exp_data)
+    C[Final VCF] --&gt; D(convert_vcf)
+    E[1000G hg38 BIM files] --&gt; F(get_ldref_snplist)
+    G[TensorQTL covariates] --&gt; H(prepare_covar)
+    B --&gt; I(compute_weights)
+    D --&gt; I
+    F --&gt; I
+    H --&gt; I
+    J(get_gemma) --&gt; I
+    I --&gt; K(make_pos_file)
+    K --&gt; L(twas_weights_report)
+
+    class A,B,C,D,E,F,G,H,I,J,K snazzy
+    class L out
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<ol type="1">
+<li><code>get_gemma</code>: Downloads the GEMMA v0.98.5 binary (required by FUSION for heritability estimation via mixed model).</li>
+<li><code>prep_exp_data</code>: Converts the quantile-normalised pseudobulk expression matrix into PLINK-compatible format and generates a gene coordinate file (chr, start, end, gene_id).</li>
+<li><code>convert_vcf</code>: Converts the final filtered VCF to PLINK2 BED format.</li>
+<li><code>get_ldref_snplist</code>: Extracts all SNP IDs present across the 1000G hg38 BIM files to define the LD reference SNP universe for cis-window extraction.</li>
+<li><code>prepare_covar</code>: Reformats TensorQTL covariate files (genotype PC 4, expression PC 40, quantile normalisation) for FUSION input.</li>
+<li><code>compute_weights</code>: The core rule — iterates over all expressed genes in a cell type, extracts cis-window genotypes (±500 kb from TSS), and runs <code>FUSION.compute_weights.R</code> for each gene. Models tested: <code>top1</code>, <code>lasso</code>, <code>enet</code>. Empty weight files (genes skipped due to insufficient cis-SNPs or heritability) are created as zero-byte stubs to satisfy Snakemake tracking.</li>
+<li><code>make_pos_file</code>: Scans the weights directory for successfully computed <code>.wgt.RDat</code> files and generates a FUSION <code>.pos</code> index file listing each gene and its weight file path.</li>
+<li><code>twas_weights_report</code>: Renders an HTML report summarising weight computation success rates and model performance across cell types.</li>
+</ol>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Gene-level batching inside a single rule</strong></p>
+<p>Rather than one Snakemake job per gene (which would require thousands of jobs), <code>compute_weights</code> loops over all genes in a single SLURM job per cell type, processing them sequentially in a shell <code>while</code> loop reading from the coordinate file. Intermediate per-gene cis-genotype files are removed after each gene to manage scratch disk usage.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="bu">read</span> <span class="va">CHR</span> <span class="va">START</span> <span class="va">END</span> <span class="va">GENE</span><span class="kw">;</span> <span class="cf">do</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract cis SNPs with plink2</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Run FUSION.compute_weights.R</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Touch stub if weight file absent</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rm</span> <span class="at">-rf</span> <span class="va">$WORKDIR</span>   <span class="co"># Clean up immediately</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="cf">done</span> <span class="op">&lt;</span> <span class="op">&lt;(</span><span class="fu">tail</span> <span class="at">-n</span> +2 <span class="va">$COORD</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Stub file handling</strong></p>
+<p>FUSION skips genes with low cis-SNP heritability (h² p-value &gt; 0.01). For these genes, an empty <code>.wgt.RDat</code> stub is created so Snakemake considers the gene processed. The downstream <code>copy_fusion_weights</code> rule in pipeline 12 filters out zero-byte stubs before passing weights to cTWAS.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="technical-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Software</strong></td>
+<td style="text-align: left;">FUSION <code>FUSION.compute_weights.R</code>; GEMMA v0.98.5; GCTA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Container</strong></td>
+<td style="text-align: left;"><code>twas.sif</code> (compute_weights); <code>r_eqtl.sif</code> (prepare_covar); <code>seurat5f.sif</code> (prep_exp_data)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Env modules</strong></td>
+<td style="text-align: left;"><code>plink/2.0</code> (convert_vcf, get_ldref_snplist)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">Pseudobulk BED (02-scanpy); final VCF (04-geno-post); TensorQTL covariates (05-tensorqtl)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;">Per-gene <code>.wgt.RDat</code> files; per-cell-type <code>.pos</code> index; HTML report</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 21%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM</th>
+<th style="text-align: center;">Walltime</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>prep_exp_data</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">1h</td>
+<td style="text-align: left;">Per cell type</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>convert_vcf</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">1h</td>
+<td style="text-align: left;">Once</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>prepare_covar</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">1h</td>
+<td style="text-align: left;">Per cell type</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>compute_weights</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">50 GB</td>
+<td style="text-align: center;">variable</td>
+<td style="text-align: left;">Per cell type; hours–days depending on gene count</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>make_pos_file</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">30 min</td>
+<td style="text-align: left;">Per cell type</td>
+</tr>
+</tbody>
+</table>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
@@ -1003,8 +1213,8 @@ ul.task-list li input[type="checkbox"] {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../pipelines/12-cTWAS.html" class="pagination-link" aria-label="Causal TWAS">
-        <span class="nav-page-text">Causal TWAS</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../pipelines/12-cTWAS.html" class="pagination-link" aria-label="12 · Causal TWAS (cTWAS)">
+        <span class="nav-page-text">12 · Causal TWAS (cTWAS)</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
