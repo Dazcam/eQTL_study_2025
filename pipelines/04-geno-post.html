@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Genotype QC pre-imputation – sc-eQTL Atlas</title>
+<title>04 · Genotype QC (Post-imputation) – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -74,6 +74,9 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 <meta property="og:title" content="sc-eQTL Atlas — Developing Human Brain">
@@ -355,7 +358,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/03-geno-pre.html">Genotyping</a></li><li class="breadcrumb-item"><a href="../pipelines/04-geno-post.html">Genotype QC pre-imputation</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/03-geno-pre.html">Genotyping</a></li><li class="breadcrumb-item"><a href="../pipelines/04-geno-post.html">04 · Genotype QC (Post-imputation)</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -439,7 +442,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/04-geno-post.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Genotype QC pre-imputation</span></a>
+ <span class="menu-text">04 · Genotype QC (Post-imputation)</span></a>
   </div>
 </li>
       </ul>
@@ -541,10 +544,11 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
-  <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
-  </ul></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
+  <li><a href="#filtering-thresholds" id="toc-filtering-thresholds" class="nav-link" data-scroll-target="#filtering-thresholds">Filtering Thresholds</a></li>
+  <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/04-geno-post.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -552,9 +556,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/03-geno-pre.html">Genotyping</a></li><li class="breadcrumb-item"><a href="../pipelines/04-geno-post.html">Genotype QC pre-imputation</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/03-geno-pre.html">Genotyping</a></li><li class="breadcrumb-item"><a href="../pipelines/04-geno-post.html">04 · Genotype QC (Post-imputation)</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Genotype QC pre-imputation</h1>
+<h1 class="title">04 · Genotype QC (Post-imputation)</h1>
 </div>
 
 
@@ -571,15 +575,149 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>This pipeline processes the imputed VCF files returned by the TOPMed Imputation Server into a final analysis-ready genotype dataset. It handles password-protected zip extraction, imputation quality assessment, rsID annotation from dbSNP, multi-chromosome concatenation, quality filtering, reference validation, and PCA-based genotype covariate generation for TensorQTL.</p>
+<hr>
 </section>
+<section id="workflow-logic" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[TOPMED Imputed ZIPs chr1–22+X] --&gt; B(impute_check)
+    B --&gt; C(impute_check_cat)
+    D[dbSNP build 156 VCF] --&gt; E(dwnld_dbsnp_ref)
+    B --&gt; F(add_rsID)
+    E --&gt; F
+    F --&gt; G(vcf_cat)
+    G --&gt; H(filter_tags)
+    H --&gt; I(check_VCF)
+    I --&gt; J(exclude_SNPs)
+    J --&gt; K(idx_vcf)
+    K --&gt; L(get_sample_list)
+    J --&gt; M(vcf_to_plink)
+    M --&gt; N(get_ld_pruned_snps)
+    N --&gt; O(prune_genotypes)
+    O --&gt; P(calc_genotype_pcs)
+    C --&gt; Q(create_combined_log)
+    G --&gt; Q
+    H --&gt; Q
+    I --&gt; Q
+    J --&gt; Q
+    P --&gt; R[(Final VCF + PLINK + PCA covariates)]
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q snazzy
+    class R out
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<ol type="1">
+<li><code>impute_check</code>: Extracts per-chromosome imputed VCFs from password-protected TOPMed zip files, parses the <code>.info</code> files, and summarises SNP counts by MAF (&lt; / ≥ 0.05) and imputation R² (&lt; / ≥ 0.8).</li>
+<li><code>impute_check_cat</code>: Concatenates per-chromosome imputation QC summaries into a single TSV.</li>
+<li><code>dwnld_dbsnp_ref</code>: Downloads the dbSNP build 156 VCF (hg38) for rsID annotation.</li>
+<li><code>add_rsID</code>: Annotates each imputed chromosome VCF with dbSNP rsIDs using <code>bcftools annotate</code>.</li>
+<li><code>vcf_cat</code>: Concatenates all rsID-annotated per-chromosome VCFs into a genome-wide VCF.</li>
+<li><code>filter_tags</code>: Computes HWE p-values with <code>bcftools +fill-tags</code> and filters to retain SNPs with MAF ≥ 0.05, R² ≥ 0.8, and HWE p-value ≥ 0.0001.</li>
+<li><code>check_VCF</code>: Validates the filtered VCF against the hg38 reference using <code>checkVCF.py</code>, generating an exclusion list of problematic variants.</li>
+<li><code>exclude_SNPs</code>: Removes variants flagged by <code>check_VCF</code>.</li>
+<li><code>idx_vcf</code>: Creates a tabix index on the final VCF.</li>
+<li><code>get_sample_list</code>: Extracts the final list of sample IDs from the VCF.</li>
+<li><code>vcf_to_plink</code>: Converts the final VCF to PLINK binary format.</li>
+<li><code>get_ld_pruned_snps</code>: Performs LD pruning (window 250 SNPs, step 5, r² threshold 0.2) for PCA.</li>
+<li><code>prune_genotypes</code>: Extracts the LD-pruned SNP set into a new PLINK binary file.</li>
+<li><code>calc_genotype_pcs</code>: Computes the top 10 genotype principal components. The first 4 are used as covariates in TensorQTL.</li>
+<li><code>create_combined_log</code>: Aggregates per-step SNP counts and QC summaries into a single combined processing log.</li>
+</ol>
+<hr>
+</section>
+<section id="filtering-thresholds" class="level3">
+<h3 class="anchored" data-anchor-id="filtering-thresholds">Filtering Thresholds</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Filter</th>
+<th style="text-align: left;">Threshold</th>
+<th style="text-align: left;">Tool</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">MAF</td>
+<td style="text-align: left;">≥ 0.05</td>
+<td style="text-align: left;">BCFtools</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Imputation R²</td>
+<td style="text-align: left;">≥ 0.8</td>
+<td style="text-align: left;">BCFtools</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">HWE p-value</td>
+<td style="text-align: left;">≥ 0.0001</td>
+<td style="text-align: left;">BCFtools +fill-tags</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Reference validation</td>
+<td style="text-align: left;">checkVCF exclusion list</td>
+<td style="text-align: left;">checkVCF.py</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="technical-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Primary tools</strong></td>
+<td style="text-align: left;">BCFtools, PLINK 1.9, PLINK 2.0, tabix, samtools</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Env modules</strong></td>
+<td style="text-align: left;"><code>bcftools</code>, <code>plink/1.9</code>, <code>samtools</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Reference</strong></td>
+<td style="text-align: left;">dbSNP build 156 (hg38); GRCh38 primary assembly FASTA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">TOPMed imputed zip archives (chr1–22, X)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;"><code>chrALL_final.filt.vcf.gz</code> (indexed); PLINK binary set; <code>pca.eigenvec</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
+<p>Most rules are I/O-bound and require minimal compute. The pipeline runs efficiently with default resources (1 thread, 5 GB RAM) for the majority of steps. The <code>filter_tags</code> and <code>vcf_cat</code> rules on a genome-wide VCF may require up to 20 GB RAM depending on chromosome X size.</p>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
