@@ -4,9 +4,9 @@ title: "Parse Alignment"
 
 ### Overview
 
-This pipeline performs combinatorial indexing processing using the Parse Biosciences split-pipe (v1.3.1) software. It orchestrates the transition from raw FASTQ multiplexed libraries to a Digital Gene Expression (DGE) matrix.
+This pipeline processes raw multiplexed FASTQ libraries from the Parse Biosciences SPLiT-seq protocol into per-plate Digital Gene Expression (DGE) matrices. It handles reference building, multi-lane FASTQ concatenation, per-sublibrary alignment and barcode demultiplexing, and final plate-level combination.
 
-***
+---
 
 ### Workflow Logic
 
@@ -25,24 +25,58 @@ graph TD
     style D fill:#f96,stroke:#333
     style E fill:#f96,stroke:#333
 ```
+OR?
 
-1. `get_refs`: Download the hg38 reference files (Ensembl Release 113).
-2. `make_ref`: Prepares genome indices for split-pipe.
-3. `cat_fqs`: Combine fastq files per sublibrary (across lanes), per read (R1, R2).
-4. `run_parse`: Core alignment and barcode demultiplexing.
-5. `run_parse_combine`: Aggregates sublibraries into a unified plate-level DGE.
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[ENSEMBL hg38 FA + GTF] --> B(get_refs)
+    B --> C(mk_ref)
+    D[samples_plateN.json] --> E(cat_fqs)
+    C --> F(run_parse)
+    E --> F
+    F --> G(run_parse_combine)
+    G --> H[(Plate DGE Matrix)]
+
+    class A,B,C,D,E,F,G snazzy
+    class H out
+```
+
+1. `get_refs`: Downloads the Ensembl GRCh38 release 113 FASTA and GTF from the Ensembl FTP.
+2. `make_ref`: Builds a split-pipe genome index from the reference files.
+3. `cat_fqs`: Concatenates per-lane FASTQ files for each sublibrary into single R1 and R2 files. 
+4. `run_parse`: Runs `split-pipe --mode all` on each sublibrary: barcode error correction, read trimming, genome alignment, and DGE generation.
+5. `run_parse_combine`: Aggregates all sublibraries from a plate into a unified plate-level DGE matrix using
 
 ***
 
 ::: {.callout-warning}
+**Environment clash workaround**
 
-Environment Clash Workaround
-
-There was a conflict between the Snakemake YAML parser and the spipe environment.
-Fix: The spipe-1.3.1 environment is manually activated within the shell block of the rule rather than via the Snakemake conda: directive.
+There is an irresolvable conflict between the Snakemake YAML parser and the `spipe-1.3.1` conda environment (both use `yaml` and `dir` internally). The workaround is to activate the spipe environment manually with `source activate spipe-1.3.1` inside the shell block of each rule, rather than using the Snakemake `conda:` directive.
 :::
 
-***
+---
+
+### FASTQ Manifest
+
+FASTQ paths are not hardcoded. Instead, `create_parse_json.py` crawls the raw sequencing directories and produces a per-plate JSON manifest (e.g. `config/samples_plate3.json`) mapping each sample ID to its R1/R2 file lists across all lanes and runs. Snakemake reads this at runtime:
+
+```python
+MERGE_FQ = json.load(open(config['MERGE_FQ_JSON']))
+ALL_SAMPLES = sorted(MERGE_FQ.keys())
+
+rule cat_fqs:
+    input:
+        r1 = lambda wildcards: MERGE_FQ[wildcards.sample]['R1'],
+        r2 = lambda wildcards: MERGE_FQ[wildcards.sample]['R2']
+```
+
+Update `MERGE_FQ_JSON` in `config/config.yaml` to point to the correct plate manifest before running.
+
+---
 
 ### Technical Requirements
 
@@ -52,48 +86,39 @@ Fix: The spipe-1.3.1 environment is manually activated within the shell block of
 | **Software** | Parse `split-pipe` v1.3.1 |
 | **Environment** | `spipe-1.3.1` |
 | **Reference** | ENSEMBL Release 113 (hg38) |
-| **Inputs** | Demultiplexed FASTQs, Sample List |
-| **Metadata** | JSON path map (via `scripts/create_parse_json.py`) |
+| **Inputs** | Per-lane demultiplexed FASTQs; JSON manifest; Sample List |
 | **Disk Space** | ~3-5 TB per plate (Scratch) |
 
-***
+---
 
-### Library Composition & Throughput
+### Library Composition
 
 We processed 150 samples across three sequencing plates:
 
-| Category | Details |
+| Category | Detail |
 | :--- | :--- |
-| **Sublibraries** | 43 total (Plate 1: 15, Plate 2: 16, Plate 3: 12) |
-| **FASTQ info** | Each sublibrary consists of 24 files (4 lanes × 3 runs × 2 reads) |
-| **Data Volume** | ~3.0 TB of final raw output (~1 TB per plate) |
+| **Plates** | 3 (Plate 1: 15 sublibraries, Plate 2: 16, Plate 3: 12) |
+| **FASTQs per sublibrary** | 24 files (4 lanes × 3 runs × 2 reads) |
+| **Total raw data** | ~3.0 TB (~1 TB per plate) |
 
-***
+---
 
-### Resource Management Strategy
+### Resource Profile
 
-To navigate a 5TB storage quota and heavy memory requirements, the following engineering strategies were implemented:
+| Rule | Threads | RAM | Walltime | Notes |
+| :--- | :---: | :---: | :---: | :--- |
+| `get_refs` | 1 | 5 GB | 1h | Local rule; wget |
+| `mk_ref` | 6 | 64 GB | 1d | One-time index build |
+| `cat_fqs` | 1 | 5 GB | — | Local rule; shell cat |
+| `run_parse` | 32 | 360 GB | 10d | Per sublibrary |
+| `run_parse_combine` | 32 | 360 GB | 3d | Per plate |
 
-| Category | Details |
-| :--- | :--- |
-| **Concurrency Control** | Restricted to 3 parallel jobs to prevent storage overflow |
-| **I/O Optimization** | Combined FASTQ transfer and concatenation into a single step to minimize scratch disk residency |
-| **Cleanup Logic** | Intermediate merged FASTQs were deleted immediately upon successful alignment |
-| **HPC Allocation** | Executed on DPMCN nodes (c_compute_neuro1) to avoid prohibitive queue times on Hawk |
+---
 
-***
+### Storage Management
 
-### Compute profile
+To stay within the 5 TB scratch quota, intermediate merged FASTQs are declared `temp()` in Snakemake and deleted immediately on successful alignment. The `cat_fqs` and `run_parse` rules are therefore chained tightly and concurrency is restricted to avoid simultaneous accumulation of multiple large merged FASTQ sets.
 
-| Category | Resource |
-| :--- | :--- |
-| **Threads** | 32 |
-| **Memory** | 360 GB |
-| **Walltime** | 10 Days |
+---
 
-*** 
 
-### Known Issue
-
-There wass a clash between the snakemake environment and the spipe environment.
-Workaround: We manually activate `spipe-1.3.1` within the shell block rather than using the `conda` directive.
