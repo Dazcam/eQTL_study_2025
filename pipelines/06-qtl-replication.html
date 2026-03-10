@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>eQTL replication – sc-eQTL Atlas</title>
+<title>06 · eQTL Replication – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -74,6 +74,9 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 <meta property="og:title" content="sc-eQTL Atlas — Developing Human Brain">
@@ -355,7 +358,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/06-qtl-replication.html">eQTL replication</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/06-qtl-replication.html">06 · eQTL Replication</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -462,7 +465,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/06-qtl-replication.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">eQTL replication</span></a>
+ <span class="menu-text">06 · eQTL Replication</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -541,10 +544,13 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
-  <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
-  </ul></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
+  <li><a href="#data-downloads" id="toc-data-downloads" class="nav-link" data-scroll-target="#data-downloads">Data Downloads</a></li>
+  <li><a href="#analysis-steps" id="toc-analysis-steps" class="nav-link" data-scroll-target="#analysis-steps">Analysis Steps</a></li>
+  <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
+  <li><a href="#run-composition" id="toc-run-composition" class="nav-link" data-scroll-target="#run-composition">Run Composition</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/06-qtl-replication.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -552,9 +558,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/06-qtl-replication.html">eQTL replication</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/05-tensorqtl.html">eQTL Mapping</a></li><li class="breadcrumb-item"><a href="../pipelines/06-qtl-replication.html">06 · eQTL Replication</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">eQTL replication</h1>
+<h1 class="title">06 · eQTL Replication</h1>
 </div>
 
 
@@ -571,15 +577,249 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>This pipeline assesses the replication of our single-nucleus eQTL discoveries against four published brain eQTL and chromatin accessibility datasets. Replication is quantified using the π₁ statistic (proportion of true positives among nominally significant associations in the reference dataset). The pipeline also tests for enrichment of our eQTL SNPs within open chromatin peaks from fetal brain snATAC-seq data.</p>
+<hr>
 </section>
+<section id="workflow-logic" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A(dwnld_obrien) --&gt; E(pi1_enrich_obrien)
+    B(dwnld_bryois) --&gt; F(pi1_enrich_bryois)
+    C(dwnld_ziffra) --&gt; G(snp_lookup)
+    C --&gt; H(atac_enrich)
+    D(dwnld_wen) --&gt; I(pi1_enrich_wen)
+    J[TensorQTL perm output] --&gt; E
+    J --&gt; F
+    J --&gt; I
+    J --&gt; K(pi1_enrich_fugita)
+    J --&gt; L(pi1_enrich_internal)
+    J --&gt; M(cat_nom_qtl)
+    M --&gt; E
+    M --&gt; F
+    M --&gt; I
+    M --&gt; K
+    M --&gt; L
+    G --&gt; H
+    E --&gt; N(pi1_enrichment_report)
+    F --&gt; N
+    G --&gt; N
+    H --&gt; N
+    I --&gt; N
+    K --&gt; N
+    L --&gt; N
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M snazzy
+    class N out
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<hr>
+</section>
+<section id="data-downloads" class="level3">
+<h3 class="anchored" data-anchor-id="data-downloads">Data Downloads</h3>
+<p>All four reference datasets are downloaded automatically by local Snakemake rules:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: left;">Dataset</th>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">PMID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>dwnld_obrien</code></td>
+<td style="text-align: left;">O’Brien 2018 — adult bulk brain eQTLs</td>
+<td style="text-align: left;"><code>curl</code> + unzip</td>
+<td style="text-align: left;">30419947</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>dwnld_bryois</code></td>
+<td style="text-align: left;">Bryois 2022 — adult single-cell eQTLs</td>
+<td style="text-align: left;">JSON manifest + <code>curl</code> loop</td>
+<td style="text-align: left;">35915177</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>dwnld_ziffra</code></td>
+<td style="text-align: left;">Ziffra 2021 — fetal snATAC-seq peaks</td>
+<td style="text-align: left;"><code>wget</code></td>
+<td style="text-align: left;">34616060</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>dwnld_wen</code></td>
+<td style="text-align: left;">Wen 2024 — developmental bulk brain eQTLs</td>
+<td style="text-align: left;">JSON manifest + <code>curl</code> loop</td>
+<td style="text-align: left;">38781368</td>
+</tr>
+</tbody>
+</table>
+<p>The Bryois and Wen datasets use a JSON manifest strategy: a pre-built JSON file maps file names to download URLs, and a <code>jq</code>/<code>curl</code> loop downloads each file individually, skipping already-present files.</p>
+<hr>
+</section>
+<section id="analysis-steps" class="level3">
+<h3 class="anchored" data-anchor-id="analysis-steps">Analysis Steps</h3>
+<p><strong><code>cat_nom_qtl</code></strong><br>
+Combines per-chromosome nominal Parquet output from TensorQTL into a single gzip-compressed TSV per cell type using <code>replication_cat_nom_qtl.py</code>. Required as input for all π₁ calculations.</p>
+<p><strong><code>snp_lookup</code></strong><br>
+For each cell type, creates a SNP coordinate lookup table (from permutation-pass top eQTL SNPs) to enable matching against Ziffra ATAC-seq peak coordinates. Requires internet access — designed to be run locally or on a node with outbound network access (uses the LDlink API for LD proxy lookup).</p>
+<p><strong><code>atac_enrich</code></strong><br>
+Tests whether top eQTL SNPs (and their LD proxies) are significantly enriched within fetal brain open chromatin peaks from Ziffra et al.&nbsp;2021.</p>
+<p><strong><code>pi1_enrich_*</code></strong><br>
+For each reference dataset, calculates the π₁ statistic as a measure of replication signal. Runs for O’Brien, Bryois (cross-matched by cell type), Wen, Fugita, and internally across our own cell types.</p>
+<p><strong><code>pi1_enrichment_report</code></strong><br>
+Renders an RMarkdown HTML report aggregating all π₁ and ATAC enrichment results across all cell types and datasets.</p>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Internal replication</strong></p>
+<p>The <code>pi1_enrich_internal</code> rule also cross-replicates eQTL results between our own cell types (e.g.&nbsp;Glu-UL vs Glu-DL), providing a within-study replication measure that is useful for interpreting cell-type specificity.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="technical-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Container</strong></td>
+<td style="text-align: left;"><code>r_eqtl.sif</code> (all analysis rules)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Env modules</strong></td>
+<td style="text-align: left;"><code>compiler/gnu/7/3.0</code>, <code>jq</code> (for Bryois/Wen downloads)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">TensorQTL nominal Parquet + permutation results (from 05-tensorqtl)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;">Per-cell-type π₁ enrichment RDS files; HTML report</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM</th>
+<th style="text-align: center;">Walltime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Download rules</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">variable</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>cat_nom_qtl</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>pi1_enrich_*</code></td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">20 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>pi1_enrichment_report</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="run-composition" class="level3">
+<h3 class="anchored" data-anchor-id="run-composition">Run Composition</h3>
+<p>The π₁ enrichment rules iterate over cell types, reference datasets, and covariate parameter combinations. The total job count is dominated by the cross-cell-type comparisons:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Approx. jobs</th>
+<th style="text-align: left;">Dimensions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>cat_nom_qtl</code></td>
+<td style="text-align: center;">20</td>
+<td style="text-align: left;">20 cell types</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>pi1_enrich_obrien</code> / <code>_wen</code></td>
+<td style="text-align: center;">20 each</td>
+<td style="text-align: left;">20 cell types</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>pi1_enrich_bryois</code></td>
+<td style="text-align: center;">160</td>
+<td style="text-align: left;">20 × 8 Bryois cell types</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>pi1_enrich_internal</code></td>
+<td style="text-align: center;">400</td>
+<td style="text-align: left;">20 × 20 cell types</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>pi1_enrich_fugita</code></td>
+<td style="text-align: center;">140</td>
+<td style="text-align: left;">20 × 7 Fugita cell types</td>
+</tr>
+</tbody>
+</table>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->

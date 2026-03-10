@@ -182,25 +182,13 @@
   {
     "objectID": "pipelines/06-qtl-replication.html",
     "href": "pipelines/06-qtl-replication.html",
-    "title": "eQTL replication",
+    "title": "06 · eQTL Replication",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "text": "Overview\nThis pipeline assesses the replication of our single-nucleus eQTL discoveries against four published brain eQTL and chromatin accessibility datasets. Replication is quantified using the π₁ statistic (proportion of true positives among nominally significant associations in the reference dataset). The pipeline also tests for enrichment of our eQTL SNPs within open chromatin peaks from fetal brain snATAC-seq data.\n\n\n\nWorkflow Logic\n\n\n\n\n\ngraph TD\n    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;\n    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;\n\n    A(dwnld_obrien) --&gt; E(pi1_enrich_obrien)\n    B(dwnld_bryois) --&gt; F(pi1_enrich_bryois)\n    C(dwnld_ziffra) --&gt; G(snp_lookup)\n    C --&gt; H(atac_enrich)\n    D(dwnld_wen) --&gt; I(pi1_enrich_wen)\n    J[TensorQTL perm output] --&gt; E\n    J --&gt; F\n    J --&gt; I\n    J --&gt; K(pi1_enrich_fugita)\n    J --&gt; L(pi1_enrich_internal)\n    J --&gt; M(cat_nom_qtl)\n    M --&gt; E\n    M --&gt; F\n    M --&gt; I\n    M --&gt; K\n    M --&gt; L\n    G --&gt; H\n    E --&gt; N(pi1_enrichment_report)\n    F --&gt; N\n    G --&gt; N\n    H --&gt; N\n    I --&gt; N\n    K --&gt; N\n    L --&gt; N\n\n    class A,B,C,D,E,F,G,H,I,J,K,L,M snazzy\n    class N out\n\n\n\n\n\n\n\n\n\nData Downloads\nAll four reference datasets are downloaded automatically by local Snakemake rules:\n\n\n\n\n\n\n\n\n\nRule\nDataset\nMethod\nPMID\n\n\n\n\ndwnld_obrien\nO’Brien 2018 — adult bulk brain eQTLs\ncurl + unzip\n30419947\n\n\ndwnld_bryois\nBryois 2022 — adult single-cell eQTLs\nJSON manifest + curl loop\n35915177\n\n\ndwnld_ziffra\nZiffra 2021 — fetal snATAC-seq peaks\nwget\n34616060\n\n\ndwnld_wen\nWen 2024 — developmental bulk brain eQTLs\nJSON manifest + curl loop\n38781368\n\n\n\nThe Bryois and Wen datasets use a JSON manifest strategy: a pre-built JSON file maps file names to download URLs, and a jq/curl loop downloads each file individually, skipping already-present files.\n\n\n\nAnalysis Steps\ncat_nom_qtl\nCombines per-chromosome nominal Parquet output from TensorQTL into a single gzip-compressed TSV per cell type using replication_cat_nom_qtl.py. Required as input for all π₁ calculations.\nsnp_lookup\nFor each cell type, creates a SNP coordinate lookup table (from permutation-pass top eQTL SNPs) to enable matching against Ziffra ATAC-seq peak coordinates. Requires internet access — designed to be run locally or on a node with outbound network access (uses the LDlink API for LD proxy lookup).\natac_enrich\nTests whether top eQTL SNPs (and their LD proxies) are significantly enriched within fetal brain open chromatin peaks from Ziffra et al. 2021.\npi1_enrich_*\nFor each reference dataset, calculates the π₁ statistic as a measure of replication signal. Runs for O’Brien, Bryois (cross-matched by cell type), Wen, Fugita, and internally across our own cell types.\npi1_enrichment_report\nRenders an RMarkdown HTML report aggregating all π₁ and ATAC enrichment results across all cell types and datasets.\n\n\n\n\n\n\n\nNote\n\n\n\nInternal replication\nThe pi1_enrich_internal rule also cross-replicates eQTL results between our own cell types (e.g. Glu-UL vs Glu-DL), providing a within-study replication measure that is useful for interpreting cell-type specificity.\n\n\n\n\n\nTechnical Requirements\n\n\n\n\n\n\n\nCategory\nDetail\n\n\n\n\nContainer\nr_eqtl.sif (all analysis rules)\n\n\nEnv modules\ncompiler/gnu/7/3.0, jq (for Bryois/Wen downloads)\n\n\nInput\nTensorQTL nominal Parquet + permutation results (from 05-tensorqtl)\n\n\nOutput\nPer-cell-type π₁ enrichment RDS files; HTML report\n\n\n\n\n\n\nResource Profile\n\n\n\nRule\nThreads\nRAM\nWalltime\n\n\n\n\nDownload rules\n1\n5 GB\nvariable\n\n\ncat_nom_qtl\n1\n10 GB\n1h\n\n\npi1_enrich_*\n4\n20 GB\n1h\n\n\npi1_enrichment_report\n1\n10 GB\n1h\n\n\n\n\n\n\nRun Composition\nThe π₁ enrichment rules iterate over cell types, reference datasets, and covariate parameter combinations. The total job count is dominated by the cross-cell-type comparisons:\n\n\n\nRule\nApprox. jobs\nDimensions\n\n\n\n\ncat_nom_qtl\n20\n20 cell types\n\n\npi1_enrich_obrien / _wen\n20 each\n20 cell types\n\n\npi1_enrich_bryois\n160\n20 × 8 Bryois cell types\n\n\npi1_enrich_internal\n400\n20 × 20 cell types\n\n\npi1_enrich_fugita\n140\n20 × 7 Fugita cell types\n\n\n\n\n\n\n\n Back to top",
     "crumbs": [
       "Overview",
       "eQTL Mapping",
-      "eQTL replication"
-    ]
-  },
-  {
-    "objectID": "pipelines/06-qtl-replication.html#workflow-summary",
-    "href": "pipelines/06-qtl-replication.html#workflow-summary",
-    "title": "eQTL replication",
-    "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Overview",
-      "eQTL Mapping",
-      "eQTL replication"
+      "06 · eQTL Replication"
     ]
   },
   {
