@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -250,10 +285,18 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
+  <li><a href="#a-single-cell-eqtl-atlas-of-the-developing-human-brain" id="toc-a-single-cell-eqtl-atlas-of-the-developing-human-brain" class="nav-link active" data-scroll-target="#a-single-cell-eqtl-atlas-of-the-developing-human-brain">A single-cell eQTL atlas of the developing human brain</a></li>
+  <li><a href="#data-engineering-architecture" id="toc-data-engineering-architecture" class="nav-link" data-scroll-target="#data-engineering-architecture">Data Engineering Architecture</a>
   <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
+  <li><a href="#workflow-orchestration" id="toc-workflow-orchestration" class="nav-link" data-scroll-target="#workflow-orchestration">Workflow Orchestration</a></li>
+  <li><a href="#centralised-configuration" id="toc-centralised-configuration" class="nav-link" data-scroll-target="#centralised-configuration">Centralised Configuration</a></li>
+  <li><a href="#data-ingestion-json-driven-fastq-management" id="toc-data-ingestion-json-driven-fastq-management" class="nav-link" data-scroll-target="#data-ingestion-json-driven-fastq-management">Data Ingestion: JSON-driven FASTQ Management</a></li>
+  <li><a href="#reproducible-environments" id="toc-reproducible-environments" class="nav-link" data-scroll-target="#reproducible-environments">Reproducible Environments</a></li>
+  <li><a href="#gpu-accelerated-eqtl-mapping" id="toc-gpu-accelerated-eqtl-mapping" class="nav-link" data-scroll-target="#gpu-accelerated-eqtl-mapping">GPU-accelerated eQTL Mapping</a></li>
+  <li><a href="#automated-documentation" id="toc-automated-documentation" class="nav-link" data-scroll-target="#automated-documentation">Automated Documentation</a></li>
   </ul></li>
+  <li><a href="#pipeline-overview" id="toc-pipeline-overview" class="nav-link" data-scroll-target="#pipeline-overview">Pipeline Overview</a></li>
+  <li><a href="#repository" id="toc-repository" class="nav-link" data-scroll-target="#repository">Repository</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -279,20 +322,232 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<hr>
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
+<section id="a-single-cell-eqtl-atlas-of-the-developing-human-brain" class="level2">
+<h2 class="anchored" data-anchor-id="a-single-cell-eqtl-atlas-of-the-developing-human-brain">A single-cell eQTL atlas of the developing human brain</h2>
+<p>Genetic influences on gene expression in the developing brain likely contribute to susceptibility to neuropsychiatric disorders. Prior eQTL studies of the prenatal human brain have relied on bulk tissue, averaging expression signals across all constituent cell types and masking the underlying cellular heterogeneity. Here, we performed single-nucleus RNA sequencing (snRNA-seq) and genome-wide genotyping on cerebral cortex from <strong>134 unrelated samples</strong> from the second trimester of gestation to generate the first single-nucleus eQTL atlas of the prenatal human brain.</p>
+<p>We identify <strong>3,121 unique eGenes</strong> across 7 major cell types and 13 of their subtypes. Combining these data with large-scale GWAS for six neuropsychiatric disorders, we implicate specific cell populations of the developing brain in disease aetiology and identify gene expression differences within them that credibly confer susceptibility.</p>
 <p align="center">
-<img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="400">
+<img src="pipelines/images/eqtl_infographic.png" alt="eQTL pipeline overview" width="500">
 </p>
 <hr>
-<section id="workflow-summary" class="level3">
-<h3 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h3>
-<p>The pipeline is divided into 13 main modules: 1. <code>01 Parse</code>: Raw data processing and alignment. 2. <code>02 Scanpy</code>: snRNAseq QC and clustering 3. <code>03 Genotyping (pre-imputation)</code>: Genotype QC and harmonisation for TOPMED imputation 4. <code>04 Genotyping (post-imputation)</code>: Genotype QC post-imputation 5. <code>05 TensorQTL</code>: eQTL Discovery and QC 6. <code>06 eQTL replication</code>: pi1 Testing etc. 7. <code>07 Prep GWAS</code>: Download and munge GWAS data for downstream applications 8. <code>08 SuSiE finemapping</code>: Generate finemapped SNPs for MaxCPP annotation 9. <code>09 S-LDSR</code>: Run Stratified LDSR 10. <code>10 SMR</code>: Run Summary Mendelian Randomisation 11. <code>11 TWAS-weights</code>: Generate TWAS weights for cTWAS 12. <code>12 cTWAS</code>: Run Causal TWAS 13. <code>12 Visualisation</code>: Generate figures and tables for manuscript</p>
-<hr>
-
-
 </section>
+<section id="data-engineering-architecture" class="level2">
+<h2 class="anchored" data-anchor-id="data-engineering-architecture">Data Engineering Architecture</h2>
+<p>This project processes ~20 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.</p>
+<section id="workflow-orchestration" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-orchestration">Workflow Orchestration</h3>
+<p>All pipelines are managed by <a href="https://snakemake.readthedocs.io/">Snakemake</a> (v8.x) with a dedicated SLURM cluster profile, allowing up to <strong>500 concurrent jobs</strong> across a dedicated compute partition (<code>c_compute_neuro1</code>, account <code>scw1641</code>). The profile handles automatic job submission, logging, and resource allocation per rule:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># config/profile/config.yaml (excerpt)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">executor</span><span class="kw">:</span><span class="at"> cluster-generic</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">jobs</span><span class="kw">:</span><span class="at"> </span><span class="dv">500</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">use-conda</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">use-singularity</span><span class="kw">:</span><span class="at"> </span><span class="ch">true</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cluster-generic-submit-cmd</span><span class="kw">: </span><span class="ch">&gt;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  sbatch</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    --ntasks={resources.ntasks}</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    --mem={resources.mem_mb}</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    --time={resources.time}</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    --cpus-per-task={resources.threads}</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    --account=scw1641</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    --partition=c_compute_neuro1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The pipeline is launched via a single shell script that captures the full Snakemake log and emails on completion:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># workflow/snakemake.sh</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">snakemake</span> <span class="at">--profile</span> ../config/profile/ <span class="va">$@</span> <span class="dv">2</span><span class="op">&gt;</span> smk-<span class="st">"</span><span class="kw">`</span><span class="fu">date</span> +<span class="st">"%d-%m-%Y"</span><span class="kw">`</span><span class="st">.log</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="st">mail -s "</span>Snakemake has finished<span class="st">" camerond@cardiff.ac.uk &lt; smk-"</span><span class="kw">`</span><span class="fu">date</span> +<span class="st">"%d-%m-%Y"</span><span class="kw">`</span>.log</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="centralised-configuration" class="level3">
+<h3 class="anchored" data-anchor-id="centralised-configuration">Centralised Configuration</h3>
+<p>All parameters, file paths, tool settings, container paths, GWAS URLs, and cell-type lists are managed in a single <code>config/config.yaml</code>. This means the entire platform can be reconfigured for a new dataset by editing one file — no hardcoded paths in any script or rule.</p>
+<p>Key config-driven components include:</p>
+<ul>
+<li><strong>Cell types</strong> (20 entries: 7 broad + 12 subtypes) — propagated automatically to TensorQTL, SuSiE, S-LDSR, SMR, and TWAS rules via Snakemake wildcards</li>
+<li><strong>GWAS URLs</strong> — six neuropsychiatric GWAS (SCZ, BPD, MDD, ADHD, OCD) downloaded directly from Figshare/PGC by the pipeline</li>
+<li><strong>Container paths</strong> — eight Singularity containers mapped centrally, ensuring every rule uses the correct software environment</li>
+<li><strong>Analysis parameters</strong> — SuSiE window (1 Mb), batch count (25), FDR threshold (0.05), TensorQTL permutation bounds, SMR windows, all in one place</li>
+</ul>
+</section>
+<section id="data-ingestion-json-driven-fastq-management" class="level3">
+<h3 class="anchored" data-anchor-id="data-ingestion-json-driven-fastq-management">Data Ingestion: JSON-driven FASTQ Management</h3>
+<p>Raw sequencing data from three plates (150 samples, 43 sublibraries) are spread across multiple sequencing runs and lanes on network-attached storage. Rather than hardcoding paths, we use a custom Python script (<code>workflow/scripts/create_parse_json.py</code>) to crawl FASTQ directories, match files by sample and read orientation using regex, sort across lanes and runs, and serialise the result to a JSON manifest:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Matches filename pattern: 10_S8_L001_R1_001.fastq.gz</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> re.search(<span class="vs">r'</span><span class="kw">(</span><span class="dv">\d</span><span class="op">+</span><span class="kw">)</span><span class="vs">_S</span><span class="dv">\d</span><span class="op">+</span><span class="vs">_</span><span class="kw">(</span><span class="vs">L</span><span class="dv">\d</span><span class="op">{3}</span><span class="kw">)</span><span class="vs">_</span><span class="kw">(</span><span class="vs">R</span><span class="dv">\d</span><span class="kw">)</span><span class="vs">'</span>, <span class="bu">file</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> m:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    sample, lane, reads <span class="op">=</span> m.group(<span class="dv">1</span>), m.group(<span class="dv">2</span>), m.group(<span class="dv">3</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    FILES[sample][reads].append(full_path)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The resulting JSON (e.g.&nbsp;<code>config/samples_plate3.json</code>) maps each sample ID to its full list of R1 and R2 FASTQ paths across all lanes and runs. Snakemake ingests this at runtime via a lambda wildcard function, allowing it to concatenate the correct files for each sample dynamically:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>rule cat_fqs:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">input</span>:</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        r1 <span class="op">=</span> <span class="kw">lambda</span> wildcards: MERGE_FQ[wildcards.sample][<span class="st">'R1'</span>],</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        r2 <span class="op">=</span> <span class="kw">lambda</span> wildcards: MERGE_FQ[wildcards.sample][<span class="st">'R2'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>A parallel JSON (<code>config/bam_files.json</code>) maps sample IDs to their processed BAM file paths for downstream genotype-aware steps (cellSNP-lite, Vireo donor deconvolution).</p>
+</section>
+<section id="reproducible-environments" class="level3">
+<h3 class="anchored" data-anchor-id="reproducible-environments">Reproducible Environments</h3>
+<p>Software reproducibility is enforced at two layers:</p>
+<p><strong>Conda</strong> environments with fully pinned dependencies are used for Python-based pipelines (Scanpy, TensorQTL). The <code>eqtl_study.yml</code> environment pins every package to an exact build hash, ensuring bit-for-bit reproducibility across HPC nodes and future reruns.</p>
+<p><strong>Singularity</strong> containers are used for R-based and specialist tools where conda environments are insufficient. Eight containers are defined in <code>config.yaml</code>:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Container</th>
+<th style="text-align: left;">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>tensorqtl.sif</code></td>
+<td style="text-align: left;">GPU-accelerated eQTL mapping (PyTorch)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>r_eqtl.sif</code></td>
+<td style="text-align: left;">Core R analysis environment</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>susier_v24.01.1.sif</code></td>
+<td style="text-align: left;">SuSiE fine-mapping</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>seurat5f.sif</code></td>
+<td style="text-align: left;">Seurat 5 / general R</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>twas.sif</code></td>
+<td style="text-align: left;">FUSION TWAS weight computation</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>gtex_eqtl.sif</code></td>
+<td style="text-align: left;">FastQTL / GTEx tools</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>genotype-qc2hrc_latest.sif</code></td>
+<td style="text-align: left;">Genotype QC and TOPMED imputation prep</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>ubuntu_22.04.sif</code></td>
+<td style="text-align: left;">Lightweight shell utility container</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="gpu-accelerated-eqtl-mapping" class="level3">
+<h3 class="anchored" data-anchor-id="gpu-accelerated-eqtl-mapping">GPU-accelerated eQTL Mapping</h3>
+<p><a href="https://github.com/broadinstitute/tensorqtl">TensorQTL</a> (PyTorch backend) is used for cis eQTL mapping, enabling GPU-parallelised permutation testing across all 19 cell types. Four mapping modes are run per cell type: nominal, permutation, independent, and trans. Output is stored in Parquet format for efficient downstream parsing.</p>
+</section>
+<section id="automated-documentation" class="level3">
+<h3 class="anchored" data-anchor-id="automated-documentation">Automated Documentation</h3>
+<p>Pipeline documentation (this site) is built with <a href="https://quarto.org/">Quarto</a> and published automatically to GitHub Pages via a GitHub Actions workflow on every push to <code>main</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .github/workflows/publish.yml</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Render and Publish</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">uses</span><span class="kw">:</span><span class="at"> quarto-dev/quarto-actions/publish@v2</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">with</span><span class="kw">:</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">target</span><span class="kw">:</span><span class="at"> gh-pages</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<hr>
+</section>
+</section>
+<section id="pipeline-overview" class="level2">
+<h2 class="anchored" data-anchor-id="pipeline-overview">Pipeline Overview</h2>
+<p>The 13 pipelines run in a defined order, passing outputs directly between stages:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">#</th>
+<th style="text-align: left;">Pipeline</th>
+<th style="text-align: left;">Input</th>
+<th style="text-align: left;">Output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">01</td>
+<td style="text-align: left;"><a href="./pipelines/01-parse.html">Parse Alignment</a></td>
+<td style="text-align: left;">Raw FASTQs</td>
+<td style="text-align: left;">Per-plate DGE matrices (H5AD)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">02</td>
+<td style="text-align: left;"><a href="./pipelines/02-scanpy.html">Scanpy</a></td>
+<td style="text-align: left;">H5AD matrices</td>
+<td style="text-align: left;">Annotated clusters, pseudobulk counts</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">03</td>
+<td style="text-align: left;"><a href="./pipelines/03-geno-pre.html">Genotypes (pre-imputation)</a></td>
+<td style="text-align: left;">Raw PLINK files (hg19)</td>
+<td style="text-align: left;">TOPMED-ready VCFs (hg38)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">04</td>
+<td style="text-align: left;"><a href="./pipelines/04-geno-post.html">Genotypes (post-imputation)</a></td>
+<td style="text-align: left;">Imputed VCFs</td>
+<td style="text-align: left;">Filtered, annotated, indexed VCF</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">05</td>
+<td style="text-align: left;"><a href="./pipelines/05-tensorqtl.html">TensorQTL</a></td>
+<td style="text-align: left;">Pseudobulk counts + VCF</td>
+<td style="text-align: left;">cis eQTL results (nominal, perm, indep, trans)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">06</td>
+<td style="text-align: left;"><a href="./pipelines/06-qtl-replication.html">eQTL Replication</a></td>
+<td style="text-align: left;">eQTL results</td>
+<td style="text-align: left;">π₁ enrichment vs.&nbsp;4 public datasets</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">07</td>
+<td style="text-align: left;"><a href="./pipelines/07-prep-GWAS.html">Prep GWAS</a></td>
+<td style="text-align: left;">PGC summary statistics</td>
+<td style="text-align: left;">Munged, lifted, harmonised GWAS files</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">08</td>
+<td style="text-align: left;"><a href="./pipelines/08-susie.html">SuSiE Fine-mapping</a></td>
+<td style="text-align: left;">eQTL + VCF</td>
+<td style="text-align: left;">Credible sets, MaxCPP / CS95 annotations</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">09</td>
+<td style="text-align: left;"><a href="./pipelines/09-SLDSR.html">S-LDSR</a></td>
+<td style="text-align: left;">Fine-mapped eQTLs + GWAS</td>
+<td style="text-align: left;">Partitioned heritability results</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">10</td>
+<td style="text-align: left;"><a href="./pipelines/10-SMR.html">SMR</a></td>
+<td style="text-align: left;">eQTL summary stats + GWAS</td>
+<td style="text-align: left;">Colocalisation results</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">11</td>
+<td style="text-align: left;"><a href="./pipelines/11-TWAS-weights.html">TWAS Weights</a></td>
+<td style="text-align: left;">Pseudobulk counts + genotypes</td>
+<td style="text-align: left;">FUSION weight files per gene/cell type</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">12</td>
+<td style="text-align: left;"><a href="./pipelines/12-cTWAS.html">cTWAS</a></td>
+<td style="text-align: left;">TWAS weights + GWAS</td>
+<td style="text-align: left;">Causal TWAS results</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">13</td>
+<td style="text-align: left;"><a href="./pipelines/13-visualization.html">Visualisation</a></td>
+<td style="text-align: left;">All upstream results</td>
+<td style="text-align: left;">Manuscript figures and tables</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="repository" class="level2">
+<h2 class="anchored" data-anchor-id="repository">Repository</h2>
+<p>Full source code, configuration, and documentation are available at: <a href="https://github.com/Dazcam/eQTL_study_2025">github.com/Dazcam/eQTL_study_2025</a></p>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
