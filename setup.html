@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Project Set up – sc-eQTL Pipeline</title>
+<title>Project Setup – sc-eQTL Pipeline</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,41 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -107,7 +142,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Getting Started</a></li><li class="breadcrumb-item"><a href="./setup.html">Project Set up</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Getting Started</a></li><li class="breadcrumb-item"><a href="./setup.html">Project Setup</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -145,7 +180,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./setup.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Project Set up</span></a>
+ <span class="menu-text">Project Setup</span></a>
   </div>
 </li>
       </ul>
@@ -251,19 +286,34 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link active" data-scroll-target="#prerequisites">Prerequisites</a></li>
+  <li><a href="#obtaining-the-data" id="toc-obtaining-the-data" class="nav-link" data-scroll-target="#obtaining-the-data">Obtaining the Data</a>
   <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
+  <li><a href="#raw-sequencing-data-snrna-seq" id="toc-raw-sequencing-data-snrna-seq" class="nav-link" data-scroll-target="#raw-sequencing-data-snrna-seq">Raw Sequencing Data (snRNA-seq)</a></li>
+  <li><a href="#genotype-data" id="toc-genotype-data" class="nav-link" data-scroll-target="#genotype-data">Genotype Data</a></li>
+  <li><a href="#public-datasets" id="toc-public-datasets" class="nav-link" data-scroll-target="#public-datasets">Public Datasets</a></li>
   </ul></li>
+  <li><a href="#cloning-the-repository" id="toc-cloning-the-repository" class="nav-link" data-scroll-target="#cloning-the-repository">Cloning the Repository</a></li>
+  <li><a href="#configuring-the-pipeline" id="toc-configuring-the-pipeline" class="nav-link" data-scroll-target="#configuring-the-pipeline">Configuring the Pipeline</a>
+  <ul class="collapse">
+  <li><a href="#root-directory" id="toc-root-directory" class="nav-link" data-scroll-target="#root-directory">Root Directory</a></li>
+  <li><a href="#container-paths" id="toc-container-paths" class="nav-link" data-scroll-target="#container-paths">Container Paths</a></li>
+  <li><a href="#cell-types" id="toc-cell-types" class="nav-link" data-scroll-target="#cell-types">Cell Types</a></li>
+  <li><a href="#slurm-profile" id="toc-slurm-profile" class="nav-link" data-scroll-target="#slurm-profile">SLURM Profile</a></li>
+  </ul></li>
+  <li><a href="#configuring-fastq-manifests" id="toc-configuring-fastq-manifests" class="nav-link" data-scroll-target="#configuring-fastq-manifests">Configuring FASTQ Manifests</a></li>
+  <li><a href="#installing-conda-environments" id="toc-installing-conda-environments" class="nav-link" data-scroll-target="#installing-conda-environments">Installing Conda Environments</a></li>
+  <li><a href="#running-the-pipeline" id="toc-running-the-pipeline" class="nav-link" data-scroll-target="#running-the-pipeline">Running the Pipeline</a></li>
+  <li><a href="#directory-structure" id="toc-directory-structure" class="nav-link" data-scroll-target="#directory-structure">Directory Structure</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/setup.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Getting Started</a></li><li class="breadcrumb-item"><a href="./setup.html">Project Set up</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Getting Started</a></li><li class="breadcrumb-item"><a href="./setup.html">Project Setup</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Project Set up</h1>
+<h1 class="title">Project Setup</h1>
 </div>
 
 
@@ -280,15 +330,303 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<p>This page covers everything needed to configure and run the pipeline from scratch: obtaining the data, installing software dependencies, and configuring the environment.</p>
+<hr>
+<section id="prerequisites" class="level2">
+<h2 class="anchored" data-anchor-id="prerequisites">Prerequisites</h2>
+<p>The pipeline is designed to run on a SLURM HPC cluster with access to Conda and Singularity. The following must be available on your system before proceeding:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Requirement</th>
+<th style="text-align: left;">Version</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Snakemake</td>
+<td style="text-align: left;">≥ 8.0</td>
+<td style="text-align: left;">Workflow manager</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Conda / Mamba</td>
+<td style="text-align: left;">Any</td>
+<td style="text-align: left;">For Python environments</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Singularity</td>
+<td style="text-align: left;">≥ 3.x</td>
+<td style="text-align: left;">For R and specialist containers</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SLURM</td>
+<td style="text-align: left;">Any</td>
+<td style="text-align: left;">Job scheduler</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Python</td>
+<td style="text-align: left;">3.12</td>
+<td style="text-align: left;">Within the Conda environment</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The pipeline has been developed and tested on the Hawk HPC system (Cardiff University, ARCCA), using the <code>c_compute_neuro1</code> partition. Resource parameters in <code>config/profile/config.yaml</code> may need adjustment for other systems.</p>
+</div>
+</div>
+<hr>
 </section>
+<section id="obtaining-the-data" class="level2">
+<h2 class="anchored" data-anchor-id="obtaining-the-data">Obtaining the Data</h2>
+<section id="raw-sequencing-data-snrna-seq" class="level3">
+<h3 class="anchored" data-anchor-id="raw-sequencing-data-snrna-seq">Raw Sequencing Data (snRNA-seq)</h3>
+<p>Raw FASTQ files are stored on restricted institutional storage and are not publicly available due to donor consent constraints. Access to the raw data can be requested by contacting Nick Bray.</p>
+<p>The snRNA-seq data were generated using the <a href="https://www.parsebiosciences.com/">Parse Biosciences</a> split-pool ligation-based combinatorial indexing (SPLiT-seq) protocol across three sequencing plates:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Plate</th>
+<th style="text-align: left;">Sublibraries</th>
+<th style="text-align: left;">Approx. Size</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Plate 1</td>
+<td style="text-align: left;">15</td>
+<td style="text-align: left;">~1 TB</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Plate 2</td>
+<td style="text-align: left;">16</td>
+<td style="text-align: left;">~1 TB</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Plate 3</td>
+<td style="text-align: left;">12</td>
+<td style="text-align: left;">~1 TB</td>
+</tr>
+</tbody>
+</table>
+<p>Raw FASTQs consist of 4 lanes × multiple sequencing runs × 2 reads (R1, R2) per sublibrary. Before running the pipeline, the FASTQ manifest JSONs must be generated (see <a href="#configuring-fastq-manifests">Configuring FASTQ Manifests</a> below).</p>
+</section>
+<section id="genotype-data" class="level3">
+<h3 class="anchored" data-anchor-id="genotype-data">Genotype Data</h3>
+<p>Raw genotype data (PLINK format, hg19) were generated by genome-wide SNP array genotyping and are subject to the same access restrictions as the sequencing data. Post-imputation VCFs (TOPMED imputation server, hg38) are also available on request.</p>
+</section>
+<section id="public-datasets" class="level3">
+<h3 class="anchored" data-anchor-id="public-datasets">Public Datasets</h3>
+<p>All public datasets used in the pipeline are downloaded automatically by Snakemake rules. URLs are specified in <code>config/config.yaml</code>:</p>
+<p><strong>GWAS summary statistics</strong> (downloaded by pipeline <code>07-prep-GWAS</code>):</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Trait</th>
+<th style="text-align: left;">Source</th>
+<th style="text-align: left;">PMID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Schizophrenia</td>
+<td style="text-align: left;">Figshare</td>
+<td style="text-align: left;">35396580</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bipolar Disorder</td>
+<td style="text-align: left;">Figshare</td>
+<td style="text-align: left;">39843750</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Major Depressive Disorder</td>
+<td style="text-align: left;">Figshare</td>
+<td style="text-align: left;">39814019</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">ADHD</td>
+<td style="text-align: left;">Figshare</td>
+<td style="text-align: left;">36702997</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">OCD</td>
+<td style="text-align: left;">Figshare</td>
+<td style="text-align: left;">40360802</td>
+</tr>
+</tbody>
+</table>
+<p><strong>eQTL replication datasets</strong> (downloaded by pipeline <code>06-qtl-replication</code>):</p>
+<ul>
+<li><a href="https://doi.org/10.1038/s41593-022-01128-z">Bryois et al.&nbsp;2022</a> — adult single-cell eQTLs</li>
+<li><a href="https://doi.org/10.1038/s41586-021-03209-8">Ziffra et al.&nbsp;2021</a> — fetal snATAC-seq peaks</li>
+<li><a href="https://doi.org/10.1038/s41588-024-01834-7">Wen et al.&nbsp;2024</a> — developmental bulk brain eQTLs</li>
+<li><a href="https://doi.org/10.1038/s41588-018-0160-6">O’Brien et al.&nbsp;2018</a> — adult bulk brain eQTLs</li>
+</ul>
+<p><strong>Reference files</strong> (downloaded by pipeline <code>01-parse</code>):</p>
+<ul>
+<li>Ensembl GRCh38 release 113 FASTA and GTF (for Parse alignment reference)</li>
+<li>dbSNP build 156 VCF (for rsID annotation of imputed genotypes)</li>
+<li>S-LDSR hg38 baseline v1.2 reference files (1000 Genomes, HapMap3)</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="cloning-the-repository" class="level2">
+<h2 class="anchored" data-anchor-id="cloning-the-repository">Cloning the Repository</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/Dazcam/eQTL_study_2025.git</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> eQTL_study_2025</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<hr>
+</section>
+<section id="configuring-the-pipeline" class="level2">
+<h2 class="anchored" data-anchor-id="configuring-the-pipeline">Configuring the Pipeline</h2>
+<p>All configuration is centralised in <code>config/config.yaml</code>. Before running, update the following sections:</p>
+<section id="root-directory" class="level3">
+<h3 class="anchored" data-anchor-id="root-directory">Root Directory</h3>
+<p>Set <code>root_dir</code> to the absolute path of your working directory on scratch storage:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">root_dir</span><span class="kw">:</span><span class="at"> /path/to/your/scratch/eQTL_study_2025/</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="container-paths" class="level3">
+<h3 class="anchored" data-anchor-id="container-paths">Container Paths</h3>
+<p>Update the <code>containers</code> block to point to your local Singularity image files (<code>.sif</code>). The pipeline uses eight containers:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">containers</span><span class="kw">:</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">fastqtl</span><span class="kw">:</span><span class="at"> /path/to/containers/gtex_eqtl.sif</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">tensorqtl</span><span class="kw">:</span><span class="at"> /path/to/containers/tensorqtl.sif</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">genotype-qc2hrc</span><span class="kw">:</span><span class="at"> /path/to/containers/genotype-qc2hrc_latest.sif</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">R</span><span class="kw">:</span><span class="at"> /path/to/containers/seurat5f.sif</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">r_eqtl</span><span class="kw">:</span><span class="at"> /path/to/containers/r_eqtl.sif</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">susie</span><span class="kw">:</span><span class="at"> /path/to/containers/susier_v24.01.1.sif</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">ubuntu</span><span class="kw">:</span><span class="at"> /path/to/containers/ubuntu_22.04.sif</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">twas</span><span class="kw">:</span><span class="at"> /path/to/containers/twas.sif</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Containers can be built from their respective definition files (available on request) or pulled from the project’s container registry.</p>
+</section>
+<section id="cell-types" class="level3">
+<h3 class="anchored" data-anchor-id="cell-types">Cell Types</h3>
+<p>The <code>cell_types</code> list controls which cell type-specific eQTL analyses are run. By default, 7 broad and 13 subtype labels are included. To run a subset, comment out entries as needed:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cell_types</span><span class="kw">:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"ExN-UL"</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"ExN-DL"</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"RG"</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"InN"</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"Endo-Peri"</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"OPC"</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"MG"</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">  # subtypes below</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="st">"ExN-UL-0"</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">  # ...</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="slurm-profile" class="level3">
+<h3 class="anchored" data-anchor-id="slurm-profile">SLURM Profile</h3>
+<p>The cluster submission profile is in <code>config/profile/config.yaml</code>. Update the <code>--account</code> and <code>--partition</code> fields for your HPC system:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cluster-generic-submit-cmd</span><span class="kw">: </span><span class="ch">&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  sbatch</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    --account=YOUR_ACCOUNT</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    --partition=YOUR_PARTITION</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    ...</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Default resource allocations are set under <code>default-resources</code> and can be overridden per rule within each <code>.smk</code> file.</p>
+<hr>
+</section>
+</section>
+<section id="configuring-fastq-manifests" class="level2">
+<h2 class="anchored" data-anchor-id="configuring-fastq-manifests">Configuring FASTQ Manifests</h2>
+<p>The pipeline uses JSON manifests to map sample IDs to their FASTQ file paths. These must be generated before running pipeline <code>01-parse</code>.</p>
+<p>Use the provided script to crawl your FASTQ directories and produce a manifest for each plate:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> workflow/scripts/create_parse_json.py <span class="dt">\</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--fastq_dirs</span> /path/to/plate1_run1 /path/to/plate1_run2 <span class="dt">\</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--plate</span> plate1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This produces <code>samples_plate1.json</code> with the structure:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"10_plate1"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"R1"</span><span class="fu">:</span> <span class="ot">[</span><span class="st">"/path/to/10_S8_L001_R1_001.fastq.gz"</span><span class="ot">,</span> <span class="er">...</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"R2"</span><span class="fu">:</span> <span class="ot">[</span><span class="st">"/path/to/10_S8_L001_R2_001.fastq.gz"</span><span class="ot">,</span> <span class="er">...</span><span class="ot">]</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="er">...</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The script automatically:</p>
+<ul>
+<li>Walks all provided directories recursively</li>
+<li>Matches files using the Parse filename convention (<code>{sample}_S{n}_{lane}_{read}_001.fastq.gz</code>)</li>
+<li>Sorts R1/R2 files consistently across lanes and runs</li>
+<li>Appends the plate identifier to each sample name to ensure uniqueness across plates</li>
+</ul>
+<p>Repeat for each plate and update <code>MERGE_FQ_JSON</code> in <code>config/config.yaml</code> to point to the relevant manifest before running.</p>
+<p>A second JSON (<code>config/bam_files.json</code>) maps sample IDs to their processed BAM file paths for genotype-aware steps. This is generated after pipeline <code>01-parse</code> completes using <code>workflow/scripts/create_bam_json.py</code>.</p>
+<hr>
+</section>
+<section id="installing-conda-environments" class="level2">
+<h2 class="anchored" data-anchor-id="installing-conda-environments">Installing Conda Environments</h2>
+<p>The Python-based Scanpy pipeline uses a pinned Conda environment. Install it with:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> env create <span class="at">-f</span> workflow/envs/eqtl_study.yml</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This environment includes Scanpy 1.10, Jupyter, Papermill (for notebook execution), doublet detection tools (Scrublet, DoubletDetection), and all dependencies pinned to exact build hashes for full reproducibility.</p>
+<p>Two additional lightweight environments are required for genotype-aware steps:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> env create <span class="at">-f</span> workflow/envs/cellsnp_lite.yml</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> env create <span class="at">-f</span> workflow/envs/vireo.yml</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Snakemake will activate the correct environment automatically for each rule when running with <code>--use-conda</code>. Manual activation is only needed for interactive development.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="running-the-pipeline" class="level2">
+<h2 class="anchored" data-anchor-id="running-the-pipeline">Running the Pipeline</h2>
+<p>From the <code>workflow/</code> directory:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> snakemake.sh</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This invokes Snakemake with the SLURM cluster profile, captures the full run log to a date-stamped file, and sends an email on completion.</p>
+<p>To run a dry-run first (recommended for new configurations):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">snakemake</span> <span class="at">--profile</span> ../config/profile/ <span class="at">-n</span> <span class="at">--quiet</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>To run a specific pipeline module only, use the rule name or target output file:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">snakemake</span> <span class="at">--profile</span> ../config/profile/ results/02SCANPY/scanpy_clustering.html</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Ensure <code>root_dir</code> in <code>config/config.yaml</code> points to a scratch filesystem with sufficient space (~20 TB for the full run). Home directories on most HPC systems will not have sufficient quota.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="directory-structure" class="level2">
+<h2 class="anchored" data-anchor-id="directory-structure">Directory Structure</h2>
+<pre><code>eQTL_study_2025/
+├── config/
+│   ├── config.yaml              # Master configuration
+│   ├── profile/config.yaml      # SLURM cluster profile
+│   ├── samples_plate{1,3}.json  # FASTQ manifests (per plate)
+│   └── bam_files.json           # BAM path manifest
+├── workflow/
+│   ├── Snakefile                # Top-level workflow entry point
+│   ├── rules/                   # 13 modular rule files (one per pipeline)
+│   ├── scripts/                 # Python and R analysis scripts
+│   ├── envs/                    # Pinned Conda environment YAMLs
+│   └── snakemake.sh             # Launch script
+├── pipelines/                   # Quarto documentation pages
+├── _quarto.yml                  # Quarto site configuration
+└── .github/workflows/           # GitHub Actions CI/CD (auto-publish docs)</code></pre>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
