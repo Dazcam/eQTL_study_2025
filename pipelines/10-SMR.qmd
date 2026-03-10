@@ -1,15 +1,101 @@
 ---
-title: "SMR"
+title: "10 · Summary Mendelian Randomisation (SMR)"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This pipeline runs [Summary Mendelian Randomisation](https://yanglab.westlake.edu.cn/software/smr/) (SMR) with HEIDI (Heterogeneity in Dependent Instruments) testing to identify genes where eQTL evidence is consistent with a shared causal variant with GWAS risk loci. It converts TensorQTL nominal output into BESD format, formats GWAS summary statistics for SMR, runs SMR + HEIDI for each cell type × GWAS combination, and summarises results.
 
-## Workflow Summary
+---
 
+### Workflow Logic
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A(get_smr_binary) --> D(create_besd)
+    B[TensorQTL nominal parquets] --> C(cat_tensorqtl_nom_snps)
+    C --> E(create_query)
+    F[SuSiE gene meta] --> E
+    G(cat_refs) --> E
+    E --> D
+    G --> H(format_gwas)
+    I[GWAS hg38 TSV] --> H
+    D --> J(smr)
+    H --> J
+    A --> J
+    G --> J
+    J --> K(smr_report)
+
+    class A,B,C,D,E,F,G,H,I,J snazzy
+    class K out
+```
+
+1. `get_smr_binary`: Downloads the SMR v1.4.0 Linux binary from the Yang Lab.
+2. `cat_refs`: Concatenates per-chromosome 1000G hg38 PLINK reference files (BED/BIM/FAM/FRQ) into genome-wide files for SMR's LD reference.
+3. `cat_tensorqtl_nom_snps`: Combines per-chromosome TensorQTL nominal Parquet files for each cell type into a single flat TSV using `smr_cat_tensorqtl_nom_snps.py`.
+4. `create_query`: Formats the concatenated nominal eQTL data into an SMR query file, filtering to eGenes passing FDR ≤ 0.05, aligning SNP IDs with the reference panel, and adding sample size (N=133).
+5. `create_besd`: Converts the query file into binary SMR BESD format (`.besd`, `.bim`, `.epi` files) using `smr --make-besd`.
+6. `format_gwas`: Reformats hg38 GWAS summary statistics into SMR `.ma` format using `smr_format_gwas.R`, aligning allele frequencies with the 1000G reference.
+7. `smr`: Runs SMR + HEIDI for each cell type × GWAS combination, testing each significant eGene for colocalisation with GWAS risk loci (p_SMR threshold: 5×10⁻⁸).
+8. `smr_report`: Renders an RMarkdown HTML report summarising SMR results filtered by p_SMR < 0.05 and p_HEIDI > 0.01.
+
+---
+
+### SMR Filtering Criteria
+
+Results are interpreted using the following thresholds (set in `config/config.yaml`):
+
+```yaml
+p_smr: 0.05        # SMR association p-value threshold
+p_heidi: 0.01      # HEIDI heterogeneity test threshold (reject if p < 0.01)
+smr_window: 500    # LD window for HEIDI test (kb)
+smr_gene: 'ENSG00000214435'  # Example gene (AS3MT) for QC plots
+```
+
+A gene passes SMR colocalisation if: **p_SMR < 0.05** (association) AND **p_HEIDI ≥ 0.01** (consistent with shared causal variant, not linkage).
+
+---
+
+::: {.callout-note}
+**LD reference for SMR**
+
+SMR uses the 1000 Genomes hg38 PLINK files (shared with the S-LDSR pipeline) as its LD reference panel. These are concatenated from per-chromosome files by the `cat_refs` rule.
+:::
+
+---
+
+### Technical Requirements
+
+| Category | Detail |
+| :--- | :--- |
+| **Software** | SMR v1.4.0 |
+| **Container** | `r_eqtl.sif` (create_query, format_gwas, report); `seurat5f.sif` (create_besd) |
+| **Env modules** | `compiler/gnu/5/5.0` (SMR binary requirements) |
+| **Input** | TensorQTL nominal Parquets (05-tensorqtl); GWAS hg38 TSVs (07-prep-GWAS); SuSiE gene meta (08-susie) |
+| **Output** | Per-cell-type × GWAS `.smr` result files; HTML report |
+
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime |
+| :--- | :---: | :---: | :---: |
+| `cat_tensorqtl_nom_snps` | 1 | 10 GB | 1h |
+| `create_query` | 4 | 20 GB | 1h |
+| `create_besd` | 4 | 20 GB | 1h |
+| `format_gwas` | 4 | 20 GB | 1h |
+| `smr` | 4 | 20 GB | 1h |
+| `smr_report` | 4 | 20 GB | 1h |
+
+---
+
+### Run Composition
+
+| Phase | Jobs | Dimensions |
+| :--- | :---: | :--- |
+| `cat_tensorqtl_nom_snps` | 20 | 20 cell types |
+| `format_gwas` | 6 | 6 GWAS traits |
+| `smr` | 120 | 20 cell types × 6 GWAS |
