@@ -2,31 +2,149 @@
 title: "Project Overview"
 ---
 
-***
+---
+title: "Project Overview"
+---
 
-# sn-eQTL Analysis Workflow
+## A single-cell eQTL atlas of the developing human brain
+
+Genetic influences on gene expression in the developing brain likely contribute to susceptibility to neuropsychiatric disorders. Prior eQTL studies of the prenatal human brain have relied on bulk tissue, averaging expression signals across all constituent cell types and masking the underlying cellular heterogeneity. Here, we performed single-nucleus RNA sequencing (snRNA-seq) and genome-wide genotyping on cerebral cortex from **134 unrelated samples** from the second trimester of gestation to generate the first single-nucleus eQTL atlas of the prenatal human brain.
+
+We identify **3,121 unique eGenes** across 7 major cell types and 13 of their subtypes. Combining these data with large-scale GWAS for six neuropsychiatric disorders, we implicate specific cell populations of the developing brain in disease aetiology and identify gene expression differences within them that credibly confer susceptibility.
 
 <p align="center">
-  <img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="400">
+  <img src="pipelines/images/eqtl_infographic.png" alt="eQTL pipeline overview" width="500">
 </p>
 
-*** 
+---
 
-### Workflow Summary
+## Data Engineering Architecture
 
-The pipeline is divided into 13 main modules:
-1. `01 Parse`: Raw data processing and alignment.
-2. `02 Scanpy`: snRNAseq QC and clustering
-3. `03 Genotyping (pre-imputation)`: Genotype QC and harmonisation for TOPMED imputation
-4. `04 Genotyping (post-imputation)`: Genotype QC post-imputation
-5. `05 TensorQTL`: eQTL Discovery and QC
-6. `06 eQTL replication`: pi1 Testing etc.
-7. `07 Prep GWAS`: Download and munge GWAS data for downstream applications
-8. `08 SuSiE finemapping`: Generate finemapped SNPs for MaxCPP annotation
-9. `09 S-LDSR`: Run Stratified LDSR
-10. `10 SMR`: Run Summary Mendelian Randomisation
-11. `11 TWAS-weights`: Generate TWAS weights for cTWAS
-12. `12 cTWAS`: Run Causal TWAS
-13. `12 Visualisation`: Generate figures and tables for manuscript
+This project processes ~20 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.
 
-***
+### Workflow Orchestration
+
+All pipelines are managed by [Snakemake](https://snakemake.readthedocs.io/) (v8.x) with a dedicated SLURM cluster profile, allowing up to **500 concurrent jobs** across a dedicated compute partition (`c_compute_neuro1`, account `scw1641`). The profile handles automatic job submission, logging, and resource allocation per rule:
+
+```yaml
+# config/profile/config.yaml (excerpt)
+executor: cluster-generic
+jobs: 500
+use-conda: true
+use-singularity: true
+cluster-generic-submit-cmd: >
+  sbatch
+    --ntasks={resources.ntasks}
+    --mem={resources.mem_mb}
+    --time={resources.time}
+    --cpus-per-task={resources.threads}
+    --account=scw1641
+    --partition=c_compute_neuro1
+```
+
+The pipeline is launched via a single shell script that captures the full Snakemake log and emails on completion:
+
+```bash
+# workflow/snakemake.sh
+snakemake --profile ../config/profile/ $@ 2> smk-"`date +"%d-%m-%Y"`.log
+mail -s "Snakemake has finished" camerond@cardiff.ac.uk < smk-"`date +"%d-%m-%Y"`.log
+```
+
+### Centralised Configuration
+
+All parameters, file paths, tool settings, container paths, GWAS URLs, and cell-type lists are managed in a single `config/config.yaml`. This means the entire platform can be reconfigured for a new dataset by editing one file — no hardcoded paths in any script or rule.
+
+Key config-driven components include:
+
+- **Cell types** (20 entries: 7 broad + 12 subtypes) — propagated automatically to TensorQTL, SuSiE, S-LDSR, SMR, and TWAS rules via Snakemake wildcards
+- **GWAS URLs** — six neuropsychiatric GWAS (SCZ, BPD, MDD, ADHD, OCD) downloaded directly from Figshare/PGC by the pipeline
+- **Container paths** — eight Singularity containers mapped centrally, ensuring every rule uses the correct software environment
+- **Analysis parameters** — SuSiE window (1 Mb), batch count (25), FDR threshold (0.05), TensorQTL permutation bounds, SMR windows, all in one place
+
+### Data Ingestion: JSON-driven FASTQ Management
+
+Raw sequencing data from three plates (150 samples, 43 sublibraries) are spread across multiple sequencing runs and lanes on network-attached storage. Rather than hardcoding paths, we use a custom Python script (`workflow/scripts/create_parse_json.py`) to crawl FASTQ directories, match files by sample and read orientation using regex, sort across lanes and runs, and serialise the result to a JSON manifest:
+
+```python
+# Matches filename pattern: 10_S8_L001_R1_001.fastq.gz
+m = re.search(r'(\d+)_S\d+_(L\d{3})_(R\d)', file)
+if m:
+    sample, lane, reads = m.group(1), m.group(2), m.group(3)
+    FILES[sample][reads].append(full_path)
+```
+
+The resulting JSON (e.g. `config/samples_plate3.json`) maps each sample ID to its full list of R1 and R2 FASTQ paths across all lanes and runs. Snakemake ingests this at runtime via a lambda wildcard function, allowing it to concatenate the correct files for each sample dynamically:
+
+```python
+rule cat_fqs:
+    input:
+        r1 = lambda wildcards: MERGE_FQ[wildcards.sample]['R1'],
+        r2 = lambda wildcards: MERGE_FQ[wildcards.sample]['R2']
+```
+
+A parallel JSON (`config/bam_files.json`) maps sample IDs to their processed BAM file paths for downstream genotype-aware steps (cellSNP-lite, Vireo donor deconvolution).
+
+### Reproducible Environments
+
+Software reproducibility is enforced at two layers:
+
+**Conda** environments with fully pinned dependencies are used for Python-based pipelines (Scanpy, TensorQTL). The `eqtl_study.yml` environment pins every package to an exact build hash, ensuring bit-for-bit reproducibility across HPC nodes and future reruns.
+
+**Singularity** containers are used for R-based and specialist tools where conda environments are insufficient. Eight containers are defined in `config.yaml`:
+
+| Container | Purpose |
+| :--- | :--- |
+| `tensorqtl.sif` | GPU-accelerated eQTL mapping (PyTorch) |
+| `r_eqtl.sif` | Core R analysis environment |
+| `susier_v24.01.1.sif` | SuSiE fine-mapping |
+| `seurat5f.sif` | Seurat 5 / general R |
+| `twas.sif` | FUSION TWAS weight computation |
+| `gtex_eqtl.sif` | FastQTL / GTEx tools |
+| `genotype-qc2hrc_latest.sif` | Genotype QC and TOPMED imputation prep |
+| `ubuntu_22.04.sif` | Lightweight shell utility container |
+
+### GPU-accelerated eQTL Mapping
+
+[TensorQTL](https://github.com/broadinstitute/tensorqtl) (PyTorch backend) is used for cis eQTL mapping, enabling GPU-parallelised permutation testing across all 19 cell types. Four mapping modes are run per cell type: nominal, permutation, independent, and trans. Output is stored in Parquet format for efficient downstream parsing.
+
+### Automated Documentation
+
+Pipeline documentation (this site) is built with [Quarto](https://quarto.org/) and published automatically to GitHub Pages via a GitHub Actions workflow on every push to `main`:
+
+```yaml
+# .github/workflows/publish.yml
+- name: Render and Publish
+  uses: quarto-dev/quarto-actions/publish@v2
+  with:
+    target: gh-pages
+```
+
+---
+
+## Pipeline Overview
+
+The 13 pipelines run in a defined order, passing outputs directly between stages:
+
+| # | Pipeline | Input | Output |
+| :--- | :--- | :--- | :--- |
+| 01 | [Parse Alignment](pipelines/01-parse.qmd) | Raw FASTQs | Per-plate DGE matrices (H5AD) |
+| 02 | [Scanpy](pipelines/02-scanpy.qmd) | H5AD matrices | Annotated clusters, pseudobulk counts |
+| 03 | [Genotypes (pre-imputation)](pipelines/03-geno-pre.qmd) | Raw PLINK files (hg19) | TOPMED-ready VCFs (hg38) |
+| 04 | [Genotypes (post-imputation)](pipelines/04-geno-post.qmd) | Imputed VCFs | Filtered, annotated, indexed VCF |
+| 05 | [TensorQTL](pipelines/05-tensorqtl.qmd) | Pseudobulk counts + VCF | cis eQTL results (nominal, perm, indep, trans) |
+| 06 | [eQTL Replication](pipelines/06-qtl-replication.qmd) | eQTL results | π₁ enrichment vs. 4 public datasets |
+| 07 | [Prep GWAS](pipelines/07-prep-GWAS.qmd) | PGC summary statistics | Munged, lifted, harmonised GWAS files |
+| 08 | [SuSiE Fine-mapping](pipelines/08-susie.qmd) | eQTL + VCF | Credible sets, MaxCPP / CS95 annotations |
+| 09 | [S-LDSR](pipelines/09-SLDSR.qmd) | Fine-mapped eQTLs + GWAS | Partitioned heritability results |
+| 10 | [SMR](pipelines/10-SMR.qmd) | eQTL summary stats + GWAS | Colocalisation results |
+| 11 | [TWAS Weights](pipelines/11-TWAS-weights.qmd) | Pseudobulk counts + genotypes | FUSION weight files per gene/cell type |
+| 12 | [cTWAS](pipelines/12-cTWAS.qmd) | TWAS weights + GWAS | Causal TWAS results |
+| 13 | [Visualisation](pipelines/13-visualization.qmd) | All upstream results | Manuscript figures and tables |
+
+---
+
+## Repository
+
+Full source code, configuration, and documentation are available at:
+[github.com/Dazcam/eQTL_study_2025](https://github.com/Dazcam/eQTL_study_2025)
+
