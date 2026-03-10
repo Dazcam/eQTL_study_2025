@@ -6,54 +6,142 @@ project:
     - "!workflow/scripts/*.Rmd"
 
 website:
-  title: "sc-eQTL Pipeline"
+  title: "sc-eQTL Atlas"
+  description: "A single-nucleus eQTL atlas of the developing human brain — pipeline documentation"
   repo-url: https://github.com/Dazcam/eQTL_study_2025
   repo-actions: [edit, issue]
+
+  # ── Navbar ─────────────────────────────────────────────────────────────────
   navbar:
+    pinned: true
+    left:
+      - text: "Overview"
+        href: index.qmd
+      - text: "Setup"
+        href: setup.qmd
+      - text: "Pipelines"
+        menu:
+          - text: "01 · Parse Alignment"
+            href: pipelines/01-parse.qmd
+          - text: "02 · Scanpy scRNA-seq"
+            href: pipelines/02-scanpy.qmd
+          - text: "---"
+          - text: "03 · Genotype QC — Pre-imputation"
+            href: pipelines/03-geno-pre.qmd
+          - text: "04 · Genotype QC — Post-imputation"
+            href: pipelines/04-geno-post.qmd
+          - text: "---"
+          - text: "05 · TensorQTL eQTL Discovery"
+            href: pipelines/05-tensorqtl.qmd
+          - text: "06 · eQTL Replication"
+            href: pipelines/06-qtl-replication.qmd
+          - text: "07 · Prepare GWAS"
+            href: pipelines/07-prep-GWAS.qmd
+          - text: "---"
+          - text: "08 · SuSiE Fine-mapping"
+            href: pipelines/08-susie.qmd
+          - text: "09 · S-LDSR"
+            href: pipelines/09-SLDSR.qmd
+          - text: "10 · SMR"
+            href: pipelines/10-SMR.qmd
+          - text: "---"
+          - text: "11 · TWAS Weights"
+            href: pipelines/11-TWAS-weights.qmd
+          - text: "12 · cTWAS"
+            href: pipelines/12-cTWAS.qmd
+          - text: "13 · Visualisation"
+            href: pipelines/13-visualization.qmd
     right:
       - icon: github
         href: https://github.com/Dazcam/eQTL_study_2025
         aria-label: GitHub
-  page-navigation: true
-  back-to-top-navigation: true
-  margin-header: |
-    [![](https://img.shields.io/badge/Snakemake-v8.x-brightgreen)](https://snakemake.github.io)
-    [![](https://img.shields.io/badge/Scanpy-v1.10-blue)](https://scanpy.readthedocs.io)
+
+  # ── Sidebar ─────────────────────────────────────────────────────────────────
   sidebar:
     style: "floating"
     search: true
+    collapse-level: 1
     contents:
       - section: "Getting Started"
         contents:
-          - index.qmd
-          - setup.qmd
-      - section: "Pipelines"
-        contents: 
+          - text: "Project Overview"
+            href: index.qmd
+          - text: "Setup & Configuration"
+            href: setup.qmd
+      - section: "Single-cell RNA-seq"
+        contents:
           - pipelines/01-parse.qmd
           - pipelines/02-scanpy.qmd
+      - section: "Genotyping"
+        contents:
           - pipelines/03-geno-pre.qmd
           - pipelines/04-geno-post.qmd
+      - section: "eQTL Mapping"
+        contents:
           - pipelines/05-tensorqtl.qmd
           - pipelines/06-qtl-replication.qmd
           - pipelines/07-prep-GWAS.qmd
+      - section: "Fine-mapping & Heritability"
+        contents:
           - pipelines/08-susie.qmd
           - pipelines/09-SLDSR.qmd
           - pipelines/10-SMR.qmd
+      - section: "TWAS"
+        contents:
           - pipelines/11-TWAS-weights.qmd
           - pipelines/12-cTWAS.qmd
           - pipelines/13-visualization.qmd
 
+  # ── Navigation & footer ──────────────────────────────────────────────────────
+  page-navigation: true
+  back-to-top-navigation: true
+
+  page-footer:
+    border: true
+    left: |
+      © 2025 Dazcam &nbsp;·&nbsp; Cardiff University, DPMCN
+    center:
+      - icon: file-earmark-text
+        text: "Preprint"
+        href: "https://github.com/Dazcam/eQTL_study_2025"
+      - icon: github
+        text: "GitHub"
+        href: "https://github.com/Dazcam/eQTL_study_2025"
+    right: |
+      Built with [Quarto](https://quarto.org) &nbsp;·&nbsp; [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+  # ── Open Graph / social cards ────────────────────────────────────────────────
+  open-graph:
+    title: "sc-eQTL Atlas — Developing Human Brain"
+    description: "A single-nucleus eQTL atlas of the developing human brain"
+    image: pipelines/images/eqtl_infographic.png
+  twitter-card:
+    title: "sc-eQTL Atlas — Developing Human Brain"
+    description: "A single-nucleus eQTL atlas of the developing human brain"
+    image: pipelines/images/eqtl_infographic.png
+    card-style: summary_large_image
+
+# ── HTML format ────────────────────────────────────────────────────────────────
 format:
   html:
-    theme: 
-      - darkly
-      - custom.scss
+    theme:
+      light: [flatly, custom.scss]
+      dark:  [darkly,  custom.scss]
     mainfont: "Inter"
     fontsize: 1.05rem
-    linkcolor: "#3498db"
+    linestretch: 1.7
+    linkcolor: "#2980b9"
     code-block-bg: true
-    code-block-border-left: "#2c3e50"
-    highlight-style: github
+    code-block-border-left: true
+    code-overflow: scroll
+    highlight-style:
+      light: github
+      dark:  dracula
     code-fold: true
-    code-summary: "Show Snakemake Code"
+    code-summary: "Show code"
+    code-copy: true
     toc: true
+    toc-depth: 3
+    toc-title: "On this page"
+    smooth-scroll: true
+    anchor-sections: true
