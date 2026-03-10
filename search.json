@@ -206,25 +206,13 @@
   {
     "objectID": "pipelines/04-geno-post.html",
     "href": "pipelines/04-geno-post.html",
-    "title": "Genotype QC pre-imputation",
+    "title": "04 · Genotype QC (Post-imputation)",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "text": "Overview\nThis pipeline processes the imputed VCF files returned by the TOPMed Imputation Server into a final analysis-ready genotype dataset. It handles password-protected zip extraction, imputation quality assessment, rsID annotation from dbSNP, multi-chromosome concatenation, quality filtering, reference validation, and PCA-based genotype covariate generation for TensorQTL.\n\n\n\nWorkflow Logic\n\n\n\n\n\ngraph TD\n    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;\n    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;\n\n    A[TOPMED Imputed ZIPs chr1–22+X] --&gt; B(impute_check)\n    B --&gt; C(impute_check_cat)\n    D[dbSNP build 156 VCF] --&gt; E(dwnld_dbsnp_ref)\n    B --&gt; F(add_rsID)\n    E --&gt; F\n    F --&gt; G(vcf_cat)\n    G --&gt; H(filter_tags)\n    H --&gt; I(check_VCF)\n    I --&gt; J(exclude_SNPs)\n    J --&gt; K(idx_vcf)\n    K --&gt; L(get_sample_list)\n    J --&gt; M(vcf_to_plink)\n    M --&gt; N(get_ld_pruned_snps)\n    N --&gt; O(prune_genotypes)\n    O --&gt; P(calc_genotype_pcs)\n    C --&gt; Q(create_combined_log)\n    G --&gt; Q\n    H --&gt; Q\n    I --&gt; Q\n    J --&gt; Q\n    P --&gt; R[(Final VCF + PLINK + PCA covariates)]\n\n    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q snazzy\n    class R out\n\n\n\n\n\n\n\nimpute_check: Extracts per-chromosome imputed VCFs from password-protected TOPMed zip files, parses the .info files, and summarises SNP counts by MAF (&lt; / ≥ 0.05) and imputation R² (&lt; / ≥ 0.8).\nimpute_check_cat: Concatenates per-chromosome imputation QC summaries into a single TSV.\ndwnld_dbsnp_ref: Downloads the dbSNP build 156 VCF (hg38) for rsID annotation.\nadd_rsID: Annotates each imputed chromosome VCF with dbSNP rsIDs using bcftools annotate.\nvcf_cat: Concatenates all rsID-annotated per-chromosome VCFs into a genome-wide VCF.\nfilter_tags: Computes HWE p-values with bcftools +fill-tags and filters to retain SNPs with MAF ≥ 0.05, R² ≥ 0.8, and HWE p-value ≥ 0.0001.\ncheck_VCF: Validates the filtered VCF against the hg38 reference using checkVCF.py, generating an exclusion list of problematic variants.\nexclude_SNPs: Removes variants flagged by check_VCF.\nidx_vcf: Creates a tabix index on the final VCF.\nget_sample_list: Extracts the final list of sample IDs from the VCF.\nvcf_to_plink: Converts the final VCF to PLINK binary format.\nget_ld_pruned_snps: Performs LD pruning (window 250 SNPs, step 5, r² threshold 0.2) for PCA.\nprune_genotypes: Extracts the LD-pruned SNP set into a new PLINK binary file.\ncalc_genotype_pcs: Computes the top 10 genotype principal components. The first 4 are used as covariates in TensorQTL.\ncreate_combined_log: Aggregates per-step SNP counts and QC summaries into a single combined processing log.\n\n\n\n\nFiltering Thresholds\n\n\n\nFilter\nThreshold\nTool\n\n\n\n\nMAF\n≥ 0.05\nBCFtools\n\n\nImputation R²\n≥ 0.8\nBCFtools\n\n\nHWE p-value\n≥ 0.0001\nBCFtools +fill-tags\n\n\nReference validation\ncheckVCF exclusion list\ncheckVCF.py\n\n\n\n\n\n\nTechnical Requirements\n\n\n\n\n\n\n\nCategory\nDetail\n\n\n\n\nPrimary tools\nBCFtools, PLINK 1.9, PLINK 2.0, tabix, samtools\n\n\nEnv modules\nbcftools, plink/1.9, samtools\n\n\nReference\ndbSNP build 156 (hg38); GRCh38 primary assembly FASTA\n\n\nInput\nTOPMed imputed zip archives (chr1–22, X)\n\n\nOutput\nchrALL_final.filt.vcf.gz (indexed); PLINK binary set; pca.eigenvec\n\n\n\n\n\n\nResource Profile\nMost rules are I/O-bound and require minimal compute. The pipeline runs efficiently with default resources (1 thread, 5 GB RAM) for the majority of steps. The filter_tags and vcf_cat rules on a genome-wide VCF may require up to 20 GB RAM depending on chromosome X size.\n\n\n\n\n Back to top",
     "crumbs": [
       "Overview",
       "Genotyping",
-      "Genotype QC pre-imputation"
-    ]
-  },
-  {
-    "objectID": "pipelines/04-geno-post.html#workflow-summary",
-    "href": "pipelines/04-geno-post.html#workflow-summary",
-    "title": "Genotype QC pre-imputation",
-    "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Overview",
-      "Genotyping",
-      "Genotype QC pre-imputation"
+      "04 · Genotype QC (Post-imputation)"
     ]
   },
   {
