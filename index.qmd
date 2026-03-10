@@ -2,10 +2,6 @@
 title: "Project Overview"
 ---
 
----
-title: "Project Overview"
----
-
 ## A single-cell eQTL atlas of the developing human brain
 
 Genetic influences on gene expression in the developing brain likely contribute to susceptibility to neuropsychiatric disorders. Prior eQTL studies of the prenatal human brain have relied on bulk tissue, averaging expression signals across all constituent cell types and masking the underlying cellular heterogeneity. Here, we performed single-nucleus RNA sequencing (snRNA-seq) and genome-wide genotyping on cerebral cortex from **134 unrelated samples** from the second trimester of gestation to generate the first single-nucleus eQTL atlas of the prenatal human brain.
