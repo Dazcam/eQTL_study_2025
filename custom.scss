@@ -1,34 +1,354 @@
 /*-- scss:defaults --*/
 
-// 1. Professional Fonts
-// Inter is the gold standard for tech docs; Serif for headers adds "Nature" journal vibes
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@700&display=swap');
+// ── Fonts ────────────────────────────────────────────────────────────────────
+// Inter: clean, legible, used by Stripe, Linear, Vercel docs
+// Source Serif 4: academic gravitas for headings — closer to Nature/eLife than
+// Playfair which can look a little decorative in this context
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Source+Serif+4:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-$font-family-sans-serif: "Inter", sans-serif;
-$presentation-heading-font: "Playfair Display", serif;
+$font-family-sans-serif:   "Inter", system-ui, -apple-system, sans-serif;
+$font-family-monospace:    "JetBrains Mono", "Fira Code", monospace;
+$headings-font-family:     "Source Serif 4", "Georgia", serif;
+$headings-font-weight:     700;
 
-// 2. Sophisticated Color Palette (Deep Navy & Slate)
-$primary: #2c3e50;
-$navbar-bg: #ffffff;
-$navbar-fg: #2c3e50;
-$link-color: #3498db;
+// ── Light theme palette ───────────────────────────────────────────────────────
+// Flatly's defaults are close to what we want; we just sharpen a few things
+$primary:        #1a3a5c;    // deep navy — anchor colour
+$secondary:      #5d8aa8;    // steel blue
+$body-color:     #2d3748;    // dark slate, softer than pure black
+$body-bg:        #ffffff;
+$link-color:     #2471a3;
+$navbar-bg:      #1a3a5c;
+$navbar-fg:      #f0f4f8;
+$sidebar-bg:     #f8fafc;
 
-// 3. Global Table Styling
-$table-cell-padding-y: 0.75rem;
-$table-border-color: #eaeff2;
-$table-head-bg: #f8f9fa;
+// ── Code ─────────────────────────────────────────────────────────────────────
+$code-bg:              #f4f7fa;
+$code-color:           #c0392b;   // inline code: muted red, common in API docs
+$code-block-bg:        #f4f7fa;
+$code-block-border-left-color: #1a3a5c;
+$code-block-border-left-width: 4px;
+
+// ── Tables ───────────────────────────────────────────────────────────────────
+$table-cell-padding-y:  0.65rem;
+$table-cell-padding-x:  0.9rem;
+$table-border-color:    #dce6ef;
+$table-head-bg:         #edf2f7;
+$table-head-color:      #1a3a5c;
+$table-striped-bg:      #f8fafc;
+
+// ── Callouts ─────────────────────────────────────────────────────────────────
+$callout-color-note:      #2471a3;
+$callout-color-warning:   #d68910;
+$callout-color-important: #c0392b;
+$callout-color-tip:       #1e8449;
+$callout-color-caution:   #a04000;
+
+// ── Misc ─────────────────────────────────────────────────────────────────────
+$border-radius:   6px;
+$border-color:    #dce6ef;
 
 /*-- scss:rules --*/
 
-// Make table headers look "Engineering Grade"
-table thead th {
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.05rem;
-  border-bottom: 2px solid $primary;
+// ── Body & typography ─────────────────────────────────────────────────────────
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-// Add a subtle border to the sidebar for structure
+// Heading hierarchy — keeps the Source Serif 4 only for h1/h2, Inter for smaller
+h1, h2 {
+  font-family: $headings-font-family;
+  letter-spacing: -0.01em;
+  color: $primary;
+}
+
+h3, h4, h5, h6 {
+  font-family: $font-family-sans-serif;
+  font-weight: 600;
+  color: $primary;
+}
+
+h1 { font-size: 2rem;   border-bottom: 2px solid $border-color; padding-bottom: 0.4rem; margin-bottom: 1.2rem; }
+h2 { font-size: 1.4rem; border-bottom: 1px solid $border-color; padding-bottom: 0.3rem; margin-bottom: 1rem; margin-top: 2rem; }
+h3 { font-size: 1.1rem; margin-top: 1.6rem; }
+
+// Horizontal rules — used as section dividers in pipeline pages
+hr {
+  border: none;
+  border-top: 1px solid $border-color;
+  margin: 2rem 0;
+  opacity: 1;
+}
+
+// ── Navbar ────────────────────────────────────────────────────────────────────
+
+.navbar {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+// Pinned navbar creates a small gap — compensate
+body.nav-fixed {
+  padding-top: 56px;
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
 .quarto-sidebar {
-  border-right: 1px solid #eee;
+  background: $sidebar-bg;
+  border-right: 1px solid $border-color;
+  font-size: 0.875rem;
+}
+
+// Section headers in sidebar: uppercase, spaced, muted
+.sidebar-section .sidebar-section-item > .sidebar-item-text,
+.sidebar-section > .sidebar-item-container > .sidebar-link {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: #8898aa !important;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+
+// Active page highlight in sidebar
+.sidebar-item.active > .sidebar-item-container .sidebar-link,
+.sidebar-item .sidebar-link.active {
+  color: $primary !important;
+  font-weight: 600;
+  background: rgba(26, 58, 92, 0.07);
+  border-radius: 4px;
+}
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid $table-border-color;
+  border-radius: $border-radius;
+  overflow: hidden;  // clips corners of first/last cells
+}
+
+table thead th {
+  background: $table-head-bg;
+  color: $table-head-color;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-bottom: 2px solid $primary;
+  padding: $table-cell-padding-y $table-cell-padding-x;
+  white-space: nowrap;
+}
+
+table tbody tr:nth-child(even) {
+  background: $table-striped-bg;
+}
+
+table tbody tr:hover {
+  background: #edf2f7;
+  transition: background 0.15s ease;
+}
+
+table td, table th {
+  padding: $table-cell-padding-y $table-cell-padding-x;
+  border-color: $table-border-color;
+  vertical-align: middle;
+}
+
+// ── Code blocks ───────────────────────────────────────────────────────────────
+
+pre.sourceCode {
+  border-radius: $border-radius;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+// Language label badge on code blocks
+div.sourceCode::before {
+  display: block;
+  font-family: $font-family-sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8898aa;
+  padding: 0.3rem 0.75rem 0;
+  background: $code-block-bg;
+  border-radius: $border-radius $border-radius 0 0;
+}
+
+// Per-language labels
+div.sourceCode.yaml::before   { content: "YAML"; }
+div.sourceCode.bash::before   { content: "Bash"; }
+div.sourceCode.python::before { content: "Python"; }
+div.sourceCode.r::before      { content: "R"; }
+div.sourceCode.snakemake::before { content: "Snakemake"; }
+
+// Inline code
+code:not(pre code) {
+  background: $code-bg;
+  color: $code-color;
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  font-size: 0.875em;
+}
+
+// Code copy button — position and style
+div.code-tools-button {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+div.code-tools-button:hover {
+  opacity: 1;
+}
+
+// ── Callout boxes ─────────────────────────────────────────────────────────────
+
+// Sharper left border, softer background for all callouts
+.callout {
+  border-radius: $border-radius;
+  border-left-width: 4px !important;
+  font-size: 0.93rem;
+  margin: 1.5rem 0;
+}
+
+.callout-note    { background: #eaf3fb; border-left-color: $callout-color-note    !important; }
+.callout-warning { background: #fef9e7; border-left-color: $callout-color-warning  !important; }
+.callout-important { background: #fdedec; border-left-color: $callout-color-important !important; }
+.callout-tip     { background: #eafaf1; border-left-color: $callout-color-tip     !important; }
+.callout-caution { background: #fef5ec; border-left-color: $callout-color-caution  !important; }
+
+// ── Mermaid diagrams ──────────────────────────────────────────────────────────
+
+// Centre diagrams and give them breathing room
+.cell-output-display .mermaid,
+.mermaid {
+  margin: 1.5rem auto;
+  max-width: 780px;
+  display: block;
+}
+
+// ── TOC (right-hand column) ───────────────────────────────────────────────────
+
+#TOC {
+  font-size: 0.82rem;
+  border-left: 2px solid $border-color;
+  padding-left: 1rem;
+}
+
+#TOC a {
+  color: #5d7a96;
+  text-decoration: none;
+}
+
+#TOC a:hover,
+#TOC a.active {
+  color: $primary;
+  font-weight: 600;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+.nav-footer {
+  font-size: 0.8rem;
+  color: #8898aa;
+  border-top: 1px solid $border-color !important;
+  padding: 1rem 0;
+}
+
+.nav-footer a {
+  color: #5d7a96;
+  text-decoration: none;
+}
+
+.nav-footer a:hover {
+  color: $primary;
+  text-decoration: underline;
+}
+
+// ── Badges (margin-header shields) ────────────────────────────────────────────
+
+// Nudge badges to sit flush and not wrap awkwardly
+.margin-header img {
+  display: inline-block;
+  margin: 0.15rem 0.1rem;
+  vertical-align: middle;
+}
+
+// ── Dark mode overrides ────────────────────────────────────────────────────────
+// Quarto's darkly theme handles most of this. We just patch the things
+// that don't look right with our custom variables on top of darkly.
+
+[data-bs-theme="dark"] {
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #a8c4dc;
+  }
+
+  h1 { border-bottom-color: #2c3e50; }
+  h2 { border-bottom-color: #2c3e50; }
+
+  table thead th {
+    background: #1e2d3d;
+    color: #a8c4dc;
+    border-bottom-color: #3d5a73;
+  }
+
+  table tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.03);
+  }
+
+  table tbody tr:hover {
+    background: rgba(255,255,255,0.06);
+  }
+
+  table {
+    border-color: #2c3e50;
+  }
+
+  code:not(pre code) {
+    background: #1a2535;
+    color: #e07b7b;
+  }
+
+  pre.sourceCode {
+    background: #1a2535;
+  }
+
+  div.sourceCode::before {
+    background: #1a2535;
+    color: #5d7a96;
+  }
+
+  .callout-note     { background: #1a2f3f; }
+  .callout-warning  { background: #2d2410; }
+  .callout-important{ background: #2d1414; }
+  .callout-tip      { background: #132d1e; }
+  .callout-caution  { background: #2d1f0d; }
+
+  .quarto-sidebar {
+    background: #1a2535;
+    border-right-color: #2c3e50;
+  }
+
+  .nav-footer {
+    border-top-color: #2c3e50 !important;
+    color: #5d7a96;
+  }
+
+  #TOC {
+    border-left-color: #2c3e50;
+  }
+
+  hr {
+    border-top-color: #2c3e50;
+  }
 }
