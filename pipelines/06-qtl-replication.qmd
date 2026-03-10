@@ -1,15 +1,123 @@
 ---
-title: "eQTL replication"
+title: "06 · eQTL Replication"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This pipeline assesses the replication of our single-nucleus eQTL discoveries against four published brain eQTL and chromatin accessibility datasets. Replication is quantified using the π₁ statistic (proportion of true positives among nominally significant associations in the reference dataset). The pipeline also tests for enrichment of our eQTL SNPs within open chromatin peaks from fetal brain snATAC-seq data.
 
-## Workflow Summary
+---
 
+### Workflow Logic
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A(dwnld_obrien) --> E(pi1_enrich_obrien)
+    B(dwnld_bryois) --> F(pi1_enrich_bryois)
+    C(dwnld_ziffra) --> G(snp_lookup)
+    C --> H(atac_enrich)
+    D(dwnld_wen) --> I(pi1_enrich_wen)
+    J[TensorQTL perm output] --> E
+    J --> F
+    J --> I
+    J --> K(pi1_enrich_fugita)
+    J --> L(pi1_enrich_internal)
+    J --> M(cat_nom_qtl)
+    M --> E
+    M --> F
+    M --> I
+    M --> K
+    M --> L
+    G --> H
+    E --> N(pi1_enrichment_report)
+    F --> N
+    G --> N
+    H --> N
+    I --> N
+    K --> N
+    L --> N
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M snazzy
+    class N out
+```
+
+---
+
+### Data Downloads
+
+All four reference datasets are downloaded automatically by local Snakemake rules:
+
+| Rule | Dataset | Method | PMID |
+| :--- | :--- | :--- | :--- |
+| `dwnld_obrien` | O'Brien 2018 — adult bulk brain eQTLs | `curl` + unzip | 30419947 |
+| `dwnld_bryois` | Bryois 2022 — adult single-cell eQTLs | JSON manifest + `curl` loop | 35915177 |
+| `dwnld_ziffra` | Ziffra 2021 — fetal snATAC-seq peaks | `wget` | 34616060 |
+| `dwnld_wen` | Wen 2024 — developmental bulk brain eQTLs | JSON manifest + `curl` loop | 38781368 |
+
+The Bryois and Wen datasets use a JSON manifest strategy: a pre-built JSON file maps file names to download URLs, and a `jq`/`curl` loop downloads each file individually, skipping already-present files.
+
+---
+
+### Analysis Steps
+
+**`cat_nom_qtl`**  
+Combines per-chromosome nominal Parquet output from TensorQTL into a single gzip-compressed TSV per cell type using `replication_cat_nom_qtl.py`. Required as input for all π₁ calculations.
+
+**`snp_lookup`**  
+For each cell type, creates a SNP coordinate lookup table (from permutation-pass top eQTL SNPs) to enable matching against Ziffra ATAC-seq peak coordinates. Requires internet access — designed to be run locally or on a node with outbound network access (uses the LDlink API for LD proxy lookup).
+
+**`atac_enrich`**  
+Tests whether top eQTL SNPs (and their LD proxies) are significantly enriched within fetal brain open chromatin peaks from Ziffra et al. 2021.
+
+**`pi1_enrich_*`**  
+For each reference dataset, calculates the π₁ statistic as a measure of replication signal. Runs for O'Brien, Bryois (cross-matched by cell type), Wen, Fugita, and internally across our own cell types.
+
+**`pi1_enrichment_report`**  
+Renders an RMarkdown HTML report aggregating all π₁ and ATAC enrichment results across all cell types and datasets.
+
+---
+
+::: {.callout-note}
+**Internal replication**
+
+The `pi1_enrich_internal` rule also cross-replicates eQTL results between our own cell types (e.g. Glu-UL vs Glu-DL), providing a within-study replication measure that is useful for interpreting cell-type specificity.
+:::
+
+---
+
+### Technical Requirements
+
+| Category | Detail |
+| :--- | :--- |
+| **Container** | `r_eqtl.sif` (all analysis rules) |
+| **Env modules** | `compiler/gnu/7/3.0`, `jq` (for Bryois/Wen downloads) |
+| **Input** | TensorQTL nominal Parquet + permutation results (from 05-tensorqtl) |
+| **Output** | Per-cell-type π₁ enrichment RDS files; HTML report |
+
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime |
+| :--- | :---: | :---: | :---: |
+| Download rules | 1 | 5 GB | variable |
+| `cat_nom_qtl` | 1 | 10 GB | 1h |
+| `pi1_enrich_*` | 4 | 20 GB | 1h |
+| `pi1_enrichment_report` | 1 | 10 GB | 1h |
+
+---
+
+### Run Composition
+
+The π₁ enrichment rules iterate over cell types, reference datasets, and covariate parameter combinations. The total job count is dominated by the cross-cell-type comparisons:
+
+| Rule | Approx. jobs | Dimensions |
+| :--- | :---: | :--- |
+| `cat_nom_qtl` | 20 | 20 cell types |
+| `pi1_enrich_obrien` / `_wen` | 20 each | 20 cell types |
+| `pi1_enrich_bryois` | 160 | 20 × 8 Bryois cell types |
+| `pi1_enrich_internal` | 400 | 20 × 20 cell types |
+| `pi1_enrich_fugita` | 140 | 20 × 7 Fugita cell types |
