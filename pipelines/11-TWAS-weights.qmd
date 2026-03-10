@@ -1,15 +1,90 @@
 ---
-title: "TWAS weights"
+title: "11 · TWAS Weights (FUSION)"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This pipeline computes gene expression prediction models (TWAS weights) for all expressed genes across each cell type using the [FUSION](http://gusevlab.org/projects/fusion/) framework. These weights encode the heritable component of gene expression and are used as input to cTWAS (pipeline 12). Weight models are trained using LASSO, elastic net, and top-1 SNP methods with GEMMA cross-validation.
 
-## Workflow Summary
+---
 
+### Workflow Logic
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[Pseudobulk BED quantile] --> B(prep_exp_data)
+    C[Final VCF] --> D(convert_vcf)
+    E[1000G hg38 BIM files] --> F(get_ldref_snplist)
+    G[TensorQTL covariates] --> H(prepare_covar)
+    B --> I(compute_weights)
+    D --> I
+    F --> I
+    H --> I
+    J(get_gemma) --> I
+    I --> K(make_pos_file)
+    K --> L(twas_weights_report)
+
+    class A,B,C,D,E,F,G,H,I,J,K snazzy
+    class L out
+```
+
+1. `get_gemma`: Downloads the GEMMA v0.98.5 binary (required by FUSION for heritability estimation via mixed model).
+2. `prep_exp_data`: Converts the quantile-normalised pseudobulk expression matrix into PLINK-compatible format and generates a gene coordinate file (chr, start, end, gene_id).
+3. `convert_vcf`: Converts the final filtered VCF to PLINK2 BED format.
+4. `get_ldref_snplist`: Extracts all SNP IDs present across the 1000G hg38 BIM files to define the LD reference SNP universe for cis-window extraction.
+5. `prepare_covar`: Reformats TensorQTL covariate files (genotype PC 4, expression PC 40, quantile normalisation) for FUSION input.
+6. `compute_weights`: The core rule — iterates over all expressed genes in a cell type, extracts cis-window genotypes (±500 kb from TSS), and runs `FUSION.compute_weights.R` for each gene. Models tested: `top1`, `lasso`, `enet`. Empty weight files (genes skipped due to insufficient cis-SNPs or heritability) are created as zero-byte stubs to satisfy Snakemake tracking.
+7. `make_pos_file`: Scans the weights directory for successfully computed `.wgt.RDat` files and generates a FUSION `.pos` index file listing each gene and its weight file path.
+8. `twas_weights_report`: Renders an HTML report summarising weight computation success rates and model performance across cell types.
+
+---
+
+::: {.callout-note}
+**Gene-level batching inside a single rule**
+
+Rather than one Snakemake job per gene (which would require thousands of jobs), `compute_weights` loops over all genes in a single SLURM job per cell type, processing them sequentially in a shell `while` loop reading from the coordinate file. Intermediate per-gene cis-genotype files are removed after each gene to manage scratch disk usage.
+
+```bash
+while read CHR START END GENE; do
+    # Extract cis SNPs with plink2
+    # Run FUSION.compute_weights.R
+    # Touch stub if weight file absent
+    rm -rf $WORKDIR   # Clean up immediately
+done < <(tail -n +2 $COORD)
+```
+:::
+
+---
+
+::: {.callout-note}
+**Stub file handling**
+
+FUSION skips genes with low cis-SNP heritability (h² p-value > 0.01). For these genes, an empty `.wgt.RDat` stub is created so Snakemake considers the gene processed. The downstream `copy_fusion_weights` rule in pipeline 12 filters out zero-byte stubs before passing weights to cTWAS.
+:::
+
+---
+
+### Technical Requirements
+
+| Category | Detail |
+| :--- | :--- |
+| **Software** | FUSION `FUSION.compute_weights.R`; GEMMA v0.98.5; GCTA |
+| **Container** | `twas.sif` (compute_weights); `r_eqtl.sif` (prepare_covar); `seurat5f.sif` (prep_exp_data) |
+| **Env modules** | `plink/2.0` (convert_vcf, get_ldref_snplist) |
+| **Input** | Pseudobulk BED (02-scanpy); final VCF (04-geno-post); TensorQTL covariates (05-tensorqtl) |
+| **Output** | Per-gene `.wgt.RDat` files; per-cell-type `.pos` index; HTML report |
+
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime | Notes |
+| :--- | :---: | :---: | :---: | :--- |
+| `prep_exp_data` | 1 | 5 GB | 1h | Per cell type |
+| `convert_vcf` | 1 | 5 GB | 1h | Once |
+| `prepare_covar` | 1 | 5 GB | 1h | Per cell type |
+| `compute_weights` | 1 | 50 GB | variable | Per cell type; hours–days depending on gene count |
+| `make_pos_file` | 1 | 5 GB | 30 min | Per cell type |
