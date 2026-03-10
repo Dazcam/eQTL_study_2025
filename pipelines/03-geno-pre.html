@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -256,8 +291,8 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
   <li><a href="#workflow-architecture" id="toc-workflow-architecture" class="nav-link" data-scroll-target="#workflow-architecture">Workflow Architecture</a></li>
-  <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources">Resources</a></li>
   <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/03-geno-pre.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -285,12 +320,12 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>The pre-imputation pipeline prepares raw micro-array genotyping data for the TOPMed Imputation Server. The workflow encompasses file format conversion, sample-level QC (sex-check, heterozygosity, and duplicates), and SNP-level QC (MAF and strand ambiguity), culminating in a chromosome-split VCF set aligned to hg38.</p>
+<p>This pipeline prepares raw SNP array genotyping data (PLINK PED/MAP format, hg19) for submission to the TOPMed Imputation Server. It covers format conversion, sample-level QC (sex assignment, heterozygosity check, duplicate removal), SNP-level QC (strand ambiguity, MAF filtering), ancestry inference using 1000 Genomes Project reference data, coordinate liftover to hg38, and chromosome-split VCF output ready for imputation upload.</p>
 <hr>
 </section>
 <section id="workflow-architecture" class="level3">
 <h3 class="anchored" data-anchor-id="workflow-architecture">Workflow Architecture</h3>
-<p>This pipeline utilizes a mix of PLINK 1.9/2.0, BCFTools, and the specialized GenotypeQCtoHRC R suite.</p>
+<p><a href="https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC">GenotypeQCtoHRC</a> R suite.</p>
 <div class="cell" data-layout-align="default">
 <div class="cell-output-display">
 <div>
@@ -298,94 +333,46 @@ ul.task-list li input[type="checkbox"] {
 <div>
 <pre class="mermaid mermaid-js">graph TD
     classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
 
-    A[Raw PED/MAP] --&gt; B(convert_raw)
+    A[Raw PED/MAP hg19] --&gt; B(convert_raw)
     B --&gt; C(add_sex_to_fam)
     C --&gt; D(rm_dup_sample)
     D --&gt; E(check_het)
-    D --&gt; F{GenotypeQCtoHRC}
-    G[1000G PGEN] --&gt; F
-    F --&gt; H(cat_genotypes)
+    D --&gt; F(make_kgp3_pgen)
+    F --&gt; G(genotype_qc2hrc)
+    D --&gt; G
+    G --&gt; H(cat_genotypes)
     H --&gt; I(rm_maf_ambig)
     I --&gt; J(rm_rare_snps)
     J --&gt; K(split_chrs)
-    K --&gt; L[Final HG38 VCFs]
-    K --&gt; M(gather_stats)
-    M --&gt; N[QC Report]
-    
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
-    style L fill:#e1f5fe,stroke:#01579b
-    style N fill:#e1f5fe,stroke:#01579b
+    K --&gt; L(gather_stats)
+    L --&gt; M(geno_pre_report)
+    K --&gt; N[(Per-chr VCFs for TOPMED)]
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M snazzy
+    class N out
 </pre>
 </div>
 <p></p></figure><p></p>
 </div>
 </div>
 </div>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">graph LR
-    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
-
-    A[Raw PED/MAP] --&gt; B(convert_raw)
-    B --&gt; C(add_sex_to_fam)
-    C --&gt; D(rm_dup_sample)
-    D --&gt; E(check_het)
-    D --&gt; F{GenotypeQCtoHRC}
-    G[1000G PGEN] --&gt; F
-    F --&gt; H(cat_genotypes)
-    H --&gt; I(rm_maf_ambig)
-    I --&gt; J(rm_rare_snps)
-    J --&gt; K(split_chrs)
-    K --&gt; L[Final HG38 VCFs]
-    K --&gt; M(gather_stats)
-    M --&gt; N[QC Report]
-    
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
-    style L fill:#e1f5fe,stroke:#01579b
-    style N fill:#e1f5fe,stroke:#01579b
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-<div style="width: 70%; margin: auto;">
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">graph TD
-    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
-
-    A[Raw PED/MAP] --&gt; B(convert_raw)
-    B --&gt; C(add_sex_to_fam)
-    C --&gt; D(rm_dup_sample)
-    D --&gt; E(check_het)
-    D --&gt; F{GenotypeQCtoHRC}
-    G[1000G PGEN] --&gt; F
-    F --&gt; H(cat_genotypes)
-    H --&gt; I(rm_maf_ambig)
-    I --&gt; J(rm_rare_snps)
-    J --&gt; K(split_chrs)
-    K --&gt; L[Final HG38 VCFs]
-    K --&gt; M(gather_stats)
-    M --&gt; N[QC Report]
-    
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
-    style L fill:#e1f5fe,stroke:#01579b
-    style N fill:#e1f5fe,stroke:#01579b
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-</div>
+<ol type="1">
+<li><code>convert_raw</code>: Converts PED/MAP to PLINK binary format (BED/BIM/FAM) and generates allele frequency report.</li>
+<li><code>add_sex_to_fam</code>: Standardises FAM file and updates sex annotations from a phenotype sheet.</li>
+<li><code>rm_dup_sample</code>: Removes a known duplicate sample (ID 14493) identified during QC.</li>
+<li><code>check_het</code>: Computes autosomal heterozygosity on LD-pruned SNPs for outlier detection.</li>
+<li><code>make_kgp3_pgen</code>: Prepares the 1000 Genomes Project Phase 3 reference panel in PLINK2 PGEN format for ancestry inference.</li>
+<li><code>genotype_qc2hrc</code>: Runs the <a href="https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC">GenotypeQCtoHRC</a> R pipeline (Singularity container). Performs comprehensive sample and SNP QC, ancestry inference, strand alignment to TOPMed reference, and liftover from hg19 → hg38. Outputs per-chromosome VCFs.</li>
+<li><code>cat_genotypes</code>: Concatenates the 22 per-chromosome VCFs from GenotypeQCtoHRC into a single genome-wide VCF.</li>
+<li><code>rm_maf_ambig</code>: Removes strand-ambiguous SNPs (A/T or C/G) with MAF &gt; 0.4, where strand cannot be reliably resolved.</li>
+<li><code>rm_rare_snps</code>: Removes SNPs with MAF &lt; 0.01.</li>
+<li><code>split_chrs</code>: Converts to VCF and splits by chromosome (chr1–22) for TOPMED upload.</li>
+<li><code>gather_stats</code>: Counts SNPs per chromosome at the GenotypeQCtoHRC and final stages for QC reporting.</li>
+<li><code>geno_pre_report</code>: Renders an RMarkdown HTML QC report summarising all filtering steps.</li>
+</ol>
+<hr>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -396,61 +383,85 @@ Note
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>We primarily used the <a href="https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC">GenotypeQCtoHRC</a> software suite for the bulk of the pre-imputation genotype QC. Clone the package into <code>../results/03GENOTYPES-PRE/GenotypeQCtoHRC/</code>. As the package uses <code>R targets</code> for job scheduling, all ouputs are generated relative to the repos <code>HOME</code> directory. So you need to <code>cd</code> into the local repo first. The shell script in the <code>genotype_qc2hrc</code> rule handles this. Some additional references and packages are also required - see the GenotypeQCtoHRC documentation for details.</p>
+<p><strong>GenotypeQCtoHRC working directory</strong></p>
+<p>The <code>GenotypeQCtoHRC</code> package uses <code>R targets</code> internally and generates all outputs relative to its own repository root. The <code>genotype_qc2hrc</code> rule therefore <code>cd</code>s into the local clone before calling <code>GenotypeQCtoHRC.R</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">(</span><span class="bu">cd</span> {params.workdir} <span class="kw">&amp;&amp;</span> <span class="ex">Rscript</span> GenotypeQCtoHRC.R <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--file</span> {params.prefix_in} <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--gh</span> TRUE <span class="at">--gh-ref</span> TopMed <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--lo</span> TRUE <span class="at">--lo-in</span> 37 <span class="at">--lo-out</span> 38 <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--clean</span> TRUE<span class="kw">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Clone the GenotypeQCtoHRC repository into <code>results/03GENOTYPES-PRE/GenotypeQCtoHRC/</code> before running this pipeline. See the <a href="https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC">GenotypeQCtoHRC documentation</a> for required reference files.</p>
 </div>
 </div>
-<hr>
-</section>
-<section id="resources" class="level3">
-<h3 class="anchored" data-anchor-id="resources">Resources</h3>
-<p>Most rules require minimal resource. Except:</p>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th style="text-align: left;">Rule</th>
-<th style="text-align: center;">Threads</th>
-<th style="text-align: center;">RAM (GB)</th>
-<th style="text-align: center;">Walltime</th>
-<th style="text-align: left;"></th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;"><code>genotype_qc2hrc</code></td>
-<td style="text-align: center;">10</td>
-<td style="text-align: center;">100</td>
-<td style="text-align: center;">5h</td>
-<td style="text-align: left;"></td>
-</tr>
-</tbody>
-</table>
 <hr>
 </section>
 <section id="technical-requirements" class="level3">
 <h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 44%">
-<col style="width: 55%">
+<col style="width: 50%">
+<col style="width: 50%">
 </colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Category</th>
-<th style="text-align: center;">Requirement</th>
+<th style="text-align: left;">Detail</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">Primary tools</td>
-<td style="text-align: center;">PLINK (v1.9 &amp; v2.0), BCFtools (v1.16), GenotypeQCtoHRC</td>
+<td style="text-align: left;"><strong>Primary tools</strong></td>
+<td style="text-align: left;">PLINK 1.9, PLINK 2.0, BCFtools 1.16</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Containers</td>
-<td style="text-align: center;">genotype-qc2hrc, R_eqtl (Singularity</td>
+<td style="text-align: left;"><strong>Container</strong></td>
+<td style="text-align: left;"><code>genotype-qc2hrc_latest.sif</code>, <code>seurat5f.sif</code> (R; for report)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Env modules</strong></td>
+<td style="text-align: left;"><code>plink/1.9</code>, <code>plink/2.0</code>, <code>bcftools/1.16.0</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">Raw PED/MAP genotype files (hg19)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;">Per-chromosome hg38 VCFs ready for TOPMed imputation</td>
 </tr>
 </tbody>
 </table>
 <hr>
+</section>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM</th>
+<th style="text-align: center;">Walltime</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Most rules</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">50 GB</td>
+<td style="text-align: center;">1h</td>
+<td style="text-align: left;">Minimal requirements</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>genotype_qc2hrc</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">100 GB</td>
+<td style="text-align: center;">5h</td>
+<td style="text-align: left;">Full ancestry QC + liftover</td>
+</tr>
+</tbody>
+</table>
 <hr>
 
 
