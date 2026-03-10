@@ -4,114 +4,89 @@ title: "Genotype QC pre-imputation"
 
 ### Overview
 
-The pre-imputation pipeline prepares raw micro-array genotyping data for the TOPMed Imputation Server. The workflow encompasses file format conversion, sample-level QC (sex-check, heterozygosity, and duplicates), and SNP-level QC (MAF and strand ambiguity), culminating in a chromosome-split VCF set aligned to hg38.
+This pipeline prepares raw SNP array genotyping data (PLINK PED/MAP format, hg19) for submission to the TOPMed Imputation Server. It covers format conversion, sample-level QC (sex assignment, heterozygosity check, duplicate removal), SNP-level QC (strand ambiguity, MAF filtering), ancestry inference using 1000 Genomes Project reference data, coordinate liftover to hg38, and chromosome-split VCF output ready for imputation upload.
 
-***
+---
 
 ### Workflow Architecture
 
-This pipeline utilizes a mix of PLINK 1.9/2.0, BCFTools, and the specialized GenotypeQCtoHRC R suite.
+[GenotypeQCtoHRC](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC) R suite.
 
 ```{mermaid}
 graph TD
     classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
 
-    A[Raw PED/MAP] --> B(convert_raw)
+    A[Raw PED/MAP hg19] --> B(convert_raw)
     B --> C(add_sex_to_fam)
     C --> D(rm_dup_sample)
     D --> E(check_het)
-    D --> F{GenotypeQCtoHRC}
-    G[1000G PGEN] --> F
-    F --> H(cat_genotypes)
+    D --> F(make_kgp3_pgen)
+    F --> G(genotype_qc2hrc)
+    D --> G
+    G --> H(cat_genotypes)
     H --> I(rm_maf_ambig)
     I --> J(rm_rare_snps)
     J --> K(split_chrs)
-    K --> L[Final HG38 VCFs]
-    K --> M(gather_stats)
-    M --> N[QC Report]
-    
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
-    style L fill:#e1f5fe,stroke:#01579b
-    style N fill:#e1f5fe,stroke:#01579b
+    K --> L(gather_stats)
+    L --> M(geno_pre_report)
+    K --> N[(Per-chr VCFs for TOPMED)]
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M snazzy
+    class N out
 ```
 
-```{mermaid}
-graph LR
-    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+1. `convert_raw`: Converts PED/MAP to PLINK binary format (BED/BIM/FAM) and generates allele frequency report.
+2. `add_sex_to_fam`: Standardises FAM file and updates sex annotations from a phenotype sheet.
+3. `rm_dup_sample`: Removes a known duplicate sample (ID 14493) identified during QC.
+4. `check_het`: Computes autosomal heterozygosity on LD-pruned SNPs for outlier detection.
+5. `make_kgp3_pgen`: Prepares the 1000 Genomes Project Phase 3 reference panel in PLINK2 PGEN format for ancestry inference.
+6. `genotype_qc2hrc`: Runs the [GenotypeQCtoHRC](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC) R pipeline (Singularity container). Performs comprehensive sample and SNP QC, ancestry inference, strand alignment to TOPMed reference, and liftover from hg19 → hg38. Outputs per-chromosome VCFs.
+7. `cat_genotypes`: Concatenates the 22 per-chromosome VCFs from GenotypeQCtoHRC into a single genome-wide VCF.
+8. `rm_maf_ambig`: Removes strand-ambiguous SNPs (A/T or C/G) with MAF > 0.4, where strand cannot be reliably resolved.
+9. `rm_rare_snps`: Removes SNPs with MAF < 0.01.
+10. `split_chrs`: Converts to VCF and splits by chromosome (chr1–22) for TOPMED upload.
+11. `gather_stats`: Counts SNPs per chromosome at the GenotypeQCtoHRC and final stages for QC reporting.
+12. `geno_pre_report`: Renders an RMarkdown HTML QC report summarising all filtering steps.
 
-    A[Raw PED/MAP] --> B(convert_raw)
-    B --> C(add_sex_to_fam)
-    C --> D(rm_dup_sample)
-    D --> E(check_het)
-    D --> F{GenotypeQCtoHRC}
-    G[1000G PGEN] --> F
-    F --> H(cat_genotypes)
-    H --> I(rm_maf_ambig)
-    I --> J(rm_rare_snps)
-    J --> K(split_chrs)
-    K --> L[Final HG38 VCFs]
-    K --> M(gather_stats)
-    M --> N[QC Report]
-    
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
-    style L fill:#e1f5fe,stroke:#01579b
-    style N fill:#e1f5fe,stroke:#01579b
-```
-
-::: {style="width: 70%; margin: auto;"}
-```{mermaid}
-graph TD
-    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
-
-    A[Raw PED/MAP] --> B(convert_raw)
-    B --> C(add_sex_to_fam)
-    C --> D(rm_dup_sample)
-    D --> E(check_het)
-    D --> F{GenotypeQCtoHRC}
-    G[1000G PGEN] --> F
-    F --> H(cat_genotypes)
-    H --> I(rm_maf_ambig)
-    I --> J(rm_rare_snps)
-    J --> K(split_chrs)
-    K --> L[Final HG38 VCFs]
-    K --> M(gather_stats)
-    M --> N[QC Report]
-    
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N snazzy
-    style L fill:#e1f5fe,stroke:#01579b
-    style N fill:#e1f5fe,stroke:#01579b
-```
-:::
-
+---
 
 ::: {.callout-note}
+**GenotypeQCtoHRC working directory**
 
-We primarily used the [GenotypeQCtoHRC](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC) software suite 
-for the bulk of the pre-imputation genotype QC. Clone the package into `../results/03GENOTYPES-PRE/GenotypeQCtoHRC/`.
-As the package uses `R targets` for job scheduling, all ouputs are generated relative to the repos `HOME` directory. 
-So you need to `cd` into the local repo first. The shell script in the `genotype_qc2hrc` rule handles this. Some 
-additional references and packages are also required - see the GenotypeQCtoHRC documentation for details.
+The `GenotypeQCtoHRC` package uses `R targets` internally and generates all outputs relative to its own repository root. The `genotype_qc2hrc` rule therefore `cd`s into the local clone before calling `GenotypeQCtoHRC.R`:
 
+```bash
+(cd {params.workdir} && Rscript GenotypeQCtoHRC.R \
+  --file {params.prefix_in} \
+  --gh TRUE --gh-ref TopMed \
+  --lo TRUE --lo-in 37 --lo-out 38 \
+  --clean TRUE)
+```
+
+Clone the GenotypeQCtoHRC repository into `results/03GENOTYPES-PRE/GenotypeQCtoHRC/` before running this pipeline. See the [GenotypeQCtoHRC documentation](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC) for required reference files.
 :::
 
-***
-
-### Resources
-
-Most rules require minimal resource. Except:
-
-| Rule | Threads | RAM (GB) | Walltime |
-| :--- | :---: | :---: | :---: | :--- |
-| `genotype_qc2hrc` | 10 | 100 | 5h | 
-
-***
+---
 
 ### Technical Requirements
 
-| Category | Requirement |
-| :--- | :---: | 
-| Primary tools | PLINK (v1.9 & v2.0), BCFtools (v1.16), GenotypeQCtoHRC | 
-| Containers | genotype-qc2hrc, R_eqtl (Singularity | 
+| Category | Detail |
+| :--- | :--- |
+| **Primary tools** | PLINK 1.9, PLINK 2.0, BCFtools 1.16 |
+| **Container** | `genotype-qc2hrc_latest.sif`, `seurat5f.sif` (R; for report) |
+| **Env modules** | `plink/1.9`, `plink/2.0`, `bcftools/1.16.0` |
+| **Input** | Raw PED/MAP genotype files (hg19) |
+| **Output** | Per-chromosome hg38 VCFs ready for TOPMed imputation |
 
-***
-***
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime | Notes |
+| :--- | :---: | :---: | :---: | :--- |
+| Most rules | 1 | 50 GB | 1h | Minimal requirements |
+| `genotype_qc2hrc` | 10 | 100 GB | 5h | Full ancestry QC + liftover |
+
+---
+
