@@ -1,15 +1,94 @@
 ---
-title: "Causal TWAS"
+title: "12 · Causal TWAS (cTWAS)"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This pipeline runs [cTWAS](https://xinhe-lab.github.io/ctwas/) (causal Transcriptome-Wide Association Study) to jointly model gene expression and GWAS variants, distinguishing genes with direct evidence of causal effects on disease from those with only indirect (LD-mediated) associations. It uses the FUSION weights generated in pipeline 11 and GWAS summary statistics from pipeline 07.
 
-## Workflow Summary
+---
 
+### Workflow Logic
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[1000G hg38 PLINK files] --> B(create_ld_matrices)
+    C[FUSION .pos + .wgt.RDat files] --> D(copy_fusion_weights)
+    D --> E(run_ctwas)
+    B --> E
+    F[GWAS hg38 TSV] --> E
+    G[SMR 1000G BIM] --> E
+    E --> H(ctwas_report)
+
+    class A,B,C,D,E,F,G snazzy
+    class H out
+```
+
+1. `create_ld_matrices`: Pre-computes LD matrices and variant information files from the 1000G hg38 PLINK reference panel. These are shared across all cell types and GWAS, so this rule runs once.
+2. `copy_fusion_weights`: Copies only genuine (non-zero-byte) FUSION weight files from pipeline 11 into a clean per-cell-type directory. Zero-byte stub files — created for genes where FUSION found insufficient heritability — cause `ctwas::preprocess_weights()` to crash, so they must be excluded before cTWAS runs.
+3. `run_ctwas`: Runs the full cTWAS analysis for each cell type × GWAS combination using `ctwas_run.R`. Fits the cTWAS mixture model, estimates prior probabilities for SNP and gene effects, and outputs posterior inclusion probabilities (PIPs) for all genes.
+4. `ctwas_report`: Renders an RMarkdown HTML report summarising cTWAS gene discoveries across cell types and GWAS traits, including locus plots where available.
+
+---
+
+::: {.callout-note}
+**Stub file filtering**
+
+FUSION produces zero-byte `.wgt.RDat` files for genes it skips (insufficient cis-SNP heritability). The `copy_fusion_weights` rule filters these out by reading the `.pos` file — which only lists genes with real weight files — and copying only those files:
+
+```bash
+awk 'NR>1 {print $2}' {input} | \
+while read wgt; do
+    cp -v {params.src_dir}/"$wgt" {params.dest_dir}/
+done
+```
+
+This ensures cTWAS only sees valid weight files and avoids `preprocess_weights()` errors.
+:::
+
+---
+
+### Key Config Parameters
+
+```yaml
+# cTWAS uses the SMR 1000G reference BIM for variant information
+# LD matrices are computed from ldsr_hg38_refs plink files
+# GWAS input: hg38 TSV (not munged sumstats)
+```
+
+The `run_ctwas` rule is parameterised by `cell_type` and `gwas` wildcards, producing one output RDS per combination.
+
+---
+
+### Technical Requirements
+
+| Category | Detail |
+| :--- | :--- |
+| **Software** | cTWAS R package |
+| **Container** | `twas.sif` (all rules; contains cTWAS + FUSION dependencies) |
+| **Input** | FUSION `.wgt.RDat` weights + `.pos` files (11-TWAS-weights); GWAS hg38 TSVs (07-prep-GWAS); SMR 1000G BIM (10-SMR) |
+| **Output** | Per-cell-type × GWAS cTWAS `.rds` result files; HTML report |
+
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime |
+| :--- | :---: | :---: | :---: |
+| `create_ld_matrices` | 5 | 20 GB | 3d |
+| `copy_fusion_weights` | 1 | 5 GB | 30 min |
+| `run_ctwas` | 6 | 96 GB | 3d |
+| `ctwas_report` | 1 | 10 GB | 1h |
+
+---
+
+### Run Composition
+
+| Phase | Jobs | Dimensions |
+| :--- | :---: | :--- |
+| `create_ld_matrices` | 1 | Once |
+| `copy_fusion_weights` | 20 | 20 cell types |
+| `run_ctwas` | 120 | 20 cell types × 6 GWAS |
