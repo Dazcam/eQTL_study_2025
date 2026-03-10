@@ -314,25 +314,13 @@
   {
     "objectID": "pipelines/05-tensorqtl.html",
     "href": "pipelines/05-tensorqtl.html",
-    "title": "eQTL Discovery",
+    "title": "05 · TensorQTL eQTL Discovery",
     "section": "",
-    "text": "This project processes raw FASTQ files into cell-type-specific eQTL discoveries.\n\n\nThe pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
+    "text": "Overview\nThis pipeline performs cell-type-specific cis eQTL mapping using TensorQTL, a GPU-accelerated implementation of the FastQTL permutation framework. It runs four mapping modes (nominal, permutation, independent, and trans) across all 19 cell types, preceded by expression and covariate preparation steps.\n\n\n\nWorkflow Logic\n\n\n\n\n\ngraph TD\n    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;\n    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;\n\n    A[Pseudobulk BED + PCA covariates] --&gt; B(prep_tensorQTL_input)\n    B --&gt; C(zip_pblk_cnts)\n    B --&gt; D(split_covariates)\n    E[Final VCF] --&gt; F(convert_genotypes)\n    C --&gt; G(tensorqtl_nom)\n    D --&gt; G\n    F --&gt; G\n    C --&gt; H(tensorqtl_perm)\n    D --&gt; H\n    F --&gt; H\n    H --&gt; I(tensorqtl_independent)\n    C --&gt; I\n    D --&gt; I\n    F --&gt; I\n    C --&gt; J(tensorqtl_trans)\n    D --&gt; J\n    F --&gt; J\n    H --&gt; K(tensorqtl_report)\n    I --&gt; K\n    J --&gt; K\n\n    class A,B,C,D,E,F,G,H,I,J,K snazzy\n    class G,H,I,J out\n\n\n\n\n\n\n\nprep_tensorQTL_input: Prepares per-cell-type normalised pseudobulk expression matrices (BED format) and covariate files. Applies batch correction (ComBat on post-conception week), merges genotype PCs and expression PCs, and normalises counts (quantile normalisation). Runs via tensorqtl_prep_input_files.R in the r_eqtl container.\nzip_pblk_cnts: bgzip-compresses and tabix-indexes the expression BED file required by TensorQTL.\nconvert_genotypes: Converts the final filtered VCF to PLINK2 PGEN format.\nsplit_covariates: Generates covariate files for each combination of genotype PC count and expression PC count, enabling parameter sweep optimisation.\ntensorqtl_nom: Nominal pass — computes all SNP–gene association p-values within a 500 kb cis window. Output stored as per-chromosome Parquet files.\ntensorqtl_perm: Permutation pass — fits an adaptive permutation model (1,000–10,000 permutations) per gene to derive empirical p-values and FDR-corrected eGene calls.\ntensorqtl_independent: Stepwise conditional analysis on permutation pass results to identify independent secondary eQTL signals per gene.\ntensorqtl_trans: Trans eQTL mapping — genome-wide SNP–gene associations.\ntensorqtl_report: Renders an RMarkdown HTML summary of eQTL discovery results across all cell types.\n\n\n\n\n\n\n\n\nNote\n\n\n\nGPU acceleration\nTensorQTL runs inside the tensorqtl.sif Singularity container and uses PyTorch for GPU-accelerated matrix operations during permutation testing. The permutation pass is the most computationally intensive step; GPU acceleration reduces runtime from days to hours per cell type.\n\n\n\n\n\nWildcard Structure\nEach TensorQTL job is parameterised by four wildcards, enabling full factorial exploration of analysis parameters:\n\n\n\nWildcard\nValues\nPurpose\n\n\n\n\ncell_type\n19 (7 broad + 12 subtypes)\nCell population\n\n\nnorm_method\nquantile\nExpression normalisation\n\n\ngeno_pc\n4\nGenotype PCs as covariates\n\n\nexp_pc\n40\nExpression PCs as covariates\n\n\n\nAdditional values can be uncommented in config/config.yaml (e.g. exp_pcs: [10,20,30,40,50]) to run a full covariate optimisation sweep.\n\n\n\nKey Config Parameters\ntensorQTL:\n  window: 500000       # Cis window (bp either side of TSS)\n  perm_min: 1000       # Minimum permutations per gene\n  perm_max: 10000      # Maximum permutations per gene\n  geno_pcs: 4          # Genotype PCs included as covariates\n  exp_pcs: [40]        # Expression PCs included as covariates\n  norm_methods: [\"quantile\"]\n\n\n\nOutput Files\n\n\n\n\n\n\n\n\nRule\nOutput format\nDescription\n\n\n\n\ntensorqtl_nom\n.cis_qtl_pairs.{chr}.parquet\nAll nominal cis associations\n\n\ntensorqtl_perm\n.cis_qtl.txt.gz\nTop eQTL per gene + empirical p-values\n\n\ntensorqtl_independent\n.cis_independent_qtl.txt.gz\nConditionally independent signals\n\n\ntensorqtl_trans\n.trans_qtl_pairs.txt.gz\nTrans associations\n\n\n\n\n\n\nTechnical Requirements\n\n\n\n\n\n\n\nCategory\nDetail\n\n\n\n\neQTL tool\nTensorQTL (PyTorch GPU backend)\n\n\nContainer\ntensorqtl.sif (eQTL runs); r_eqtl.sif (input prep); gtex_eqtl.sif (bgzip/tabix); seurat5f.sif (report)\n\n\nEnv modules\nplink/2.0 (genotype conversion)\n\n\nInput\nPseudobulk BED (from 02-scanpy); filtered VCF + PCA covariates (from 04-geno-post)\n\n\n\n\n\n\nResource Profile\n\n\n\nRule\nThreads\nRAM\nWalltime\n\n\n\n\nprep_tensorQTL_input\n1\n6 GB\n5h\n\n\nzip_pblk_cnts\n1\n5 GB\n1h\n\n\nsplit_covariates\n1\n6 GB\n5h\n\n\ntensorqtl_nom\n10\n100 GB\n5h\n\n\ntensorqtl_perm\n10\n100 GB\n5h\n\n\ntensorqtl_independent\n10\n100 GB\n5h\n\n\ntensorqtl_trans\n10\n100 GB\n5h\n\n\n\n\n\n\n\n Back to top",
     "crumbs": [
       "Overview",
       "eQTL Mapping",
-      "eQTL Discovery"
-    ]
-  },
-  {
-    "objectID": "pipelines/05-tensorqtl.html#workflow-summary",
-    "href": "pipelines/05-tensorqtl.html#workflow-summary",
-    "title": "eQTL Discovery",
-    "section": "",
-    "text": "The pipeline is divided into 13 main modules: 1. 01 Parse: Raw data processing and alignment. 2. 02 Scanpy: Single-cell QC and clustering… (etc)",
-    "crumbs": [
-      "Overview",
-      "eQTL Mapping",
-      "eQTL Discovery"
+      "05 · TensorQTL eQTL Discovery"
     ]
   },
   {
