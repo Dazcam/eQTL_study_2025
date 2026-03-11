@@ -137,7 +137,6 @@ dependencies:
   - libxml2=2.13.5=h0d44e9d_1
   - libzlib=1.3.1=hb9d3cd8_2
   - llvmlite=0.43.0=py312h374181b_1
-  - louvain=0.8.2=py312h30efb56_0
   - markupsafe=3.0.2=py312h178313f_1
   - matplotlib-base=3.10.0=py312hd3ec401_0
   - matplotlib-inline=0.1.7=pyhd8ed1ab_1
@@ -161,7 +160,6 @@ dependencies:
   - openjpeg=2.5.3=h5fbd93e_0
   - openssl=3.4.0=h7b32b05_1
   - overrides=7.7.0=pyhd8ed1ab_1
-  - packaging=24.2=pyhd8ed1ab_2
   - pandas=2.2.3=py312hf9745cd_1
   - pandoc=3.6.1=ha770c72_0
   - pandocfilters=1.5.0=pyhd8ed1ab_0
@@ -257,13 +255,10 @@ dependencies:
       - argparse==1.4.0
       - cython==3.0.11
       - doubletdetection==4.2
-      - et-xmlfile==2.0.0
       - imageio==2.36.1
-      - lazy-loader==0.4
-      - openpyxl==3.1.5
-      - phenograph==1.5.7
+      - louvain==0.7.1
+      - packaging==26.0
       - scikit-image==0.25.0
-      - scrublet==0.2.3
       - tifffile==2024.12.12
       - xlrd==2.0.1
-prefix: /scratch/c.c1477909/.conda/envs/eqtl_study
+prefix: /scratch/SCWF00021/.conda/envs/eqtl_study
