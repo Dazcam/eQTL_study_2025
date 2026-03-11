@@ -84,9 +84,14 @@ rule get_ldref_snplist:
                 cat {input} | cut -f 2 > {output} 2>&1 | tee {log}                
                 """
 
-
 rule prepare_covar:
-    input:  config["tensorQTL"]["split_covariates"]["output"].format(cell_type="{cell_type}", norm_method="quantile", geno_pc=4, exp_pc=40)
+    input:  
+        lambda w: config["tensorQTL"]["split_covariates"]["output"].format(
+            cell_type=w.cell_type, 
+            norm_method="quantile",
+            geno_pc=config['tensorQTL']['geno_pcs'], 
+            exp_pc=config['exp_pc_map'][w.cell_type]
+        )
     output: "../results/11TWAS/fusion_input/{cell_type}_covariates.txt"
     message: "Prepare covariate gene expression data for FUSION"
     singularity: config["containers"]["r_eqtl"]
@@ -102,7 +107,7 @@ rule compute_weights:
         expr_file = rules.prep_exp_data.output.exp,
         coord_file = rules.prep_exp_data.output.coord,
         ldref_snps = rules.get_ldref_snplist.output,
-        covar = "../results/11TWAS/fusion_input/{cell_type}_covariates.txt",
+        covar = rules.prepare_covar.output,
         gemma = config["twas"]["get_gemma"]["output"]
     output:
         touch("../results/11TWAS/weights/{cell_type}/all_weights_done.txt")
@@ -245,8 +250,9 @@ rule twas_weights_report:
             rmd_script = "scripts/twas_weights_summary.Rmd"
     output: "reports/11TWAS/11twas_weights_report.html"
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
-            log_dir = "../results/00LOG/11TWAS/", 
-            output_file = "../reports/11TWAS/11twas_weights_report.html",
+            weights_dir = "../../results/00LOG/11TWAS/", 
+            bmark_dir = "../reports/benchmarks/"
+            out_file = "../reports/11TWAS/11twas_weights_report.html",
     singularity: config["containers"]["R"]
     message:  "Generate TWAS weights report data for report"
     benchmark: "reports/benchmarks/11twas.twas_weights_summary.benchmark.txt"
