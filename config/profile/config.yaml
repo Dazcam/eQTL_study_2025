@@ -4,6 +4,7 @@ use-conda: True
 use-envmodules: True
 conda-frontend: conda
 use-singularity: True
+singularity-args: "--bind /shared/scratch/SCWF00021/eQTL_study_2025"
 keep-going: True
 jobs: 500
 rerun-incomplete: True
@@ -21,9 +22,8 @@ cluster-generic-submit-cmd:
     --job-name=smk-{rule}
     --output=../results/00LOG/smk-logfiles/{rule}.%j.out
     --error=../results/00LOG/smk-logfiles/{rule}.%j.err
-    --account=scw1641
-    --qos=maxjobs500
-    --partition=c_compute_neuro1
+    --account=SCWF00021_n_bray_19
+    --partition=htc_genoa
 
 default-resources:
   - ntasks=1

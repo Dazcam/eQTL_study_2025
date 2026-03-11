@@ -1,4 +1,9 @@
+configfile: "../config/config.yaml"
 localrules: ldsr_strat_summary
+
+rule all:
+    input:
+        "reports/09SLDSR/09ldsr_report.html"
 
 rule get_hg38_refs:
     output: baseline = expand(config["sldsr"]["get_hg38_refs"]["baseline"], chr=range(1, 23)),
@@ -9,7 +14,7 @@ rule get_hg38_refs:
     params: config["sldsr"]["get_hg38_refs"]["params"]
     benchmark: "reports/benchmarks/09sldsr.get_hg38_refs.txt"
     log:    config["sldsr"]["get_hg38_refs"]["log"]
-    shell: "scripts/get_ldsr_hg38_refs.sh {params} > {log} 2>&1"
+    shell: "scripts/ldsr_get_hg38_refs.sh {params} > {log} 2>&1"
 
 rule get_hg19_refs:
     output: baseline = expand(config["sldsr"]["get_hg19_refs"]["baseline"], chr=range(1, 23)),
@@ -20,7 +25,7 @@ rule get_hg19_refs:
     params: config["sldsr"]["get_hg19_refs"]["params"]
     benchmark: "reports/benchmarks/09sldsr.get_hg19_refs.txt"
     log:    config["sldsr"]["get_hg19_refs"]["log"]
-    shell: "scripts/get_ldsr_hg19_refs.sh {params} > {log} 2>&1"
+    shell: "scripts/ldsr_get_hg19_refs.sh {params} > {log} 2>&1"
 
 rule make_annot:
     input:  cred_set = config["susie"]["sort_susie"]["output"],
@@ -31,7 +36,7 @@ rule make_annot:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/09sldsr.make_annot_{chr}_{cell_type}.txt"
     message: "Generating maxCPP and CS95 annotations for {wildcards.cell_type}, chr {wildcards.chr}"
-    script: "../scripts/make_annot.R"
+    script: "../scripts/ldsr_make_annot.R"
 
 rule lift_hapmap3_snps:
    # Lift hapmap3 SNPs to hg38
