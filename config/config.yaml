@@ -11,27 +11,48 @@ plate:
 root_dir: /scratch/c.c1477909/eQTL_study_2025/
 
 cell_types: 
-  - "ExN-UL"
-  - "ExN-DL"
-  - "RG"
-  - "InN"
+  - "Glu-UL"
+  - "Glu-DL"
+  - "NPC"
+  - "GABA"
   - "Endo-Peri"
   - "OPC" 
   - "MG"
-  - "ExN-UL-0"
-  - "ExN-UL-1"
-  - "ExN-UL-2"
-  - "ExN-DL-0"
-  - "ExN-DL-1"
-  - "ExN-DL-2"
-  - "ExN-DL-3"
-  - "InN-0"
-  - "InN-1"
-  - "RG-0"
-  - "RG-1"
-  - "RG-2"
-  - "RG-3"
+  - "Glu-UL-0"
+  - "Glu-UL-1"
+  - "Glu-UL-2"
+  - "Glu-DL-0"
+  - "Glu-DL-1"
+  - "Glu-DL-2"
+  - "GABA-0"
+  - "GABA-1"
+  - "GABA-2"
+  - "NPC-0"
+  - "NPC-1"
+  - "NPC-2"
 
+exp_pc_map:
+  Glu-UL: 50
+  Glu-DL: 40
+  NPC: 30
+  GABA: 30
+  Endo-Peri: 30
+  OPC: 30
+  MG: 30
+  Glu-UL-0: 30
+  Glu-UL-1: 50
+  Glu-UL-2: 40
+  Glu-DL-0: 40
+  Glu-DL-1: 40
+  Glu-DL-2: 30
+  GABA-0: 30
+  GABA-1: 40
+  GABA-2: 40
+  NPC-0: 50
+  NPC-1: 30
+  NPC-2: 20
+
+## Remove on freeze 2
 cell_types_bryois:
   - "Astrocytes"
   - "Excitatory_neurons"
@@ -41,7 +62,7 @@ cell_types_bryois:
   - "Endothelial_cells"
   - "Pericytes"
   - "Microglia"
-#  - "pb"
+# -------------------
 
 fugita_cell_types:
   - "Ast"
@@ -74,7 +95,7 @@ gwas:
   bpd: https://figshare.com/ndownloader/files/49760772                  # PMID:39843750
   mdd: https://figshare.com/ndownloader/files/51487022                  # PMID:39814019
   adhd: https://figshare.com/ndownloader/articles/22564390/versions/1    # PMID:36702997 
-  ptsd: https://figshare.com/ndownloader/articles/26349322/versions/3    # PMID:38637617
+#  ptsd: https://figshare.com/ndownloader/articles/26349322/versions/3    # PMID:38637617
   ocd: https://figshare.com/ndownloader/articles/28707155/versions/4     # PMID:40360802  
  
 containers:
@@ -135,6 +156,22 @@ scanpy:
     benchmark: reports/benchmarks/scanpy_clustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_clustering.log
 
+  clustering2:
+    input: scripts/scanpy_clustering2.ipynb
+    output: ../results/02SCANPY/scanpy_clustering2.html
+    nb_out: ../results/02SCANPY/scanpy_clustering2_pm.ipynb
+    html_out: scanpy_clustering2.html
+    benchmark: reports/benchmarks/scanpy_clustering2.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_clustering2.log
+
+  clustering3:
+    input: scripts/scanpy_clustering3.ipynb
+    output: ../results/02SCANPY/scanpy_clustering3.html
+    nb_out: ../results/02SCANPY/scanpy_clustering3_pm.ipynb
+    html_out: scanpy_clustering3.html
+    benchmark: reports/benchmarks/scanpy_clustering3.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_clustering3.log
+
   annotation:
     input: scripts/scanpy_annotation.ipynb
     output: ../results/02SCANPY/scanpy_annotation.html
@@ -143,18 +180,18 @@ scanpy:
     log: ../results/00LOG/02SCANPY/scanpy_annotation.log
 
   pseudobulk:
-    input: scripts/scanpy_cell_label_and_pseudobulk.ipynb
-    output: ../results/02SCANPY/scanpy_cell_label_and_pseudobulk.html
-    nb_out: ../results/02SCANPY/scanpy_cell_label_and_pseudobulk_pm.ipynb
-    html_out: scanpy_cell_label_and_pseudobulk.html
-    log: ../results/00LOG/02SCANPY/scanpy_cell_label_and_pseudobulk.log
+    input: scripts/scanpy_pseudobulk.ipynb
+    output: ../results/02SCANPY/scanpy_pseudobulk.html
+    nb_out: ../results/02SCANPY/scanpy_pseudobulk_pm.ipynb
+    html_out: scanpy_pseudobulk.html
+    log: ../results/00LOG/02SCANPY/scanpy_pseudobulk.log
 
   extra:
-    input: scripts/scanpy_extra.ipynb
-    output: ../results/02SCANPY/scanpy_extra.html
-    nb_out: ../results/02SCANPY/scanpy_extra_pm.ipynb
-    html_out: scanpy_extra.html
-    log: ../results/00LOG/02SCANPY/scanpy_extra.log
+    input: scripts/scanpy_extra2.ipynb
+    output: ../results/02SCANPY/scanpy_extra2.html
+    nb_out: ../results/02SCANPY/scanpy_extra2_pm.ipynb
+    html_out: scanpy_extra2.html
+    log: ../results/00LOG/02SCANPY/scanpy_extra2.log
 
   subclustering:
     input: scripts/scanpy_subclustering.ipynb
@@ -164,8 +201,8 @@ scanpy:
     benchmark: reports/benchmarks/scanpy_subclustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
-  env: "../envs/eqtl_study.yml"
-
+  env: "../envs/eqtl_study2.yml"
+#  env: /scratch/SCWF00021/.conda/envs/eqtl_study
 
 # ------------  GENOTYPES PRE_IMPUTATION  ----------------
 
@@ -325,9 +362,9 @@ tensorQTL:
   out_prefix: ../results/04TENSORQTL/chrALL_final.filt
   window: 500000
   geno_pcs: 4
-  exp_pcs: [40]
+#  exp_pcs: [40]
   norm_methods: ["quantile"]
-#  exp_pcs: [10,20,30,40,50]
+  exp_pcs: [10,20,30,40,50]
 #  norm_methods: ["bryois", "fujita", "quantile", "xue"]
 
   prep_tensorQTL_input:
@@ -431,21 +468,35 @@ qtl_rep:
     out_dir: ../resources/public_datasets/wen_2024/
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_wen.log
 
+  get_perm_ld_proxies:
+    output: ../results/06QTL-REPLICATION/proxies/{cell_type}/tensorqtl_perm_proxies.tsv
+    proxy_dir: ../results/06QTL-REPLICATION/proxies/{cell_type}/
+    ldlink_token: ../config/ldlink_token.txt
+    log: ../results/00LOG/QTL-REPLICATION/get_perm_ld_proxies_{cell_type}.log
+
   snp_lookup:
     qtl_perm: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz    
     out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup.log
 
-  get_perm_ld_proxies:
-    output: ../results/06QTL-REPLICATION/proxies/{cell_type}/tensorqtl_perm_proxies.tsv
-    proxy_dir: ../results/QTL-REPLICATION/proxies/{cell_type}/
-    ldlink_token: ../config/ldlink_token.txt
-    log: ../results/00LOG/QTL-REPLICATION/get_perm_ld_proxies_{cell_type}.log
-
   atac_enrich:
     peak_dir: ../resources/public_datasets/ziffra_2021/ 
     out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds    
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich.log
+
+  atac_enrich_all:
+    peak_dir: ../resources/public_datasets/ziffra_2021/
+    out_file: ../results/06QTL-REPLICATION/atac_enrich_all/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich_all.log
+
+  snp_lookup_indep:
+    qtl_indep: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent.cis_independent_qtl.txt.gz
+    out_file: ../results/06QTL-REPLICATION/atac_enrich_indep/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup_indep.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup_indep.log
+
+  atac_enrich_indep:
+    out_file: ../results/06QTL-REPLICATION/atac_enrich_indep/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich_indep.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich_indep.log
   
   cat_nom_qtl:
     parquet: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.{chr}.parquet
@@ -481,9 +532,9 @@ qtl_rep:
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{fugita_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_fugita.log
 
   pi1_enrich_internal:
-    enrich: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_tbl.rds
-    pi1: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_results_tbl.rds
-    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_pi1_enrich_internal.log
+    enrich: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_tbl.rds
+    pi1: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_results_tbl.rds
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_internal.log
 
 # ------------  PREP GWAS  ----------------
 
@@ -732,7 +783,7 @@ smr:
     in_dir: ../../results/10SMR/smr # Rel to Rmd script
     log: ../results/00LOG/10SMR/smr_report.log  
 
-# ---------  Plotting  ------------
+# ---------  Tables & Plotting  ------------
 
 plotting:
   eqtl_boxplots:
@@ -744,44 +795,71 @@ plotting:
     output: reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds
     log: ../results/00LOG/11PLOTTING/eqtl_boxplots_r.log
 
+  eqtl_tbl:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    peak_dir: ../resources/public_datasets/ziffra_2021/
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/eQTL_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/eqtl_tbl.log
+
+  smr_tbl:
+    smr_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+    eqtl_nom_dir: ../results/10SMR/smr_input/
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/all_smr_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/all_smr_tbl.log
+
+  eqtl_qc_plt:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    ziffra_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/eqtl_qc_plt.pdf
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/eqtl_qc_plt.log
+
+  ldsr_plt:
+    in_dir: ../results/09SLDSR/strat_bl_v12/
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/ldsr_plt.pdf
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/ldsr_plt.log
+
+  rep_plt:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    internal_dir: ../results/06QTL-REPLICATION/internal/ 
+    fugita_dir:  ../results/06QTL-REPLICATION/fugita/
+    beta_dir: ../results/06QTL-REPLICATION/beta_cor/
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/replication_plt.pdf
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/replication_plt.log
+
+  supp_plt:
+    geno_dir: ../results/04GENOTYPES/covariates/ 
+    expr_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/expression_PC_plt.pdf
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/supplementary_plt.log
+
   eqtl_boxplots_py:
     pairs_csv: ../resources/sheets/pairs.csv
     exp_dir: ../results/05TENSORQTL/prep_input/
-    out_dir: reports/11PLOTTING/boxplots_py/
-    output: reports/11PLOTTING/boxplots_py/plot_qtl.done
-    log: ../results/00LOG/11PLOTTING/eqtl_boxplots_py.log
+    out_dir: reports/13MANUSCRIPT_PLOTS_TABLES/eqtl_boxplots/
+    output: reports/13MANUSCRIPT_PLOTS_TABLES/eqtl_boxplots/plot_qtl.done
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/eqtl_boxplots_py.log
 
-# -----------  JOBS  --------------
+  data_perm:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/NPC-2_cis_eQTL_perm.tsv.gz
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_perm.log
 
-jobs:
-  run_jobs:
-    bulk_file: ../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz
-    output: ../results/12JOBS/jobs_with_se_p.tsv.gz
-    sc_dir: ../results/10SMR/smr_input/
-    out_dir: ../results/12JOBS/
-    log: ../results/00LOG/12JOBS/run_jobs.log
+  data_nominal:
+    in_dir: ../results/10SMR/smr_input/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/NPC-2_cis_eQTL_nominal.tsv.gz
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_nominal.log
 
-  merge_jobs: 
-    nom_p: ../results/12JOBS/mrgd/{cell_type}_nom.cis_qtl_pairs_jobs_mrg.tsv
-    fdr: ../results/12JOBS/mrgd/{cell_type}_nom.cis_qtl_pairs_jobs_mrg_fdr.tsv
-    jobs_dir: ../results/12JOBS/
-    log: ../results/00LOG/12JOBS/smr_input/merge_jobs_{cell_type}.log
-
-  create_query:
-    query: ../results/12JOBS/smr_input/{cell_type}/{cell_type}_query.tsv
-    gene_lst: ../results/12JOBS/smr_input/{cell_type}/{cell_type}_gene_list.tsv
-    log: ../results/00LOG/12JOBS/create_query_{cell_type}.log
-
-  create_besd:
-    besd: ../results/12JOBS/smr_input/{cell_type}/{cell_type}.besd
-    prefix: ../results/12JOBS/smr_input/{cell_type}/{cell_type}
-    log: ../results/00LOG/12JOBS/create_besd_{cell_type}.log
-
-  smr:
-    smr: ../results/12JOBS/smr/{cell_type}/{cell_type}_{gwas}.smr
-    smr_prefix: ../results/12JOBS/smr/{cell_type}/{cell_type}_{gwas}
-    log: ../results/00LOG/12JOBS/smr_{cell_type}_{gwas}.log 
-
-# ---------  Smpl Swaps  ----------
-
+  data_mk_eqtl_tar:
+    out_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/nbray_2026_dev_brain_eqtl.tar.gz    
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_mk_eqtl_tar.log
+ 
+  data_weights:
+    out_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/ 
+    file_name: fusion_weights.tar.gz
+    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/fusion_weights.tar.gz
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_weights.log
 

@@ -2,8 +2,17 @@ configfile: "../config/config.yaml"
 
 rule all:
     input:
-        "reports/05TENSORQTL/tensorqtl_report.html"        
-    
+        expand(
+            [
+                config["tensorQTL"]["tensorqtl_nom"]["output"]
+            ],
+            cell_type=config["cell_types"],
+            ref_cell_type=config["cell_types_bryois"],
+            geno_pc=config["tensorQTL"]["geno_pcs"],
+            exp_pc=config["tensorQTL"]["exp_pcs"],
+            norm_method=config["tensorQTL"]["norm_methods"]
+        )
+
 rule prep_tensorQTL_input:
     input:  cov_file = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
             sex_file = config["tensorQTL"]["prep_tensorQTL_input"]["sex_file"],
@@ -20,7 +29,7 @@ rule prep_tensorQTL_input:
     message: "Prep pseudoblk GeX and covariate matricies for tensorQTL with norm: {wildcards.norm_method}"
     benchmark: "reports/benchmarks/05tensorQTL.prep_tensorQTL_input_{cell_type}_{norm_method}.txt"
     log:    config["tensorQTL"]["prep_tensorQTL_input"]["log"]
-    script: "../scripts/prep_tensorQTL_input_files.R"
+    script: "../scripts/tensorqtl_prep_input_files.R"
 
 rule zip_pblk_cnts:
     input:   rules.prep_tensorQTL_input.output.exp_out
@@ -52,7 +61,7 @@ rule split_covariates:
     message: "Divide covariate file to test different PC thresholds in tensorQTL for norm: {wildcards.norm_method}"
     benchmark: "reports/benchmarks/05tensorQTL.split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"   
     log:    config["tensorQTL"]["split_covariates"]["log"]
-    script: "../scripts/split_covariates_for_tensorQTL.R"
+    script: "../scripts/tensorqtl_split_covariates.R"
 
 rule tensorqtl_nom:
     input:  genotypes = rules.convert_genotypes.output,
@@ -84,7 +93,7 @@ rule tensorqtl_perm:
             prefix_out = config["tensorQTL"]["tensorqtl_perm"]["prefix_out"],
             window = config["tensorQTL"]["window"]
     singularity: config["containers"]["tensorqtl"]
-    resources: threads = 10, mem_mb = 100000, time="5:00:00"
+    resources: threads = 10, mem_mb = 20000, time="5:00:00"
     message: "Run tensorQTL permutation for norm: {wildcards.norm_method}"
     benchmark: "reports/benchmarks/05tensorQTL.perm_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["tensorQTL"]["tensorqtl_perm"]["log"]
@@ -119,46 +128,46 @@ rule tensorqtl_independent:
               --cis_output {input.cis_perm} >> {log} 2>&1
             """
 
-rule tensorqtl_trans:
-    input:  genotypes = rules.convert_genotypes.output,
-            counts = rules.zip_pblk_cnts.output,
-            covariates = rules.split_covariates.output
-    output: config["tensorQTL"]["tensorqtl_trans"]["output"]
-    params: prefix_in = config["tensorQTL"]["tensorqtl_trans"]["prefix_in"],
-            prefix_out = config["tensorQTL"]["tensorqtl_trans"]["prefix_out"],
-            window = config["tensorQTL"]["window"]
-    singularity: config["containers"]["tensorqtl"]
-    resources: threads = 10, mem_mb = 100000, time="5:00:00"
-    message: "Run tensorQTL trans for norm: {wildcards.norm_method}"
-    benchmark: "reports/benchmarks/05tensorQTL.trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
-    log:    config["tensorQTL"]["tensorqtl_trans"]["log"]
-    shell:
-            """
-            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
-              --covariates {input.covariates} \
-              --mode trans \
-              --output_text \
-              --window {params.window} >> {log} 2>&1
-            """
+#rule tensorqtl_trans:
+#    input:  genotypes = rules.convert_genotypes.output,
+#            counts = rules.zip_pblk_cnts.output,
+#            covariates = rules.split_covariates.output
+#    output: config["tensorQTL"]["tensorqtl_trans"]["output"]
+#    params: prefix_in = config["tensorQTL"]["tensorqtl_trans"]["prefix_in"],
+#            prefix_out = config["tensorQTL"]["tensorqtl_trans"]["prefix_out"],
+#            window = config["tensorQTL"]["window"]
+#    singularity: config["containers"]["tensorqtl"]
+#    resources: threads = 10, mem_mb = 100000, time="5:00:00"
+#    message: "Run tensorQTL trans for norm: {wildcards.norm_method}"
+#    benchmark: "reports/benchmarks/05tensorQTL.trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+#    log:    config["tensorQTL"]["tensorqtl_trans"]["log"]
+#    shell:
+#            """
+#            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
+#              --covariates {input.covariates} \
+#              --mode trans \
+#              --output_text \
+#              --window {params.window} >> {log} 2>&1
+#            """
 
-rule post_trans:
-    input:  perm = rules.tensorqtl_perm.output,
-            trans = rules.tensorqtl_trans.output
-    output: config["tensorQTL"]["post_trans"]["output"] 
-    params: proxy_dir = config["tensorQTL"]["post_trans"]["proxy_dir"],
-            ldlink_token = config["tensorQTL"]["post_trans"]["ldlink_token"]
-    singularity: config["containers"]["r_eqtl"]
-    message: "Run post-trans eQTL analysis and get LD proxies for perm eQTL"
-    benchmark: "reports/benchmarks/05tensorQTL.post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
-    log:    config["tensorQTL"]["post_trans"]["log"]
-    script:  "../scripts/post_tensorqtl_trans_analysis.R"
+#rule post_trans:
+#    input:  perm = rules.tensorqtl_perm.output,
+#            trans = rules.tensorqtl_trans.output
+#    output: config["tensorQTL"]["post_trans"]["output"] 
+#    params: proxy_dir = config["tensorQTL"]["post_trans"]["proxy_dir"],
+#            ldlink_token = config["tensorQTL"]["post_trans"]["ldlink_token"]
+#    singularity: config["containers"]["r_eqtl"]
+#    message: "Run post-trans eQTL analysis and get LD proxies for perm eQTL"
+#    benchmark: "reports/benchmarks/05tensorQTL.post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+#    log:    config["tensorQTL"]["post_trans"]["log"]
+#    script:  "../scripts/post_tensorqtl_trans_analysis.R"
 
 rule tensorqtl_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  perm  = expand(rules.tensorqtl_perm.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             indep = expand(rules.tensorqtl_independent.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]), 
-            trans = expand(rules.tensorqtl_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
-            post_trans = expand(rules.post_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+#            trans = expand(rules.tensorqtl_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+#            post_trans = expand(rules.post_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
             rmd_script = "scripts/tensorQTL_report.Rmd"
     output: "reports/05TENSORQTL/tensorqtl_report.html"
     params: in_dir = "../../results/05TENSORQTL/tensorqtl_perm/",
@@ -201,3 +210,10 @@ rule tensorqtl_report:
 #               --expression_dir {params.expression_dir} \
 #               --output_dir {params.output_dir} >> {log}
 #             """
+
+
+
+## ----  Notes for running this pipeline  ----
+# Run 1. L1 sensitivity analysis: Run L1 cell types only up until tensorqtl_perm (all norm factors, exp_pcs, geno_pcs)
+# Run 2. L2 sensitivity analysis: Run L2 cell types only up until tensorqtl_perm (norm_factors:, all exp_pcs, geno_pcs) 
+# Run 3. Independent, trans analyses:  
