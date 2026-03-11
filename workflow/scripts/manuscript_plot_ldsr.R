@@ -152,7 +152,6 @@ plot_B <- ldsr_tbl |>
   geom_vline(xintercept = 0, color = "black", linewidth = 0.6) +
   geom_vline(xintercept = thresh_level2, linetype = "dashed", color = "black") +
   geom_vline(xintercept = thresh_nominal, linetype = "dotted", color = "black") +
-  theme_minimal(base_size = 12) +
   base_theme +
   scale_fill_manual(values = custom_palette) +
   labs(
