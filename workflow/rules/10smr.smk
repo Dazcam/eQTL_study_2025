@@ -2,6 +2,7 @@ configfile: "../config/config.yaml"
 
 rule all:
     input:
+#        '../results/10SMR/beta_cor/smr_beta_correlation_single.done'
         "reports/10SMR/10smr_report.html"
 #        expand("../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr", cell_type=config["cell_types"], gwas=config["gwas"])
      
@@ -50,9 +51,8 @@ rule cat_refs:
 # Move this to tensorflow rules when debugged
 rule cat_tensorqtl_nom_snps:
     input: lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
-                geno_pc=config['tensorQTL']['geno_pcs'],
-                exp_pc=config['tensorQTL']['exp_pcs'][0]:
-                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{w.cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet"
+                geno_pc=config['tensorQTL']['geno_pcs']:
+                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/{w.cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet"
     output: cat_snps = config["smr"]["cat_tensorqtl_nom_snps"]["cat_snps"],
             summary = config["smr"]["cat_tensorqtl_nom_snps"]["summary"]
     params: config["smr"]["cat_tensorqtl_nom_snps"]["dir"]
@@ -61,7 +61,7 @@ rule cat_tensorqtl_nom_snps:
     log: config["smr"]["cat_tensorqtl_nom_snps"]["log"]
     shell:
         """
-        python scripts/cat_tensorqtl_nom_snps.py \
+        python scripts/smr_cat_tensorqtl_nom_snps.py \
           --nom_dir {params} \
           --cell_type {wildcards.cell_type} \
           --concat_out {output.cat_snps} \
@@ -151,6 +151,18 @@ rule smr:
                 --peqtl-smr 5e-8 >> {log} 2>&1 
             """
 
+rule beta_correlation_single:
+    # Testing: may need to add code to handle specific gwas / cell types
+    output: '../results/10SMR/beta_cor/smr_beta_correlation_single.done'
+    params: in_dir = '../results/10SMR/smr',
+            fugita_dir = '../resources/public_datasets/fugita_2024/'
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 6, mem_mb = 96000, time="1-0:00:00"
+    message: "Generating data for SMR eQTL beta correlation analysis for replication (single N pairs)"
+    benchmark: "reports/benchmarks/06smr.beta_correlation_single.txt"
+    log:    "../results/00LOG/10SMR/beta_correlation_single.log"
+    script: "../scripts/smr_beta_correlation_single.R"
+
 # These rules can be used to generate code for smr plots
 # Note that smr_plot doesn't produce output for snp / gene pairs
 # If using these rules need to get code to handel this
@@ -198,6 +210,7 @@ rule smr_report:
     output: config["smr"]["smr_report"]["html"]
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
             in_dir = config["smr"]["smr_report"]["in_dir"],
+            tbl_dir = "../../results/13MANUSCRIPT_PLOTS_TABLES/tables/",
             output_file = "../reports/10SMR/10smr_report.html",
             p_smr = config["p_smr"],
             p_heidi =  config["p_heidi"]    
@@ -210,6 +223,11 @@ rule smr_report:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(cell_types = c({params.cell_types}), in_dir = '{params.in_dir}', p_smr = '{params.p_smr}', p_heidi = '{params.p_heidi}', bmark_dir = '../reports/benchmarks/'))" > {log} 2>&1
+            params = list(cell_types = c({params.cell_types}), 
+            in_dir = '{params.in_dir}',
+            tbl_dir = '{params.tbl_dir}', 
+            p_smr = '{params.p_smr}', 
+            p_heidi = '{params.p_heidi}', 
+            bmark_dir = '../reports/benchmarks/'))" > {log} 2>&1
         """
 
