@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>scRNAseq analysis – sc-eQTL Atlas</title>
+<title>02 · scRNAseq analysis – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -397,7 +397,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Single-cell RNA-seq</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">scRNAseq analysis</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Single-cell RNA-seq</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">02 · scRNAseq analysis</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -458,7 +458,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/02-scanpy.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">scRNAseq analysis</span></a>
+ <span class="menu-text">02 · scRNAseq analysis</span></a>
   </div>
 </li>
       </ul>
@@ -595,9 +595,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Single-cell RNA-seq</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">scRNAseq analysis</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/01-parse.html">Single-cell RNA-seq</a></li><li class="breadcrumb-item"><a href="../pipelines/02-scanpy.html">02 · scRNAseq analysis</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">scRNAseq analysis</h1>
+<h1 class="title">02 · scRNAseq analysis</h1>
 </div>
 
 
@@ -617,7 +617,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <hr>
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>This pipeline transitions raw per-plate DGE matrices (H5AD format) into biologically annotated cell clusters and pseudobulk expression matrices ready for eQTL mapping. Analysis is implemented in a series of Jupyter notebooks executed non-interactively by [Papermill] (https://papermill.readthedocs.io/), with each rule producing a rendered HTML report alongside the notebook output.</p>
+<p>This pipeline transitions raw per-plate DGE matrices (H5AD format) into biologically annotated cell clusters and pseudobulk expression matrices ready for eQTL mapping. Analysis is implemented in a series of Jupyter notebooks executed non-interactively by [Papermill] (https://papermill.readthedocs.io), with each rule producing a rendered HTML report alongside the notebook output.</p>
 <hr>
 </section>
 <section id="workflow-logic" class="level3">
@@ -645,10 +645,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <ol type="1">
-<li><code>scanpy_qc</code>: Per-plate quality control — filters cells by mitochondrial read fraction, minimum gene count, and UMI count thresholds. Runs in parallel across the three plates.</li>
-<li><code>scanpy_clustering</code>: Iterative dimensionality reduction and clustering across three sequential rounds. Each round performs PCA, UMAP, and Leiden graph clustering at increasing resolution, with manual inspection between rounds to remove low-quality or doublet-enriched clusters.</li>
-<li><code>scanpy_subclustering</code>: Generates fine-grained subclusters for the four most abundant level-1 populations (ExN-UL, ExN-DL, InN, RG), producing the 13 subtype labels used for eQTL mapping.</li>
-<li><code>scanpy_annotation</code>: Expert-guided cell-type labelling using canonical marker gene expression.</li>
+<li><code>scanpy_qc</code>: Per-plate quality control — filters cells by mitochondrial read fraction, minimum gene count, and UMI count thresholds etc. Runs in parallel across the three plates.</li>
+<li><code>scanpy_clustering</code>: Iterative dimensionality reduction and clustering across three sequential rounds. Each round performs PCA, UMAP, and Leiden graph clustering at increasing resolution, with manual inspection between rounds to remove low-quality cells / clusters.</li>
+<li><code>scanpy_subclustering</code>: Generates fine-grained subclusters for the four most abundant level-1 populations (Glu-UL, Glu-DL, GABA, NPC), producing the 13 subtype labels used for eQTL mapping.</li>
+<li><code>scanpy_annotation</code>: Cell-type labelling using canonical marker gene expression.</li>
 <li><code>scanpy_cell_label_and_pseudobulk</code>: Transfers final cell labels, then sum-aggregates single-cell counts per donor per cell type to produce pseudobulk matrices for TensorQTL.</li>
 </ol>
 <hr>
@@ -663,7 +663,7 @@ Note
 </div>
 <div class="callout-body-container callout-body">
 <p><strong>Notebook execution pattern</strong></p>
-<p>Every rule uses <a href="https://papermill.readthedocs.io/">Papermill</a> to execute the notebook non-interactively, passing a <code>plate</code> parameter to parameterise the run. The executed notebook is then converted to HTML by <code>jupyter nbconvert</code> for QC review:</p>
+<p>Every rule uses <a href="https://papermill.readthedocs.io">Papermill</a> to execute the notebook non-interactively, passing a <code>plate</code> parameter to parameterise the run. The executed notebook is then converted to HTML by <code>jupyter nbconvert</code> for QC review:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">papermill</span> {input.nb} {params.nb_out} <span class="at">-p</span> plate {wildcards.plate}</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">jupyter</span> nbconvert <span class="at">--to</span> html {params.nb_out} <span class="at">--output</span> {params.html_out}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -694,11 +694,11 @@ Note
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Key packages</strong></td>
-<td style="text-align: left;"><code>scanpy</code>, <code>anndata</code>, <code>leidenalg</code>, <code>umap-learn</code>, <code>scrublet</code>, <code>doubletdetection</code></td>
+<td style="text-align: left;"><code>scanpy</code>, <code>anndata</code>, <code>leidenalg</code>, <code>umap-learn</code>, <code>scrublet</code></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Input</strong></td>
-<td style="text-align: left;">Per-plate H5AD from <code>01-parse</code> (<code>combine_{plate}/all-sample/DGE_filtered/anndata.h5ad</code>)</td>
+<td style="text-align: left;">Per-plate H5AD from <code>01PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad</code>)</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Output</strong></td>
