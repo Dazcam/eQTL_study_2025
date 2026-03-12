@@ -616,7 +616,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>This pipeline downloads, standardises, and processes GWAS summary statistics for six neuropsychiatric traits into formats required by S-LDSR, SMR, and cTWAS. Steps include format normalisation, Z-score and sample size addition, coordinate liftover from hg19 to hg38, and final munging for LDSR compatibility.</p>
+<p>This pipeline downloads, standardises, and processes GWAS summary statistics for six neuropsychiatric traits into formats required by S-LDSR, SMR, and cTWAS. Steps include format normalisation, Z-score generation and sample size addition, coordinate liftover from hg19 to hg38, and final munging for LDSR compatibility.</p>
 <hr>
 </section>
 <section id="workflow-logic" class="level3">
@@ -746,6 +746,22 @@ Note
 </div>
 </div>
 <hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Singularity container</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># From repo root directory</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">singularity</span> pull ubuntu_22.04.sif docker://ubuntu:22.04</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> ubuntu_22.04.sif to resources/containers/</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
 </section>
 <section id="technical-requirements" class="level3">
 <h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
