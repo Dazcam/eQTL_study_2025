@@ -84,9 +84,9 @@ website:
         contents:
           - pipelines/05-tensorqtl.qmd
           - pipelines/06-qtl-replication.qmd
-          - pipelines/07-prep-GWAS.qmd
       - section: "Fine-mapping & Heritability"
         contents:
+          - pipelines/07-prep-GWAS.qmd
           - pipelines/08-susie.qmd
           - pipelines/09-SLDSR.qmd
           - pipelines/10-SMR.qmd
@@ -94,7 +94,9 @@ website:
         contents:
           - pipelines/11-TWAS-weights.qmd
           - pipelines/12-cTWAS.qmd
-          - pipelines/13-visualization.qmd
+      - section: "Visualisation"
+        contents:
+          - pipelines/13-visualisation.qmd
 
   # ── Navigation & footer ──────────────────────────────────────────────────────
   page-navigation: true
