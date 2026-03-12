@@ -582,7 +582,7 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>This pipeline performs Bayesian fine-mapping of cis-eQTL signals using <a href="https://stephenslab.github.io/susieR/">SuSiE</a> (Sum of Single Effects), applied to all significant eGenes identified by TensorQTL. For each eGene, SuSiE models the association signal as a sum of independent effects and returns 95% credible sets — sets of SNPs that collectively contain the causal variant with ≥95% posterior probability. These credible sets are the primary output consumed by downstream S-LDSR (pipeline 09), SMR (pipeline 10), and cTWAS (pipeline 12) analyses.</p>
+<p>This pipeline performs Bayesian fine-mapping of cis-eQTL signals using <a href="https://stephenslab.github.io/susieR/">SuSiE</a> (Sum of Single Effects), applied to all significant eGenes identified by TensorQTL. For each eGene, SuSiE models the association signal as a sum of independent effects and returns 95% credible sets — sets of SNPs that collectively contain the causal variant with ≥95% posterior probability. These credible sets are the primary output consumed by downstream S-LDSR (pipeline 09) to create the MaxCPP annotation.</p>
 <hr>
 </section>
 <section id="workflow-logic" class="level3">
@@ -711,7 +711,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Container</strong></td>
-<td style="text-align: left;"><code>susier_v24.01.1.sif</code> (<code>run_susie</code>); <code>r_eqtl.sif</code> (prep + report rules)</td>
+<td style="text-align: left;"><code>susier.sif</code> (<code>run_susie</code>); <code>r_eqtl.sif</code> (prep + report rules)</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Input</strong></td>
