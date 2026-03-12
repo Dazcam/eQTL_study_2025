@@ -618,7 +618,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>This pipeline performs cell-type-specific cis eQTL mapping using <a href="https://github.com/broadinstitute/tensorqtl">TensorQTL</a>, a GPU-accelerated implementation of the FastQTL permutation framework. It runs four mapping modes (nominal, permutation, independent, and trans) across all 19 cell types, preceded by expression and covariate preparation steps.</p>
+<p>This pipeline performs cell-type-specific cis-eQTL mapping using <a href="https://github.com/broadinstitute/tensorqtl">TensorQTL</a>, a GPU-accelerated implementation of the FastQTL permutation framework. It runs four mapping modes (nominal, permutation, independent, and trans) across all 19 cell types, preceded by expression and covariate preparation steps.</p>
 <hr>
 </section>
 <section id="workflow-logic" class="level3">
@@ -662,7 +662,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <ol type="1">
-<li><code>prep_tensorQTL_input</code>: Prepares per-cell-type normalised pseudobulk expression matrices (BED format) and covariate files. Applies batch correction (ComBat on post-conception week), merges genotype PCs and expression PCs, and normalises counts (quantile normalisation). Runs via <code>tensorqtl_prep_input_files.R</code> in the <code>r_eqtl</code> container.</li>
+<li><code>prep_tensorQTL_input</code>: Prepares per-cell-type normalised pseudobulk expression matrices (BED format) and covariate files. Merges genotype PCs and expression PCs, and normalises counts (quantile normalisation). Runs via <code>tensorqtl_prep_input_files.R</code> in the <code>r_eqtl</code> container.</li>
 <li><code>zip_pblk_cnts</code>: bgzip-compresses and tabix-indexes the expression BED file required by TensorQTL.</li>
 <li><code>convert_genotypes</code>: Converts the final filtered VCF to PLINK2 PGEN format.</li>
 <li><code>split_covariates</code>: Generates covariate files for each combination of genotype PC count and expression PC count, enabling parameter sweep optimisation.</li>
@@ -683,8 +683,12 @@ Note
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><strong>GPU acceleration</strong></p>
+<p><strong>Singulairty Container</strong></p>
 <p>TensorQTL runs inside the <code>tensorqtl.sif</code> Singularity container and uses PyTorch for GPU-accelerated matrix operations during permutation testing. The permutation pass is the most computationally intensive step; GPU acceleration reduces runtime from days to hours per cell type.</p>
+<p>The container is available as a dockerfile <a href="https://hub.docker.com/r/francois4/tensorqtl">here</a>. You can convert it to a <code>.sif</code> file by running</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># From repo root dir</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">singularity</span> pull tensorqtl_latest.sif docker://francois4/tensorqtl</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mv</span> tensorqtl<span class="pp">*</span>.sif resources/containers/tensorqtl.sif</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 <hr>
@@ -728,13 +732,13 @@ Note
 </section>
 <section id="key-config-parameters" class="level3">
 <h3 class="anchored" data-anchor-id="key-config-parameters">Key Config Parameters</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tensorQTL</span><span class="kw">:</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">window</span><span class="kw">:</span><span class="at"> </span><span class="dv">500000</span><span class="co">       # Cis window (bp either side of TSS)</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">perm_min</span><span class="kw">:</span><span class="at"> </span><span class="dv">1000</span><span class="co">       # Minimum permutations per gene</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">perm_max</span><span class="kw">:</span><span class="at"> </span><span class="dv">10000</span><span class="co">      # Maximum permutations per gene</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">geno_pcs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span><span class="co">          # Genotype PCs included as covariates</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">exp_pcs</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="dv">40</span><span class="kw">]</span><span class="co">        # Expression PCs included as covariates</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">norm_methods</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">"quantile"</span><span class="kw">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tensorQTL</span><span class="kw">:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">window</span><span class="kw">:</span><span class="at"> </span><span class="dv">500000</span><span class="co">       # Cis window (bp either side of TSS)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">perm_min</span><span class="kw">:</span><span class="at"> </span><span class="dv">1000</span><span class="co">       # Minimum permutations per gene</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">perm_max</span><span class="kw">:</span><span class="at"> </span><span class="dv">10000</span><span class="co">      # Maximum permutations per gene</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">geno_pcs</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span><span class="co">          # Genotype PCs included as covariates</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">exp_pcs</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="dv">40</span><span class="kw">]</span><span class="co">        # Expression PCs included as covariates</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">norm_methods</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="st">"quantile"</span><span class="kw">]</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <hr>
 </section>
 <section id="output-files" class="level3">
@@ -797,7 +801,7 @@ Note
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Container</strong></td>
-<td style="text-align: left;"><code>tensorqtl.sif</code> (eQTL runs); <code>r_eqtl.sif</code> (input prep); <code>gtex_eqtl.sif</code> (bgzip/tabix); <code>seurat5f.sif</code> (report)</td>
+<td style="text-align: left;"><code>tensorqtl.sif</code> (eQTL runs); <code>r_eqtl.sif</code> (input prep); <code>gtex_eqtl.sif</code> (bgzip/tabix); <code>r_eqtl.sif</code> (report)</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Env modules</strong></td>
