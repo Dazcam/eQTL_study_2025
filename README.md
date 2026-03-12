@@ -17,7 +17,7 @@ This repository is an end-to-end computational genomics platform to process ~3 T
 
 ## Pipeline overview
 
-The full analysis runs as 13 sequential Snakemake pipelines on a SLURM HPC cluster, with up to 500 concurrent jobs. Each stage is containerised via Singularity for reproducibility.
+The full analysis runs as 13 sequential Snakemake pipelines on a SLURM HPC cluster, with up to 500 concurrent jobs. Each stage is containerised via Conda environments or Singularity containers for reproducibility.
 
 | # | Stage | Tools |
 | :---: | :--- | :--- |
