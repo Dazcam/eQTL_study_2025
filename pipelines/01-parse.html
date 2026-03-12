@@ -584,7 +584,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
-  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
   <li><a href="#fastq-manifest" id="toc-fastq-manifest" class="nav-link" data-scroll-target="#fastq-manifest">FASTQ Manifest</a></li>
   <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
   <li><a href="#library-composition" id="toc-library-composition" class="nav-link" data-scroll-target="#library-composition">Library Composition</a></li>
@@ -620,33 +619,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
 <p>This pipeline processes raw multiplexed FASTQ libraries from the Parse Biosciences SPLiT-seq protocol into per-plate Digital Gene Expression (DGE) matrices. It handles reference building, multi-lane FASTQ concatenation, per-sublibrary alignment and barcode demultiplexing, and final plate-level combination.</p>
 <hr>
-</section>
-<section id="workflow-logic" class="level3">
-<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
-<p>The pipeline follows a tiered execution strategy to manage heavy I/O and storage constraints.</p>
-<div class="cell" data-layout-align="default">
-<div class="cell-output-display">
-<div>
-<p></p><figure class="figure"><p></p>
-<div>
-<pre class="mermaid mermaid-js">graph TD
-    A[get_refs] --&gt; B[make_ref]
-    C[cat_fqs] --&gt; D[run_parse]
-    B --&gt; D
-    D --&gt; E[run_parse_combine]
-
-    style A fill:#f96,stroke:#333
-    style B fill:#f96,stroke:#333
-    style C fill:#f96,stroke:#333
-    style D fill:#f96,stroke:#333
-    style E fill:#f96,stroke:#333
-</pre>
-</div>
-<p></p></figure><p></p>
-</div>
-</div>
-</div>
-<p>OR?</p>
 <div class="cell" data-layout-align="default">
 <div class="cell-output-display">
 <div>
