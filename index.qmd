@@ -1,5 +1,5 @@
 ---
-title: "Project Overview"
+title: "Project Overview - Beta"
 ---
 
 ## A single-cell eQTL atlas of the developing human brain
@@ -16,7 +16,7 @@ We identify **3,121 unique eGenes** across 7 major cell types and 13 of their su
 
 ## Data Engineering Architecture
 
-This project processes ~20 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.
+This project processes ~3 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.
 
 ### Workflow Orchestration
 
