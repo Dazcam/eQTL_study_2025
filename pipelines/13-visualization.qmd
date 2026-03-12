@@ -1,15 +1,113 @@
 ---
-title: "Visualisation"
+title: "13 · Manuscript Plots, Tables & Data Sharing"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This final pipeline generates all publication-ready figures, summary tables, and data-sharing files from the upstream analysis results. It produces the eQTL and SMR manuscript tables, QC and results plots, and reformatted eQTL summary statistics packaged for public data deposition. Most rules operate independently and can be re-run selectively as manuscript revisions require.
 
-## Workflow Summary
+---
 
+### Workflow Logic
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[TensorQTL perm output] --> B(eqtl_tbl)
+    C[SMR results] --> D(smr_tbl)
+    A --> E(eqtl_qc_plt)
+    F[S-LDSR results] --> G(ldsr_plt)
+    H[Replication results] --> I(replication_plt)
+    J[Genotype PCA covariates] --> K(supplementary_plt)
+    A --> L(data_perm)
+    M[SMR nominal input] --> N(data_nominal)
+    L --> O(mk_eqtl_tar)
+    N --> O
+    B --> P[(results/13MANUSCRIPT_PLOTS_TABLES)]
+    D --> P
+    E --> P
+    G --> P
+    I --> P
+    K --> P
+    O --> P
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O snazzy
+    class P out
+```
+
+1. `eqtl_tbl`: Generates the main eQTL results table for the manuscript from TensorQTL permutation output, annotating lead SNPs with allele information and overlap with Ziffra 2021 ATAC-seq peaks.
+2. `smr_tbl`: Compiles the SMR/HEIDI results table across all cell types and GWAS traits, merging SMR output with eQTL nominal summary statistics.
+3. `eqtl_qc_plt`: Produces eQTL QC figures including signal summaries per cell type and comparisons with the Ziffra 2021 dataset.
+4. `ldsr_plt`: Plots S-LDSR stratified heritability enrichments across cell types and neuropsychiatric traits.
+5. `replication_plt`: Produces π₁-based replication plots against published datasets (Bryois, O'Brien, Wen, Fugita) and internal replication results, including beta-correlation scatter plots.
+6. `supplementary_plt`: Generates supplementary figures, including genotype PCA plots and expression PC summaries across cell types.
+7. `data_perm`: Reformats TensorQTL permutation-pass eQTL results into a standardised, publicly shareable TSV (annotated with allele information from the PVAR file). Outputs a representative NPC-2 file as the data-sharing example.
+8. `data_nominal`: Reformats TensorQTL nominal-pass summary statistics from the SMR input directory into a publicly shareable TSV.
+9. `mk_eqtl_tar`: Packages all per-cell-type permutation and nominal eQTL summary statistic files into a single compressed tar archive (`nbray_2026_dev_brain_eqtl.tar.gz`) for data deposition.
+
+---
+
+### Output Structure
+
+All outputs are written to `results/13MANUSCRIPT_PLOTS_TABLES/`:
+
+```
+results/13MANUSCRIPT_PLOTS_TABLES/
+├── plots/
+│   ├── eqtl_qc_plt.pdf
+│   ├── ldsr_plt.pdf
+│   ├── replication_plt.pdf
+│   └── expression_PC_plt.pdf
+├── tables/
+│   ├── all_eqtl_tbl.xlsx
+│   └── all_smr_tbl.xlsx
+└── data_sharing/
+    ├── NPC-2_cis_eQTL_perm.tsv.gz
+    ├── NPC-2_cis_eQTL_nominal.tsv.gz
+    └── nbray_2026_dev_brain_eqtl.tar.gz
+```
+
+---
+
+### Technical Requirements
+
+| Category | Detail |
+| :--- | :--- |
+| **Container** | `r_eqtl.sif` (all R rules) |
+| **Modules** | `pigz` (`mk_eqtl_tar`, `data_weights`) |
+| **Input** | TensorQTL perm/nominal output (05); S-LDSR results (09); SMR results (10); replication results (06) |
+| **Output** | PDF figures, XLSX tables, compressed TSV summary statistics |
+
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime |
+| :--- | :---: | :---: | :---: |
+| `eqtl_tbl` | 1 | 20 GB | 2h |
+| `smr_tbl` | 10 | 80 GB | 2h |
+| `eqtl_qc_plt` | 1 | 10 GB | 1h |
+| `ldsr_plt` | 1 | 10 GB | 1h |
+| `replication_plt` | 1 | 10 GB | 1h |
+| `supplementary_plt` | 4 | 20 GB | 1h |
+| `data_perm` | 1 | 10 GB | 1h |
+| `data_nominal` | 10 | 80 GB | 4h |
+| `mk_eqtl_tar` | 8 | 16 GB | 5h |
+
+---
+
+::: {.callout-note}
+**Selective execution**
+
+Most rules in this pipeline have no dependencies on each other and can be run independently. To regenerate a single figure or table, invoke Snakemake with the specific target output file rather than the default `all` rule. The `all` rule currently targets only the data-sharing outputs (`data_perm`, `data_nominal`, `mk_eqtl_tar`); plotting and table rules are commented out pending manuscript finalisation.
+:::
+
+---
+
+::: {.callout-note}
+**Data sharing archive**
+
+`mk_eqtl_tar` uses `pigz` for parallelised compression (`--threads 8`) and calls `data_sharing_mk_eqtl_tar.sh` to iterate over all cell types, collecting permutation and nominal eQTL files into the final archive. The FUSION TWAS weights archive (`fusion_weights.tar.gz`) is produced by the separate `data_weights` rule, which is also currently commented out of the `all` target.
+:::
