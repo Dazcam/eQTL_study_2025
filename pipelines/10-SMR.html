@@ -657,7 +657,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><code>get_smr_binary</code>: Downloads the SMR v1.4.0 Linux binary from the Yang Lab.</li>
 <li><code>cat_refs</code>: Concatenates per-chromosome 1000G hg38 PLINK reference files (BED/BIM/FAM/FRQ) into genome-wide files for SMR’s LD reference.</li>
 <li><code>cat_tensorqtl_nom_snps</code>: Combines per-chromosome TensorQTL nominal Parquet files for each cell type into a single flat TSV using <code>smr_cat_tensorqtl_nom_snps.py</code>.</li>
-<li><code>create_query</code>: Formats the concatenated nominal eQTL data into an SMR query file, filtering to eGenes passing FDR ≤ 0.05, aligning SNP IDs with the reference panel, and adding sample size (N=133).</li>
+<li><code>create_query</code>: Formats the concatenated nominal eQTL data into an SMR query file, filtering to eGenes passing FDR ≤ 0.05, aligning SNP IDs with the reference panel, and adding sample size (N=134).</li>
 <li><code>create_besd</code>: Converts the query file into binary SMR BESD format (<code>.besd</code>, <code>.bim</code>, <code>.epi</code> files) using <code>smr --make-besd</code>.</li>
 <li><code>format_gwas</code>: Reformats hg38 GWAS summary statistics into SMR <code>.ma</code> format using <code>smr_format_gwas.R</code>, aligning allele frequencies with the 1000G reference.</li>
 <li><code>smr</code>: Runs SMR + HEIDI for each cell type × GWAS combination, testing each significant eGene for colocalisation with GWAS risk loci (p_SMR threshold: 5×10⁻⁸).</li>
@@ -793,8 +793,8 @@ Note
 <tbody>
 <tr class="odd">
 <td style="text-align: left;"><code>cat_tensorqtl_nom_snps</code></td>
-<td style="text-align: center;">20</td>
-<td style="text-align: left;">20 cell types</td>
+<td style="text-align: center;">19</td>
+<td style="text-align: left;">19 cell types</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><code>format_gwas</code></td>
@@ -803,8 +803,8 @@ Note
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><code>smr</code></td>
-<td style="text-align: center;">120</td>
-<td style="text-align: left;">20 cell types × 6 GWAS</td>
+<td style="text-align: center;">114</td>
+<td style="text-align: left;">19 cell types × 6 GWAS</td>
 </tr>
 </tbody>
 </table>
