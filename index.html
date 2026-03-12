@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Project Overview – sc-eQTL Atlas</title>
+<title>Project Overview - Beta – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -369,7 +369,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">12 · cTWAS</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./pipelines/13-visualization.html">
+    <a class="dropdown-item" href="./pipelines/13-visualisation.html">
  <span class="dropdown-text">13 · Visualisation</span></a>
   </li>  
     </ul>
@@ -577,8 +577,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       </div>
       <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 ">  
           <li class="sidebar-item">
- <span class="menu-text">pipelines/13-visualisation.qmd</span>
-  </li>
+  <div class="sidebar-item-container"> 
+  <a href="./pipelines/13-visualisation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">13 · Manuscript Plots, Tables &amp; Data Sharing</span></a>
+  </div>
+</li>
       </ul>
   </li>
     </ul>
@@ -612,7 +615,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Getting Started</a></li><li class="breadcrumb-item"><a href="./index.html">Project Overview</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Project Overview</h1>
+<h1 class="title">Project Overview - Beta</h1>
 </div>
 
 
@@ -640,7 +643,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="data-engineering-architecture" class="level2">
 <h2 class="anchored" data-anchor-id="data-engineering-architecture">Data Engineering Architecture</h2>
-<p>This project processes ~20 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.</p>
+<p>This project processes ~3 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.</p>
 <section id="workflow-orchestration" class="level3">
 <h3 class="anchored" data-anchor-id="workflow-orchestration">Workflow Orchestration</h3>
 <p>All pipelines are managed by <a href="https://snakemake.readthedocs.io/">Snakemake</a> (v8.x) with a dedicated SLURM cluster profile, allowing up to <strong>500 concurrent jobs</strong> across a dedicated compute partition (<code>c_compute_neuro1</code>, account <code>scw1641</code>). The profile handles automatic job submission, logging, and resource allocation per rule:</p>
@@ -842,7 +845,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td style="text-align: left;">13</td>
-<td style="text-align: left;"><a href="./pipelines/13-visualization.html">Visualisation</a></td>
+<td style="text-align: left;"><a href="pipelines/13-visualization.qmd">Visualisation</a></td>
 <td style="text-align: left;">All upstream results</td>
 <td style="text-align: left;">Manuscript figures and tables</td>
 </tr>
