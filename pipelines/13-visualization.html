@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Visualisation – sc-eQTL Atlas</title>
+<title>13 · Manuscript Plots, Tables &amp; Data Sharing – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -73,6 +73,9 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 <meta property="og:title" content="sc-eQTL Atlas — Developing Human Brain">
@@ -354,7 +357,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/13-visualization.html">Visualisation</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/13-visualization.html">13 · Manuscript Plots, Tables &amp; Data Sharing</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -484,7 +487,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/08-susie.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">SuSiE finemapping</span></a>
+ <span class="menu-text">08 · SuSiE Fine-mapping</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -525,7 +528,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/13-visualization.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">Visualisation</span></a>
+ <span class="menu-text">13 · Manuscript Plots, Tables &amp; Data Sharing</span></a>
   </div>
 </li>
       </ul>
@@ -540,10 +543,11 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
-  <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
-  </ul></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
+  <li><a href="#output-structure" id="toc-output-structure" class="nav-link" data-scroll-target="#output-structure">Output Structure</a></li>
+  <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/13-visualization.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -551,9 +555,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/13-visualization.html">Visualisation</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/11-TWAS-weights.html">TWAS</a></li><li class="breadcrumb-item"><a href="../pipelines/13-visualization.html">13 · Manuscript Plots, Tables &amp; Data Sharing</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Visualisation</h1>
+<h1 class="title">13 · Manuscript Plots, Tables &amp; Data Sharing</h1>
 </div>
 
 
@@ -570,15 +574,213 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>This final pipeline generates all publication-ready figures, summary tables, and data-sharing files from the upstream analysis results. It produces the eQTL and SMR manuscript tables, QC and results plots, and reformatted eQTL summary statistics packaged for public data deposition. Most rules operate independently and can be re-run selectively as manuscript revisions require.</p>
+<hr>
 </section>
+<section id="workflow-logic" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[TensorQTL perm output] --&gt; B(eqtl_tbl)
+    C[SMR results] --&gt; D(smr_tbl)
+    A --&gt; E(eqtl_qc_plt)
+    F[S-LDSR results] --&gt; G(ldsr_plt)
+    H[Replication results] --&gt; I(replication_plt)
+    J[Genotype PCA covariates] --&gt; K(supplementary_plt)
+    A --&gt; L(data_perm)
+    M[SMR nominal input] --&gt; N(data_nominal)
+    L --&gt; O(mk_eqtl_tar)
+    N --&gt; O
+    B --&gt; P[(results/13MANUSCRIPT_PLOTS_TABLES)]
+    D --&gt; P
+    E --&gt; P
+    G --&gt; P
+    I --&gt; P
+    K --&gt; P
+    O --&gt; P
+
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O snazzy
+    class P out
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<ol type="1">
+<li><code>eqtl_tbl</code>: Generates the main eQTL results table for the manuscript from TensorQTL permutation output, annotating lead SNPs with allele information and overlap with Ziffra 2021 ATAC-seq peaks.</li>
+<li><code>smr_tbl</code>: Compiles the SMR/HEIDI results table across all cell types and GWAS traits, merging SMR output with eQTL nominal summary statistics.</li>
+<li><code>eqtl_qc_plt</code>: Produces eQTL QC figures including signal summaries per cell type and comparisons with the Ziffra 2021 dataset.</li>
+<li><code>ldsr_plt</code>: Plots S-LDSR stratified heritability enrichments across cell types and neuropsychiatric traits.</li>
+<li><code>replication_plt</code>: Produces π₁-based replication plots against published datasets (Bryois, O’Brien, Wen, Fugita) and internal replication results, including beta-correlation scatter plots.</li>
+<li><code>supplementary_plt</code>: Generates supplementary figures, including genotype PCA plots and expression PC summaries across cell types.</li>
+<li><code>data_perm</code>: Reformats TensorQTL permutation-pass eQTL results into a standardised, publicly shareable TSV (annotated with allele information from the PVAR file). Outputs a representative NPC-2 file as the data-sharing example.</li>
+<li><code>data_nominal</code>: Reformats TensorQTL nominal-pass summary statistics from the SMR input directory into a publicly shareable TSV.</li>
+<li><code>mk_eqtl_tar</code>: Packages all per-cell-type permutation and nominal eQTL summary statistic files into a single compressed tar archive (<code>nbray_2026_dev_brain_eqtl.tar.gz</code>) for data deposition.</li>
+</ol>
+<hr>
+</section>
+<section id="output-structure" class="level3">
+<h3 class="anchored" data-anchor-id="output-structure">Output Structure</h3>
+<p>All outputs are written to <code>results/13MANUSCRIPT_PLOTS_TABLES/</code>:</p>
+<pre><code>results/13MANUSCRIPT_PLOTS_TABLES/
+├── plots/
+│   ├── eqtl_qc_plt.pdf
+│   ├── ldsr_plt.pdf
+│   ├── replication_plt.pdf
+│   └── expression_PC_plt.pdf
+├── tables/
+│   ├── all_eqtl_tbl.xlsx
+│   └── all_smr_tbl.xlsx
+└── data_sharing/
+    ├── NPC-2_cis_eQTL_perm.tsv.gz
+    ├── NPC-2_cis_eQTL_nominal.tsv.gz
+    └── nbray_2026_dev_brain_eqtl.tar.gz</code></pre>
+<hr>
+</section>
+<section id="technical-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Container</strong></td>
+<td style="text-align: left;"><code>r_eqtl.sif</code> (all R rules)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Modules</strong></td>
+<td style="text-align: left;"><code>pigz</code> (<code>mk_eqtl_tar</code>, <code>data_weights</code>)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">TensorQTL perm/nominal output (05); S-LDSR results (09); SMR results (10); replication results (06)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;">PDF figures, XLSX tables, compressed TSV summary statistics</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM</th>
+<th style="text-align: center;">Walltime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>eqtl_tbl</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">20 GB</td>
+<td style="text-align: center;">2h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>smr_tbl</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">80 GB</td>
+<td style="text-align: center;">2h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>eqtl_qc_plt</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>ldsr_plt</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>replication_plt</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>supplementary_plt</code></td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">20 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>data_perm</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>data_nominal</code></td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">80 GB</td>
+<td style="text-align: center;">4h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>mk_eqtl_tar</code></td>
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">16 GB</td>
+<td style="text-align: center;">5h</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Selective execution</strong></p>
+<p>Most rules in this pipeline have no dependencies on each other and can be run independently. To regenerate a single figure or table, invoke Snakemake with the specific target output file rather than the default <code>all</code> rule. The <code>all</code> rule currently targets only the data-sharing outputs (<code>data_perm</code>, <code>data_nominal</code>, <code>mk_eqtl_tar</code>); plotting and table rules are commented out pending manuscript finalisation.</p>
+</div>
+</div>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Data sharing archive</strong></p>
+<p><code>mk_eqtl_tar</code> uses <code>pigz</code> for parallelised compression (<code>--threads 8</code>) and calls <code>data_sharing_mk_eqtl_tar.sh</code> to iterate over all cell types, collecting permutation and nominal eQTL files into the final archive. The FUSION TWAS weights archive (<code>fusion_weights.tar.gz</code>) is produced by the separate <code>data_weights</code> rule, which is also currently commented out of the <code>all</code> target.</p>
+</div>
+</div>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->

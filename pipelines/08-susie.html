@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>SuSiE finemapping – sc-eQTL Atlas</title>
+<title>08 · SuSiE Fine-mapping – sc-eQTL Atlas</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -74,6 +74,9 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 <style>html{ scroll-behavior: smooth; }</style>
+<script src="../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
 
 <meta property="og:title" content="sc-eQTL Atlas — Developing Human Brain">
@@ -355,7 +358,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">Fine-mapping &amp; Heritability</a></li><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">SuSiE finemapping</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">Fine-mapping &amp; Heritability</a></li><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">08 · SuSiE Fine-mapping</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -485,7 +488,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/08-susie.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">SuSiE finemapping</span></a>
+ <span class="menu-text">08 · SuSiE Fine-mapping</span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -526,7 +529,7 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../pipelines/13-visualization.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Visualisation</span></a>
+ <span class="menu-text">13 · Manuscript Plots, Tables &amp; Data Sharing</span></a>
   </div>
 </li>
       </ul>
@@ -541,10 +544,12 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sn-eqtl-analysis-workflow" id="toc-sn-eqtl-analysis-workflow" class="nav-link active" data-scroll-target="#sn-eqtl-analysis-workflow">sn-eQTL Analysis Workflow</a>
-  <ul class="collapse">
-  <li><a href="#workflow-summary" id="toc-workflow-summary" class="nav-link" data-scroll-target="#workflow-summary">Workflow Summary</a></li>
-  </ul></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#workflow-logic" id="toc-workflow-logic" class="nav-link" data-scroll-target="#workflow-logic">Workflow Logic</a></li>
+  <li><a href="#parallelisation-strategy" id="toc-parallelisation-strategy" class="nav-link" data-scroll-target="#parallelisation-strategy">Parallelisation Strategy</a></li>
+  <li><a href="#output-files" id="toc-output-files" class="nav-link" data-scroll-target="#output-files">Output Files</a></li>
+  <li><a href="#technical-requirements" id="toc-technical-requirements" class="nav-link" data-scroll-target="#technical-requirements">Technical Requirements</a></li>
+  <li><a href="#resource-profile" id="toc-resource-profile" class="nav-link" data-scroll-target="#resource-profile">Resource Profile</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/Dazcam/eQTL_study_2025/edit/main/pipelines/08-susie.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/Dazcam/eQTL_study_2025/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -552,9 +557,9 @@ ul.task-list li input[type="checkbox"] {
 <main class="content" id="quarto-document-content">
 
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">Fine-mapping &amp; Heritability</a></li><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">SuSiE finemapping</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">Fine-mapping &amp; Heritability</a></li><li class="breadcrumb-item"><a href="../pipelines/08-susie.html">08 · SuSiE Fine-mapping</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">SuSiE finemapping</h1>
+<h1 class="title">08 · SuSiE Fine-mapping</h1>
 </div>
 
 
@@ -571,15 +576,239 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="sn-eqtl-analysis-workflow" class="level1">
-<h1>sn-eQTL Analysis Workflow</h1>
-<p>This project processes raw FASTQ files into cell-type-specific eQTL discoveries.</p>
-<section id="workflow-summary" class="level2">
-<h2 class="anchored" data-anchor-id="workflow-summary">Workflow Summary</h2>
-<p>The pipeline is divided into 13 main modules: 1. <strong>01 Parse</strong>: Raw data processing and alignment. 2. <strong>02 Scanpy</strong>: Single-cell QC and clustering… (etc)</p>
-
-
+<section id="overview" class="level3">
+<h3 class="anchored" data-anchor-id="overview">Overview</h3>
+<p>This pipeline performs Bayesian fine-mapping of cis-eQTL signals using <a href="https://stephenslab.github.io/susieR/">SuSiE</a> (Sum of Single Effects), applied to all significant eGenes identified by TensorQTL. For each eGene, SuSiE models the association signal as a sum of independent effects and returns 95% credible sets — sets of SNPs that collectively contain the causal variant with ≥95% posterior probability. These credible sets are the primary output consumed by downstream S-LDSR (pipeline 09), SMR (pipeline 10), and cTWAS (pipeline 12) analyses.</p>
+<hr>
 </section>
+<section id="workflow-logic" class="level3">
+<h3 class="anchored" data-anchor-id="workflow-logic">Workflow Logic</h3>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[TensorQTL perm output] --&gt; B(get_sig_eGenes)
+    C[Pseudobulk BED] --&gt; D(prep_susie_gene_meta)
+    C --&gt; E(prep_susie_input)
+    F[TensorQTL covariates] --&gt; E
+    G[Final VCF] --&gt; H(vcf_to_dosage)
+    B --&gt; I(run_susie)
+    D --&gt; I
+    E --&gt; I
+    H --&gt; I
+    I --&gt; J(merge_susie)
+    J --&gt; K(sort_susie)
+    K --&gt; L(susie_report)
+
+    class A,B,C,D,E,F,G,H,I,J,K snazzy
+    class L out
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<ol type="1">
+<li><code>get_sig_eGenes</code>: Extracts significant eGenes (FDR &lt; 0.05) from TensorQTL permutation output for each cell type. These define the set of loci to be fine-mapped.</li>
+<li><code>prep_susie_gene_meta</code>: Creates a gene metadata file (chromosome, TSS position, gene ID) from the pseudobulk BED file for each cell type, used by <code>run_susie</code> to define the cis window.</li>
+<li><code>vcf_to_dosage</code>: Converts the imputed VCF to a bgzipped, tabix-indexed allele dosage matrix (CHROM, POS, REF, ALT + per-sample dosage), the genotype format expected by <code>susie_run.R</code>.</li>
+<li><code>prep_susie_input</code>: Subsets the pseudobulk expression BED and covariate file to overlapping samples, and writes a sample list for the fine-mapping run.</li>
+<li><code>run_susie</code>: Runs SuSiE fine-mapping in parallel batches (25 batches per cell type) across a ±1 Mb cis window. Per-gene outputs include credible set SNPs (<code>.cred.txt</code>), high-PIP credible set SNPs (<code>.cred.hp.txt</code>), and full SNP-level posterior statistics (<code>.snp.txt</code>).</li>
+<li><code>merge_susie</code>: Concatenates the 25 per-batch output files into a single merged file for each cell type and output suffix (<code>.cred.hp.txt</code>, <code>.cred.txt</code>, <code>.snp.txt</code>).</li>
+<li><code>sort_susie</code>: Sorts the merged high-PIP credible set file by chromosome and position, then bgzips for efficient downstream access.</li>
+<li><code>susie_report</code>: Renders an RMarkdown HTML report summarising credible set sizes, PIP distributions, and eGene counts per cell type.</li>
+</ol>
+<hr>
+</section>
+<section id="parallelisation-strategy" class="level3">
+<h3 class="anchored" data-anchor-id="parallelisation-strategy">Parallelisation Strategy</h3>
+<p>Fine-mapping is the most computationally intensive step of the pipeline. Each cell type’s eGenes are split into <strong>25 batches</strong> and submitted as independent SLURM jobs, enabling all cell types to be processed in parallel. A ±1 Mb cis window is used for all genes.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Phase</th>
+<th style="text-align: center;">Jobs per cell type</th>
+<th style="text-align: center;">Total jobs (19 cell types)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>run_susie</code></td>
+<td style="text-align: center;">25</td>
+<td style="text-align: center;">475</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>merge_susie</code></td>
+<td style="text-align: center;">3 (one per suffix)</td>
+<td style="text-align: center;">57</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>sort_susie</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">19</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="output-files" class="level3">
+<h3 class="anchored" data-anchor-id="output-files">Output Files</h3>
+<p>For each cell type, three output file types are produced after merging:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz</code></td>
+<td style="text-align: left;">High-PIP SNPs (one row per credible set, sorted by position) — <strong>primary output for downstream pipelines</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>{cell_type}.mrgd.susie.cred.txt.gz</code></td>
+<td style="text-align: left;">All SNPs in 95% credible sets</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>{cell_type}.mrgd.susie.snp.txt.gz</code></td>
+<td style="text-align: left;">Full SNP-level posterior inclusion probabilities</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="technical-requirements" class="level3">
+<h3 class="anchored" data-anchor-id="technical-requirements">Technical Requirements</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>Software</strong></td>
+<td style="text-align: left;">SuSiE (<code>susieR</code> v24.01.1)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Container</strong></td>
+<td style="text-align: left;"><code>susier_v24.01.1.sif</code> (<code>run_susie</code>); <code>r_eqtl.sif</code> (prep + report rules)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Input</strong></td>
+<td style="text-align: left;">TensorQTL permutation output (05-tensorqtl); pseudobulk BED + covariates (05-tensorqtl); final VCF (04-geno-post)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;">Per-cell-type sorted, merged credible set files; HTML summary report</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="resource-profile" class="level3">
+<h3 class="anchored" data-anchor-id="resource-profile">Resource Profile</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rule</th>
+<th style="text-align: center;">Threads</th>
+<th style="text-align: center;">RAM</th>
+<th style="text-align: center;">Walltime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>get_sig_eGenes</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">30 min</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>vcf_to_dosage</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">2h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>prep_susie_input</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">30 min</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>run_susie</code> (per batch)</td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">20 GB</td>
+<td style="text-align: center;">4h</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>merge_susie</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">30 min</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>sort_susie</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">5 GB</td>
+<td style="text-align: center;">30 min</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>susie_report</code></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">20 GB</td>
+<td style="text-align: center;">1h</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Batch indexing</strong></p>
+<p>SuSiE batch indices run from 1 to <code>susie_batches</code> (currently 25). The <code>run_susie</code> rule passes both the batch index and total batch count to <code>susie_run.R</code>, which internally partitions the eGene list and processes only the assigned slice. This avoids loading all eGenes into memory simultaneously.</p>
+</div>
+</div>
+<hr>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Writing full SNP output</strong></p>
+<p>The <code>write_full_susie</code> config flag (currently <code>TRUE</code>) controls whether the full SNP-level output (<code>.snp.txt</code>) is written for every gene. This substantially increases storage use but is required for post-hoc interrogation of PIP distributions. Set to <code>FALSE</code> to write credible set files only.</p>
+</div>
+</div>
+
+
 </section>
 
 <a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main> <!-- /main -->
