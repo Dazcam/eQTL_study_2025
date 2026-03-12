@@ -1,5 +1,5 @@
 ---
-title: "Project Overview - Beta"
+title: "Project Overview - Alpha"
 ---
 
 ## A single-cell eQTL atlas of the developing human brain
