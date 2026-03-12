@@ -4,6 +4,8 @@ project:
   render:
     - "*.qmd"
     - "!workflow/scripts/*.Rmd"
+  resources:
+    - "eqtl-browser/"
 
 website:
   title: "sc-eQTL Atlas"
