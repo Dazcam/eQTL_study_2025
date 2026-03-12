@@ -37,9 +37,9 @@ website:
             href: pipelines/05-tensorqtl.qmd
           - text: "06 · eQTL Replication"
             href: pipelines/06-qtl-replication.qmd
+          - text: "---"
           - text: "07 · Prepare GWAS"
             href: pipelines/07-prep-GWAS.qmd
-          - text: "---"
           - text: "08 · SuSiE Fine-mapping"
             href: pipelines/08-susie.qmd
           - text: "09 · S-LDSR"
@@ -51,6 +51,7 @@ website:
             href: pipelines/11-TWAS-weights.qmd
           - text: "12 · cTWAS"
             href: pipelines/12-cTWAS.qmd
+          - text: "---"
           - text: "13 · Visualisation"
             href: pipelines/13-visualisation.qmd
     right:
