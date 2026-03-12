@@ -1,15 +1,107 @@
 ---
-title: "SuSiE finemapping"
+title: "08 · SuSiE Fine-mapping"
 ---
 
-# sn-eQTL Analysis Workflow
+### Overview
 
-This project processes raw FASTQ files into cell-type-specific eQTL discoveries. 
+This pipeline performs Bayesian fine-mapping of cis-eQTL signals using [SuSiE](https://stephenslab.github.io/susieR/) (Sum of Single Effects), applied to all significant eGenes identified by TensorQTL. For each eGene, SuSiE models the association signal as a sum of independent effects and returns 95% credible sets — sets of SNPs that collectively contain the causal variant with ≥95% posterior probability. These credible sets are the primary output consumed by downstream S-LDSR (pipeline 09), SMR (pipeline 10), and cTWAS (pipeline 12) analyses.
 
-## Workflow Summary
+---
 
+### Workflow Logic
 
-The pipeline is divided into 13 main modules:
-1. **01 Parse**: Raw data processing and alignment.
-2. **02 Scanpy**: Single-cell QC and clustering...
-(etc)
+```{mermaid}
+graph TD
+    classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
+    classDef out fill:#e1f5fe,stroke:#01579b,color:#000;
+
+    A[TensorQTL perm output] --> B(get_sig_eGenes)
+    C[Pseudobulk BED] --> D(prep_susie_gene_meta)
+    C --> E(prep_susie_input)
+    F[TensorQTL covariates] --> E
+    G[Final VCF] --> H(vcf_to_dosage)
+    B --> I(run_susie)
+    D --> I
+    E --> I
+    H --> I
+    I --> J(merge_susie)
+    J --> K(sort_susie)
+    K --> L(susie_report)
+
+    class A,B,C,D,E,F,G,H,I,J,K snazzy
+    class L out
+```
+
+1. `get_sig_eGenes`: Extracts significant eGenes (FDR < 0.05) from TensorQTL permutation output for each cell type. These define the set of loci to be fine-mapped.
+2. `prep_susie_gene_meta`: Creates a gene metadata file (chromosome, TSS position, gene ID) from the pseudobulk BED file for each cell type, used by `run_susie` to define the cis window.
+3. `vcf_to_dosage`: Converts the imputed VCF to a bgzipped, tabix-indexed allele dosage matrix (CHROM, POS, REF, ALT + per-sample dosage), the genotype format expected by `susie_run.R`.
+4. `prep_susie_input`: Subsets the pseudobulk expression BED and covariate file to overlapping samples, and writes a sample list for the fine-mapping run.
+5. `run_susie`: Runs SuSiE fine-mapping in parallel batches (25 batches per cell type) across a ±1 Mb cis window. Per-gene outputs include credible set SNPs (`.cred.txt`), high-PIP credible set SNPs (`.cred.hp.txt`), and full SNP-level posterior statistics (`.snp.txt`).
+6. `merge_susie`: Concatenates the 25 per-batch output files into a single merged file for each cell type and output suffix (`.cred.hp.txt`, `.cred.txt`, `.snp.txt`).
+7. `sort_susie`: Sorts the merged high-PIP credible set file by chromosome and position, then bgzips for efficient downstream access.
+8. `susie_report`: Renders an RMarkdown HTML report summarising credible set sizes, PIP distributions, and eGene counts per cell type.
+
+---
+
+### Parallelisation Strategy
+
+Fine-mapping is the most computationally intensive step of the pipeline. Each cell type's eGenes are split into **25 batches** and submitted as independent SLURM jobs, enabling all cell types to be processed in parallel. A ±1 Mb cis window is used for all genes.
+
+| Phase | Jobs per cell type | Total jobs (19 cell types) |
+| :--- | :---: | :---: |
+| `run_susie` | 25 | 475 |
+| `merge_susie` | 3 (one per suffix) | 57 |
+| `sort_susie` | 1 | 19 |
+
+---
+
+### Output Files
+
+For each cell type, three output file types are produced after merging:
+
+| File | Contents |
+| :--- | :--- |
+| `{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz` | High-PIP SNPs (one row per credible set, sorted by position) — **primary output for downstream pipelines** |
+| `{cell_type}.mrgd.susie.cred.txt.gz` | All SNPs in 95% credible sets |
+| `{cell_type}.mrgd.susie.snp.txt.gz` | Full SNP-level posterior inclusion probabilities |
+
+---
+
+### Technical Requirements
+
+| Category | Detail |
+| :--- | :--- |
+| **Software** | SuSiE (`susieR` v24.01.1) |
+| **Container** | `susier_v24.01.1.sif` (`run_susie`); `r_eqtl.sif` (prep + report rules) |
+| **Input** | TensorQTL permutation output (05-tensorqtl); pseudobulk BED + covariates (05-tensorqtl); final VCF (04-geno-post) |
+| **Output** | Per-cell-type sorted, merged credible set files; HTML summary report |
+
+---
+
+### Resource Profile
+
+| Rule | Threads | RAM | Walltime |
+| :--- | :---: | :---: | :---: |
+| `get_sig_eGenes` | 1 | 10 GB | 30 min |
+| `vcf_to_dosage` | 1 | 10 GB | 2h |
+| `prep_susie_input` | 1 | 10 GB | 30 min |
+| `run_susie` (per batch) | 1 | 20 GB | 4h |
+| `merge_susie` | 1 | 5 GB | 30 min |
+| `sort_susie` | 1 | 5 GB | 30 min |
+| `susie_report` | 1 | 20 GB | 1h |
+
+---
+
+::: {.callout-note}
+**Batch indexing**
+
+SuSiE batch indices run from 1 to `susie_batches` (currently 25). The `run_susie` rule passes both the batch index and total batch count to `susie_run.R`, which internally partitions the eGene list and processes only the assigned slice. This avoids loading all eGenes into memory simultaneously.
+:::
+
+---
+
+::: {.callout-note}
+**Writing full SNP output**
+
+The `write_full_susie` config flag (currently `TRUE`) controls whether the full SNP-level output (`.snp.txt`) is written for every gene. This substantially increases storage use but is required for post-hoc interrogation of PIP distributions. Set to `FALSE` to write credible set files only.
+:::
