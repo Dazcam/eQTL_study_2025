@@ -1,4 +1,4 @@
-# sc-eQTL Atlas · Developing Human Brain
+# sc-eQTL Atlas | Developing Human Brain | Beta
 
 > **A single-nucleus eQTL atlas of the prenatal human cerebral cortex**  
 > Cardiff University · Division of Psychological Medicine and Clinical Neurosciences  
@@ -9,9 +9,11 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥8.0-brightgreen)](https://snakemake.readthedocs.io)
 [![Platform](https://img.shields.io/badge/platform-SLURM%20HPC-blue)](https://slurm.schedmd.com/)
 
-## What this is
+## What this is?
 
-We performed **single-nucleus RNA sequencing and genome-wide genotyping** on cerebral cortex from 134 unrelated fetal samples (second trimester) to generate the first cell-type-resolved eQTL atlas of the prenatal human brain. Combining these data with GWAS for six neuropsychiatric disorders, we identify which specific cell populations and gene expression changes credibly contribute to disease risk.
+We performed **single-nucleus RNA sequencing and genome-wide genotyping** on cerebral cortex from 134 unrelated samples (second trimester) to generate the first cell-type-resolved eQTL atlas of the prenatal human brain.
+
+This repository is an end-to-end computational genomics platform to process ~3 TB of raw single-nucleus RNA sequencing and genome-wide genotyping data. The pipeline identifies genetic variants that influence gene expression in specific brain cell types during development, and links those variants to neuropsychiatric disease risk.
 
 ## Pipeline overview
 
@@ -19,13 +21,13 @@ The full analysis runs as 13 sequential Snakemake pipelines on a SLURM HPC clust
 
 | # | Stage | Tools |
 | :---: | :--- | :--- |
-| 01 | Parse SPLiT-seq alignment | Parse Biosciences pipeline |
+| 01 | scRNA-seq Alignment | Parse Biosciences split-pipe |
 | 02 | scRNA-seq QC, clustering & pseudobulk | Scanpy, Papermill |
 | 03 | Genotype QC — pre-imputation | PLINK, GenotypeQCtoHRC |
 | 04 | Genotype QC — post-imputation | bcftools, PLINK, dbSNP |
 | 05 | cis-eQTL mapping | TensorQTL (GPU-accelerated) |
 | 06 | eQTL replication & ATAC enrichment | π₁ statistic, custom R |
-| 07 | GWAS summary statistic preparation | ldsc munge, CrossMap |
+| 07 | GWAS summary statistic preparation | GWAS standarisation and liftover |
 | 08 | Bayesian fine-mapping | SuSiE |
 | 09 | Heritability enrichment | S-LDSR (stratified LD score regression) |
 | 10 | Causal inference | SMR + HEIDI |
@@ -34,6 +36,10 @@ The full analysis runs as 13 sequential Snakemake pipelines on a SLURM HPC clust
 | 13 | Manuscript figures, tables & data sharing | R (ggplot2, tidyverse) |
 
 Full documentation for each stage — including DAG diagrams, rule descriptions, resource profiles, and technical notes — is at the **[pipeline documentation site](https://dazcam.github.io/eQTL_study_2025/)**.
+
+## App
+
+A fully client-side interactive app to query the eQTL permutation results is available at the **[eQTL Browser]([https://dazcam.github.io/eQTL_study_2025/](https://dazcam.github.io/eQTL_study_2025/eqtl-browser/))**.
 
 ## Repository structure
 
