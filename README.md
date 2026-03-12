@@ -1,32 +1,100 @@
-# A single-cell eQTL atlas of the developing human brain (2026) - draft
+# sc-eQTL Atlas · Developing Human Brain
 
-Genetic influences on gene expression in the developing brain are likely to impact a variety of human traits, including susceptibility to neuropsychiatric disorders. However, to date, expression quantitative trait loci (eQTL) studies of the prenatal human brain have been based on ‘bulk’ tissue, where gene expression measures are averaged across all constituent cell types. Here, we performed single nuclei RNA sequencing (snRNA-Seq) and genome-wide genotyping on cerebral cortex from 134 unrelated samples from the second trimester of gestation to provide the first single nuclei eQTL atlas of the prenatal human brain. We identify 3121 unique eGenes across 7 major cell types and 12 of their subtypes, combining these data with large-scale genome-wide association study (GWAS) data for neuropsychiatric disorders to implicate particular cell populations of the developing human brain in the etiology of these conditions and to identify specific gene expression differences within them that credibly confer susceptibility. Our study significantly advances knowledge of the cellular origins of neuropsychiatric disorders and provides a resource for interpreting GWAS findings for other conditions with a potential neurodevelopmental component.
+> **A single-nucleus eQTL atlas of the prenatal human cerebral cortex**  
+> Cardiff University · Division of Psychological Medicine and Clinical Neurosciences  
+> Manuscript in preparation · 2026
 
-This project was carried out in the Division of Psychological Medicine and Clinical Neurosciences (DPMCN). The pre-print is [here]().
+[![Docs](https://github.com/Dazcam/eQTL_study_2025/actions/workflows/publish.yml/badge.svg)](https://dazcam.github.io/eQTL_study_2025/)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![Snakemake](https://img.shields.io/badge/snakemake-≥8.0-brightgreen)](https://snakemake.readthedocs.io)
+[![Platform](https://img.shields.io/badge/platform-SLURM%20HPC-blue)](https://slurm.schedmd.com/)
 
-***
+## What this is
 
-<p align="center">
-  <img src="pipelines/images/eqtl_infographic.png" alt="eQTL Infographic" width="600">
-</p>
+We performed **single-nucleus RNA sequencing and genome-wide genotyping** on cerebral cortex from 134 unrelated fetal samples (second trimester) to generate the first cell-type-resolved eQTL atlas of the prenatal human brain. Combining these data with GWAS for six neuropsychiatric disorders, we identify which specific cell populations and gene expression changes credibly contribute to disease risk.
 
-***
+## Pipeline overview
 
-### Data Processing & Pipeline Documentation
+The full analysis runs as 13 sequential Snakemake pipelines on a SLURM HPC cluster, with up to 500 concurrent jobs. Each stage is containerised via Singularity for reproducibility.
 
-The raw data in this project were processed through a modular suite of 13 Snakemake pipelines.
+| # | Stage | Tools |
+| :---: | :--- | :--- |
+| 01 | Parse SPLiT-seq alignment | Parse Biosciences pipeline |
+| 02 | scRNA-seq QC, clustering & pseudobulk | Scanpy, Papermill |
+| 03 | Genotype QC — pre-imputation | PLINK, GenotypeQCtoHRC |
+| 04 | Genotype QC — post-imputation | bcftools, PLINK, dbSNP |
+| 05 | cis-eQTL mapping | TensorQTL (GPU-accelerated) |
+| 06 | eQTL replication & ATAC enrichment | π₁ statistic, custom R |
+| 07 | GWAS summary statistic preparation | ldsc munge, CrossMap |
+| 08 | Bayesian fine-mapping | SuSiE |
+| 09 | Heritability enrichment | S-LDSR (stratified LD score regression) |
+| 10 | Causal inference | SMR + HEIDI |
+| 11 | TWAS weight computation | FUSION |
+| 12 | Causal TWAS | cTWAS |
+| 13 | Manuscript figures, tables & data sharing | R (ggplot2, tidyverse) |
 
-Comprehensive documentation for each stage—including technical requirements, HPC resource profiles etc. is available at our documentation site:
+Full documentation for each stage — including DAG diagrams, rule descriptions, resource profiles, and technical notes — is at the **[pipeline documentation site](https://dazcam.github.io/eQTL_study_2025/)**.
 
-+ [View the Pipeline Documentation](https://dazcam.github.io/eQTL_study_2025/)
+## Repository structure
 
-![Docs Build Status](https://github.com/Dazcam/eQTL_study_2025/actions/workflows/publish.yml/badge.svg)
+```
+.
+├── config/                   # Pipeline configuration (YAML, sample lists, JSON)
+├── workflow/
+│   ├── Snakefile             # Master workflow entry point
+│   ├── rules/                # 13 Snakemake rule files (one per pipeline stage)
+│   ├── scripts/              # R, Python, and shell analysis scripts
+│   └── envs/                 # Conda environment definitions
+├── pipelines/                # Quarto documentation source (one .qmd per stage)
+├── resources/                # Reference data, public datasets, sample metadata
+├── results/                  # Pipeline outputs (not tracked in git)
+└── eqtl-browser/             # Interactive eQTL data browser (static HTML app)
+```
 
+## Quickstart
 
-***
+### Prerequisites
 
-## **Copyright and Licence Information**
+| Requirement | Version |
+| :--- | :--- |
+| Snakemake | ≥ 8.0 |
+| Conda / Mamba | any |
+| Singularity | ≥ 3.x |
+| SLURM | any |
+| Python | 3.12 |
 
-See the [LICENCE file](LICENCE.md)
+See the **[Setup page](https://dazcam.github.io/eQTL_study_2025/setup.html)** for full installation instructions, data access, and environment configuration.
 
-***
+### Run
+
+```bash
+# Clone the repo
+git clone https://github.com/Dazcam/eQTL_study_2025.git
+cd eQTL_study_2025
+
+# Dry run — check the full job graph without executing
+snakemake -n --profile config/profile
+
+# Submit to SLURM
+bash workflow/snakemake.sh
+```
+
+## Data access
+
+| Resource | Location |
+| :--- | :--- |
+| Raw snRNA-seq data | *Available on request pending publication* |
+| Imputed genotypes | *Available on request pending publication* |
+| eQTL summary statistics | *To be deposited on publication* |
+| TWAS weights | *To be deposited on publication* |
+
+An interactive browser for the permutation-pass eQTL summary statistics is available at **[dazcam.github.io/eQTL_study_2025/eqtl-browser/](https://dazcam.github.io/eQTL_study_2025/eqtl-browser/)**.
+
+## Citation
+
+> Manuscript in preparation. Details will be updated on preprint release.
+
+## Licence & copyright
+
+Code in this repository is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).  
+© 2026 Cardiff University. See [LICENCE.md](LICENCE.md) for details.
