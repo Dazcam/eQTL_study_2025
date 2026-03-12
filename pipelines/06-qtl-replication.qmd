@@ -4,7 +4,7 @@ title: "06 · eQTL Replication"
 
 ### Overview
 
-This pipeline assesses the replication of our single-nucleus eQTL discoveries against four published brain eQTL and chromatin accessibility datasets. Replication is quantified using the π₁ statistic (proportion of true positives among nominally significant associations in the reference dataset). The pipeline also tests for enrichment of our eQTL SNPs within open chromatin peaks from fetal brain snATAC-seq data.
+This pipeline assesses the replication of our single-nucleus eQTL discoveries against four published brain eQTL and chromatin accessibility datasets. Replication is quantified using the π₁ statistic (proportion of true positives, i.e. non-nulls, among nominally significant associations in the reference dataset). The pipeline also tests for enrichment of our eQTL SNPs within open chromatin peaks from fetal brain snATAC-seq data.
 
 ---
 
