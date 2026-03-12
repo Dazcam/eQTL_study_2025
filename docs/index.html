@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eQTL Browser · Developing Human Brain</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0e14;
+    --surface:   #111620;
+    --border:    #1e2736;
+    --border2:   #2a3548;
+    --accent:    #4af0c4;
+    --accent2:   #2dd4a0;
+    --dim:       #3a4f6a;
+    --muted:     #5a7090;
+    --text:      #c8daea;
+    --text-hi:   #e8f4ff;
+    --warn:      #f0a44a;
+    --sig:       #4af0c4;
+    --insig:     #5a7090;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .shell {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 36px 0 28px;
+    border-bottom: 1px solid var(--border2);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .logo-block {}
+
+  .logo-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-hi);
+    line-height: 1.2;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.7;
+  }
+
+  /* ── Controls bar ── */
+  .controls {
+    display: grid;
+    grid-template-columns: 260px 1fr auto auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 900px) {
+    .controls { grid-template-columns: 1fr 1fr; }
+    .controls .search-wrap { grid-column: 1 / -1; }
+  }
+
+  label.ctrl-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  select, input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--text-hi);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a7090'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
+  }
+
+  select:focus, input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(74, 240, 196, 0.1);
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .search-wrap input {
+    padding-left: 34px;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .filter-row > div {
+    flex: 1;
+    min-width: 160px;
+    max-width: 220px;
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 9px 18px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #050a08;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border2);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--dim); }
+
+  /* ── Status bar ── */
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .status-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-text strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .sig-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .sig-toggle input { width: auto; cursor: pointer; accent-color: var(--accent); }
+
+  /* ── Table ── */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  thead th {
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border2);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    transition: color 0.12s;
+  }
+
+  thead th:hover { color: var(--text); }
+
+  thead th.sorted-asc::after  { content: ' ↑'; color: var(--accent); }
+  thead th.sorted-desc::after { content: ' ↓'; color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.08s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(74, 240, 196, 0.03); }
+
+  td {
+    padding: 9px 14px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  td.gene-name {
+    color: var(--text-hi);
+    font-weight: 500;
+  }
+
+  td.ensembl {
+    color: var(--dim);
+    font-size: 11px;
+  }
+
+  td.snp-id {
+    color: var(--warn);
+    font-size: 11px;
+  }
+
+  td.chrom {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .sig-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .sig-yes { background: rgba(74,240,196,0.12); color: var(--sig); }
+  .sig-no  { background: rgba(90,112,144,0.12); color: var(--insig); }
+
+  .slope-pos { color: #6ee7b7; }
+  .slope-neg { color: #f87171; }
+
+  /* ── Empty / loading states ── */
+  .state-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 13px;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .state-panel svg { opacity: 0.3; }
+
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 0 0;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .pg-btn {
+    padding: 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .pg-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .pg-btn:disabled { opacity: 0.3; cursor: default; }
+  .pg-btn.active { background: rgba(74,240,196,0.12); border-color: var(--accent); color: var(--accent); }
+
+  .pg-info { color: var(--muted); padding: 0 8px; }
+
+  /* ── Info strip ── */
+  .info-strip {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .info-strip .info-item strong { color: var(--text); font-weight: 500; }
+
+  /* ── Cell type pills ── */
+  .ct-group {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 1px dashed var(--border2);
+    border-radius: 6px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(74,240,196,0.03);
+    color: var(--text);
+  }
+  .upload-zone input { display: none; }
+  .upload-zone .upload-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
+  .upload-zone p { margin-top: 4px; font-size: 11px; }
+
+  .loaded-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .loaded-indicator::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  /* ── Mode switcher ── */
+  .mode-switcher {
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .mode-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border2);
+    background: var(--surface);
+  }
+
+  .mode-tab {
+    flex: 1;
+    padding: 11px 20px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .mode-tab:last-child { border-right: none; }
+  .mode-tab:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+  .mode-tab.active { color: var(--accent); background: rgba(74,240,196,0.05); }
+  .mode-tab-icon { font-size: 14px; }
+
+  .mode-panel { padding: 18px 20px; }
+
+  .upload-zone {
+    border: 1px dashed var(--border2);
+    border-radius: 6px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(74,240,196,0.03);
+    color: var(--text);
+  }
+  .upload-zone input { display: none; }
+  .upload-zone .upload-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
+  .upload-zone p { margin-top: 4px; font-size: 11px; }
+
+  .autoload-desc {
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: rgba(240,164,74,0.06);
+    border: 1px solid rgba(240,164,74,0.18);
+    border-radius: 4px;
+    color: var(--warn);
+  }
+
+  .autoload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+  }
+
+  .al-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.12s;
+    user-select: none;
+  }
+  .al-item:hover { border-color: var(--dim); }
+  .al-item.selected { border-color: var(--accent); background: rgba(74,240,196,0.05); }
+  .al-item input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+
+  .al-status {
+    margin-left: auto;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .al-status.pending  { color: var(--dim); }
+  .al-status.loading  { color: var(--warn); }
+  .al-status.done     { color: var(--accent); }
+  .al-status.error    { color: #f87171; }
+
+  .timing-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 9px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    align-self: center;
+  }
+
+  .loaded-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .loaded-indicator::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="logo-block">
+      <div class="logo-eyebrow">Single-nucleus eQTL atlas</div>
+      <h1>Developing Human Brain <span>//</span> eQTL Browser</h1>
+    </div>
+    <div class="header-meta">
+      134 samples · 7 major cell types · 19 clusters<br>
+      3,121 unique eGenes · Second trimester cortex
+    </div>
+  </header>
+
+  <!-- ── Mode switcher ── -->
+  <div class="mode-switcher" id="modeSwitcher">
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabUpload" onclick="switchMode('upload')">
+        <span class="mode-tab-icon">⬆</span> Manual upload
+      </button>
+      <button class="mode-tab" id="tabAutoload" onclick="switchMode('autoload')">
+        <span class="mode-tab-icon">⚡</span> Autoload from repo
+      </button>
+    </div>
+
+    <!-- Upload panel -->
+    <div class="mode-panel" id="panelUpload">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".tsv,.tsv.gz,.txt,.gz" multiple>
+        <div class="upload-icon">⬆</div>
+        <strong>Drop eQTL TSV files here</strong>
+        <p>Accepts <code>*_cis_eQTL_perm.tsv.gz</code> · multiple files · processed entirely in-browser</p>
+      </div>
+    </div>
+
+    <!-- Autoload panel -->
+    <div class="mode-panel" id="panelAutoload" style="display:none;">
+      <div class="autoload-info">
+        <div class="autoload-desc">
+          Fetches data files directly from the GitHub Pages deployment.<br>
+          Edit <code>AUTOLOAD_BASE_URL</code> in the script config block to point at your repo.
+        </div>
+        <div class="autoload-grid" id="autoloadGrid">
+          <!-- populated by JS -->
+        </div>
+        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="autoloadAllBtn" onclick="autoloadAll()">Load all cell types</button>
+          <button class="btn btn-ghost" id="autoloadSelBtn" onclick="autoloadSelected()">Load selected</button>
+          <span class="timing-badge" id="timingBadge" style="display:none;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadedFiles" style="display:none; margin-bottom:18px; gap:10px; flex-wrap:wrap;"></div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div>
+      <label class="ctrl-label">Cell type</label>
+      <select id="cellTypeSelect">
+        <option value="">— select cell type —</option>
+      </select>
+    </div>
+    <div class="search-wrap">
+      <label class="ctrl-label">Search gene symbol or Ensembl ID</label>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="geneSearch" placeholder="e.g. BRCA2 or ENSG00000139618" autocomplete="off">
+    </div>
+    <div>
+      <label class="ctrl-label">SNP / rsID</label>
+      <input type="text" id="snpSearch" placeholder="e.g. rs12345">
+    </div>
+    <div>
+      <label class="ctrl-label">&nbsp;</label>
+      <button class="btn btn-ghost" id="clearBtn">Clear</button>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <div>
+      <label class="ctrl-label">Chromosome</label>
+      <select id="chromFilter">
+        <option value="">All chromosomes</option>
+        <option value="1">chr1</option><option value="2">chr2</option>
+        <option value="3">chr3</option><option value="4">chr4</option>
+        <option value="5">chr5</option><option value="6">chr6</option>
+        <option value="7">chr7</option><option value="8">chr8</option>
+        <option value="9">chr9</option><option value="10">chr10</option>
+        <option value="11">chr11</option><option value="12">chr12</option>
+        <option value="13">chr13</option><option value="14">chr14</option>
+        <option value="15">chr15</option><option value="16">chr16</option>
+        <option value="17">chr17</option><option value="18">chr18</option>
+        <option value="19">chr19</option><option value="20">chr20</option>
+        <option value="21">chr21</option><option value="22">chr22</option>
+        <option value="X">chrX</option>
+      </select>
+    </div>
+    <div>
+      <label class="ctrl-label">Max q-value</label>
+      <select id="qvalFilter">
+        <option value="">All</option>
+        <option value="0.05">≤ 0.05 (significant)</option>
+        <option value="0.1">≤ 0.10</option>
+        <option value="0.2">≤ 0.20</option>
+      </select>
+    </div>
+    <div>
+      <label class="ctrl-label">Effect direction</label>
+      <select id="slopeFilter">
+        <option value="">Both</option>
+        <option value="pos">Positive (↑)</option>
+        <option value="neg">Negative (↓)</option>
+      </select>
+    </div>
+    <div>
+      <label class="ctrl-label">Rows per page</label>
+      <select id="pageSizeSelect">
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="200">200</option>
+        <option value="500">500</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <div class="status-text" id="statusText">No data loaded</div>
+    <div style="display:flex; gap:16px; align-items:center;">
+      <button class="btn btn-ghost" id="exportBtn" style="padding:5px 12px; font-size:11px;" disabled>Export filtered TSV</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap" id="tableWrap">
+    <div class="state-panel" id="statePanel">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+      Upload a cell-type eQTL file to begin
+    </div>
+    <table id="resultsTable" style="display:none;">
+      <thead>
+        <tr>
+          <th data-col="symbol">Gene</th>
+          <th data-col="ensembl_id">Ensembl ID</th>
+          <th data-col="CHROM">Chr</th>
+          <th data-col="POS">Position</th>
+          <th data-col="SNP">SNP</th>
+          <th data-col="REF">Ref</th>
+          <th data-col="ALT">Alt</th>
+          <th data-col="AF">AF</th>
+          <th data-col="slope">Slope</th>
+          <th data-col="slope_se">SE</th>
+          <th data-col="pval_nominal">p (nominal)</th>
+          <th data-col="pval_beta">p (beta)</th>
+          <th data-col="qval">q-value</th>
+          <th>FDR 5%</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="pagination" id="pagination"></div>
+
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  CONFIG — edit this block to match your deployment                      ║
+// ╠══════════════════════════════════════════════════════════════════════════╣
+// ║                                                                          ║
+// ║  AUTOLOAD_BASE_URL: the folder on GitHub Pages that contains your       ║
+// ║  *_cis_eQTL_perm.tsv.gz files.  Trailing slash required.               ║
+// ║                                                                          ║
+// ║  Example (GitHub Pages from /docs folder):                              ║
+// ║    https://username.github.io/eQTL_study_2025/data/                    ║
+// ║                                                                          ║
+// ║  AUTOLOAD_CELL_TYPES: the 19 cell type names — must match the           ║
+// ║  filename prefix exactly, e.g. "Glu-UL" → Glu-UL_cis_eQTL_perm.tsv.gz ║
+// ║                                                                          ║
+const AUTOLOAD_BASE_URL = 'https://YOUR-USERNAME.github.io/YOUR-REPO/data/';
+
+const AUTOLOAD_CELL_TYPES = [
+  'Glu-UL', 'Glu-DL', 'NPC', 'GABA', 'MG', 'OPC', 'Endo-Peri',
+  'Glu-UL-0', 'Glu-UL-1', 'Glu-UL-2',
+  'Glu-DL-0', 'Glu-DL-1', 'Glu-DL-2',
+  'GABA-0', 'GABA-1', 'GABA-2',
+  'NPC-0', 'NPC-1', 'NPC-2',
+];
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  loadedData: {},      // cellType -> array of row objects
+  currentCellType: '',
+  filtered: [],
+  sortCol: 'qval',
+  sortDir: 'asc',
+  page: 1,
+  pageSize: 100,
+  mode: 'upload',      // 'upload' | 'autoload'
+};
+
+// ── Column definitions ─────────────────────────────────────────────────────
+const COLS = ['symbol','ensembl_id','CHROM','POS','SNP','REF','ALT','AF','slope','slope_se','pval_nominal','pval_beta','qval'];
+
+// ── Mode switching ─────────────────────────────────────────────────────────
+window.switchMode = function(mode) {
+  state.mode = mode;
+  document.getElementById('panelUpload').style.display   = mode === 'upload'   ? 'block' : 'none';
+  document.getElementById('panelAutoload').style.display = mode === 'autoload' ? 'block' : 'none';
+  document.getElementById('tabUpload').classList.toggle('active',   mode === 'upload');
+  document.getElementById('tabAutoload').classList.toggle('active', mode === 'autoload');
+  if (mode === 'autoload') buildAutoloadGrid();
+};
+
+// ── Autoload grid ──────────────────────────────────────────────────────────
+function buildAutoloadGrid() {
+  const grid = document.getElementById('autoloadGrid');
+  if (grid.children.length > 0) return; // already built
+  AUTOLOAD_CELL_TYPES.forEach(ct => {
+    const item = document.createElement('label');
+    item.className = 'al-item';
+    item.dataset.ct = ct;
+    item.innerHTML = `
+      <input type="checkbox" checked data-ct="${ct}">
+      <span>${ct}</span>
+      <span class="al-status pending" id="alst-${ct.replace(/[^a-zA-Z0-9]/g,'-')}">—</span>
+    `;
+    item.querySelector('input').addEventListener('change', e => {
+      item.classList.toggle('selected', e.target.checked);
+    });
+    item.classList.add('selected');
+    grid.appendChild(item);
+  });
+}
+
+function getSelectedCellTypes() {
+  return [...document.querySelectorAll('#autoloadGrid input[type="checkbox"]:checked')]
+    .map(cb => cb.dataset.ct);
+}
+
+function setAlStatus(ct, cls, text) {
+  const el = document.getElementById('alst-' + ct.replace(/[^a-zA-Z0-9]/g,'-'));
+  if (el) { el.className = `al-status ${cls}`; el.textContent = text; }
+}
+
+window.autoloadAll = async function() {
+  buildAutoloadGrid();
+  document.querySelectorAll('#autoloadGrid input[type="checkbox"]').forEach(cb => {
+    cb.checked = true;
+    cb.closest('.al-item').classList.add('selected');
+  });
+  await runAutoload(AUTOLOAD_CELL_TYPES);
+};
+
+window.autoloadSelected = async function() {
+  const selected = getSelectedCellTypes();
+  if (selected.length === 0) return;
+  await runAutoload(selected);
+};
+
+async function runAutoload(cellTypes) {
+  const btn1 = document.getElementById('autoloadAllBtn');
+  const btn2 = document.getElementById('autoloadSelBtn');
+  btn1.disabled = btn2.disabled = true;
+
+  const badge = document.getElementById('timingBadge');
+  badge.style.display = 'inline-block';
+  badge.textContent = 'Loading…';
+
+  const t0 = performance.now();
+  let loaded = 0;
+
+  // Load sequentially to avoid saturating bandwidth — swap to Promise.all for parallel
+  for (const ct of cellTypes) {
+    setAlStatus(ct, 'loading', '…');
+    const url = AUTOLOAD_BASE_URL + encodeURIComponent(ct) + '_cis_eQTL_perm.tsv.gz';
+    const tStart = performance.now();
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      await parseAndStore(ct, blob);
+      const elapsed = ((performance.now() - tStart) / 1000).toFixed(1);
+      setAlStatus(ct, 'done', `✓ ${elapsed}s`);
+      loaded++;
+      markFileLoaded(ct, state.loadedData[ct].length);
+      rebuildCellTypeSelect();
+      // Auto-select first loaded
+      if (loaded === 1) {
+        document.getElementById('cellTypeSelect').value = ct;
+        state.currentCellType = ct;
+        applyFilters();
+      }
+    } catch (err) {
+      setAlStatus(ct, 'error', '✗ err');
+      console.warn(`Failed to load ${ct}:`, err);
+    }
+  }
+
+  const totalSec = ((performance.now() - t0) / 1000).toFixed(1);
+  badge.textContent = `${loaded}/${cellTypes.length} loaded · ${totalSec}s total`;
+  btn1.disabled = btn2.disabled = false;
+}
+
+async function parseAndStore(cellType, blob) {
+  let text;
+  if (blob.type === 'application/gzip' || blob.name?.endsWith?.('.gz') || true) {
+    try {
+      const ds = new DecompressionStream('gzip');
+      const stream = new Response(blob.stream().pipeThrough(ds));
+      text = await stream.text();
+    } catch {
+      text = await blob.text(); // fallback if not gzipped
+    }
+  }
+  state.loadedData[cellType] = parseTSV(text);
+}
+
+// ── Manual file loading ────────────────────────────────────────────────────
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+async function handleFiles(files) {
+  for (const file of files) {
+    showLoading();
+    const cellType = file.name.replace(/_cis_eQTL_perm.*/, '').replace(/\.tsv.*/, '').replace(/\.gz$/, '');
+    await parseAndStore(cellType, file);
+    markFileLoaded(cellType, state.loadedData[cellType].length);
+  }
+  rebuildCellTypeSelect();
+  if (state.currentCellType && state.loadedData[state.currentCellType]) {
+    applyFilters();
+  } else if (Object.keys(state.loadedData).length === 1) {
+    const ct = Object.keys(state.loadedData)[0];
+    document.getElementById('cellTypeSelect').value = ct;
+    state.currentCellType = ct;
+    applyFilters();
+  }
+}
+
+function parseTSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split('\t').map(h => h.trim());
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split('\t');
+    if (vals.length < 2) continue;
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = vals[idx] !== undefined ? vals[idx].trim() : ''; });
+    // Coerce numerics
+    ['POS','AF','slope','slope_se','pval_nominal','pval_beta','qval'].forEach(c => {
+      row[c] = row[c] !== '' && row[c] !== 'NA' ? parseFloat(row[c]) : null;
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+
+function markFileLoaded(cellType, count) {
+  const container = document.getElementById('loadedFiles');
+  container.style.display = 'flex';
+  // Check if already there
+  if (container.querySelector(`[data-ct="${cellType}"]`)) return;
+  const pill = document.createElement('div');
+  pill.dataset.ct = cellType;
+  pill.className = 'loaded-indicator';
+  pill.textContent = `${cellType} (${count.toLocaleString()} rows)`;
+  pill.style.cssText = 'padding:5px 12px; background:rgba(74,240,196,0.06); border:1px solid rgba(74,240,196,0.2); border-radius:4px; cursor:pointer;';
+  pill.title = 'Click to select';
+  pill.addEventListener('click', () => {
+    document.getElementById('cellTypeSelect').value = cellType;
+    state.currentCellType = cellType;
+    state.page = 1;
+    applyFilters();
+  });
+  container.appendChild(pill);
+}
+
+function rebuildCellTypeSelect() {
+  const sel = document.getElementById('cellTypeSelect');
+  const current = sel.value;
+  // Clear all but first option
+  while (sel.options.length > 1) sel.remove(1);
+  Object.keys(state.loadedData).sort().forEach(ct => {
+    const opt = document.createElement('option');
+    opt.value = ct;
+    opt.text = ct;
+    sel.appendChild(opt);
+  });
+  if (current && state.loadedData[current]) sel.value = current;
+}
+
+// ── Controls wiring ────────────────────────────────────────────────────────
+document.getElementById('cellTypeSelect').addEventListener('change', e => {
+  state.currentCellType = e.target.value;
+  state.page = 1;
+  applyFilters();
+});
+
+['geneSearch','snpSearch'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { state.page = 1; applyFilters(); });
+});
+
+['chromFilter','qvalFilter','slopeFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => { state.page = 1; applyFilters(); });
+});
+
+document.getElementById('pageSizeSelect').addEventListener('change', e => {
+  state.pageSize = parseInt(e.target.value);
+  state.page = 1;
+  renderPage();
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  ['geneSearch','snpSearch'].forEach(id => document.getElementById(id).value = '');
+  ['chromFilter','qvalFilter','slopeFilter'].forEach(id => document.getElementById(id).value = '');
+  state.page = 1;
+  applyFilters();
+});
+
+document.getElementById('exportBtn').addEventListener('click', exportTSV);
+
+// Sort on header click
+document.querySelectorAll('thead th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (state.sortCol === col) {
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      state.sortCol = col;
+      state.sortDir = 'asc';
+    }
+    state.page = 1;
+    renderPage();
+  });
+});
+
+// ── Filter + sort + render ─────────────────────────────────────────────────
+function applyFilters() {
+  const data = state.loadedData[state.currentCellType];
+  if (!data) { showEmpty('Select a cell type to view results'); return; }
+
+  const gene = document.getElementById('geneSearch').value.trim().toLowerCase();
+  const snp  = document.getElementById('snpSearch').value.trim().toLowerCase();
+  const chrom = document.getElementById('chromFilter').value;
+  const qvalMax = document.getElementById('qvalFilter').value;
+  const slopeDir = document.getElementById('slopeFilter').value;
+
+  state.filtered = data.filter(r => {
+    if (gene && !(
+      (r.symbol || '').toLowerCase().includes(gene) ||
+      (r.ensembl_id || '').toLowerCase().includes(gene)
+    )) return false;
+    if (snp && !(r.SNP || '').toLowerCase().includes(snp)) return false;
+    if (chrom && String(r.CHROM) !== chrom) return false;
+    if (qvalMax && (r.qval === null || r.qval > parseFloat(qvalMax))) return false;
+    if (slopeDir === 'pos' && (r.slope === null || r.slope < 0)) return false;
+    if (slopeDir === 'neg' && (r.slope === null || r.slope >= 0)) return false;
+    return true;
+  });
+
+  renderPage();
+}
+
+function sortData(arr) {
+  const col = state.sortCol;
+  const dir = state.sortDir === 'asc' ? 1 : -1;
+  return [...arr].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    if (typeof va === 'number') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb)) * dir;
+  });
+}
+
+function renderPage() {
+  const sorted = sortData(state.filtered);
+  const total  = sorted.length;
+  const ps     = state.pageSize;
+  const pages  = Math.max(1, Math.ceil(total / ps));
+  state.page   = Math.min(state.page, pages);
+  const slice  = sorted.slice((state.page - 1) * ps, state.page * ps);
+
+  updateStatus(total);
+  updateSortHeaders();
+  renderTable(slice);
+  renderPagination(pages, total);
+  document.getElementById('exportBtn').disabled = total === 0;
+}
+
+function renderTable(rows) {
+  const statePanel = document.getElementById('statePanel');
+  const table      = document.getElementById('resultsTable');
+  const tbody      = document.getElementById('tableBody');
+
+  if (rows.length === 0) {
+    statePanel.style.display = 'flex';
+    statePanel.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>No results match the current filters`;
+    table.style.display = 'none';
+    return;
+  }
+
+  statePanel.style.display = 'none';
+  table.style.display = 'table';
+
+  tbody.innerHTML = rows.map(r => {
+    const sig = r.qval !== null && r.qval <= 0.05;
+    const slopeClass = r.slope !== null ? (r.slope >= 0 ? 'slope-pos' : 'slope-neg') : '';
+    const slopeStr = r.slope !== null ? (r.slope >= 0 ? '+' : '') + r.slope.toFixed(3) : '—';
+    const seStr    = r.slope_se !== null ? r.slope_se.toFixed(4) : '—';
+    const pnomStr  = r.pval_nominal !== null ? fmtSci(r.pval_nominal) : '—';
+    const pbetaStr = r.pval_beta   !== null ? fmtSci(r.pval_beta)   : '—';
+    const qvalStr  = r.qval        !== null ? r.qval.toFixed(4)      : '—';
+    const afStr    = r.AF          !== null ? r.AF.toFixed(3)         : '—';
+    const posStr   = r.POS         !== null ? r.POS.toLocaleString()  : '—';
+
+    return `<tr>
+      <td class="gene-name">${esc(r.symbol || '—')}</td>
+      <td class="ensembl">${esc(r.ensembl_id || '—')}</td>
+      <td class="chrom">${esc(r.CHROM || '—')}</td>
+      <td style="color:var(--muted);font-size:11px">${posStr}</td>
+      <td class="snp-id">${esc(r.SNP || '—')}</td>
+      <td style="color:var(--muted)">${esc(r.REF || '—')}</td>
+      <td style="color:var(--muted)">${esc(r.ALT || '—')}</td>
+      <td style="color:var(--muted)">${afStr}</td>
+      <td class="${slopeClass}">${slopeStr}</td>
+      <td style="color:var(--muted);font-size:11px">${seStr}</td>
+      <td style="font-size:11px">${pnomStr}</td>
+      <td style="font-size:11px">${pbetaStr}</td>
+      <td style="font-size:11px">${qvalStr}</td>
+      <td><span class="sig-badge ${sig ? 'sig-yes' : 'sig-no'}">${sig ? 'SIG' : '—'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPagination(pages, total) {
+  const el = document.getElementById('pagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+
+  const cur = state.page;
+  let html = '';
+  html += `<button class="pg-btn" ${cur === 1 ? 'disabled' : ''} onclick="goPage(${cur-1})">‹ Prev</button>`;
+
+  // Windowed page numbers
+  let start = Math.max(1, cur - 3);
+  let end   = Math.min(pages, cur + 3);
+  if (start > 1) html += `<button class="pg-btn" onclick="goPage(1)">1</button>${start > 2 ? '<span class="pg-info">…</span>' : ''}`;
+  for (let p = start; p <= end; p++) {
+    html += `<button class="pg-btn ${p === cur ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  if (end < pages) html += `${end < pages - 1 ? '<span class="pg-info">…</span>' : ''}<button class="pg-btn" onclick="goPage(${pages})">${pages}</button>`;
+  html += `<button class="pg-btn" ${cur === pages ? 'disabled' : ''} onclick="goPage(${cur+1})">Next ›</button>`;
+  html += `<span class="pg-info">${total.toLocaleString()} rows · page ${cur} of ${pages}</span>`;
+  el.innerHTML = html;
+}
+
+window.goPage = function(p) {
+  state.page = p;
+  renderPage();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+function updateStatus(total) {
+  const data = state.loadedData[state.currentCellType];
+  const totalRows = data ? data.length : 0;
+  const ct = state.currentCellType || '—';
+  document.getElementById('statusText').innerHTML =
+    `<strong>${total.toLocaleString()}</strong> / ${totalRows.toLocaleString()} rows · cell type: <strong>${ct}</strong>`;
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    if (th.dataset.col === state.sortCol) {
+      th.classList.add(state.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmtSci(v) {
+  if (v === null || v === undefined) return '—';
+  if (v === 0) return '0';
+  if (v >= 0.001 && v < 10000) return v.toPrecision(3);
+  return v.toExponential(2);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showLoading() {
+  const statePanel = document.getElementById('statePanel');
+  const table      = document.getElementById('resultsTable');
+  statePanel.style.display = 'flex';
+  statePanel.innerHTML = '<div class="spinner"></div>Parsing file…';
+  table.style.display = 'none';
+}
+
+function showEmpty(msg) {
+  const statePanel = document.getElementById('statePanel');
+  const table      = document.getElementById('resultsTable');
+  statePanel.style.display = 'flex';
+  statePanel.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>${msg}`;
+  table.style.display = 'none';
+  document.getElementById('statusText').textContent = 'No data loaded';
+  document.getElementById('pagination').innerHTML = '';
+  document.getElementById('exportBtn').disabled = true;
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function exportTSV() {
+  const sorted = sortData(state.filtered);
+  const header = [...COLS, 'sig_fdr05'].join('\t');
+  const lines  = sorted.map(r => {
+    const vals = COLS.map(c => r[c] !== null && r[c] !== undefined ? r[c] : '');
+    vals.push(r.qval !== null && r.qval <= 0.05 ? 'TRUE' : 'FALSE');
+    return vals.join('\t');
+  });
+  const blob = new Blob([header + '\n' + lines.join('\n')], { type: 'text/tab-separated-values' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `${state.currentCellType || 'eqtl'}_filtered_${Date.now()}.tsv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
