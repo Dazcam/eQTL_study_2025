@@ -8,25 +8,6 @@ This pipeline processes raw multiplexed FASTQ libraries from the Parse Bioscienc
 
 ---
 
-### Workflow Logic
-
-The pipeline follows a tiered execution strategy to manage heavy I/O and storage constraints.
-
-```{mermaid}
-graph TD
-    A[get_refs] --> B[make_ref]
-    C[cat_fqs] --> D[run_parse]
-    B --> D
-    D --> E[run_parse_combine]
-
-    style A fill:#f96,stroke:#333
-    style B fill:#f96,stroke:#333
-    style C fill:#f96,stroke:#333
-    style D fill:#f96,stroke:#333
-    style E fill:#f96,stroke:#333
-```
-OR?
-
 ```{mermaid}
 graph TD
     classDef snazzy fill:#f1f1f1,stroke:#333,stroke-width:2px,color:#000;
