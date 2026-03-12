@@ -90,5 +90,5 @@ The `run_ctwas` rule is parameterised by `cell_type` and `gwas` wildcards, produ
 | Phase | Jobs | Dimensions |
 | :--- | :---: | :--- |
 | `create_ld_matrices` | 1 | Once |
-| `copy_fusion_weights` | 20 | 20 cell types |
-| `run_ctwas` | 120 | 20 cell types × 6 GWAS |
+| `copy_fusion_weights` | 19 | 19 cell types |
+| `run_ctwas` | 114 | 19 cell types × 6 GWAS |
