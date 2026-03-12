@@ -1,4 +1,4 @@
-# sc-eQTL Atlas | Developing Human Brain | Beta
+# sc-eQTL Atlas | Developing Human Brain | Alpha
 
 > **A single-nucleus eQTL atlas of the prenatal human cerebral cortex**  
 > Cardiff University · Division of Psychological Medicine and Clinical Neurosciences  
