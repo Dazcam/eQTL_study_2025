@@ -9,7 +9,7 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥8.0-brightgreen)](https://snakemake.readthedocs.io)
 [![Platform](https://img.shields.io/badge/platform-SLURM%20HPC-blue)](https://slurm.schedmd.com/)
 
-## What this is?
+## What this is
 
 We performed **single-nucleus RNA sequencing and genome-wide genotyping** on cerebral cortex from 134 unrelated samples (second trimester) to generate the first cell-type-resolved eQTL atlas of the prenatal human brain.
 
