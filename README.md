@@ -39,7 +39,7 @@ Full documentation for each stage — including DAG diagrams, rule descriptions,
 
 ## App
 
-A fully client-side interactive app to query the eQTL permutation results is available at the **[eQTL Browser]([https://dazcam.github.io/eQTL_study_2025/](https://dazcam.github.io/eQTL_study_2025/eqtl-browser/))**.
+A fully client-side interactive app to query the eQTL permutation results is available at the **[eQTL Browser](https://dazcam.github.io/eQTL_study_2025/eqtl-browser/))**.
 
 ## Repository structure
 
@@ -93,8 +93,6 @@ bash workflow/snakemake.sh
 | Imputed genotypes | *Available on request pending publication* |
 | eQTL summary statistics | *To be deposited on publication* |
 | TWAS weights | *To be deposited on publication* |
-
-An interactive browser for the permutation-pass eQTL summary statistics is available at **[dazcam.github.io/eQTL_study_2025/eqtl-browser/](https://dazcam.github.io/eQTL_study_2025/eqtl-browser/)**.
 
 ## Citation
 
