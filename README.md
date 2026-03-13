@@ -39,7 +39,7 @@ Full documentation for each stage — including DAG diagrams, rule descriptions,
 
 ## App
 
-A fully client-side interactive app to query the eQTL permutation results is available at the **[eQTL Browser](https://dazcam.github.io/eQTL_study_2025/eqtl-browser/)**. (Note that only `autoload from repo` function and data for Glu-UL are available until publication.)
+A fully client-side interactive app to query the eQTL permutation results is available at the **[eQTL Browser](https://dazcam.github.io/eQTL_study_2025/eqtl-browser/)**. (Note that only `autoload from repo` function and data for `Glu-UL` are available until publication.)
 
 ## Repository structure
 
