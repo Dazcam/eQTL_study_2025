@@ -36,7 +36,7 @@ graph TD
 1. `get_smr_binary`: Downloads the SMR v1.4.0 Linux binary from the Yang Lab.
 2. `cat_refs`: Concatenates per-chromosome 1000G hg38 PLINK reference files (BED/BIM/FAM/FRQ) into genome-wide files for SMR's LD reference.
 3. `cat_tensorqtl_nom_snps`: Combines per-chromosome TensorQTL nominal Parquet files for each cell type into a single flat TSV using `smr_cat_tensorqtl_nom_snps.py`.
-4. `create_query`: Formats the concatenated nominal eQTL data into an SMR query file, filtering to eGenes passing FDR ≤ 0.05, aligning SNP IDs with the reference panel, and adding sample size (N=133).
+4. `create_query`: Formats the concatenated nominal eQTL data into an SMR query file, filtering to eGenes passing FDR ≤ 0.05, aligning SNP IDs with the reference panel, and adding sample size (N=134).
 5. `create_besd`: Converts the query file into binary SMR BESD format (`.besd`, `.bim`, `.epi` files) using `smr --make-besd`.
 6. `format_gwas`: Reformats hg38 GWAS summary statistics into SMR `.ma` format using `smr_format_gwas.R`, aligning allele frequencies with the 1000G reference.
 7. `smr`: Runs SMR + HEIDI for each cell type × GWAS combination, testing each significant eGene for colocalisation with GWAS risk loci (p_SMR threshold: 5×10⁻⁸).
@@ -96,6 +96,6 @@ SMR uses the 1000 Genomes hg38 PLINK files (shared with the S-LDSR pipeline) as 
 
 | Phase | Jobs | Dimensions |
 | :--- | :---: | :--- |
-| `cat_tensorqtl_nom_snps` | 20 | 20 cell types |
+| `cat_tensorqtl_nom_snps` | 19 | 19 cell types |
 | `format_gwas` | 6 | 6 GWAS traits |
-| `smr` | 120 | 20 cell types × 6 GWAS |
+| `smr` | 114 | 19 cell types × 6 GWAS |

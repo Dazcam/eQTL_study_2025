@@ -4,7 +4,7 @@ title: "05 · TensorQTL eQTL Discovery"
 
 ### Overview
 
-This pipeline performs cell-type-specific cis eQTL mapping using [TensorQTL](https://github.com/broadinstitute/tensorqtl), a GPU-accelerated implementation of the FastQTL permutation framework. It runs four mapping modes (nominal, permutation, independent, and trans) across all 19 cell types, preceded by expression and covariate preparation steps.
+This pipeline performs cell-type-specific cis-eQTL mapping using [TensorQTL](https://github.com/broadinstitute/tensorqtl), a GPU-accelerated implementation of the FastQTL permutation framework. It runs four mapping modes (nominal, permutation, independent, and trans) across all 19 cell types, preceded by expression and covariate preparation steps.
 
 ---
 
@@ -40,7 +40,7 @@ graph TD
     class G,H,I,J out
 ```
 
-1. `prep_tensorQTL_input`: Prepares per-cell-type normalised pseudobulk expression matrices (BED format) and covariate files. Applies batch correction (ComBat on post-conception week), merges genotype PCs and expression PCs, and normalises counts (quantile normalisation). Runs via `tensorqtl_prep_input_files.R` in the `r_eqtl` container.
+1. `prep_tensorQTL_input`: Prepares per-cell-type normalised pseudobulk expression matrices (BED format) and covariate files. Merges genotype PCs and expression PCs, and normalises counts (quantile normalisation). Runs via `tensorqtl_prep_input_files.R` in the `r_eqtl` container.
 2. `zip_pblk_cnts`: bgzip-compresses and tabix-indexes the expression BED file required by TensorQTL.
 3. `convert_genotypes`: Converts the final filtered VCF to PLINK2 PGEN format.
 4. `split_covariates`: Generates covariate files for each combination of genotype PC count and expression PC count, enabling parameter sweep optimisation.
@@ -53,9 +53,17 @@ graph TD
 ---
 
 ::: {.callout-note}
-**GPU acceleration**
+**Singulairty Container**
 
 TensorQTL runs inside the `tensorqtl.sif` Singularity container and uses PyTorch for GPU-accelerated matrix operations during permutation testing. The permutation pass is the most computationally intensive step; GPU acceleration reduces runtime from days to hours per cell type.
+
+The container is available as a dockerfile [here](https://hub.docker.com/r/francois4/tensorqtl). You can convert it to a `.sif` file by running
+
+```bash
+# From repo root dir
+singularity pull tensorqtl_latest.sif docker://francois4/tensorqtl
+mv tensorqtl*.sif resources/containers/tensorqtl.sif
+```
 :::
 
 ---
@@ -105,7 +113,7 @@ tensorQTL:
 | Category | Detail |
 | :--- | :--- |
 | **eQTL tool** | TensorQTL (PyTorch GPU backend) |
-| **Container** | `tensorqtl.sif` (eQTL runs); `r_eqtl.sif` (input prep); `gtex_eqtl.sif` (bgzip/tabix); `seurat5f.sif` (report) |
+| **Container** | `tensorqtl.sif` (eQTL runs); `r_eqtl.sif` (input prep); `gtex_eqtl.sif` (bgzip/tabix); `r_eqtl.sif` (report) |
 | **Env modules** | `plink/2.0` (genotype conversion) |
 | **Input** | Pseudobulk BED (from 02-scanpy); filtered VCF + PCA covariates (from 04-geno-post) |
 
@@ -122,3 +130,4 @@ tensorQTL:
 | `tensorqtl_perm` | 10 | 100 GB | 5h |
 | `tensorqtl_independent` | 10 | 100 GB | 5h |
 | `tensorqtl_trans` | 10 | 100 GB | 5h |
+

@@ -4,7 +4,7 @@ title: "08 · SuSiE Fine-mapping"
 
 ### Overview
 
-This pipeline performs Bayesian fine-mapping of cis-eQTL signals using [SuSiE](https://stephenslab.github.io/susieR/) (Sum of Single Effects), applied to all significant eGenes identified by TensorQTL. For each eGene, SuSiE models the association signal as a sum of independent effects and returns 95% credible sets — sets of SNPs that collectively contain the causal variant with ≥95% posterior probability. These credible sets are the primary output consumed by downstream S-LDSR (pipeline 09), SMR (pipeline 10), and cTWAS (pipeline 12) analyses.
+This pipeline performs Bayesian fine-mapping of cis-eQTL signals using [SuSiE](https://stephenslab.github.io/susieR/) (Sum of Single Effects), applied to all significant eGenes identified by TensorQTL. For each eGene, SuSiE models the association signal as a sum of independent effects and returns 95% credible sets — sets of SNPs that collectively contain the causal variant with ≥95% posterior probability. These credible sets are the primary output consumed by downstream S-LDSR (pipeline 09) to create the MaxCPP annotation.
 
 ---
 
@@ -72,7 +72,7 @@ For each cell type, three output file types are produced after merging:
 | Category | Detail |
 | :--- | :--- |
 | **Software** | SuSiE (`susieR` v24.01.1) |
-| **Container** | `susier_v24.01.1.sif` (`run_susie`); `r_eqtl.sif` (prep + report rules) |
+| **Container** | `susier.sif` (`run_susie`); `r_eqtl.sif` (prep + report rules) |
 | **Input** | TensorQTL permutation output (05-tensorqtl); pseudobulk BED + covariates (05-tensorqtl); final VCF (04-geno-post) |
 | **Output** | Per-cell-type sorted, merged credible set files; HTML summary report |
 

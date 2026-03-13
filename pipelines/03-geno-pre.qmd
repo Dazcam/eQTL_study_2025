@@ -1,5 +1,5 @@
 ---
-title: "Genotype QC pre-imputation"
+title: "03 · Genotype QC pre-imputation"
 ---
 
 ### Overview

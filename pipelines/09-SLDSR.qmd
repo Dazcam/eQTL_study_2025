@@ -78,11 +78,11 @@ The pipeline fans out across four dimensions simultaneously:
 
 | Phase | Jobs | Dimensions |
 | :--- | :---: | :--- |
-| `make_annot` | 880 | 20 cell types × 2 annot types × 22 chr |
-| `ldsr_ld_scores_hg38` | 880 | 20 × 2 × 22 |
-| `ldsr_strat_hg38_bl_v12` | 240 | 20 × 2 × 6 GWAS |
+| `make_annot` | 836 | 19 cell types × 2 annot types × 22 chr |
+| `ldsr_ld_scores_hg38` | 836 | 20 × 2 × 22 |
+| `ldsr_strat_hg38_bl_v12` | 228 | 19 × 2 × 6 GWAS |
 
-The SLURM profile's `jobs: 500` cap and `qos=maxjobs500` ensure all 880 annotation/LD score jobs complete in parallel without queue saturation.
+The SLURM profile's `jobs: 500` cap and `qos=maxjobs500` ensure all 838 annotation/LD score jobs complete in parallel without queue saturation.
 
 ---
 
