@@ -1,5 +1,5 @@
 ---
-title: "scRNAseq analysis"
+title: "02 · scRNAseq analysis"
 ---
 
 ---
@@ -8,7 +8,7 @@ title: "scRNAseq analysis"
 
 This pipeline transitions raw per-plate DGE matrices (H5AD format) into biologically annotated cell clusters and pseudobulk expression
 matrices ready for eQTL mapping. Analysis is implemented in a series of Jupyter notebooks executed non-interactively by [Papermill]
-(https://papermill.readthedocs.io/), with each rule producing a rendered HTML report alongside the notebook output.
+(https://papermill.readthedocs.io), with each rule producing a rendered HTML report alongside the notebook output.
 
 ---
 
@@ -28,10 +28,10 @@ graph TD
     class A,B,C,D,E,F snazzy
 ```
 
-1. `scanpy_qc`: Per-plate quality control — filters cells by mitochondrial read fraction, minimum gene count, and UMI count thresholds. Runs in parallel across the three plates.
-2. `scanpy_clustering`: Iterative dimensionality reduction and clustering across three sequential rounds. Each round performs PCA, UMAP, and Leiden graph clustering at increasing resolution, with manual inspection between rounds to remove low-quality or doublet-enriched clusters.
-3. `scanpy_subclustering`: Generates fine-grained subclusters for the four most abundant level-1 populations (ExN-UL, ExN-DL, InN, RG), producing the 13 subtype labels used for eQTL mapping.
-4. `scanpy_annotation`: Expert-guided cell-type labelling using canonical marker gene expression.
+1. `scanpy_qc`: Per-plate quality control — filters cells by mitochondrial read fraction, minimum gene count, and UMI count thresholds etc. Runs in parallel across the three plates.
+2. `scanpy_clustering`: Iterative dimensionality reduction and clustering across three sequential rounds. Each round performs PCA, UMAP, and Leiden graph clustering at increasing resolution, with manual inspection between rounds to remove low-quality cells / clusters.
+3. `scanpy_subclustering`: Generates fine-grained subclusters for the four most abundant level-1 populations (Glu-UL, Glu-DL, GABA, NPC), producing the 13 subtype labels used for eQTL mapping.
+4. `scanpy_annotation`: Cell-type labelling using canonical marker gene expression.
 5. `scanpy_cell_label_and_pseudobulk`: Transfers final cell labels, then sum-aggregates single-cell counts per donor per cell type to produce pseudobulk matrices for TensorQTL.
 
 ---
@@ -39,7 +39,7 @@ graph TD
 ::: {.callout-note}
 **Notebook execution pattern**
 
-Every rule uses [Papermill](https://papermill.readthedocs.io/) to execute the notebook non-interactively, passing a `plate` parameter to parameterise the run. The executed notebook is then converted to HTML by `jupyter nbconvert` for QC review:
+Every rule uses [Papermill](https://papermill.readthedocs.io) to execute the notebook non-interactively, passing a `plate` parameter to parameterise the run. The executed notebook is then converted to HTML by `jupyter nbconvert` for QC review:
 
 ```bash
 papermill {input.nb} {params.nb_out} -p plate {wildcards.plate}
@@ -55,8 +55,8 @@ jupyter nbconvert --to html {params.nb_out} --output {params.html_out}
 | :--- | :--- |
 | **Environment** | `eqtl_study` conda (Scanpy 1.10, Papermill, Jupyter) |
 | **Container** | — (conda only for this pipeline) |
-| **Key packages** | `scanpy`, `anndata`, `leidenalg`, `umap-learn`, `scrublet`, `doubletdetection` |
-| **Input** | Per-plate H5AD from `01-parse` (`combine_{plate}/all-sample/DGE_filtered/anndata.h5ad`) |
+| **Key packages** | `scanpy`, `anndata`, `leidenalg`, `umap-learn`, `scrublet` |
+| **Input** | Per-plate H5AD from `01PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad`) |
 | **Output** | Annotated AnnData object; per-cell-type pseudobulk BED files |
 
 ---
@@ -83,3 +83,4 @@ All 19 labels are propagated automatically through the downstream pipelines via 
 | `scanpy_cell_label_and_pseudobulk` | 10 | 100 GB | 3d | Sum aggregation per donor/cell type |
 
 ---
+

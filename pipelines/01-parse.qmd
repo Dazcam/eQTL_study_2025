@@ -1,31 +1,12 @@
 ---
-title: "Parse Alignment"
+title: "01 · Parse Alignment"
 ---
 
 ### Overview
 
-This pipeline processes raw multiplexed FASTQ libraries from the Parse Biosciences SPLiT-seq protocol into per-plate Digital Gene Expression (DGE) matrices. It handles reference building, multi-lane FASTQ concatenation, per-sublibrary alignment and barcode demultiplexing, and final plate-level combination.
+This pipeline processes raw multiplexed FASTQ libraries from the [Parse Biosciences SPLiT-seq protocol](https://www.parsebiosciences.com) into per-plate Digital Gene Expression (DGE) matrices. It handles reference building, multi-lane FASTQ concatenation, per-sublibrary alignment and barcode demultiplexing, and final plate-level combination.
 
 ---
-
-### Workflow Logic
-
-The pipeline follows a tiered execution strategy to manage heavy I/O and storage constraints.
-
-```{mermaid}
-graph TD
-    A[get_refs] --> B[make_ref]
-    C[cat_fqs] --> D[run_parse]
-    B --> D
-    D --> E[run_parse_combine]
-
-    style A fill:#f96,stroke:#333
-    style B fill:#f96,stroke:#333
-    style C fill:#f96,stroke:#333
-    style D fill:#f96,stroke:#333
-    style E fill:#f96,stroke:#333
-```
-OR?
 
 ```{mermaid}
 graph TD

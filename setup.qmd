@@ -1,5 +1,5 @@
 ---
-title: "Project Setup"
+title: "Project Setup - Alpha"
 ---
 
 This page covers everything needed to configure and run the pipeline from scratch: obtaining the data, installing software dependencies, and configuring the environment.
@@ -253,3 +253,5 @@ eQTL_study_2025/
 ├── _quarto.yml                  # Quarto site configuration
 └── .github/workflows/           # GitHub Actions CI/CD (auto-publish docs)
 ```
+
+

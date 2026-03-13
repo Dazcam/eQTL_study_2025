@@ -4,7 +4,7 @@ title: "07 · Prepare GWAS Summary Statistics"
 
 ### Overview
 
-This pipeline downloads, standardises, and processes GWAS summary statistics for six neuropsychiatric traits into formats required by S-LDSR, SMR, and cTWAS. Steps include format normalisation, Z-score and sample size addition, coordinate liftover from hg19 to hg38, and final munging for LDSR compatibility.
+This pipeline downloads, standardises, and processes GWAS summary statistics for six neuropsychiatric traits into formats required by S-LDSR, SMR, and cTWAS. Steps include format normalisation, Z-score generation and sample size addition, coordinate liftover from hg19 to hg38, and final munging for LDSR compatibility.
 
 ---
 
@@ -76,6 +76,16 @@ Because each PGC consortium uses different column naming conventions, the `stand
 :::
 
 ---
+
+::: {.callout-note}
+**Singularity container**
+
+```bash
+# From repo root directory
+singularity pull ubuntu_22.04.sif docker://ubuntu:22.04
+mv ubuntu_22.04.sif to resources/containers/
+```
+:::
 
 ### Technical Requirements
 
