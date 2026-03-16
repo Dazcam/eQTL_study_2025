@@ -100,33 +100,31 @@ Update the `containers` block to point to your local Singularity image files (`.
 
 ```yaml
 containers:
-  fastqtl: /path/to/containers/gtex_eqtl.sif
   tensorqtl: /path/to/containers/tensorqtl.sif
-  genotype-qc2hrc: /path/to/containers/genotype-qc2hrc_latest.sif
-  R: /path/to/containers/seurat5f.sif
+  genotype-qc2hrc: /path/to/containers/genotype-qc2hrc.sif
   r_eqtl: /path/to/containers/r_eqtl.sif
-  susie: /path/to/containers/susier_v24.01.1.sif
-  ubuntu: /path/to/containers/ubuntu_22.04.sif
+  susie: /path/to/containers/susier.sif
+  ubuntu: /path/to/containers/ubuntu.sif
   twas: /path/to/containers/twas.sif
 ```
 
-Containers can be built from their respective definition files (available on request) or pulled from the project's container registry.
+Containers can be built from their respective definition files (available on request) or pulled from the project's [container registry](https://quay.io/user/dazcam1/?tab=repos).
 
 ### Cell Types
 
-The `cell_types` list controls which cell type-specific eQTL analyses are run. By default, 7 broad and 13 subtype labels are included. To run a subset, comment out entries as needed:
+The `cell_types` list controls which cell type-specific eQTL analyses are run. By default, 7 broad and 12 subtype labels are included. To run a subset, comment out entries as needed:
 
 ```yaml
 cell_types:
-  - "ExN-UL"
-  - "ExN-DL"
-  - "RG"
-  - "InN"
+  - "Glu-UL"
+  - "Glu-DL"
+  - "NPC"
+  - "GABA"
   - "Endo-Peri"
   - "OPC"
   - "MG"
   # subtypes below
-  - "ExN-UL-0"
+  - "Glu-UL-0"
   # ...
 ```
 
