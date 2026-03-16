@@ -2,7 +2,7 @@
 
 > **A single-nucleus eQTL atlas of the prenatal human cerebral cortex**  
 > Cardiff University · Division of Psychological Medicine and Clinical Neurosciences  
-> Manuscript in preparation · 2026
+> Manuscript in review · 2026
 
 [![Docs](https://github.com/Dazcam/eQTL_study_2025/actions/workflows/publish.yml/badge.svg)](https://dazcam.github.io/eQTL_study_2025/)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
@@ -96,7 +96,7 @@ bash workflow/snakemake.sh
 
 ## Citation
 
-> Manuscript in preparation. Details will be updated on preprint release.
+> Manuscript preprint is available on [Research Square](https://www.researchsquare.com/article/rs-9011993/v1).
 
 ## Licence & copyright
 
