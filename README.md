@@ -11,7 +11,7 @@
 
 ## What this is
 
-We performed **single-nucleus RNA sequencing and genome-wide genotyping** on cerebral cortex from 134 unrelated samples (second trimester) to generate the first cell-type-resolved eQTL atlas of the prenatal human brain.
+We performed single-nucleus RNA sequencing and genome-wide genotyping on cerebral cortex from 134 unrelated samples (second trimester) to generate the first cell-type-resolved eQTL atlas of the prenatal human brain.
 
 This repository is an end-to-end computational genomics platform to process ~3 TB of raw single-nucleus RNA sequencing and genome-wide genotyping data. The pipeline identifies genetic variants that influence gene expression in specific brain cell types during development, and links those variants to neuropsychiatric disease risk.
 
