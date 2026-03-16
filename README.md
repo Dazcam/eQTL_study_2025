@@ -98,6 +98,10 @@ bash workflow/snakemake.sh
 
 > Manuscript preprint is available on [Research Square](https://www.researchsquare.com/article/rs-9011993/v1).
 
+## Funding
+
+> This work was funded by Medical Research Council / UK Research and Innovation project grant ([MR/Y003756/1](https://gtr.ukri.org/projects?ref=MR%2FY003756%2F1)).
+
 ## Licence & copyright
 
 Code in this repository is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).  
