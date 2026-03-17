@@ -1,0 +1,43 @@
+Bootstrap: docker
+From: bioconductor/bioconductor_docker
+
+```bash fold
+Bootstrap: docker
+From: bioconductor/bioconductor_docker
+
+%post
+	# Prevent interactive prompts during build
+	export DEBIAN_FRONTEND=noninteractive
+	export TZ=Etc/UTC
+
+	# Install system dependencies
+	apt-get update && apt-get install -y git
+	
+	# Install remotes package for GitHub installations
+	R -e "install.packages('remotes')"
+	
+	# Install FUSION R dependencies
+	R -e "install.packages(c('optparse','RColorBrewer','glmnet','methods','Rfast', 'tidyverse'))"
+	
+	# Install package to make reports
+	R -e "install.packages(c('knitr', 'DT', 'viridis', 'cowplot', 'rmarkdown', 'glue', 'kableExtra', 'gt', 'gtExtras'), repos='https://cloud.r-project.org/')"
+	
+	# Install ctwas package from GitHub (multigroup variant)
+	R -e "remotes::install_github('xinhe-lab/ctwas', ref = 'multigroup')"
+	
+	# Install Ensembl database for annotations 
+	R -e "BiocManager::install('EnsDb.Hsapiens.v86')"
+	
+	# Clone FUSION scripts into the container
+	git clone https://github.com/gusevlab/fusion_twas.git /opt/fusion_twas
+	
+	## Install plink2R (from GitHub)
+	cd /opt && git clone https://github.com/gabraham/plink2R.git
+	R -e "install.packages('/opt/plink2R/plink2R', repos=NULL, type='source')"
+
+%runscript
+	echo "Container for FUSION / cTWAS pipeline ready. Use Rscript to run TWAS scripts."
+
+%labels
+    Maintainer: Dazcam
+    Description: Singularity container with cTWAS and FUSION for sn-eQTL-project
