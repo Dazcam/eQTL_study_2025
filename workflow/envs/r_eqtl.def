@@ -1,0 +1,44 @@
+Bootstrap: docker
+From: bioconductor/bioconductor_docker
+
+%post
+    # Prevent interactive prompts during build
+    export DEBIAN_FRONTEND=noninteractive
+    export TZ=Etc/UTC
+
+    # Install system dependencies required for R packages
+    apt-get update && apt-get install -y \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libcairo2-dev \
+        libxt-dev \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install tidyverse (includes dplyr and stringr)
+    R -e "install.packages('tidyverse', repos='https://cloud.r-project.org/')"
+
+    # Install Bioconductor package edgeR
+    R -e "BiocManager::install(c('edgeR','limma','sva','GenomicRanges','GenomeInfoDb','nullranges'))"
+
+    # Install remaining CRAN packages
+    R -e "install.packages(c('knitr', 'DT', 'viridis', 'cowplot', 'rmarkdown', 'glue', 'kableExtra', 'gt', 'gtExtras','qvalue','UpSetR','patchwork','ggrepel'), repos='https://cloud.r-project.org/')"
+    
+    # Install additional packages for JOBs
+    R -e "install.packages(c('R.utils', 'pracma', 'quadprog'))"
+    R -e "devtools::install_github('LidaWangPSU/JOBS/JOBS')"
+    
+    # Install LDlinkR
+    R -e "install.packages('LDlinkR')"
+
+%environment
+    export PATH=/usr/local/bin:$PATH
+
+%runscript
+    exec R "$@"
+
+%labels
+    Maintainer: Dazcam
+    Description: Singularity container with R and Bioconductor packages for sn-eQTL-project

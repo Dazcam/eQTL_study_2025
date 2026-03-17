@@ -1,0 +1,41 @@
+Bootstrap: docker 
+From: bioconductor/bioconductor_docker
+
+%post
+    # Set DEBIAN_FRONTEND to noninteractive to avoid prompts
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Update package index and install system dependencies
+    apt-get update && apt-get install -y \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        pandoc \
+        zstd \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install R packages from CRAN
+    R -e "install.packages(c('rmarkdown', 'optparse', 'targets', 'tarchetypes', 'here', 'pbapply', 'tidyverse', 'parallelly', 'VGAM', 'AssocTests', 'caret', 'probably', 'tint', 'glue', 'colorspace', 'scales', 'scattermore', 'ggpubr', 'devtools'), repos='https://cloud.r-project.org/')"
+
+    # Install slugify from GitHub
+    R -e "devtools::install_github('cannin/slugify')"
+
+    # Install Bioconductor packages
+    R -e "if (!requireNamespace('BiocManager', quietly = TRUE)) install.packages('BiocManager', repos='https://cloud.r-project.org/'); BiocManager::install(c('BiocParallel', 'GWASTools', 'GENESIS', 'SNPRelate', 'rtracklayer'), update=FALSE, ask=FALSE)"
+
+    # Create directories for tools and references
+    mkdir -p /opt/GenotypeQCtoHRC_extras/tools /opt/GenotypeQCtoHRC_extras/references
+    
+%environment 
+	export LC_ALL=C.UTF-8 
+	export LANG=C.UTF-8 
+	export R_LIBS_USER=/usr/local/lib/R/site-library
+
+%runscript 
+	echo "GenotypeQCtoHRC Singularity container. Use 'singularity exec Rscript ...' to run the pipeline." 
+	exec /bin/bash "$@"
+
+%labels
+    Maintainer: Dazcam
+    Description: Singularity container with GenotypeQCtoHRC and subsidiary packages for sn-eQTL-project
