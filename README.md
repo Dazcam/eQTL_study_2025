@@ -76,13 +76,13 @@ See the **[Setup page](https://dazcam.github.io/eQTL_study_2025/setup.html)** fo
 ```bash
 # Clone the repo
 git clone https://github.com/Dazcam/eQTL_study_2025.git
-cd eQTL_study_2025
+cd eQTL_study_2025/workflow
 
 # Dry run — check the full job graph without executing
-snakemake -n --profile config/profile
+snakemake -np
 
 # Submit to SLURM
-bash workflow/snakemake.sh
+./snakemake.sh
 ```
 
 ## Data access
