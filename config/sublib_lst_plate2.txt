@@ -1,0 +1,15 @@
+../results/01PARSE/2_plate1
+../results/01PARSE/3_plate1
+../results/01PARSE/4_plate1
+../results/01PARSE/5_plate1
+../results/01PARSE/6_plate1
+../results/01PARSE/7_plate1
+../results/01PARSE/8_plate1
+../results/01PARSE/9_plate1
+../results/01PARSE/10_plate1
+../results/01PARSE/11_plate1
+../results/01PARSE/12_plate1
+../results/01PARSE/13_plate1
+../results/01PARSE/14_plate1
+../results/01PARSE/15_plate1
+../results/01PARSE/16_plate1
