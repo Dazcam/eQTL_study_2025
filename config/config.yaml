@@ -1,12 +1,11 @@
 # ------------  GLOBAL  ----------------
-
-MERGE_FQ_JSON: ../config/samples_plate3.json
-BAM_FILES: ../config/bam_files_test.json
-
 plate:
   - plate1
   - plate2
   - plate3
+
+MERGE_FQ_JSON: ../config/samples_{plate}.json
+BAM_FILES: ../config/bam_files_test.json
 
 root_dir: /scratch/c.c1477909/eQTL_study_2025/
 
@@ -81,8 +80,8 @@ write_full_susie: TRUE
 
 annot_types:
   - maxCPP
-  - CS95
-
+  - CS95   # Rm on freeze 2
+ 
 p_smr: 0.05
 p_heidi: 0.01
 smr_window: 500
@@ -101,12 +100,19 @@ gwas:
 containers:
   fastqtl: ../resources/containers/gtex_eqtl.sif
   tensorqtl: ../resources/containers/tensorqtl.sif
-  genotype-qc2hrc: ../resources/containers/genotype-qc2hrc_latest.sif
+  genotype-qc2hrc: ../resources/containers/genotype-qc2hrc.sif
   R: ../resources/containers/seurat5f.sif
   r_eqtl: ../resources/containers/r_eqtl.sif
-  susie: ../resources/containers/susier_v24.01.1.sif
+  susie: ../resources/containers/susier.sif
   ubuntu: ../resources/containers/ubuntu_22.04.sif
   twas: ../resources/containers/twas.sif
+
+# -------------  SETUP  ----------------
+
+setup:
+  get_containers:
+    output: ../resources/containers/get_containers.done
+    log: ../results/00LOG/00SETUP/get_containers.log 
 
 
 # -------------  PARSE  ----------------
@@ -119,21 +125,31 @@ parse:
     gtf_out: ../resources/refs/Homo_sapiens.GRCh38.113.gtf.gz
     outdir: ../resources/refs/
     log: ../results/00LOG/01PARSE/get_refs.log
+
   mk_ref:
     outfile: ../resources/refs/ref.done
     outdir: ../resources/refs/hg38
     build: hg38
     log: ../results/00LOG/01PARSE/mk_ref.log
-  cat_fqs:
-    out_r1: ../results/01PARSE/MRGD_fqs/{sample}_R1.fastq.gz 
-    out_r2: ../results/01PARSE/MRGD_fqs/{sample}_R2.fastq.gz
-    log_r1: ../results/00LOG/01PARSE/cat_fqs_{sample}_R1.log
-    log_r2: ../results/00LOG/01PARSE/cat_fqs_{sample}_R1.log
-    outdir: ../results/01PARSE/MRGD_fqs/
-  run_parse:
-    outfile: ../results/01PARSE/{sample}/run.done
-    log: ../results/00LOG/01PARSE/run_parse_{sample}.log
 
+  cat_fqs:
+    out_r1: ../results/01PARSE/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
+    out_r2: ../results/01PARSE/MRGD_fqs/{plate}/{sample}_R2.fastq.gz
+    log_r1: ../results/00LOG/01PARSE/{plate}/cat_fqs_{sample}_R1.log
+    log_r2: ../results/00LOG/01PARSE/{plate}/cat_fqs_{sample}_R2.log
+    outdir: ../results/01PARSE/MRGD_fqs/
+
+  run_parse:
+    outfile: ../results/01PARSE/{plate}/{sample}/run.done
+    outdir: "../results/01PARSE/{plate}/{sample}"        
+    sample_list: "../config/sample-list_{plate}.txt"
+    log: ../results/00LOG/01PARSE/{plate}/run_parse_{sample}.log
+
+  run_parse_combine:
+    outfile: "../results/01PARSE/{plate}/combine/run.done"
+    outdir: "../results/01PARSE/{plate}/combine"
+    sublib_list: "../config/sublib_lst_{plate}.txt"
+    log: "../results/00LOG/01PARSE/{plate}/run_parse_combine.log"    
 
 # ------------  SCANPY  ----------------
 
@@ -201,7 +217,7 @@ scanpy:
     benchmark: reports/benchmarks/scanpy_subclustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
-  env: "../envs/eqtl_study2.yml"
+  env: "../envs/eqtl_study.yml"
 #  env: /scratch/SCWF00021/.conda/envs/eqtl_study
 
 # ------------  GENOTYPES PRE_IMPUTATION  ----------------
