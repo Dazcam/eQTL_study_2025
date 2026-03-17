@@ -1,17 +1,17 @@
 configfile: "../config/config.yaml"
 
-rule all:
-    input:
-        expand(
-            [
-                config["tensorQTL"]["tensorqtl_nom"]["output"]
-            ],
-            cell_type=config["cell_types"],
-            ref_cell_type=config["cell_types_bryois"],
-            geno_pc=config["tensorQTL"]["geno_pcs"],
-            exp_pc=config["tensorQTL"]["exp_pcs"],
-            norm_method=config["tensorQTL"]["norm_methods"]
-        )
+#rule all:
+#    input:
+#        expand(
+#            [
+#                config["tensorQTL"]["tensorqtl_nom"]["output"]
+#            ],
+#            cell_type=config["cell_types"],
+#            ref_cell_type=config["cell_types_bryois"],
+#            geno_pc=config["tensorQTL"]["geno_pcs"],
+#            exp_pc=config["tensorQTL"]["exp_pcs"],
+#            norm_method=config["tensorQTL"]["norm_methods"]
+#        )
 
 rule prep_tensorQTL_input:
     input:  cov_file = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
@@ -168,15 +168,15 @@ rule tensorqtl_report:
             indep = expand(rules.tensorqtl_independent.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]), 
 #            trans = expand(rules.tensorqtl_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
 #            post_trans = expand(rules.post_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
-            rmd_script = "scripts/tensorQTL_report.Rmd"
-    output: "reports/05TENSORQTL/tensorqtl_report.html"
-    params: in_dir = "../../results/05TENSORQTL/tensorqtl_perm/",
-            bmark_dir = "../reports/benchmarks/",
-            output_file = "../reports/05TENSORQTL/tensorqtl_report.html",
+            rmd_script = config["tensorQTL"]["tensorqtl_report"]["rmd_script"]
+    output: config["tensorQTL"]["tensorqtl_report"]["output"]
+    params: in_dir = config["tensorQTL"]["tensorqtl_report"]["in_dir"],
+            bmark_dir = config["tensorQTL"]["tensorqtl_report"]["bmark_dir"],
+            output_file = config["tensorQTL"]["tensorqtl_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate tensorQTL report"
     benchmark: "reports/benchmarks/05tensorQTL.tensorqtl_report.benchmark.txt"
-    log:     "../results/00LOG/05TENSORQTL/tensorqtl_report.log"
+    log:     config["tensorQTL"]["tensorqtl_report"]["log"]
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \

@@ -279,3 +279,22 @@ rule calc_genotype_pcs:
                   --pca {params.pcs} \
                   --out {params.output_prefix} > {log} 2>&1
             """
+
+rule geno_post_report:
+    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
+    input:  stats = rules.calc_genotype_pcs.output,
+            rmd_script = config["geno_post_impute"]["geno_post_report"]["rmd_script"]
+    output: config["geno_post_impute"]["geno_post_report"]["html"]
+    params: in_dir = config["geno_post_impute"]["geno_post_report"]["in_dir"],
+            bmark_dir = config["geno_post_impute"]["geno_post_report"]["bmark_dir"],
+            output_file = config["geno_post_impute"]["geno_post_report"]["out_file"]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Generate genotyping pre-imputation report"
+    benchmark: "reports/benchmarks/geno_post_impute.geno_post_report.benchmark.txt"
+    log: config["geno_post_impute"]["geno_post_report"]["log"]
+    shell:
+        """
+        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+            output_file = '{params.output_file}', \
+            params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+        """

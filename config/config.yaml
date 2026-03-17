@@ -366,6 +366,13 @@ geno_post_impute:
     params: ../results/04GENOTYPES-POST/covariates/pca
     pcs: 10
     log: ../results/00LOG/04GENOTYPES-POST/calc_genotype_pcs.log
+  geno_post_report:
+    rmd_script: scripts/genotyping_post_impute_report.Rmd
+    html: reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
+    out_file: ../reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
+    in_dir: ../reports/04GENOTYPES-POST/
+    bmark_dir: ../reports/benchmarks/
+    log: ../results/00LOG/04GENOTYPES-POST/geno_post_report.log
 
 # ------------  TENSORQTL  ----------------
 
@@ -438,6 +445,14 @@ tensorQTL:
     proxy_dir: ../results/05TENSORQTL/proxies/{cell_type}/    
     ldlink_token: ../config/ldlink_token.txt
     log: ../results/00LOG/05TENSORQTL/get_perm_ld_proxies_{cell_type}.log
+
+  tensorqtl_report:
+    rmd_script: scripts/tensorQTL_report.Rmd
+    output: reports/05TENSORQTL/tensorqtl_report.html
+    in_dir: ../../results/05TENSORQTL/tensorqtl_perm/
+    bmark_dir: ../reports/benchmarks/
+    output_file: ../reports/05TENSORQTL/tensorqtl_report.html
+    log: ../results/00LOG/05TENSORQTL/tensorqtl_report.log
 
 # Note: split this into 2 scripts
 # ../scripts/tensorqtl_get_perm_ld_proxies.R uses LDlink R to download proxy SNPs first
