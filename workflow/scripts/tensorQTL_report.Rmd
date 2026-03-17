@@ -65,8 +65,6 @@ Sensitivity settings:
 
 ```{r, summary_table_L1, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-#in_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/05TENSORQTL/logs/"
-#bmark_dir <- "~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/"
 exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- c('bryois', 'fujita', 'quantile', 'xue')
@@ -178,7 +176,7 @@ summary_list <- summarise_logs(cell_types, in_dir)
 ***
 
 ```{r, eQTL_by_exp_PC_plot, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
-# Define custom color palette
+ƒ# Define custom color palette
 custom_palette <- c(
   'Glu-UL' = '#4363d8',
   'Glu-DL' = '#00B6EB',
@@ -560,7 +558,7 @@ ggplot(egene_per_cell, aes(x=reorder(cell_type,n), y=n, fill=cell_type)) +
 
 #### Upset
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
@@ -610,22 +608,39 @@ ggplot(scatter_dat, aes(x=n_cells, y=n, label=cell_type, color=cell_type)) +
 
 #### Settings
 
-+ Showing plots for geno PCs = 4, Exp PCs = 40, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
 ***
 
 ```{r, variables, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 # Select one row per cell type, keeping only cell_type, genes_tested, samples, and variants
+expPC_map <- c(
+  "Glu-UL"     = 50,
+  "Glu-DL"     = 40,
+  "GABA"       = 30,
+  "NPC"        = 30,
+  "MG"         = 30,
+  "OPC"        = 30,
+  "Endo-Peri"  = 30
+)
+
+expPC_tbl <- tibble(
+  cell_type = names(expPC_map),
+  expPC = as.numeric(expPC_map)
+)
+
 summary_table <- summary_tbl %>%
-  dplyr::select(cell_type, genes_tested, samples, variants) %>%
+  filter(norm_methods == "quantile") %>%
+  inner_join(expPC_tbl, by = c("cell_type", "expPC")) %>%
+  select(cell_type, genes_tested, samples, variants) %>%
   distinct(cell_type, .keep_all = TRUE) %>%
-  arrange(cell_type) # Sort alphabetically for consistency
+  arrange(cell_type)
 
 # Create the gt table
 table <- summary_table %>%
   gt() %>%
   tab_header(
-    title = "Table 1. TensorQTL, inputs per cell type"
+    title = "Table 3. TensorQTL, inputs per cell type"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -704,7 +719,7 @@ rank_counts <- all_eqtls %>%
   rename(primary = `1`, secondary = `2`, tertiary = `3`) %>%
   gt() %>%
   tab_header(
-    title = "Table 2. Independent eQTL counts per cell type"
+    title = "Table 4. Independent eQTL counts per cell type"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -756,7 +771,7 @@ median_distances <- all_eqtls %>%
   ) %>%
   gt() %>%
   tab_header(
-    title = "Table 3. Median TSS distances (kb) for independent eQTLs per cell type"
+    title = "Table 5. Median TSS distances (kb) for independent eQTLs per cell type"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -824,7 +839,7 @@ multi_eqtls_tbl <- multi_eqtls %>%
     gsub("<U\\+2212>", "−", ., perl = TRUE))) %>%
   gt() %>%
   tab_header(
-    title = "Table 3. Genes with multiple independent eQTL per cell type"
+    title = "Table 6. Genes with multiple independent eQTL per cell type"
   ) %>%
   cols_label(
     cell_type          = "Cell Type",
@@ -1034,7 +1049,7 @@ summary <- benchmarks %>%
 # Table
 datatable(
   summary,
-  caption = 'Table X. Rule benchmarking. Means and SD across replicates.',
+  caption = 'Table 7. Rule benchmarking. Means and SD across replicates.',
   options = list(
     pageLength = 25,
     autoWidth = TRUE,
@@ -1586,7 +1601,7 @@ rank_counts <- all_eqtls %>%
   rename(primary = `1`, secondary = `2`, tertiary = `3`) %>%
   gt() %>%
   tab_header(
-    title = "Table 2. Independent eQTL counts per cell type"
+    title = "Table 3. Independent eQTL counts per cell type"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -1638,7 +1653,7 @@ median_distances <- all_eqtls %>%
   ) %>%
   gt() %>%
   tab_header(
-    title = "Table 3. Median TSS distances (kb) for independent eQTLs per cell type"
+    title = "Table 4. Median TSS distances (kb) for independent eQTLs per cell type"
   ) %>%
   cols_label(
     cell_type = "Cell Type",
@@ -1678,7 +1693,7 @@ print(median_distances)
 
 #### Shared
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = 4, Exp PCs = `expPC_map_L1` or `expPC_map_L2`, norm method = 'quantile'
 
 ***
 
@@ -1813,7 +1828,7 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
 
 #### Counts CT {.tabset}
 
-+ Showing counts for geno PCs = 4, Exp PCs = `expPC_map_L1` or `expPC_map_L2`, norm method = 'quantile'
++ Showing counts for geno PCs = 4, Exp PCs = `expPC_map_all`, norm method = 'quantile'
 
 ***
 
