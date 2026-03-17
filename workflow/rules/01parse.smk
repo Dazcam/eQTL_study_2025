@@ -36,7 +36,7 @@ rule mk_ref:
     log:     config["parse"]["mk_ref"]["log"]
     shell:
        	     r"""
-             source activate spipe-1.3.1
+             source activate spipe
              split-pipe \
              --mode mkref \
              --genome_name {params.build} \
@@ -76,7 +76,7 @@ rule run_parse:
     log:     config["parse"]["run_parse"]["log"]
     shell:
              """
-             source activate spipe-1.3.1
+             source activate spipe
              split-pipe \
                --mode all \
                --kit WT_mega \
@@ -98,7 +98,7 @@ rule run_parse_combine:
     log:     "../results/00LOG/01PARSE/run_parse_combine.log"
     shell:
         """
-        source activate spipe-1.3.1
+        source activate spipe
         split-pipe \
         --mode comb \
         --sublib_list ../config/sublib_lst_plate3.txt \
