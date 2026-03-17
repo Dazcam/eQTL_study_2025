@@ -176,7 +176,7 @@ summary_list <- summarise_logs(cell_types, in_dir)
 ***
 
 ```{r, eQTL_by_exp_PC_plot, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
-ƒ# Define custom color palette
+# Define custom color palette
 custom_palette <- c(
   'Glu-UL' = '#4363d8',
   'Glu-DL' = '#00B6EB',
