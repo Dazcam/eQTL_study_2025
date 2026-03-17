@@ -59,9 +59,6 @@ bmark_dir <- params$bmark_dir
 ```{r, check_imputation_tbl, echo = FALSE, message = FALSE, warning = FALSE}
 imp_check_tbl <- read_tsv(paste0(in_dir, 'impute_check/chr_ALL_summary.tsv'))
 
-# Load the data (assuming the path is correct)
-imp_check_tbl <- read_tsv(paste0(in_dir, 'impute_check/chr_ALL_summary.tsv'))
-
 # Create the GT table
 imp_check_tbl %>%
   gt() %>%
@@ -122,10 +119,7 @@ imp_check_tbl %>%
 ### Genotype PCs
 
 ```{r, genotype_PCs, echo = FALSE, message = FALSE, warning = FALSE}
-eigenval <- read_table(
-  "~/Desktop/eQTL_study_2025/workflow/reports/04GENOTYPES-POST/pca.eigenval",
-  col_names = "eigenval"
-)
+eigenval <- read_table("../reports/04GENOTYPES-POST/pca.eigenval", col_names = "eigenval")
 
 # calculate proportion and cumulative variance explained
 variance <- eigenval %>%
