@@ -5,7 +5,7 @@ plate:
   - plate3
 
 MERGE_FQ_JSON: ../config/samples_{plate}.json
-BAM_FILES: ../config/bam_files_test.json
+BAM_FILES: ../config/bam_files.json
 
 root_dir: /scratch/c.c1477909/eQTL_study_2025/
 
@@ -108,12 +108,32 @@ containers:
   twas: ../resources/containers/twas.sif
 
 # -------------  SETUP  ----------------
+fastq:
+  plate1:
+    - /nfs/neurocluster/sequencers/foetalRNAseq/241009_A00748_0604_AHV7W2DSXC_fastq/
+    - /nfs/neurocluster/sequencers/foetalRNAseq/240925_A00748_0596_AHL5JFDSXC_fastq/
+    - /nfs/neurocluster/biobank/sequencers-test/241009_A00748_0603_BHVF5CDSXC_fastq/
+
+  plate2:
+    - /nfs/neurocluster/biobank/sequencers-test/241023_A00748_0613_BHVC35DSXC_fastq/
+    - /nfs/neurocluster/biobank/sequencers-test/241023_A00748_0614_AHVG75DSXC_fastq/
+    - /nfs/neurocluster/biobank/sequencers-test/241028_A00748_0618_AHVFYYDSXC_fastq/
+
+  plate3:
+    - /nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/
+    - /nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/
+    - /nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/
+
+PLATES = list(config["fastq"].keys())
 
 setup:
   get_containers:
     output: ../resources/containers/get_containers.done
     log: ../results/00LOG/00SETUP/get_containers.log 
 
+  create_parse_json:
+    output: ../config/samples_{plate}.json
+    log: ../results/00LOG/00SETUP/create_parse_json.log
 
 # -------------  PARSE  ----------------
 
