@@ -76,6 +76,7 @@ def aggregate_input(wildcards):
 rule all:
     input:
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
+         expand(config["setup"]["create_parse_json"]["output"], plate=PLATES)
 #        config["scanpy"]["subclustering"]["output"],
 #        config["geno_pre_impute"]["geno_pre_report"]["html"],
 #        config["geno_post_impute"]["geno_post_report"]["html"]

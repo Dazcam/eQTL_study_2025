@@ -13,6 +13,7 @@ workflow/scripts/__pycache__/
 config/passwords/*
 workflow/reports/00CHECK_SMPL_CONTAMINATION/*
 reports/benchmarks/
+workflow/reports/00CHECK_SMPL_CONTAMINATION/*
 workflow/reports/00CHECK_SMPL_CONTAMINATION/check_sample_swaps.html
 workflow/reports/02SCANPY/scanpy_annotation.html
 workflow/reports/02SCANPY/scanpy_clustering.html
