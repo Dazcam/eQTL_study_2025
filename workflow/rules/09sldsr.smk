@@ -45,7 +45,7 @@ rule lift_hapmap3_snps:
    output: config["sldsr"]["lift_hapmap3_snps"]["output"],
    singularity: config["containers"]["ubuntu"]   
    log: config["sldsr"]["lift_hapmap3_snps"]["log"]
-   shell: "/scratch/c.c1477909/eQTL_study_2025/workflow/scripts/liftover_hapmap3_snps.sh {output} > {log} 2>&1"
+   shell: "/scratch/c.c1477909/eQTL_study_2025/workflow/scripts/ldsr_liftover_hapmap3_snps.sh {output} > {log} 2>&1"
 
 
 rule ldsr_ld_scores_hg38:
