@@ -1,6 +1,14 @@
 configfile: "../config/config.yaml"
 
-localrules: create_parse_json
+localrules: create_parse_json, setup_liftover
+
+PLATES = list(config["fastq"].keys())
+
+rule all:
+    input:
+#        config["setup"]["get_containers"]["output"],
+#        expand(config["setup"]["create_parse_json"]["output"], plate=PLATES),
+        config["setup"]["liftover"]["output"]
 
 rule get_containers:
     output:  config["setup"]["get_containers"]["output"],
@@ -23,4 +31,17 @@ rule create_parse_json:
              --fastq_dirs {params.dirs} > {log} 2>&1
              """
 
+rule setup_liftover:
+    output:  config["setup"]["liftover"]["output"]
+    params:  outdir = config["setup"]["liftover"]["outdir"]
+    log:     config["setup"]["liftover"]["log"]
+    shell:
+             """
+             wget -nc -P {params.outdir} http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver
+             wget -nc -P {params.outdir} http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
+             wget -nc -P {params.outdir} http://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz
+        
+             chmod +x {params.outdir}/liftOver
+             touch {output}
+             """
 

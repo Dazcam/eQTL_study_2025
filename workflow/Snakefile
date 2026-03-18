@@ -2,7 +2,6 @@ configfile: '../config/config.yaml'
 
 #include: 'rules/00check_fastqs.smk'
 #include: 'rules/00check_sample_contamination.smk'
-include: 'rules/00setup.smk'
 #include: 'rules/01parse.smk' 
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute.smk'
@@ -39,12 +38,10 @@ include: 'rules/00setup.smk'
 #                all_genes.append(gene_id)
 #    return list(set(all_genes))
 
-PLATES = list(config["fastq"].keys())
 
 rule all:
     input:
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
-         expand(config["setup"]["create_parse_json"]["output"], plate=PLATES)
 #        config["scanpy"]["subclustering"]["output"],
 #        config["geno_pre_impute"]["geno_pre_report"]["html"],
 #        config["geno_post_impute"]["geno_post_report"]["html"]
