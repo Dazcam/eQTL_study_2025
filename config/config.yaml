@@ -131,6 +131,11 @@ setup:
     output: ../config/samples_{plate}.json
     log: ../results/00LOG/00SETUP/create_parse_json_{plate}.log
 
+  liftover:
+    output: ../resources/liftover/setup_liftover.done
+    outdir: ../resources/liftover
+    log: ../results/00LOG/00SETUP/liftover.log
+
 # -------------  PARSE  ----------------
 
 parse:
