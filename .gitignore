@@ -11,3 +11,4 @@ workflow/scripts/__pycache__/
 config/passwords/*
 workflow/reports/00CHECK_SMPL_CONTAMINATION/vireo/
 reports/benchmarks/
+workflow/reports/00CHECK_SMPL_CONTAMINATION/check_sample_swaps.html
