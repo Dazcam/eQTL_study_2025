@@ -156,11 +156,11 @@ all_matched   <- bind_rows(map(all_results, "matched_tbl"))
 
 ***
 
-#### Tables {.tabset}
+### Tables {.tabset}
 
 ***
 
-### Summarise cell assignments
+#### Summarise cell assignments
 
 ***
 
@@ -173,7 +173,7 @@ datatable(
 
 ***
 
-### Summary per donor
+#### Summary per donor
 
 ***
 
@@ -204,7 +204,7 @@ datatable(
 
 ***
 
-### Plate proportions
+#### Plate proportions
 
 ***
 
@@ -232,7 +232,9 @@ datatable(
 )
 ```
 
-### Low Coverage samples
+***
+
+#### Low Coverage samples
 
 ***
 
@@ -251,6 +253,10 @@ datatable(
   options = list(pageLength = 25, autoWidth = TRUE)
 )
 ```
+
+***
+
+#### Per-chr 
 
 ***
 
