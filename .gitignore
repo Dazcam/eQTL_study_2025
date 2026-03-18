@@ -38,3 +38,9 @@ workflow/reports/11TWAS/11twas_weights_report.html
 workflow/reports/12CTWAS/12ctwas_report.html
 workflow/reports/12JOBS/jobs_report.html
 workflow/reports/12JOBS/jobs_report_pre_se_imp.html
+workflow/reports/02SCANPY/*.xlsx
+workflow/.Rhistory
+workflow/scripts/.Rhistory
+workflow/.cache/
+workflow/.snakemake
+workflow/smk-*.log
