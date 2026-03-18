@@ -24,6 +24,10 @@ cell_types <- params$cell_types
 
 ***
 
+We used [susieR](https://stephenslab.github.io/susieR/index.html) for finemapping. The citation for SuSiE is [https://doi.org/10.1111/rssb.12388](https://academic.oup.com/jrsssb/article/82/5/1273/7056114).
+
+***
+
 1. `get_sig_eGenes`: Get sig. eGenes per cell type from TensorQTL perm output
 2. `prep_susie_gene_meta`: Create gene metadata file per cell type for SuSiE
 3. `vcf_to_dosage`: Generate a allele dosage file from genotypes VCF for SuSiE
