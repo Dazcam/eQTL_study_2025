@@ -1,6 +1,8 @@
 .DS_Store
 resources/
 results/
+config/bam_files_test.json
+config/ldlink_token.txt
 workflow/.DS_Store
 workflow/reports/previous_runs/24-11-07/*.html
 workflow/reports/previous_runs/24-11-11/*.html
@@ -9,7 +11,7 @@ workflow/reports/markdown/
 workflow/scripts/.ipynb_checkpoints/
 workflow/scripts/__pycache__/
 config/passwords/*
-workflow/reports/00CHECK_SMPL_CONTAMINATION/vireo/
+workflow/reports/00CHECK_SMPL_CONTAMINATION/*
 reports/benchmarks/
 workflow/reports/00CHECK_SMPL_CONTAMINATION/check_sample_swaps.html
 workflow/reports/02SCANPY/scanpy_annotation.html
@@ -44,3 +46,5 @@ workflow/scripts/.Rhistory
 workflow/.cache/
 workflow/.snakemake
 workflow/smk-*.log
+workflow/reports/benchmarks/
+workflow/reports/fq_check/
