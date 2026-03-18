@@ -30,10 +30,13 @@ for fastq_dir in args.fastq_dirs:
                 print(m)
                 if m:
                     sample = m.group(1)
-#                    if sample == '1':  # Exclude sublibrary 1 # We excluded sublibrary 1 from plate1
-#                        continue
                     lane = m.group(2)
                     reads = m.group(3)
+
+                    # We excluded sublibrary 1 from plate1
+                    if sample == '1' and args.plate == 'plate1':
+                        continue
+
                     FILES[sample][reads].append(full_path)
 
 # Sort R1 and R2 reads across lanes
@@ -55,16 +58,19 @@ for sample in FILES_sorted.keys():
 
 # Output summary information
 print()
-print("total {} unique samples will be processed".format(len(FILES_with_plate.keys())))
+print(f"total {len(FILES_with_plate)} unique samples will be processed")
 print("------------------------------------------")
-for sample in FILES_with_plate.keys():
+
+for sample in sorted(FILES_with_plate):
     for read in sorted(FILES_with_plate[sample]):
-        print("{sample} {read} has {n} fastq".format(sample=sample, read=read, n=len(FILES_with_plate[sample][read])))
+        n = len(FILES_with_plate[sample][read])
+        print(f"{sample} {read} has {n} fastq")
+
 print("------------------------------------------")
 print(f"check the samples_{plate}.json file for fastqs belonging to each sample")
 print()
 
 # Write the JSON output file with sample names including plate identifier
 js = json.dumps(FILES_with_plate, indent=4, sort_keys=True)
-with open(f'samples_{plate}.json', 'w') as json_file:
+with open(f'../config/samples_{plate}.json', 'w') as json_file:
     json_file.write(js)

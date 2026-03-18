@@ -98,8 +98,6 @@ gwas:
   ocd: https://figshare.com/ndownloader/articles/28707155/versions/4     # PMID:40360802  
  
 containers:
-  fastqtl: ../resources/containers/gtex_eqtl.sif
-  tensorqtl: ../resources/containers/tensorqtl.sif
   genotype-qc2hrc: ../resources/containers/genotype-qc2hrc.sif
   R: ../resources/containers/seurat5f.sif
   r_eqtl: ../resources/containers/r_eqtl.sif
@@ -122,9 +120,7 @@ fastq:
   plate3:
     - /nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/
     - /nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/
-    - /nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq/
-
-PLATES = list(config["fastq"].keys())
+    - /nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq_attempt2/250716_A00748_0722_AHC52WDSXF_fastq/
 
 setup:
   get_containers:
@@ -133,7 +129,7 @@ setup:
 
   create_parse_json:
     output: ../config/samples_{plate}.json
-    log: ../results/00LOG/00SETUP/create_parse_json.log
+    log: ../results/00LOG/00SETUP/create_parse_json_{plate}.log
 
 # -------------  PARSE  ----------------
 
@@ -238,7 +234,6 @@ scanpy:
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
   env: "../envs/eqtl_study.yml"
-#  env: /scratch/SCWF00021/.conda/envs/eqtl_study
 
 # ------------  GENOTYPES PRE_IMPUTATION  ----------------
 
