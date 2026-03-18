@@ -155,7 +155,7 @@ rule add_z_score:
     log:     config["prep_gwas"]["add_z_score"]["log"]
     shell:
              """
-             python scripts/add_z_score_to_sumstats.py \
+             python scripts/gwas_add_z_score_to_sumstats.py \
              --sumstats {input} \
              --out {output} > {log} 2>&1
              """
@@ -233,7 +233,7 @@ rule add_hg38_coords_to_gwas:
     message: "Adding hg38 coords to {input.sumstats} sumstats"
     benchmark: "reports/benchmarks/07prep_gwas.add_hg38_coords_to_gwas_{gwas}.txt"
     log: config["prep_gwas"]["add_hg38_coords_to_gwas"]["log"]
-    script: "../scripts/add_hg38_coords_to_gwas.py"
+    script: "../scripts/gwas_add_hg38_coords_to_gwas.py"
 
 
 rule munge_sumstats:
