@@ -46,11 +46,11 @@ graph TD
 
 | Trait | Source | PMID | Notes |
 | :--- | :--- | :--- | :--- |
-| Schizophrenia (SCZ) | Figshare | 35396580 | EUR only, PGC3 wave 3 |
-| Bipolar Disorder (BPD) | Figshare | 39843750 | 2024 release |
-| Major Depressive Disorder (MDD) | Figshare | 39814019 | 2025 release, no 23andMe/UKBB |
-| ADHD | Figshare | 36702997 | iPSYCH + deCODE + PGC; nested zip |
-| OCD | Figshare | 40360802 | no 23andMe; nested zip |
+| Schizophrenia (SCZ) | [PGC Figshare](https://figshare.com/ndownloader/files/34517828) | 35396580 | EUR only, PGC3 wave 3 |
+| Bipolar Disorder (BPD) | [PGC Figshare](https://figshare.com/ndownloader/files/49760772) | 39843750 | 2024 release |
+| Major Depressive Disorder (MDD) | [PGC Figshare](https://figshare.com/ndownloader/files/51487022) | 39814019 | 2025 release, no 23andMe/UKBB |
+| ADHD | [Figshare](https://figshare.com/ndownloader/files/40036684) | 36702997 | iPSYCH + deCODE + PGC |
+| OCD | [Figshare](https://figshare.com/ndownloader/files/53357735) | 40360802 | no 23andMe |
 
 Download URLs are specified in `config/config.yaml` under the `gwas:` block and are passed as Snakemake wildcards, so adding a new GWAS requires only a new URL entry.
 
