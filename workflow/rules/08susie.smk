@@ -19,7 +19,6 @@ rule get_sig_eGenes:
 rule prep_susie_gene_meta:
     input:  lambda w, norm_method=config['tensorQTL']['norm_methods'][0]:
                 f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed"
-#config["susie"]["prep_susie_gene_meta"]["pseudblk"]
     output: config["susie"]["prep_susie_gene_meta"]["output"]
     singularity: config["containers"]["R"]
     message: "Create gene metadata file for {wildcards.cell_type} for SuSiE"
@@ -68,7 +67,7 @@ rule prep_susie_input:
     message: "Extract genotype, expression, and covariate data for {wildcards.cell_type} for SuSiE fine-mapping"
     benchmark: "reports/benchmarks/08susie.prep_susie_input_{cell_type}.txt",
     log:    config["susie"]["prep_susie_input"]["log"]
-    script: "../scripts/prep_susie_input.py"
+    script: "../scripts/susie_prep_input.py"
 
 rule run_susie:
     input:  exp_mat = rules.prep_susie_input.output.exp_bed,
