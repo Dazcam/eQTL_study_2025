@@ -93,9 +93,12 @@ gwas:
   scz: https://figshare.com/ndownloader/files/34517828                  # PMID:35396580, EUR only
   bpd: https://figshare.com/ndownloader/files/49760772                  # PMID:39843750
   mdd: https://figshare.com/ndownloader/files/51487022                  # PMID:39814019
-  adhd: https://figshare.com/ndownloader/articles/22564390/versions/1    # PMID:36702997 
+  adhd: https://figshare.com/ndownloader/files/40036684                 # PMID:36702997
+  ocd: https://figshare.com/ndownloader/files/53357735                  # PMID:40360802
+
+#  adhd: https://figshare.com/ndownloader/articles/22564390/versions/1    # PMID:36702997 
 #  ptsd: https://figshare.com/ndownloader/articles/26349322/versions/3    # PMID:38637617
-  ocd: https://figshare.com/ndownloader/articles/28707155/versions/4     # PMID:40360802  
+#  ocd: https://figshare.com/ndownloader/articles/28707155/versions/4     # PMID:40360802  
  
 containers:
   genotype-qc2hrc: ../resources/containers/genotype-qc2hrc.sif
@@ -591,8 +594,8 @@ qtl_rep:
 
 prep_gwas:
   get_gwas_sumstats:
-    output: ../results/07PREP-GWAS/{gwas}_hg19_raw.tsv
-    log: ../results/00LOG/07PREP-GWAS/get_gwas_sumstats_{gwas}.log
+    output: ../results/20PREP-GWAS/{gwas}_hg19_raw.tsv
+    log: ../results/00LOG/20PREP-GWAS/get_gwas_sumstats_{gwas}.log
 
   standardise_sumstats:
     output: ../results/07PREP-GWAS/{gwas}_hg19_standardised.tsv
@@ -667,6 +670,8 @@ susie:
     log: ../results/00LOG/08SUSIE/sort_susie_{cell_type}.log
 
   susie_report:
+    output_file: ../reports/08SUSIE/08susie_report.html
+    script: scripts/susie_report.Rmd 
     html: reports/08SUSIE/08susie_report.html
     in_dir: ../../results/08SUSIE/susie/
     log: ../results/00LOG/08SUSIE/08susie_report.log
@@ -725,17 +730,17 @@ sldsr:
     log: ../results/00LOG/09SLDSR/ldsr_report.log
 
 # ---------  TWAS  ----------
-# Note that I'm hardcoding the norm_method and genPC and expPC here
-# TODO: add covariates / Fix GEMMA models
 
 twas:
   get_gemma:
     output: ../resources/gemma/gemma
+
   prep_exp_data:
     input: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
     exp: ../results/11TWAS/fusion_input/{cell_type}_plink.txt
     coord: ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
     log: ../results/00LOG/11TWAS/prep_exp_data_{cell_type}.log
+
   convert_vcf:
     input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     bed: ../results/11TWAS/fusion_input/genotypes_hg38.bed
@@ -743,6 +748,7 @@ twas:
     fam: ../results/11TWAS/fusion_input/genotypes_hg38.fam 
     prefix: ../results/11TWAS/fusion_input/genotypes_hg38
     log: ../results/00LOG/11TWAS/convert_vcf.log
+
   restrict_geno_to_ldref:
     bed: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bed 
     bim: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bim
@@ -751,18 +757,32 @@ twas:
     prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
     prefix_out: ../results/11TWAS/fusion_input/genotypes_hg38_filt
     log: ../results/00LOG/11TWAS/restrict_geno_to_ldref.log
+
   prepare_gene_inputs:
     prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
     prefix_out: ../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis
 
   compute_weights:
     covar: ../results/05TENSORQTL/prep_input/{cell_type}_quantile_genPC_4_expPC_40_split_covariates.txt
-    output: ../results/11TWAS/weights/{cell_type}/{gene_id}.RDat
+    output: "../results/11TWAS/weights/{cell_type}/all_weights_done.txt"
     outdir: ../results/11TWAS/weights/{cell_type}
-    log: ../results/00LOG/11TWAS/weights_{cell_type}_{gene_id}.log
-  aggregate_weights:
-    output: ../results/11TWAS/weights/{cell_type}/summary.txt
-    log: ../results/00LOG/11TWAS/aggregate_{cell_type}.log
+    log: ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
+
+  make_pos_file:
+    output: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
+    log: ../results/00LOG/11TWAS/make_pos_file_{cell_type}.log
+
+#  aggregate_weights:
+#    output: ../results/11TWAS/weights/{cell_type}/summary.txt
+#    log: ../results/00LOG/11TWAS/aggregate_{cell_type}.log
+  
+  twas_weights_report:
+    script: scripts/twas_weights_summary.Rmd
+    output: reports/11TWAS/11twas_weights_report.html
+    weights_dir: ../../results/00LOG/11TWAS/
+    bmark_dir: ../reports/benchmarks/
+    out_file: ../reports/11TWAS/11twas_weights_report.html
+    log: ../results/00LOG/11TWAS/twas_weights_report.log   
 
 # ---------  SMR  ----------
 
