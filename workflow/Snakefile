@@ -9,7 +9,7 @@ configfile: '../config/config.yaml'
 #include: 'rules/05tensorQTL.smk'
 #include: 'rules/06qtl_replication.smk'
 #include: 'rules/07prep_gwas.smk'
-#include: 'rules/08susie.smk'
+include: 'rules/08susie.smk'
 #include: 'rules/09sldsr.smk'
 #include: 'rules/10smr.smk'
 #include: 'rules/11twas.smk'
@@ -46,6 +46,11 @@ rule all:
 #        config["geno_pre_impute"]["geno_pre_report"]["html"],
 #        config["geno_post_impute"]["geno_post_report"]["html"]
 #        config["tensorQTL"]["tensorqtl_report"]["output"]
+        config["susie"]["susie_report"]["html"],
+#        config["sldsr"]["ldsr_report"]["html"],
+#        config["smr"]["smr_report"]["html"],
+        
+
 
 
 #        expand("../results/11TWAS/weights/{cell_type}/{cell_type}.pos", cell_type=config["cell_types"])

@@ -53,11 +53,11 @@ rule prep_exp_data:
     output: exp = config["twas"]["prep_exp_data"]["exp"],
             coord = config["twas"]["prep_exp_data"]["coord"]
     params: run_test = config['twas_run_test']
-    singularity: config["containers"]["R"]
+    singularity: config["containers"]["r_eqtl"]
     message: "Creating plink ready expression data and gene coordinate file for FUSION weight calculation"
     benchmark: "reports/benchmarks/11twas.prep_exp_data_{cell_type}.benchmark.txt"    
     log:    config["twas"]["prep_exp_data"]["log"]
-    script: "../scripts/prep_expr_for_FUSION.R"
+    script: "../scripts/twas_prep_expr_for_FUSION.R"
 
 # Rule to convert VCF to PLINK
 rule convert_vcf:
@@ -97,27 +97,24 @@ rule prepare_covar:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/11twas.prepare_covariates.benchmark_{cell_type}.txt"
     log:      "../results/00LOG/11TWAS/prepare_covar_{cell_type}.log"
-    script:   "../scripts/prep_covar_for_FUSION.R"    
+    script:   "../scripts/twas_prep_covar_for_FUSION.R"    
 
 rule compute_weights:
-    input:
-        bed = config["twas"]["convert_vcf"]["bed"],
-        bim = config["twas"]["convert_vcf"]["bim"],
-        fam = config["twas"]["convert_vcf"]["fam"],
-        expr_file = rules.prep_exp_data.output.exp,
-        coord_file = rules.prep_exp_data.output.coord,
-        ldref_snps = rules.get_ldref_snplist.output,
-        covar = rules.prepare_covar.output,
-        gemma = config["twas"]["get_gemma"]["output"]
-    output:
-        touch("../results/11TWAS/weights/{cell_type}/all_weights_done.txt")
-    params:
-        prefix_in = config["twas"]["convert_vcf"]["prefix"],
-        outdir = "../results/11TWAS/weights/{cell_type}"
+    input:  bed = config["twas"]["convert_vcf"]["bed"],
+            bim = config["twas"]["convert_vcf"]["bim"],
+            fam = config["twas"]["convert_vcf"]["fam"],
+            expr_file = rules.prep_exp_data.output.exp,
+            coord_file = rules.prep_exp_data.output.coord,
+            ldref_snps = rules.get_ldref_snplist.output,
+            covar = rules.prepare_covar.output,
+            gemma = config["twas"]["get_gemma"]["output"]
+    output: touch(config["twas"]["compute_weights"]["output"])
+    params: prefix_in = config["twas"]["convert_vcf"]["prefix"],
+            outdir = config["twas"]["convert_vcf"]["outdir"]
     singularity: config["containers"]["twas"]
     message: "Running FUSION weights for ALL genes in {wildcards.cell_type}"
     benchmark: "reports/benchmarks/11twas.compute_all_weights_{cell_type}.benchmark.txt"
-    log: "../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log"
+    log: config["twas"]["compute_weights"]["log"]
     shell:
         r"""
         echo "Starting weight computation for {wildcards.cell_type}" > {log}
@@ -193,14 +190,15 @@ rule compute_weights:
         """
 
 rule make_pos_file:
-    input:  "../results/11TWAS/weights/{cell_type}/all_weights_done.txt"
-    output: "../results/11TWAS/weights/{cell_type}/{cell_type}.pos"
+    input:  rules.compute_weights.output
+    output: config["twas"]["make_pos_file"]["output"]
     params: coord_file = config["twas"]["prep_exp_data"]["coord"],
             cis_window = config["tensorQTL"]["window"]
     message:  "Generate FUSION .pos file for {wildcards.cell_type}"
     benchmark: "reports/benchmarks/11twas.make_pos_file_{cell_type}.benchmark.txt"
-    log:      "../results/00LOG/11TWAS/make_pos_file_{cell_type}.log"
-    script:   "../scripts/make_fusion_pos_file.py"
+    log:      config["twas"]["make_pos_file"]["log"]
+    script:   "../scripts/twas_make_fusion_pos_file.py"
+
 
 # Not got base TWAS running yet, using CTWAS anyway
 
@@ -244,19 +242,17 @@ rule make_pos_file:
 #            """
 
 rule twas_weights_report:
-    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
-    input:  pos = expand("../results/11TWAS/weights/{cell_type}/{cell_type}.pos", cell_type = config['cell_types']),
-#            twas_results = expand("../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.twas", cell_type = config['cell_types'], gwas = config['gwas']),
-            rmd_script = "scripts/twas_weights_summary.Rmd"
-    output: "reports/11TWAS/11twas_weights_report.html"
+    input:  pos = expand(rules.make_pos_file.output, cell_type = config['cell_types']),
+            rmd_script = config["twas"]["twas_weights_report"]["script"]
+    output: config["twas"]["twas_weights_report"]["output"]
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
-            weights_dir = "../../results/00LOG/11TWAS/", 
-            bmark_dir = "../reports/benchmarks/"
-            out_file = "../reports/11TWAS/11twas_weights_report.html",
-    singularity: config["containers"]["R"]
+            weights_dir = config["twas"]["twas_weights_report"]["weights_dir"],
+            bmark_dir = config["twas"]["twas_weights_report"]["bmark_dir"],
+            out_file = config["twas"]["twas_weights_report"]["out_file"]
+    singularity: config["containers"]["r_eqtl"]
     message:  "Generate TWAS weights report data for report"
     benchmark: "reports/benchmarks/11twas.twas_weights_summary.benchmark.txt"
-    log: "../results/00LOG/11TWAS/twas_weights_summary.log" 
+    log: config["twas"]["twas_weights_report"]["log"]
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \

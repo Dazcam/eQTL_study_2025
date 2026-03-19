@@ -8,10 +8,10 @@ rule all:
 #        config['plotting']['eqtl_qc_plt']['out_file'],
 #        config['plotting']['ldsr_plt']['out_file'],
 #        config['plotting']['rep_plt']['out_file'],
-#        config['plotting']['supp_plt']['out_file'],
-        config['plotting']['data_perm']['out_file'],
-        config['plotting']['data_nominal']['out_file'],
-        config['plotting']['data_mk_eqtl_tar']['out_file']
+        config['plotting']['supp_plt']['out_file'],
+#        config['plotting']['data_perm']['out_file'],
+#        config['plotting']['data_nominal']['out_file'],
+#        config['plotting']['data_mk_eqtl_tar']['out_file']
 #        config['plotting']['data_weights']['out_file']
 
 rule eqtl_tbl:

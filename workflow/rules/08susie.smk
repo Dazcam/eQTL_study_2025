@@ -1,10 +1,6 @@
 configfile: "../config/config.yaml"
 localrules: prep_susie_gene_meta
 
-rule all:
-    input:
-       "reports/08SUSIE/08susie_report.html"
-
 rule get_sig_eGenes:
     input:  lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
                 geno_pc=config['tensorQTL']['geno_pcs']:
@@ -149,11 +145,11 @@ rule sort_susie:
 rule susie_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  susie_files = expand(rules.sort_susie.output, cell_type = config["cell_types"]),
-            rmd_script = "scripts/susie_report.Rmd"
+            rmd_script = config["susie"]["susie_report"]["script"]
     output: config["susie"]["susie_report"]["html"]
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
             in_dir = config["susie"]["susie_report"]["in_dir"],
-            output_file = "../reports/08SUSIE/08susie_report.html"
+            output_file = config["susie"]["susie_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SuSiE report"
     benchmark: "reports/benchmarks/08susie.susie_report.txt"
