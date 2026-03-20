@@ -594,8 +594,8 @@ qtl_rep:
 
 prep_gwas:
   get_gwas_sumstats:
-    output: ../results/20PREP-GWAS/{gwas}_hg19_raw.tsv
-    log: ../results/00LOG/20PREP-GWAS/get_gwas_sumstats_{gwas}.log
+    output: ../results/07PREP-GWAS/{gwas}_hg19_raw.tsv
+    log: ../results/00LOG/07PREP-GWAS/get_gwas_sumstats_{gwas}.log
 
   standardise_sumstats:
     output: ../results/07PREP-GWAS/{gwas}_hg19_standardised.tsv
@@ -749,18 +749,28 @@ twas:
     prefix: ../results/11TWAS/fusion_input/genotypes_hg38
     log: ../results/00LOG/11TWAS/convert_vcf.log
 
-  restrict_geno_to_ldref:
-    bed: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bed 
-    bim: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bim
-    fam: ../results/11TWAS/fusion_input/genotypes_hg38_filt.fam
-    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
-    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
-    prefix_out: ../results/11TWAS/fusion_input/genotypes_hg38_filt
-    log: ../results/00LOG/11TWAS/restrict_geno_to_ldref.log
+#  restrict_geno_to_ldref:
+#    bed: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bed 
+#    bim: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bim
+#    fam: ../results/11TWAS/fusion_input/genotypes_hg38_filt.fam
+#    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
+#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
+#    prefix_out: ../results/11TWAS/fusion_input/genotypes_hg38_filt
+#    log: ../results/00LOG/11TWAS/restrict_geno_to_ldref.log
 
-  prepare_gene_inputs:
-    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
-    prefix_out: ../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis
+
+#  prepare_gene_inputs:
+#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
+#    prefix_out: ../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis
+
+  get_ldref_snplist:
+    input: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
+    log: ../results/00LOG/11TWAS/get_ldref_snplist.log
+
+  prepare_covar:
+    output: ../results/11TWAS/fusion_input/{cell_type}_covariates.txt
+    log: ../results/00LOG/11TWAS/prepare_covar_{cell_type}.log
 
   compute_weights:
     covar: ../results/05TENSORQTL/prep_input/{cell_type}_quantile_genPC_4_expPC_40_split_covariates.txt
@@ -853,6 +863,45 @@ smr:
     html: reports/10SMR/10smr_report.html
     in_dir: ../../results/10SMR/smr # Rel to Rmd script
     log: ../results/00LOG/10SMR/smr_report.log  
+
+# ---------  CTWAS  ----------
+
+ctwas:
+  create_ld_matrices:
+    output: ../results/12CTWAS/ld_mats/create_ctwas_ld_matrices.done
+    ld_ref_dir: ../resources/ldsr/ldsr_hg38_refs/plink_files/
+    out_dir: ../results/12CTWAS/ld_mats/
+    log:  ../results/00LOG/12CTWAS/create_ld_matrices.log
+ 
+  copy_fusion_weights:
+    input: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
+    output: "../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done"
+    scr_dir: ../results/11TWAS/weights/{cell_type}
+    dest_dir: ../results/12CTWAS/weights/{cell_type}
+    log: ../results/00LOG/12CTWAS/copy_weights_{cell_type}.log 
+
+  run_ctwas:
+    gwas: ../results/07PREP-GWAS/{gwas}_hg38.tsv
+    weights: ../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done
+    bim_file: ../results/10SMR/smr_input/1000G.EUR.hg38.bim
+    output: ../results/12CTWAS/output/ctwas{cell_type}_{gwas}_ctwas.rds
+    ld_dir: ../results/12CTWAS/ld_mats/  
+    weights_dir: ../results/12CTWAS/weights/{cell_type}/
+    log: ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
+
+  run_ctwas_multi:
+    output: ../results/12CTWAS/multi/ctwas_multi_{cell_type}_{gwas}_ctwas.rds
+    log: ../results/00LOG/12CTWAS/ctwas_run_multi_{cell_type}_{gwas}.log
+
+  ctwas_report:
+    rmd_script: scripts/ctwas_report.Rmd
+    output: reports/12CTWAS/12ctwas_report.html
+    in_dir: ../../results/12CTWAS/
+    bmark_dir: ../reports/benchmarks/
+    lookup_dir: ../../resources/sheets/
+    tbl_dir: ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+    output_file: ../reports/12CTWAS/12ctwas_report.html
+    log: ../results/00LOG/12CTWAS/ctwas_report.log 
 
 # ---------  Tables & Plotting  ------------
 
