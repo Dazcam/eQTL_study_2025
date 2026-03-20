@@ -5,36 +5,36 @@ rule all:
     input: 
         "reports/11TWAS/11twas_weights_report.html"        
 
-def weights_input_function(wildcards):
-    """
-    Return the list of all .wgt.RDat files needed for a given cell_type
-    by reading the cell-type-specific permanent coordinate file.
-    """
-    import pandas as pd
-    
-    coord_file = config["twas"]["prep_exp_data"]["coord"].format(cell_type=wildcards.cell_type)
+#def weights_input_function(wildcards):
+#    """
+#    Return the list of all .wgt.RDat files needed for a given cell_type
+#    by reading the cell-type-specific permanent coordinate file.
+#    """
+#    import pandas as pd
+#    
+#    coord_file = config["twas"]["prep_exp_data"]["coord"].format(cell_type=wildcards.cell_type)
 
-    df = pd.read_csv(coord_file, sep=r'\s+', header=0)
-    # Your file has header: chr start end gene_id
-    genes = df["gene_id"].tolist()
+#    df = pd.read_csv(coord_file, sep=r'\s+', header=0)
+#    # Your file has header: chr start end gene_id
+#    genes = df["gene_id"].tolist()
 
-    return expand(
-        "../results/11TWAS/weights/{cell_type}/{gene}.wgt.RDat",
-        cell_type=wildcards.cell_type,
-        gene=genes
-    )
+#    return expand(
+#        "../results/11TWAS/weights/{cell_type}/{gene}.wgt.RDat",
+#        cell_type=wildcards.cell_type,
+#        gene=genes
+#    )
 
-def pos_input_function(wildcards):
-    """
-    Return list of successfully computed .wgt.RDat files for a given cell_type.
-    Only includes genes that actually produced a weight file (some may be empty).
-    """
-    import glob, os
-    weight_dir = f"../results/11TWAS/weights/{wildcards.cell_type}"
-    rdats = glob.glob(f"{weight_dir}/*.wgt.RDat")
-    # Filter out zero-byte files (genes that were skipped)
-    rdats = [f for f in rdats if os.path.getsize(f) > 0]
-    return rdats
+#def pos_input_function(wildcards):
+#    """
+#    Return list of successfully computed .wgt.RDat files for a given cell_type.
+#    Only includes genes that actually produced a weight file (some may be empty).
+#    """
+#    import glob, os
+#    weight_dir = f"../results/11TWAS/weights/{wildcards.cell_type}"
+#    rdats = glob.glob(f"{weight_dir}/*.wgt.RDat")
+#    # Filter out zero-byte files (genes that were skipped)
+#    rdats = [f for f in rdats if os.path.getsize(f) > 0]
+#    return rdats
 
 rule get_gemma:
    output:  config["twas"]["get_gemma"]["output"] 
@@ -59,7 +59,6 @@ rule prep_exp_data:
     log:    config["twas"]["prep_exp_data"]["log"]
     script: "../scripts/twas_prep_expr_for_FUSION.R"
 
-# Rule to convert VCF to PLINK
 rule convert_vcf:
     input: config["twas"]["convert_vcf"]["input"]
     output: bed = config["twas"]["convert_vcf"]["bed"],
@@ -73,12 +72,13 @@ rule convert_vcf:
     shell:  """plink2 --vcf {input} --make-bed --out {params} > {log} 2>&1"""   
 
 rule get_ldref_snplist:
-    input:       expand("../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim", chr = range(1, 23))
-    output:      config["twas"]["restrict_geno_to_ldref"]["snp_lst"]
+    input:       expand(config["twas"]["get_ldref_snplist"]["input"], chr = range(1, 23))
+    output:      config["twas"]["get_ldref_snplist"]["snp_lst"]
     envmodules: "plink/2.0"
     message:    "Restrict genotyped SNPs to LD reference SNPs"
     benchmark:  "reports/benchmarks/11twas.restrict_geno_to_ldref.benchmark.txt"
-    log:        "../results/00LOG/11TWAS/restrict_genotypes_to_ldref.log"
+    log:        config["twas"]["get_ldref_snplist"]["log"]
+"../results/00LOG/11TWAS/restrict_genotypes_to_ldref.log"
     shell:      """
                 # Extract SNP IDs from LD reference .bim files
                 cat {input} | cut -f 2 > {output} 2>&1 | tee {log}                
@@ -92,11 +92,11 @@ rule prepare_covar:
             geno_pc=config['tensorQTL']['geno_pcs'], 
             exp_pc=config['exp_pc_map'][w.cell_type]
         )
-    output: "../results/11TWAS/fusion_input/{cell_type}_covariates.txt"
+    output: config["twas"]["prepare_covar"]["output"]
     message: "Prepare covariate gene expression data for FUSION"
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/11twas.prepare_covariates.benchmark_{cell_type}.txt"
-    log:      "../results/00LOG/11TWAS/prepare_covar_{cell_type}.log"
+    log:  config["twas"]["prepare_covar"]["log"]
     script:   "../scripts/twas_prep_covar_for_FUSION.R"    
 
 rule compute_weights:
