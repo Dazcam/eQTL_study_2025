@@ -58,6 +58,7 @@ below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQC
 #### Tables
 
 ```{r, autosomal_het_table, results='asis', echo=FALSE}
+in_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/03GENOTYPES-PRE/'
 het_tbl <- read.table(paste0(in_dir, 'eqtl_genotypes_hg19_nodup.het'), header = T) |>
   tibble() |>
   rename(O_HOM = 'O.HOM.', E_HOM = 'E.HOM.', N_NM = 'N.NM.') |>
@@ -66,13 +67,13 @@ het_tbl <- read.table(paste0(in_dir, 'eqtl_genotypes_hg19_nodup.het'), header = 
   mutate(
     mean_het = mean(het_rate),
     sd_het = sd(het_rate),
-    outlier_het = abs(het_rate - mean_het) > 3 * sd_het
+    outlier_het = abs(het_rate - mean_het) > 4 * sd_het
   ) |>
   # ID outliers based on inbreeding coefficient F
     mutate(
     mean_F = mean(F),
     sd_F = sd(F),
-    outlier_F = abs(F - mean_F) > 3 * sd_F | F < -0.15 | F > 0.15
+    outlier_F = abs(F - mean_F) > 4 * sd_F | F < -0.15 | F > 0.15
   ) |>
   mutate(across(where(is.numeric), ~round(., 3)))
 datatable(het_tbl, caption = 'Table 1. Autosomal heterozygosity table')
@@ -97,8 +98,8 @@ write_tsv(outliers_tbl, paste0(in_dir, "het_outliers.txt"), col_names = FALSE)
 ```{r, het_plot, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
 het_plot <- ggplot(het_tbl, aes(x = het_rate)) +
   geom_histogram(binwidth = 0.005, fill = "#4C78A8", color = "black", alpha = 0.7) +
-  geom_vline(aes(xintercept = mean_het + 3 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
-  geom_vline(aes(xintercept = mean_het - 3 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = mean_het + 4 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = mean_het - 4 * sd_het), color = "#E31A1C", linetype = "dashed", size = 1) +
   labs(
     title = "Heterozygosity Rate Distribution",
     x = "Heterozygosity Rate",
@@ -118,14 +119,14 @@ het_plot <- ggplot(het_tbl, aes(x = het_rate)) +
 # Create publication-ready F distribution plot
 f_plot <- ggplot(het_tbl, aes(x = F)) +
   geom_histogram(binwidth = 0.01, fill = "#F28E2B", color = "black", alpha = 0.7) +
-  geom_vline(aes(xintercept = mean_F + 3 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
-  geom_vline(aes(xintercept = mean_F - 3 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = mean_F + 4 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = mean_F - 4 * sd_F), color = "#E31A1C", linetype = "dashed", size = 1) +
   geom_vline(xintercept = c(-0.15, 0.15), color = "#E31A1C", linetype = "solid", size = 1) +
   labs(
     title = "Inbreeding Coefficient (F) Distribution",
     x = "Inbreeding Coefficient (F)",
     y = "Count",
-    caption = "Red lines: solid = [-0.15, 0.15], dashed = ±3 SD"
+    caption = "Red lines: solid = [-0.15, 0.15], dashed = ±4 SD"
   ) +
   theme_minimal(base_size = 12) +
   theme(

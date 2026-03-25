@@ -65,30 +65,18 @@ for (i in seq_len(nrow(celltype_map))) {
   file_path <- paste0(log_dir, my_ct, '_', norm_method, '_perm.cis_qtl.txt.gz')
   
   # Read the file
-  df_sig <- read_delim(file_path, delim = '\t', col_names = TRUE) %>%
+  pooled_my <- read_delim(file_path, delim = '\t', col_names = TRUE) %>%
     filter(qval < 0.05) %>%
     select(snp = variant_id, gene = phenotype_id, beta = slope) %>%
-    filter(str_detect(snp, "^rs"), str_detect(gene, "^ENSG"))
-  message('\nSig. eQTL in ', my_ct, ': ', nrow(df_sig), '\n')
-  
-  write_tsv(df_sig, file.path(out_dir, paste0(my_ct, "_beta_cor_single_df_sig.tsv")))
-  
-  # Pool: for dup SNP-gene, keep largest abs(beta)
-  pooled_my <- df_sig %>%
-    group_by(snp, gene) %>%
-    slice_max(abs(beta), n = 1, with_ties = FALSE) %>%  # If ties in abs, picks first
-    ungroup() |>
-    # filter(str_detect(snp, '^rs')) |> 
-    # filter(str_detect(gene, '^ENSG')) |>
+    filter(str_detect(snp, "^rs"), str_detect(gene, "^ENSG")) |>
     mutate(key = paste(snp, gene, sep = '_')) |>
     select(key, beta_my = beta)
-  message('Pooled sig. eQTL after dup rm : ', nrow(pooled_my))
-  message('Any NAs in pooled sig. eQTL? ', anyNA(pooled_my))
-  message('\nPooled sig. eQTL tbl:\n')
+  message('\nSig. eQTL in ', my_ct, ': ', nrow(df_sig), '\n')
+  message('Any NAs in sig. eQTL? ', anyNA(pooled_my))
+  message('\nSig. eQTL tbl:\n')
   print(pooled_my)
   
-  write_tsv(pooled_my, file.path(out_dir, paste0(my_ct, "_beta_cor_single_pooled_my.tsv")))
-
+  write_tsv(pooled_my, file.path(out_dir, paste0(my_ct, "_beta_cor_single_df_sig.tsv")))
   
   message('\nLoading Fugita data ...\n')
   fugita_path <- paste0(fugita_dir, 'celltype-eqtl-sumstats.', fu_ct,'.tsv')
@@ -104,6 +92,8 @@ for (i in seq_len(nrow(celltype_map))) {
 
   setDT(fugita_df)
   
+  # This removes duplicate SNP / gene pairs i.e. same pairs in multiple cell types
+  # Opts for one with biggest beta
   pooled_fugita <- fugita_df[
     , .SD[which.max(abs(beta))],
     by = .(snp, gene)
