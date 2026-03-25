@@ -97,7 +97,7 @@ rule create_besd:
     log: config["smr"]["create_besd"]["log"]
     shell:
         """
-        {input.smr} --qfile {input.query} --add-n 133 --make-besd --out {params} > {log} 2>&1
+        {input.smr} --qfile {input.query} --add-n 134 --make-besd --out {params} > {log} 2>&1
         """
 
 # Generate frq files from my samples; fails smr due to allele freq discrepancies
