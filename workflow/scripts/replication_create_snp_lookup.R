@@ -8,6 +8,7 @@
 # 2. Use BiomaRt to get hg38 SNP coordinates for 1
 
 # Notes: Needs to run on head node BiomaRt requires net access
+
 ## Info  ------------------------------------------------------------------------------
 
 ## Set up logging for Snakemake
