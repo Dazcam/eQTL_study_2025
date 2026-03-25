@@ -46,7 +46,7 @@ message(paste("trans-eQTL file: ", trans))
 message(paste("Token file: ", token_file))
 message(paste("Proxy dir: ", proxy_dir))
 message(paste("Output will write to: ", output))
-message(paste("Cell type: ", cell_type))
+message(paste("Cell type: ", cell_type, '\n'))
 
 #dir.create(proxy_dir)
 #setwd(proxy_dir) # Need to set this as LDproxy_batch spits out files to wd
@@ -58,12 +58,12 @@ lead_variants <- cis_eQTL_tbl %>%
   filter(qval < 0.05) %>%
   pull(variant_id)
 n_sig_cis <- length(lead_variants)
-message(' ', n_sig_cis, ' FDR sig. eQTL loaded.')
+message(n_sig_cis, ' FDR sig. eQTL loaded.')
 
 
-message('Loading trans-eQTL for: ', cell_type)
+message('\nLoading trans-eQTL for: ', cell_type)
 trans_raw <- read_tsv(trans) 
-message(' ', nrow(trans_raw), ' trans eQTL loaded.')
+message(nrow(trans_raw), ' trans eQTL loaded.')
 
 ## Get proxies -----
 # message('Collecting LD proxies for: ', cell_type)
@@ -112,9 +112,9 @@ message(' ', nrow(trans_raw), ' trans eQTL loaded.')
 
 ## Intersect rsIDs with trans data -----
 bf_p <- 0.05 / (n_sig_cis * length(lead_variants))
-message('BF correction factor set to: ', bf_p)
+message('\nBF correction factor set to: ', bf_p)
 
-message('Extracting BF sig. trans eQTL ... ')
+message('\nExtracting BF sig. trans eQTL ... ')
 trans_sig <- trans_raw %>%
   filter(variant_id %in% lead_variants) |>
   arrange(pval) |>
@@ -140,7 +140,7 @@ message('Number of BF sig. trans eQTL: ', nrow(trans_sig))
 #   print(n = Inf)
   
 ## Write output -----
-message('Writing file to: ', output)
+message('\nWriting file to: ', output)
 write_tsv(trans_sig, output)
 
 message('All Done.')
