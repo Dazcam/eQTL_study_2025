@@ -6,7 +6,7 @@ conda-frontend: conda
 use-singularity: True
 singularity-args: "--bind /shared/scratch/SCWF00021/eQTL_study_2025"
 keep-going: True
-jobs: 500
+jobs: 3
 rerun-incomplete: True
 #restart-times: 1
 printshellcmds: True
