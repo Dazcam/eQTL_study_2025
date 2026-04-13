@@ -1,7 +1,7 @@
 # ------------  GLOBAL  ----------------
 plate:
-  - plate1
-  - plate2
+#  - plate1
+#  - plate2
   - plate3
 
 MERGE_FQ_JSON: ../config/samples_{plate}.json
@@ -983,3 +983,16 @@ plotting:
     out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/fusion_weights.tar.gz
     log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_weights.log
 
+
+data_sharing:
+  extract_fq:
+    out_r1: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
+    out_r2: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_R2.fastq.gz
+    log_r1: ../results/00LOG/14DATA_SHARING/{plate}/cat_fqs_{sample}_R1.log
+    log_r2: ../results/00LOG/14DATA_SHARING/{plate}/cat_fqs_{sample}_R2.log
+    outdir: ../results/14DATA_SHARING/MRGD_fqs/
+
+  extract_cell_meta:
+    input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
+    output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
+    log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
