@@ -38,7 +38,7 @@ The snRNA-seq data were generated via combinatorial barcoding using three Everco
 | Plate 2 | 16 | ~1 TB |
 | Plate 3 | 12 | ~1 TB |
 
-Raw FASTQs consist of 4 lanes × 9 sequencing runs × 2 reads (R1, R2) per sublibrary. Before running the pipeline, the FASTQ manifest JSONs must be generated (see [Configuring FASTQ Manifests](#configuring-fastq-manifests) below).
+Raw FASTQs consist of 4 lanes × 3 sequencing runs × 2 reads (R1, R2) per sublibrary. Before running the pipeline, the FASTQ manifest JSONs must be generated (see [Configuring FASTQ Manifests](#configuring-fastq-manifests) below).
 
 ### Genotype Data
 
