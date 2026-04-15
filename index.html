@@ -647,10 +647,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="data-engineering-architecture" class="level2">
 <h2 class="anchored" data-anchor-id="data-engineering-architecture">Data Engineering Architecture</h2>
-<p>This project processes ~3 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.</p>
+<p>This project processes ~3 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster.</p>
 <section id="workflow-orchestration" class="level3">
 <h3 class="anchored" data-anchor-id="workflow-orchestration">Workflow Orchestration</h3>
-<p>All pipelines are managed by <a href="https://snakemake.readthedocs.io/">Snakemake</a> (v8.x) with a dedicated SLURM cluster profile, allowing up to <strong>500 concurrent jobs</strong> across a dedicated compute partition (<code>c_compute_neuro1</code>, account <code>scw1641</code>). The profile handles automatic job submission, logging, and resource allocation per rule:</p>
+<p>All pipelines are managed by <a href="https://snakemake.readthedocs.io/">Snakemake</a> with a dedicated SLURM cluster profile, allowing up to 500 concurrent jobs across a dedicated compute partition and account ID. The profile handles automatic job submission, logging, and resource allocation per rule:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># config/profile/config.yaml (excerpt)</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">executor</span><span class="kw">:</span><span class="at"> cluster-generic</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">jobs</span><span class="kw">:</span><span class="at"> </span><span class="dv">500</span></span>
@@ -662,7 +662,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    --mem={resources.mem_mb}</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    --time={resources.time}</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    --cpus-per-task={resources.threads}</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    --account=scw1641</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    --account=&lt;account_id&gt;</span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    --partition=c_compute_neuro1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The pipeline is launched via a single shell script that captures the full Snakemake log and emails on completion:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># workflow/snakemake.sh</span></span>
@@ -674,7 +674,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>All parameters, file paths, tool settings, container paths, GWAS URLs, and cell-type lists are managed in a single <code>config/config.yaml</code>. This means the entire platform can be reconfigured for a new dataset by editing one file — no hardcoded paths in any script or rule.</p>
 <p>Key config-driven components include:</p>
 <ul>
-<li><strong>Cell types</strong> (20 entries: 7 broad + 12 subtypes) — propagated automatically to TensorQTL, SuSiE, S-LDSR, SMR, and TWAS rules via Snakemake wildcards</li>
+<li><strong>Cell types</strong> (7 broad + 12 subtypes) — propagated automatically to TensorQTL, SuSiE, S-LDSR, SMR, and TWAS rules via Snakemake wildcards</li>
 <li><strong>GWAS URLs</strong> — six neuropsychiatric GWAS (SCZ, BPD, MDD, ADHD, OCD) downloaded directly from Figshare/PGC by the pipeline</li>
 <li><strong>Container paths</strong> — eight Singularity containers mapped centrally, ensuring every rule uses the correct software environment</li>
 <li><strong>Analysis parameters</strong> — SuSiE window (1 Mb), batch count (25), FDR threshold (0.05), TensorQTL permutation bounds, SMR windows, all in one place</li>
@@ -699,7 +699,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="reproducible-environments">Reproducible Environments</h3>
 <p>Software reproducibility is enforced at two layers:</p>
 <p><strong>Conda</strong> environments with fully pinned dependencies are used for Python-based pipelines (Scanpy, TensorQTL). The <code>eqtl_study.yml</code> environment pins every package to an exact build hash, ensuring bit-for-bit reproducibility across HPC nodes and future reruns.</p>
-<p><strong>Singularity</strong> containers are used for R-based and specialist tools where conda environments are insufficient. Eight containers are defined in <code>config.yaml</code>:</p>
+<p><strong>Singularity</strong> containers are used for R-based and specialist tools where conda environments are insufficient. Six containers are defined in <code>config.yaml</code>:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 50%">
@@ -721,20 +721,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td style="text-align: left;">Core R analysis environment</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;"><code>susier_v24.01.1.sif</code></td>
+<td style="text-align: left;"><code>susier.sif</code></td>
 <td style="text-align: left;">SuSiE fine-mapping</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;"><code>seurat5f.sif</code></td>
-<td style="text-align: left;">Seurat 5 / general R</td>
-</tr>
-<tr class="odd">
 <td style="text-align: left;"><code>twas.sif</code></td>
 <td style="text-align: left;">FUSION TWAS weight computation</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"><code>gtex_eqtl.sif</code></td>
-<td style="text-align: left;">FastQTL / GTEx tools</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><code>genotype-qc2hrc_latest.sif</code></td>
