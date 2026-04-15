@@ -18,11 +18,11 @@ This site is the documetation for an end-to-end computational genomics platform 
 
 ## Data Engineering Architecture
 
-This project processes ~3 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster. The platform was designed from the ground up for scalability, reproducibility, and collaborative reuse.
+This project processes ~3 TB of raw genomic data through a suite of 13 interoperable Snakemake pipelines, orchestrated on a SLURM HPC cluster.
 
 ### Workflow Orchestration
 
-All pipelines are managed by [Snakemake](https://snakemake.readthedocs.io/) (v8.x) with a dedicated SLURM cluster profile, allowing up to **500 concurrent jobs** across a dedicated compute partition (`c_compute_neuro1`, account `scw1641`). The profile handles automatic job submission, logging, and resource allocation per rule:
+All pipelines are managed by [Snakemake](https://snakemake.readthedocs.io/) with a dedicated SLURM cluster profile, allowing up to 500 concurrent jobs across a dedicated compute partition and account ID. The profile handles automatic job submission, logging, and resource allocation per rule:
 
 ```yaml
 # config/profile/config.yaml (excerpt)
@@ -36,7 +36,7 @@ cluster-generic-submit-cmd: >
     --mem={resources.mem_mb}
     --time={resources.time}
     --cpus-per-task={resources.threads}
-    --account=scw1641
+    --account=<account_id>
     --partition=c_compute_neuro1
 ```
 
@@ -54,7 +54,7 @@ All parameters, file paths, tool settings, container paths, GWAS URLs, and cell-
 
 Key config-driven components include:
 
-- **Cell types** (20 entries: 7 broad + 12 subtypes) — propagated automatically to TensorQTL, SuSiE, S-LDSR, SMR, and TWAS rules via Snakemake wildcards
+- **Cell types** (7 broad + 12 subtypes) — propagated automatically to TensorQTL, SuSiE, S-LDSR, SMR, and TWAS rules via Snakemake wildcards
 - **GWAS URLs** — six neuropsychiatric GWAS (SCZ, BPD, MDD, ADHD, OCD) downloaded directly from Figshare/PGC by the pipeline
 - **Container paths** — eight Singularity containers mapped centrally, ensuring every rule uses the correct software environment
 - **Analysis parameters** — SuSiE window (1 Mb), batch count (25), FDR threshold (0.05), TensorQTL permutation bounds, SMR windows, all in one place
@@ -88,16 +88,14 @@ Software reproducibility is enforced at two layers:
 
 **Conda** environments with fully pinned dependencies are used for Python-based pipelines (Scanpy, TensorQTL). The `eqtl_study.yml` environment pins every package to an exact build hash, ensuring bit-for-bit reproducibility across HPC nodes and future reruns.
 
-**Singularity** containers are used for R-based and specialist tools where conda environments are insufficient. Eight containers are defined in `config.yaml`:
+**Singularity** containers are used for R-based and specialist tools where conda environments are insufficient. Six containers are defined in `config.yaml`:
 
 | Container | Purpose |
 | :--- | :--- |
 | `tensorqtl.sif` | GPU-accelerated eQTL mapping (PyTorch) |
 | `r_eqtl.sif` | Core R analysis environment |
-| `susier_v24.01.1.sif` | SuSiE fine-mapping |
-| `seurat5f.sif` | Seurat 5 / general R |
+| `susier.sif` | SuSiE fine-mapping |
 | `twas.sif` | FUSION TWAS weight computation |
-| `gtex_eqtl.sif` | FastQTL / GTEx tools |
 | `genotype-qc2hrc_latest.sif` | Genotype QC and TOPMED imputation prep |
 | `ubuntu_22.04.sif` | Lightweight shell utility container |
 
