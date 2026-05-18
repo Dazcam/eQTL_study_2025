@@ -1,0 +1,74 @@
+Bootstrap: docker
+From: bioconductor/bioconductor_docker
+
+%labels
+    Author Dazcam
+    Description SingleR container for spatial label transfer analysis
+    Version 1.0.0
+
+%post
+
+    export DEBIAN_FRONTEND=noninteractive
+    export TZ=Etc/UTC
+
+    # Update apt and install system dependencies
+    apt-get update && apt-get install -y \
+        libhdf5-dev \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libfreetype6-dev \
+        libpng-dev \
+        libtiff5-dev \
+        libjpeg-dev \
+        libgit2-dev \
+        && apt-get clean
+
+    # Install R packages from Bioconductor
+    R --no-echo --no-restore --no-save << 'EOF'
+
+    # CRAN packages
+    install.packages(c(
+        "remotes",
+        "BiocManager",
+        "pheatmap",
+        "RColorBrewer",
+        "ggplot2",
+        "dplyr",
+        "tidyr",
+        "data.table",
+        "Matrix"
+    ), repos = "https://cloud.r-project.org")
+
+    # Bioconductor packages
+    BiocManager::install(c(
+        "SingleR",
+        "SingleCellExperiment",
+        "SummarizedExperiment",
+        "scuttle",
+        "zellkonverter",
+        "BiocParallel",
+        "scran"
+    ), ask = FALSE, update = TRUE)
+
+%environment
+    export LC_ALL=C
+    export PATH=/usr/local/bin:$PATH
+
+%runscript
+    exec Rscript "$@"
+
+%test
+    R --no-echo --no-restore --no-save << 'EOF'
+    library(SingleR)
+    library(SingleCellExperiment)
+    library(scuttle)
+    library(zellkonverter)
+    library(BiocParallel)
+    library(pheatmap)
+    cat("All packages loaded successfully\n")
+    cat("SingleR version:", as.character(packageVersion("SingleR")), "\n")
+    cat("zellkonverter version:", as.character(packageVersion("zellkonverter")), "\n")
