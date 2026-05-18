@@ -30,7 +30,7 @@ The pipeline has been developed and tested on the Hawk HPC system (Cardiff Unive
 
 Raw FASTQ files are stored on restricted institutional storage and are not publicly available due to donor consent constraints. Access to the raw data can be requested by contacting Nick Bray.
 
-The snRNA-seq data were generated using the [Parse Biosciences](https://www.parsebiosciences.com/) split-pool ligation-based combinatorial indexing (SPLiT-seq) protocol across three sequencing plates:
+The snRNA-seq data were generated via combinatorial barcoding using three Evercode WT (v2) Mega kits [Parse Biosciences](https://www.parsebiosciences.com/) across three sequencing plates (9 runs total):
 
 | Plate | Sublibraries | Approx. Size |
 | :--- | :--- | :--- |
@@ -38,7 +38,7 @@ The snRNA-seq data were generated using the [Parse Biosciences](https://www.pars
 | Plate 2 | 16 | ~1 TB |
 | Plate 3 | 12 | ~1 TB |
 
-Raw FASTQs consist of 4 lanes × multiple sequencing runs × 2 reads (R1, R2) per sublibrary. Before running the pipeline, the FASTQ manifest JSONs must be generated (see [Configuring FASTQ Manifests](#configuring-fastq-manifests) below).
+Raw FASTQs consist of 4 lanes × 3 sequencing runs × 2 reads (R1, R2) per sublibrary. Before running the pipeline, the FASTQ manifest JSONs must be generated (see [Configuring FASTQ Manifests](#configuring-fastq-manifests) below).
 
 ### Genotype Data
 
@@ -60,10 +60,8 @@ All public datasets used in the pipeline are downloaded automatically by Snakema
 
 **eQTL replication datasets** (downloaded by pipeline `06-qtl-replication`):
 
-- [Bryois et al. 2022](https://doi.org/10.1038/s41593-022-01128-z) — adult single-cell eQTLs
+- [Fugita et al. 2024](https://doi.org/10.1038/s41588-024-01685-y) — adult single-cell eQTL
 - [Ziffra et al. 2021](https://doi.org/10.1038/s41586-021-03209-8) — fetal snATAC-seq peaks
-- [Wen et al. 2024](https://doi.org/10.1038/s41588-024-01834-7) — developmental bulk brain eQTLs
-- [O'Brien et al. 2018](https://doi.org/10.1038/s41588-018-0160-6) — adult bulk brain eQTLs
 
 **Reference files** (downloaded by pipeline `01-parse`):
 
@@ -94,7 +92,7 @@ Set `root_dir` to the absolute path of your working directory on scratch storage
 root_dir: /path/to/your/scratch/eQTL_study_2025/
 ```
 
-### Container Paths
+### Container Paths - NOTE: Update to online portal for this
 
 Update the `containers` block to point to your local Singularity image files (`.sif`). The pipeline uses eight containers:
 
