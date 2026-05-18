@@ -50,6 +50,7 @@ From: bioconductor/bioconductor_docker
         "SummarizedExperiment",
         "scuttle",
         "anndataR",
+        "rhdf5",
         "BiocParallel",
         "scran"
     ), ask = FALSE, update = TRUE)
