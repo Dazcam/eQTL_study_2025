@@ -49,7 +49,7 @@ From: bioconductor/bioconductor_docker
         "SingleCellExperiment",
         "SummarizedExperiment",
         "scuttle",
-        "zellkonverter",
+        "anndataR",
         "BiocParallel",
         "scran"
     ), ask = FALSE, update = TRUE)
@@ -66,9 +66,9 @@ From: bioconductor/bioconductor_docker
     library(SingleR)
     library(SingleCellExperiment)
     library(scuttle)
-    library(zellkonverter)
+    library(anndataR)
     library(BiocParallel)
     library(pheatmap)
     cat("All packages loaded successfully\n")
     cat("SingleR version:", as.character(packageVersion("SingleR")), "\n")
-    cat("zellkonverter version:", as.character(packageVersion("zellkonverter")), "\n")
+    cat("anndataR version:", as.character(packageVersion("anndataR")), "\n")
