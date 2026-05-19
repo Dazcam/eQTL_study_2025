@@ -107,6 +107,7 @@ containers:
   susie: ../resources/containers/susier.sif
   ubuntu: ../resources/containers/ubuntu_22.04.sif
   twas: ../resources/containers/twas.sif
+  singler: ../resources/containers/singler.sif
 
 # -------------  SETUP  ----------------
 fastq:
@@ -996,3 +997,51 @@ data_sharing:
     input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
     output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
     log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
+
+
+# --- review
+review:
+  dwnld_qian:
+    output: ../resources/public_datasets/qian_2025/merscope_integrated_855.h5ad
+    web_link: https://zenodo.org/records/14422018/files/merscope_integrated_855.h5ad?download=1 
+    log: ../results/00LOG/15REVIEW/dwnld_qian.log
+
+  prep_qian_ref:
+    output: ../results/15REVIEW/qian_ref_subsampled.h5ad
+    log: ../results/00LOG/15REVIEW/prep_qian_ref.log
+    script: ../scripts/review_prep_qian_ref.py
+
+  prep_singler_query:
+    query_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    h5ad: ../results/15REVIEW/adata_clusters_v3_query_prepped.h5ad
+    umap_csv: ../results/15REVIEW/umap_coords.csv
+    log: ../results/00LOG/15REVIEW/prep_singler_query.log
+    script: ../scripts/review_prep_singler_query.py
+
+  singler_classify:
+    csv: ../results/15REVIEW/singler_results.csv
+    pred_rds: "../results/15REVIEW/singler_pred.rds"
+    sce_rds:  "../results/15REVIEW/singler_sce_sub.rds"
+    log: ../results/00LOG/15REVIEW/singler_classify.log
+    script: ../scripts/review_singler_classify.R
+
+  batch_correction_kbet:
+    csv:        "../results/15REVIEW/batch_correction/kbet_results.csv"
+    plot:       "../results/15REVIEW/batch_correction/kbet_rejection_rates.png"
+    log:        "../results/00LOG/15REVIEW/batch_correction_kbet.log"
+    script:     "../scripts/review_kbet.py"
+    n_subsample: 10000   # cells to subsample (stratified by cell type)
+    random_seed: 1234
+    k0:          30      # neighbourhood size for chi-squared test
+
+  batch_correction_lisi:
+    csv:        "../results/15REVIEW/batch_correction/lisi_results.csv"
+    plot:       "../results/15REVIEW/batch_correction/lisi_scores.png"
+    log:        "../results/00LOG/15REVIEW/batch_correction_lisi.log"
+    script:     "../scripts/review_lisi.py"
+    random_seed: 1234
+    perplexity:  30   
+
+  singler_report:
+    html: "reports/15REVIEW/15singler_report.html"
+    log:  "../results/00LOG/15REVIEW/singler_report.log"

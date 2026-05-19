@@ -47,7 +47,9 @@ rule prep_singler_query:
 rule singler_classify:
     input:   ref_h5ad   = config["review"]["prep_qian_ref"]["output"],
              query_h5ad = config["review"]["prep_singler_query"]["h5ad"]
-    output:  config["review"]["singler_classify"]["csv"]
+    output:  config["review"]["singler_classify"]["csv"],
+             pred_rds = config["review"]["singler_classify"]["pred_rds"],
+             sce_rds  = config["review"]["singler_classify"]["sce_rds"]             
     singularity: config["containers"]["singler"]
     resources: threads  = 8, mem_mb = 128000, time = "2:00:00"
     threads: 8
@@ -89,10 +91,14 @@ rule batch_correction_kbet:
 rule singler_report:
     input:   singler_csv = config["review"]["singler_classify"]["csv"],
              umap_csv    = config["review"]["prep_singler_query"]["umap_csv"],
+             pred_rds    = config["review"]["singler_classify"]["pred_rds"],
+             sce_rds     = config["review"]["singler_classify"]["sce_rds"],             
              rmd_script  = "scripts/review_singler_report.Rmd"
     output:  config["review"]["singler_report"]["html"]
     params:  singler_csv = "../../results/15REVIEW/singler_results.csv", # Paths relative to the Rmd script location (scripts/)
              umap_csv    = "../../results/15REVIEW/umap_coords.csv",
+             pred_rds    = "../../results/15REVIEW/singler_pred.rds",
+             sce_rds     = "../../results/15REVIEW/singler_sce_sub.rds",
              output_file = "../reports/15REVIEW/15singler_report.html"
     resources:   threads = 4, mem_mb = 32000, time = "1:00:00"
     singularity: config["containers"]["singler"]
@@ -104,5 +110,7 @@ rule singler_report:
             output_file = '{params.output_file}', \
             params = list(
                 singler_csv = '{params.singler_csv}',
-                umap_csv    = '{params.umap_csv}'))" > {log} 2>&1
+                umap_csv    = '{params.umap_csv}',
+                pred_rds    = '{params.pred_rds}',
+                sce_rds     = '{params.sce_rds}'))" > {log} 2>&1
         """
