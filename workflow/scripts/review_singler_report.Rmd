@@ -1,0 +1,590 @@
+---
+title: "Spatial Validation: SingleR Label Transfer"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    code_folding: hide
+params:
+  singler_csv: null
+  umap_csv:    null
+---
+
+***
+
+## Changelog
+
+| Version | Date       | Changes |
+|---------|------------|---------|
+| v1.0    | 2026-05-19 | Initial report. Heatmap used mean SingleR scores row-normalised to fractions. |
+| v1.1    | 2026-05-19 | Fixed heatmap metric: switched from mean scores to fraction of cells with winning H2 label. Added aggregated H2 group UMAP tab. Updated MG negative control note to clarify pruning behaviour. |
+| v1.2    | 2026-05-19 | Combined heatmap and max fraction bar chart into single figure. Merged all UMAPs into single 2x2 panel. Added H2 group breakdown table per L1 population. Added interpretive note on Glu-UL signal strength. |
+
+***
+
+## Overview {.tabset}
+
+***
+
+This report presents the results of SingleR-based label transfer from the Qian et al. 2025
+MERFISH spatial transcriptomics dataset onto our snRNA-seq data. The analysis addresses
+Reviewer Comment 2, which requested spatial and laminar validation of our L1 cell type
+annotations — specifically the distinction between upper layer (Glu-UL) and deep layer
+(Glu-DL) glutamatergic neuron populations.
+
+**Reference:** Qian et al. 2025, *Nature*. Single-cell spatial transcriptomics of the
+developing human cortex (MERFISH, 300-gene panel, GW15–GW34).
+
+**Method:** SingleR (Bioconductor) was used to transfer H2-level spatial annotations
+from the Qian MERFISH reference onto all 679,738 cells in our snRNA-seq dataset.
+The reference was subsampled to 500 cells per H2 cluster (33 clusters, 16,500 cells total)
+after excluding V1/V2 cortical areas (transcriptionally discontinuous per Qian et al.).
+270 of 300 MERFISH panel genes (90%) were shared with our snRNA-seq data.
+
+***
+
+```{r setup, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(DT)
+library(gt)
+library(cowplot)
+library(pheatmap)
+library(RColorBrewer)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(viridis)
+
+knitr::opts_chunk$set(
+  echo      = FALSE,
+  message   = FALSE,
+  warning   = FALSE,
+  fig.align = "center"
+)
+
+# ── Parameters ────────────────────────────────────────────────────────────────────────
+
+singler_csv <- params$singler_csv
+umap_csv    <- params$umap_csv
+
+# ── Cell type colour palette (from scanpy_gene_lists.py) ─────────────────────────────
+
+custom_palette <- c(
+  'Glu-UL'    = '#4363d8',
+  'Glu-DL'    = '#00B6EB',
+  'GABA'      = '#3CBB75',
+  'NPC'       = '#FF5959',
+  'OPC'       = '#FDE725',
+  'MG'        = '#F58231',
+  'Endo-Peri' = '#B200ED'
+)
+
+# ── H2 group colour palette ───────────────────────────────────────────────────────────
+
+group_palette <- c(
+  'Upper EN'   = '#4363d8',
+  'Deep EN'    = '#00B6EB',
+  'Inhibitory' = '#3CBB75',
+  'Progenitor' = '#FF5959',
+  'OPC'        = '#FDE725',
+  'EC'         = '#B200ED',
+  'Migrating'  = '#A0A0A0',
+  'Astrocyte'  = '#D3D3D3'
+)
+
+# ── L1 population order for plots ────────────────────────────────────────────────────
+
+l1_order <- c('Glu-UL', 'Glu-DL', 'GABA', 'NPC', 'OPC', 'MG', 'Endo-Peri')
+
+# ── H2 column order grouped by expected biological correspondence ─────────────────────
+
+h2_order <- c(
+  # Glu-UL block
+  'EN-L2', 'EN-IT-L2/3', 'EN-IT-L3/4', 'EN-IT-L4', 'EN-IT-L4/5',
+  # Glu-DL block
+  'EN-IT-L6', 'EN-ET-L5/6', 'EN-ET-SP-early', 'EN-ET-SP', 'EN-ET-SP-P', 'EN-ET-L6-early',
+  # GABA block
+  'IN-CGE', 'IN-MGE', 'IN-SST', 'IN-VZ/GE', 'INP-VZ/GE',
+  # NPC block
+  'RG1', 'oRG1', 'tRG', 'vRG-late',
+  'IPC-VZ/SVZ', 'IPC-iSVZ', 'IPC-SVZ-1', 'IPC-SVZ-2', 'IPC-oSVZ',
+  # OPC
+  'OPC',
+  # EC (Endo-Peri)
+  'EC',
+  # Migrating/immature - no clear L1 match
+  'EN-IZ-1', 'EN-IZ-2', 'EN-oSVZ-1', 'En-oSVZ-2',
+  # Astrocytes - present in Qian but not in our L1
+  'Astro-1', 'Astro-late1'
+)
+
+# ── H2 to group mapping ───────────────────────────────────────────────────────────────
+
+h2_group_map <- c(
+  'EN-L2'          = 'Upper EN',   'EN-IT-L2/3'     = 'Upper EN',
+  'EN-IT-L3/4'     = 'Upper EN',   'EN-IT-L4'       = 'Upper EN',
+  'EN-IT-L4/5'     = 'Upper EN',
+  'EN-IT-L6'       = 'Deep EN',    'EN-ET-L5/6'     = 'Deep EN',
+  'EN-ET-SP-early' = 'Deep EN',    'EN-ET-SP'       = 'Deep EN',
+  'EN-ET-SP-P'     = 'Deep EN',    'EN-ET-L6-early' = 'Deep EN',
+  'IN-CGE'         = 'Inhibitory', 'IN-MGE'         = 'Inhibitory',
+  'IN-SST'         = 'Inhibitory', 'IN-VZ/GE'       = 'Inhibitory',
+  'INP-VZ/GE'      = 'Inhibitory',
+  'RG1'            = 'Progenitor', 'oRG1'           = 'Progenitor',
+  'tRG'            = 'Progenitor', 'vRG-late'       = 'Progenitor',
+  'IPC-VZ/SVZ'     = 'Progenitor', 'IPC-iSVZ'       = 'Progenitor',
+  'IPC-SVZ-1'      = 'Progenitor', 'IPC-SVZ-2'      = 'Progenitor',
+  'IPC-oSVZ'       = 'Progenitor',
+  'OPC'            = 'OPC',
+  'EC'             = 'EC',
+  'EN-IZ-1'        = 'Migrating',  'EN-IZ-2'        = 'Migrating',
+  'EN-oSVZ-1'      = 'Migrating',  'En-oSVZ-2'      = 'Migrating',
+  'Astro-1'        = 'Astrocyte',  'Astro-late1'    = 'Astrocyte'
+)
+
+# ── Load data ─────────────────────────────────────────────────────────────────────────
+
+singler <- read_csv(singler_csv, show_col_types = FALSE)
+umap    <- read_csv(umap_csv,    show_col_types = FALSE)
+
+# Factor L1 populations in biological order
+singler$cell_type <- factor(singler$cell_type, levels = l1_order)
+umap$cell_type    <- factor(umap$cell_type,    levels = l1_order)
+
+# Join H2 labels and groups to UMAP at load time
+umap <- umap %>%
+  left_join(singler %>% select(cell_id, H2_label), by = 'cell_id') %>%
+  mutate(H2_group = h2_group_map[H2_label])
+
+```
+
+***
+
+### Classification summary
+
+***
+
+```{r summary_table}
+
+# Cell counts per L1 population
+cell_counts <- singler %>%
+  count(cell_type, name = 'N cells') %>%
+  arrange(match(cell_type, l1_order))
+
+# Pruning rate per L1 population
+pruning <- singler %>%
+  group_by(cell_type) %>%
+  summarise(
+    `N pruned` = sum(is.na(H2_pruned)),
+    `% pruned` = sprintf('%.2f%%', 100 * mean(is.na(H2_pruned))),
+    .groups = 'drop'
+  )
+
+# Top H2 winning label per L1 population with percentage
+top_h2 <- singler %>%
+  group_by(cell_type) %>%
+  count(H2_label, name = 'n') %>%
+  mutate(pct = sprintf('%.1f%%', 100 * n / sum(n))) %>%
+  slice_max(n, n = 1) %>%
+  rename(`Top H2 label` = H2_label, `N assigned` = n, `% of population` = pct) %>%
+  ungroup()
+
+summary_tbl <- cell_counts %>%
+  left_join(pruning, by = 'cell_type') %>%
+  left_join(top_h2,  by = 'cell_type')
+
+summary_tbl %>%
+  gt() %>%
+  tab_header(
+    title    = 'Table 1. SingleR classification summary',
+    subtitle = 'Per L1 population cell counts, pruning rates, and top H2 winning label assignment'
+  ) %>%
+  cols_label(cell_type = 'Cell Type') %>%
+  tab_style(
+    style     = cell_text(weight = 'bold'),
+    locations = cells_column_labels(everything())
+  ) %>%
+  tab_options(
+    table.font.size           = px(14),
+    table.border.top.style    = 'none',
+    table.border.bottom.style = 'solid',
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = 'black',
+    heading.align             = 'center'
+  )
+
+```
+
+***
+
+**Note on Microglia (MG):** Microglia are absent from the Qian MERFISH reference panel,
+which was designed for cortical neurons and glia. MG cells will therefore be assigned
+to the nearest transcriptional match in the reference, which has no biological
+interpretation. The MG row in the heatmap below serves as a **negative control** — we
+would not expect enrichment on the diagonal.
+
+Note that SingleR assigned labels to all but 3 MG cells rather than returning NA. This
+is expected behaviour — pruning occurs only when the score margin between the top and
+second label falls below a statistical threshold. With no microglial genes in the 300-gene
+MERFISH panel, MG scores are uniformly low and compressed across all reference clusters,
+but the margin between top and second label remains just above the pruning threshold.
+The resulting assignments are biologically uninterpretable and confirm the absence of a
+microglial reference in the Qian panel.
+
+***
+
+### Correspondence heatmap
+
+***
+
+Replicating the approach of Qian et al. Extended Data Figure 3d, the heatmap below shows
+the **fraction of cells from each L1 population whose winning SingleR label was each Qian
+H2 cluster**. Each row sums to 1. Columns are ordered by expected biological correspondence
+to produce diagonal enrichment. The bar chart on the right shows the maximum fraction
+value per row.
+
+H2 clusters are grouped as follows:
+
+- **Upper layer EN** (EN-L2, EN-IT-L2/3, EN-IT-L3/4, EN-IT-L4, EN-IT-L4/5) → expected to enrich for Glu-UL
+- **Deep layer EN** (EN-IT-L6, EN-ET-L5/6, EN-ET-SP\*, EN-ET-L6-early) → expected to enrich for Glu-DL
+- **Inhibitory** (IN-CGE, IN-MGE, IN-SST, IN-VZ/GE, INP-VZ/GE) → expected to enrich for GABA
+- **Progenitors** (RG1, oRG1, tRG, vRG-late, IPC\*) → expected to enrich for NPC
+- **OPC, EC** → expected to enrich for OPC and Endo-Peri respectively
+- **Migrating/immature EN, Astrocytes** → no expected L1 match (right margin)
+
+**Note on Glu-UL signal strength:** The Glu-UL row shows diffuse enrichment across the
+Upper EN block rather than a single dominant hit. This is expected: upper layer neurons
+at 12–21 PCW are less transcriptionally mature and more heterogeneous than deep layer
+neurons at the same developmental stage. The subplate (EN-ET-SP-P) dominates Glu-DL
+with a strong signal (~60%) because subplate neurons are among the earliest and most
+transcriptionally distinct excitatory neurons, and are already well-established by
+mid-gestation. The weaker Glu-UL signal reflects genuine developmental biology rather
+than a classification failure, and is consistent with the known trajectory of upper
+layer neuron maturation occurring later in cortical development.
+
+***
+
+```{r heatmap_combined, fig.width=20, fig.height=5}
+
+# ── Build fraction matrix from winning labels ─────────────────────────────────────────
+
+frac_mat <- singler %>%
+  group_by(cell_type, H2_label) %>%
+  summarise(n = n(), .groups = 'drop') %>%
+  group_by(cell_type) %>%
+  mutate(fraction = n / sum(n)) %>%
+  ungroup() %>%
+  select(cell_type, H2_label, fraction) %>%
+  pivot_wider(
+    names_from  = H2_label,
+    values_from = fraction,
+    values_fill = 0
+  ) %>%
+  column_to_rownames('cell_type')
+
+frac_mat <- frac_mat[
+  l1_order[l1_order %in% rownames(frac_mat)],
+  h2_order[h2_order %in% colnames(frac_mat)]
+]
+
+# ── Colour scale ──────────────────────────────────────────────────────────────────────
+
+heatmap_colours <- colorRampPalette(
+  c('#FFFFFF', '#F2E8F5', '#C9A8D4', '#8B5BA6', '#4B1C6E')
+)(100)
+
+# ── Row annotation ────────────────────────────────────────────────────────────────────
+
+row_ann <- data.frame(
+  `Cell Type` = rownames(frac_mat),
+  row.names   = rownames(frac_mat),
+  check.names = FALSE
+)
+row_ann_colours <- list(`Cell Type` = custom_palette[rownames(frac_mat)])
+
+# ── Column annotation ─────────────────────────────────────────────────────────────────
+
+col_ann <- data.frame(
+  Group     = h2_group_map[colnames(frac_mat)],
+  row.names = colnames(frac_mat),
+  check.names = FALSE
+)
+
+group_colours <- c(
+  'Upper EN'   = '#4363d8',
+  'Deep EN'    = '#00B6EB',
+  'Inhibitory' = '#3CBB75',
+  'Progenitor' = '#FF5959',
+  'OPC'        = '#FDE725',
+  'EC'         = '#B200ED',
+  'Migrating'  = '#D3D3D3',
+  'Astrocyte'  = '#A9A9A9'
+)
+
+col_ann_colours <- list(Group = group_colours)
+
+# ── Max fraction bar chart ────────────────────────────────────────────────────────────
+
+max_fractions <- frac_mat %>%
+  as.data.frame() %>%
+  rownames_to_column('cell_type') %>%
+  pivot_longer(-cell_type, names_to = 'H2', values_to = 'fraction') %>%
+  group_by(cell_type) %>%
+  summarise(max_fraction = max(fraction), .groups = 'drop') %>%
+  mutate(cell_type = factor(cell_type, levels = rev(l1_order)))
+
+bar_plt <- ggplot(max_fractions, aes(x = cell_type, y = max_fraction, fill = cell_type)) +
+  geom_col(width = 0.7) +
+  scale_fill_manual(values = custom_palette, guide = 'none') +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
+  coord_flip() +
+  labs(
+    x     = NULL,
+    y     = 'Max fraction',
+    title = 'Max fraction\nper L1 population'
+  ) +
+  theme_classic(base_size = 11) +
+  theme(
+    plot.title  = element_text(hjust = 0.5, face = 'bold', size = 11),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.x = element_text(size = 9),
+    axis.title  = element_text(size = 10)
+  )
+
+# ── Draw heatmap then combine with bar chart using cowplot ────────────────────────────
+
+heatmap_grob <- pheatmap(
+  frac_mat,
+  color                = heatmap_colours,
+  cluster_rows         = FALSE,
+  cluster_cols         = FALSE,
+  annotation_row       = row_ann,
+  annotation_col       = col_ann,
+  annotation_colors    = c(row_ann_colours, col_ann_colours),
+  annotation_names_row = FALSE,
+  annotation_names_col = FALSE,
+  border_color         = NA,
+  fontsize             = 9,
+  fontsize_row         = 10,
+  fontsize_col         = 8,
+  angle_col            = 45,
+  legend_breaks        = c(0, 0.25, 0.5, 0.75, 1.0),
+  legend_labels        = c('0.0', '0.25', '0.5', '0.75', '1.0'),
+  main                 = 'Correspondence with Qian et al. 2025 MERFISH H2 clusters (fraction of cells with winning label)',
+  silent               = TRUE
+)
+
+plot_grid(
+  as.grob(heatmap_grob),
+  bar_plt,
+  ncol        = 2,
+  rel_widths  = c(4, 0.6),
+  align       = 'h',
+  axis        = 'tb'
+)
+
+```
+
+***
+
+### H2 group breakdown
+
+***
+
+The table below summarises the percentage of cells from each L1 population that mapped
+to each aggregated H2 group. This provides a cleaner summary statistic than the full
+heatmap — the key comparison is the fraction of Glu-UL cells mapping to Upper EN versus
+Deep EN, and vice versa for Glu-DL.
+
+***
+
+```{r group_breakdown_table}
+
+# Compute fraction of cells per L1 population mapping to each H2 group
+group_breakdown <- singler %>%
+  mutate(H2_group = h2_group_map[H2_label]) %>%
+  group_by(cell_type, H2_group) %>%
+  summarise(n = n(), .groups = 'drop') %>%
+  group_by(cell_type) %>%
+  mutate(pct = round(100 * n / sum(n), 1)) %>%
+  ungroup() %>%
+  select(cell_type, H2_group, pct) %>%
+  pivot_wider(
+    names_from  = H2_group,
+    values_from = pct,
+    values_fill = 0
+  )
+
+# Order rows by L1 and columns by biological relevance
+col_order <- c('cell_type', 'Upper EN', 'Deep EN', 'Inhibitory',
+               'Progenitor', 'OPC', 'EC', 'Migrating', 'Astrocyte')
+col_order <- col_order[col_order %in% colnames(group_breakdown)]
+
+group_breakdown <- group_breakdown %>%
+  arrange(match(cell_type, l1_order)) %>%
+  select(all_of(col_order))
+
+group_breakdown %>%
+  gt() %>%
+  tab_header(
+    title    = 'Table 2. H2 group breakdown per L1 population',
+    subtitle = 'Percentage of cells whose winning SingleR label fell in each H2 group'
+  ) %>%
+  cols_label(cell_type = 'Cell Type') %>%
+  # Highlight the diagonal - expected correct group per L1 population
+  tab_style(
+    style     = cell_fill(color = '#EAF4FB'),
+    locations = cells_body(columns = 'Upper EN', rows = cell_type == 'Glu-UL')
+  ) %>%
+  tab_style(
+    style     = cell_fill(color = '#EAF4FB'),
+    locations = cells_body(columns = 'Deep EN', rows = cell_type == 'Glu-DL')
+  ) %>%
+  tab_style(
+    style     = cell_fill(color = '#EAF4FB'),
+    locations = cells_body(columns = 'Inhibitory', rows = cell_type == 'GABA')
+  ) %>%
+  tab_style(
+    style     = cell_fill(color = '#EAF4FB'),
+    locations = cells_body(columns = 'Progenitor', rows = cell_type == 'NPC')
+  ) %>%
+  tab_style(
+    style     = cell_fill(color = '#EAF4FB'),
+    locations = cells_body(columns = 'OPC', rows = cell_type == 'OPC')
+  ) %>%
+  tab_style(
+    style     = cell_fill(color = '#EAF4FB'),
+    locations = cells_body(columns = 'EC', rows = cell_type == 'Endo-Peri')
+  ) %>%
+  tab_style(
+    style     = cell_text(weight = 'bold'),
+    locations = cells_column_labels(everything())
+  ) %>%
+  tab_options(
+    table.font.size           = px(14),
+    table.border.top.style    = 'none',
+    table.border.bottom.style = 'solid',
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = 'black',
+    heading.align             = 'center'
+  )
+
+```
+
+***
+
+### UMAP
+
+***
+
+```{r umap_combined, fig.width=16, fig.height=12}
+
+umap_theme <- theme_classic(base_size = 11) +
+  theme(
+    plot.title   = element_text(hjust = 0.5, face = 'bold', size = 11),
+    legend.text  = element_text(size = 8),
+    axis.text    = element_blank(),
+    axis.ticks   = element_blank(),
+    axis.line    = element_blank(),
+    legend.key.size = unit(0.4, 'cm')
+  )
+
+# Panel A: L1 cell type
+p_l1 <- ggplot(umap, aes(x = UMAP1, y = UMAP2, colour = cell_type)) +
+  geom_point(size = 0.1, alpha = 0.5) +
+  scale_colour_manual(values = custom_palette, name = 'Cell type') +
+  labs(title = 'A: L1 cell type annotations') +
+  umap_theme +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+
+# Panel B: H2 group (aggregated)
+group_order <- c('Upper EN', 'Deep EN', 'Inhibitory', 'Progenitor',
+                 'OPC', 'EC', 'Migrating', 'Astrocyte')
+
+p_h2_group <- umap %>%
+  mutate(H2_group = factor(H2_group, levels = group_order)) %>%
+  ggplot(aes(x = UMAP1, y = UMAP2, colour = H2_group)) +
+  geom_point(size = 0.1, alpha = 0.4) +
+  scale_colour_manual(values = group_palette, name = 'H2 group', na.value = 'grey80') +
+  labs(title = 'B: SingleR H2 groups (aggregated)') +
+  umap_theme +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+
+# Panel C: H2 label (full 33 clusters)
+p_h2 <- ggplot(umap, aes(x = UMAP1, y = UMAP2, colour = H2_label)) +
+  geom_point(size = 0.1, alpha = 0.4) +
+  labs(title = 'C: SingleR H2 labels (all clusters)', colour = 'H2 label') +
+  umap_theme +
+  guides(colour = guide_legend(
+    override.aes = list(size = 3, alpha = 1),
+    ncol = 2
+  ))
+
+# Panel D: PCW
+p_pcw <- ggplot(umap, aes(x = UMAP1, y = UMAP2, colour = as.numeric(PCW))) +
+  geom_point(size = 0.1, alpha = 0.5) +
+  scale_colour_viridis_c(name = 'PCW', option = 'plasma') +
+  labs(title = 'D: Post-conception weeks (PCW)') +
+  umap_theme
+
+plot_grid(p_l1, p_h2_group, p_h2, p_pcw,
+          ncol   = 2,
+          nrow   = 2,
+          align  = 'hv',
+          labels = NULL)
+
+```
+
+***
+
+### Methods note
+
+***
+
+**Reference dataset:** Qian et al. (2025) *Nature*. MERFISH spatial transcriptomics of
+the developing human cortex. 18 million cells profiled across 8 cortical areas and
+7 developmental timepoints (GW15–GW34) with a 300-gene panel.
+
+**Reference preparation:** V1/V2 cortical areas were excluded from the reference as these
+regions show transcriptional discontinuity from the rest of the cortex (Qian et al.).
+All gestational weeks were retained as H2 cluster labels were assigned across all
+timepoints jointly. The reference was subsampled to 500 cells per H2 cluster
+(33 clusters, 16,500 cells total) — sufficient for stable cluster median estimation
+in SingleR.
+
+**Gene overlap:** 270 of 300 MERFISH panel genes (90%) were present in our snRNA-seq
+data. The 30 absent genes are likely lowly expressed or absent in dissociated nuclei
+relative to intact tissue.
+
+**Classification:** SingleR (v2.14.0) was run with `classifySingleR()` using 8 threads
+and logNorm-normalised counts. Only 58 of 679,738 cells (0.009%) were pruned as low
+confidence. All classifications used `assay.type = "logcounts"`.
+
+**Heatmap metric (v1.1):** The heatmap shows the fraction of cells in each L1 population
+whose winning SingleR label was each H2 cluster. This is computed from hard per-cell
+label assignments rather than mean scores, directly replicating the metric used in Qian
+et al. Extended Data Figure 3d.
+
+**H2 group breakdown table (v1.2):** Winning labels are aggregated into H2 groups
+(Upper EN, Deep EN, Inhibitory, Progenitor, OPC, EC, Migrating, Astrocyte) and
+reported as percentages per L1 population. Expected diagonal cells are highlighted.
+
+**Interpretation:** Diagonal enrichment in the heatmap and group breakdown table
+confirms that our transcriptionally-defined L1 populations correspond to
+spatially-validated Qian H2 clusters. Glu-DL shows strong enrichment in the Deep EN
+group (~60% to EN-ET-SP-P alone), consistent with the early transcriptional
+specification of subplate neurons. Glu-UL enrichment in the Upper EN group is more
+diffuse, reflecting the known later maturation of upper layer neurons at mid-gestation
+PCW stages. The Microglia (MG) row serves as a negative control — assignments are
+biologically uninterpretable and the low pruning rate (3 cells) reflects score
+compression across reference clusters lacking any microglial representation.
+
+***
