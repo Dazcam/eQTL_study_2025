@@ -1,0 +1,822 @@
+---
+title: "Developmental Specificity of Fetal Brain eQTL"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    code_folding: hide
+    theme: flatly
+    df_print: paged
+params:
+  eqtl_universe: null
+  classification: null
+  ocr_enrich: null
+  eqtl_effects: null
+  beta_correlation: null
+  perm_dir: null
+  gene_lookup: null
+  bmark_dir: null
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, warning = FALSE, message = FALSE,
+  fig.width = 10, fig.height = 7, dpi = 150
+)
+
+suppressPackageStartupMessages({
+  library(ComplexHeatmap)
+  library(circlize)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(AnnotationDbi)
+  library(patchwork)
+  library(cowplot)
+  library(scales)
+  library(gt)
+  library(DT)
+  library(data.table)
+  library(tidyverse)
+})
+
+# --- Params, not snakemake@input: this Rmd is rendered via
+# rmarkdown::render(params = list(...)), not Snakemake's script: directive ---
+eqtl_universe_file    <- params$eqtl_universe
+classification_file   <- params$classification
+ocr_enrich_file        <- params$ocr_enrich
+eqtl_effects_file      <- params$eqtl_effects
+beta_correlation_file  <- params$beta_correlation
+perm_dir               <- params$perm_dir
+bmark_dir              <- params$bmark_dir
+
+gene_lookup <- read_tsv(params$gene_lookup, show_col_types = FALSE) |>
+  select(ensembl_gene_id, external_gene_name) |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
+
+# Smaller-font DT wrapper for wide tables (Opposite effects, Subcluster-
+# specific gene table) so all columns fit on screen without horizontal scroll
+small_dt <- function(df, page_length = 20) {
+  datatable(
+    df, filter = "top", rownames = FALSE, class = "compact stripe hover",
+    options = list(
+      pageLength = page_length, scrollX = TRUE,
+      initComplete = DT::JS(
+        "function(settings, json) {",
+        "$(this.api().table().container()).css({'font-size': '75%'});",
+        "}"
+      )
+    )
+  )
+}
+```
+
+```{r load-data}
+eqtl_universe    <- read_rds(eqtl_universe_file)
+classification   <- read_rds(classification_file)
+ocr_enrich       <- read_rds(ocr_enrich_file)
+eqtl_effects     <- read_rds(eqtl_effects_file)
+beta_correlation <- read_rds(beta_correlation_file)
+
+# Unpack classification
+any_table    <- classification$any_table
+any_summary  <- classification$any_summary
+cs_table     <- classification$cell_specific_table
+cs_summary   <- classification$cell_specific_summary
+
+# Unpack subcluster/supercluster effect-size object
+subcluster_tbl   <- eqtl_effects$subcluster_specific
+supercluster_tbl <- eqtl_effects$supercluster_specific
+de_markers       <- eqtl_effects$de_markers_raw
+
+# Full L1+L2+adult pairwise slope matrix (reinstated from the prior report
+# version). ASSUMED still present under these two names in eqtl_effects --
+# please confirm eqtl_effect_sizes.R still writes effect_size_matrix /
+# effect_size_long alongside the subcluster/supercluster tables.
+effect_matrix <- eqtl_effects$effect_size_matrix
+effect_long   <- eqtl_effects$effect_size_long
+
+# Unpack beta correlation object (real structure from devspec_beta_correlation.R)
+paired_betas     <- beta_correlation$paired_betas
+opposite_effects <- beta_correlation$opposite_effects
+celltype_map     <- beta_correlation$celltype_map
+
+# Add gene symbols (paired_betas/opposite_effects only carry ENSG in `gene`)
+paired_betas <- paired_betas |>
+  left_join(gene_lookup, by = c("gene" = "ensembl_gene_id"))
+
+opposite_effects <- opposite_effects |>
+  left_join(gene_lookup, by = c("gene" = "ensembl_gene_id"))
+
+# Per-comparison Pearson r (no cor_summary is written by the beta_correlation
+# rule, so compute it here)
+beta_cor_summary <- paired_betas |>
+  group_by(my_cell_type, fugita_cell_type) |>
+  summarise(
+    n = n(),
+    r = cor(beta_my, beta_fugita, use = "complete.obs"),
+    .groups = "drop"
+  ) |>
+  mutate(comparison = paste(my_cell_type, "vs", fugita_cell_type))
+
+comparison_levels <- paste(celltype_map$my_cell, "vs", celltype_map$fugita_cell)
+
+# exp_pc_map for all 19 cell types (L1 + L2), hardcoded per instruction
+exp_pc_map <- c(
+  "Glu-UL" = 50, "Glu-DL" = 40, "NPC" = 30, "GABA" = 30,
+  "Endo-Peri" = 30, "OPC" = 30, "MG" = 30,
+  "Glu-UL-0" = 30, "Glu-UL-1" = 50, "Glu-UL-2" = 40,
+  "Glu-DL-0" = 40, "Glu-DL-1" = 40, "Glu-DL-2" = 30,
+  "GABA-0" = 30, "GABA-1" = 40, "GABA-2" = 40,
+  "NPC-0" = 50, "NPC-1" = 30, "NPC-2" = 20
+)
+geno_pc     <- 4
+norm_method <- "quantile"
+
+# GO gene universe = every phenotype_id tested in that cell type's own perm
+# file (unfiltered), matching the same path pattern used in
+# devspec_beta_correlation.R
+read_perm_universe <- function(cell_type, perm_dir) {
+  expPC <- exp_pc_map[[cell_type]]
+  f <- paste0(perm_dir, cell_type, "_", norm_method, "_genPC_", geno_pc,
+              "_expPC_", expPC, "/", cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")
+  if (!file.exists(f)) {
+    warning(paste("perm file not found for", cell_type, ":", f))
+    return(character(0))
+  }
+  fread(f, select = "phenotype_id") |> pull(phenotype_id) |> unique()
+}
+```
+
+## Developmental specificity pipeline steps {.tabset}
+
+***
+
+1. `extract_eqtl_universe`: Extract unique fetal eGene-eSNP universe (L1+L2)
+2. `classify_eqtl_specificity`: Classify pairs as testable/untestable and shared/fetal-specific vs Fujita
+3. `ocr_enrich`: Test fetal-specific eQTL enrichment in fetal (Ziffra) and adult (Li et al.) OCRs
+4. `eqtl_effect_sizes`: Extract subcluster/supercluster-specific eQTL and DE marker crossref
+5. `beta_correlation`: Fetal-adult eQTL beta correlations and opposite-effect allele checks
+6. `dev_specificity_report`: Summarise developmental specificity results
+
+***
+
+### Classification of fetal eQTL {.tabset}
+
+- 6,844 unique (eGene, eSNP) pairs identified across all 19 fetal cell types
+- Test for overlap in 7 Fugita adult cell types
+- Categories:
+  - `testable_shared`: gene expressed & SNP genotyped in Fujita; the pair is sig. in at least one adult cell type.
+  - `testable_specific`: gene expressed & SNP genotyped in Fujita; the pair is NOT sig. in any adult cell type.
+  - `untestable_genotyped_not_expressed`: SNP genotyped, gene not expressed in any Fujita cell type
+  - `untestable_not_genotyped_expressed`: gene expressed, SNP not genotyped in Fujita data
+  - `untestable_not_genotyped_not_expressed`: neither gene nor SNP is present in Fujita.
+- Tiers:
+  - `Any`: Unique fetal eGene-eSNP pair 'shared' if significant in at least one Fugita cell type.
+  - `Cell-specifc`: Unique cell-specific fetal eGene-eSNP pairs tested against only label-matched Fujita cell type
+
+***
+
+#### "Any" tier {.tabset}
+
+##### Summary table
+
+```{r any-tier-summary}
+any_summary |>
+  mutate(pct = percent(prop, accuracy = 0.1)) |>
+  select(Category = final_category, Count = n, Proportion = pct) |>
+  gt() |>
+  tab_header(title = '"Any" tier classification')
+```
+
+##### Barplot
+
+```{r any-tier-barplot, fig.height=5, fig.width=7}
+any_summary |>
+  mutate(
+    final_category = fct_reorder(final_category, n),
+    fill_group = case_when(
+      str_detect(final_category, "shared")   ~ "Shared",
+      str_detect(final_category, "specific") ~ "Fetal-specific",
+      TRUE                                   ~ "Untestable"
+    )
+  ) |>
+  ggplot(aes(x = final_category, y = n, fill = fill_group)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_manual(values = c("Shared" = "#4DAF4A", "Fetal-specific" = "#E41A1C",
+                                "Untestable" = "grey70")) +
+  labs(x = NULL, y = "Number of unique (eGene, eSNP) pairs", fill = "Classification") +
+  theme_classic(base_size = 13) +
+  theme(legend.position = "top")
+```
+
+##### Testable-pairs pie
+
+```{r any-tier-testable-pie, fig.height=4, fig.width=5}
+any_table |>
+  filter(str_detect(final_category, "^testable")) |>
+  count(final_category) |>
+  ggplot(aes(x = "", y = n, fill = final_category)) +
+  geom_col(width = 1) +
+  coord_polar("y") +
+  scale_fill_manual(values = c("testable_shared" = "#4DAF4A", "testable_specific" = "#E41A1C")) +
+  labs(fill = "Classification") +
+  theme_void(base_size = 13)
+```
+
+***
+
+#### Cell-specific tier {.tabset}
+
+##### Per-cell-type table
+
+```{r cs-tier-summary}
+cs_summary |>
+  filter(!is.na(ref_cell_type)) |>
+  select(Cell_Type = cell_type, Fujita_Match = ref_cell_type,
+         Category = final_category, Count = n, Proportion = prop) |>
+  datatable(filter = "top", rownames = FALSE,
+            options = list(pageLength = 20, scrollX = TRUE))
+```
+
+##### Barplot
+
+```{r cs-tier-barplot, fig.height=8, fig.width=10}
+cs_summary |>
+  filter(!is.na(ref_cell_type)) |>
+  mutate(
+    fill_group = case_when(
+      str_detect(final_category, "shared")    ~ "Shared",
+      str_detect(final_category, "specific")  ~ "Fetal-specific",
+      final_category == "no_adult_equivalent" ~ "No adult equivalent",
+      TRUE                                    ~ "Untestable"
+    )
+  ) |>
+  ggplot(aes(x = cell_type, y = n, fill = fill_group)) +
+  geom_col(position = "fill") +
+  coord_flip() +
+  scale_fill_manual(values = c("Shared" = "#4DAF4A", "Fetal-specific" = "#E41A1C",
+                                "Untestable" = "grey70", "No adult equivalent" = "grey40")) +
+  scale_y_continuous(labels = percent) +
+  labs(x = NULL, y = "Proportion of eGene-eSNP pairs", fill = "Classification") +
+  theme_classic(base_size = 13) +
+  theme(legend.position = "top")
+```
+
+***
+
+### OCR enrichment {.tabset}
+
+***
+
+- Fetal-specific and shared eQTL SNPs tested for enrichment in fetal (Ziffra
+et al. 2021) and adult (Li et al. 2023) open chromatin regions via block
+bootstrap permutation.
+
+For the adult data, the following peaks were mapped to fetal-like cell types:
+
+```{r li-to-l1-mapping, eval=FALSE}
+li_to_L1 <- list(
+  "Glu-UL" = c("ITL23_1", "ITL23_2", "ITL23_3", "ITL23_4", "ITL23_5", "ITL23_6",
+               "ITL34", "ITL4_1", "ITL4_2", "ITL45_1", "ITL45_2",
+               "ITV1C_1", "ITV1C_2", "ITV1C_3"),
+  "Glu-DL" = c("ITL5_1", "ITL5_2", "ITL5_3", "ITL5_4",
+               "ITL6_1_1", "ITL6_1_2", "ITL6_2_1", "ITL6_2_2",
+               "CT_1", "CT_2", "L6B_1", "L6B_2", "NP_1", "NP_2", "NP_3", "ET"),
+  "GABA"   = c("SST_1", "SST_2", "SST_3", "SST_4", "SST_5", "SST_CHODL",
+               "PVALB_1", "PVALB_2", "PVALB_3", "PVALB_4", "PV_ChCs",
+               "VIP_1", "VIP_2", "VIP_3", "VIP_4", "VIP_5", "VIP_6", "VIP_7",
+               "SNCG_1", "SNCG_2", "SNCG_3", "SNCG_4", "SNCG_5",
+               "LAMP5", "LAMP5_LHX6"),
+  "MG"     = c("MGC_1", "MGC_2"),
+  "OPC"    = c("OPC", "COP"),
+  "Endo-Peri" = c("EC", "SMC")
+)
+```
+
+***
+
+#### Fold enrichment
+
+***
+
+```{r ocr-enrichment-barplot, fig.height=7, fig.width=10}
+ocr_enrich |>
+  mutate(
+    peak_set = str_remove(peak_set, "^(fetal_|adult_)"),
+    sig_label = case_when(p_value < 0.001 ~ "***",
+                           p_value < 0.01  ~ "**",
+                           p_value < 0.05  ~ "*",
+                           TRUE            ~ "ns")
+  ) |>
+  ggplot(aes(x = reorder(peak_set, fold_enrichment), y = fold_enrichment, fill = stage)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
+  geom_text(aes(label = sig_label),
+            position = position_dodge(width = 0.8), vjust = -0.3, size = 3.5) +
+  facet_wrap(~ snp_set, ncol = 1, scales = "free_x") +
+  coord_flip() +
+  scale_fill_manual(values = c(fetal = "#984EA3", adult = "#FF7F00")) +
+  labs(x = NULL, y = "Fold enrichment (observed / mean permuted)", fill = "Peak stage") +
+  theme_classic(base_size = 13) +
+  theme(legend.position = "top")
+```
+
+***
+
+#### Results table
+
+```{r ocr-enrichment-table}
+ocr_enrich |>
+  mutate(p_value = signif(p_value, 3),
+         fold_enrichment = round(fold_enrichment, 2),
+         mean_permuted_overlap = round(mean_permuted_overlap, 1)) |>
+  select(Peak_Set = peak_set, Stage = stage, SNP_Set = snp_set,
+         N_SNPs = n_snps, N_Peaks = n_peaks,
+         Observed = observed_overlap, Mean_Permuted = mean_permuted_overlap,
+         Fold_Enrichment = fold_enrichment, P_Value = p_value) |>
+  gt() |>
+  tab_header(title = "OCR enrichment results") |>
+  tab_options(table.font.size = px(11))
+```
+
+***
+
+### Effect-size concordance {.tabset}
+
+***
+
+- Pearson correlation of eQTL slopes between each fetal cell type and its
+matched Fujita adult cell type
+- Opposite-effect pairs - defined as having a discordant sign, highlighted
+- Allele-coding status against Fujita's REF/ALT and 1000G EUR annotated.
+
+***
+
+#### Scatter grid
+
+***
+
+```{r beta-scatter-grid, fig.height=8, fig.width=14}
+plot_df <- paired_betas |>
+  mutate(
+    comparison = factor(paste(my_cell_type, "vs", fugita_cell_type), levels = comparison_levels),
+    opposite_effect = sign(beta_my) != sign(beta_fugita)
+  )
+
+r_labels <- beta_cor_summary |>
+  mutate(comparison = factor(comparison, levels = comparison_levels),
+         label = paste0("r = ", round(r, 3), "\nn = ", n))
+
+ggplot(plot_df, aes(x = beta_my, y = beta_fugita)) +
+  geom_point(aes(colour = opposite_effect), alpha = 0.4, size = 0.7) +
+  geom_abline(slope = 1, intercept = 0, colour = "grey40", linetype = "dashed") +
+  geom_smooth(method = "lm", se = FALSE, colour = "#377EB8", linewidth = 0.6) +
+  geom_text(data = r_labels, aes(x = -Inf, y = Inf, label = label),
+            hjust = -0.1, vjust = 1.2, size = 3, inherit.aes = FALSE) +
+  scale_colour_manual(values = c(`TRUE` = "#E41A1C", `FALSE` = "grey60"),
+                       labels = c(`TRUE` = "Opposite effect", `FALSE` = "Concordant")) +
+  facet_wrap(~ comparison, ncol = 4, scales = "free") +
+  labs(x = "Fetal slope", y = "Adult (Fujita) slope", colour = NULL) +
+  theme_classic(base_size = 11) +
+  theme(legend.position = "top")
+```
+
+***
+
+#### Correlation heatmap
+
+***
+
+```{r effect-size-heatmap, fig.height=8, fig.width=9}
+slope_cols <- grep("^slope_", names(effect_matrix), value = TRUE)
+slope_mat <- as.matrix(effect_matrix[, slope_cols])
+colnames(slope_mat) <- str_remove(colnames(slope_mat), "^slope_")
+
+fetal_L1_cols <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+fetal_L2_cols <- sort(setdiff(
+  colnames(slope_mat)[!str_starts(colnames(slope_mat), "Fujita_")],
+  fetal_L1_cols
+))
+fujita_cols <- sort(colnames(slope_mat)[str_starts(colnames(slope_mat), "Fujita_")])
+
+col_order <- c(fetal_L1_cols, fetal_L2_cols, fujita_cols)
+col_order <- col_order[col_order %in% colnames(slope_mat)]
+slope_mat <- slope_mat[, col_order]
+
+cor_mat <- cor(slope_mat, use = "pairwise.complete.obs")
+
+stage_anno <- ifelse(str_starts(colnames(cor_mat), "Fujita_"), "Adult", "Fetal")
+ha <- HeatmapAnnotation(
+  Stage = stage_anno,
+  col = list(Stage = c(Fetal = "#984EA3", Adult = "#FF7F00"))
+)
+
+col_fun <- colorRamp2(c(-1, 0, 1), c("#2166AC", "white", "#B2182B"))
+
+Heatmap(
+  cor_mat,
+  name = "Pearson r",
+  col = col_fun,
+  top_annotation = ha,
+  clustering_method_rows = "ward.D2",
+  clustering_method_columns = "ward.D2",
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    grid.text(sprintf("%.2f", cor_mat[i, j]), x, y, gp = gpar(fontsize = 6))
+  },
+  row_names_gp = gpar(fontsize = 8),
+  column_names_gp = gpar(fontsize = 8)
+)
+
+# Save to file
+slope_full_tbl <- effect_matrix |>
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+  select(external_gene_name, phenotype_id, variant_id,
+         all_of(paste0("slope_", col_order))) |>
+  rename(Symbol = external_gene_name, ENSG_ID = phenotype_id, SNP = variant_id) |>
+  rename_with(~ str_remove(., "^slope_"), starts_with("slope_")) |>
+  distinct(ENSG_ID, SNP, .keep_all = TRUE)
+
+write_tsv(slope_full_tbl, "../reports/19DEV-SPECIFICITY/slope_full_table.tsv")
+
+```
+
+***
+
+#### Pairwise n
+
+***
+
+```{r pairwise-n, fig.height=8, fig.width=9}
+n_mat <- matrix(NA, ncol(slope_mat), ncol(slope_mat),
+                dimnames = list(colnames(slope_mat), colnames(slope_mat)))
+for (i in seq_len(ncol(slope_mat))) {
+  for (j in seq_len(ncol(slope_mat))) {
+    n_mat[i, j] <- sum(complete.cases(slope_mat[, c(i, j)]))
+  }
+}
+
+col_fun_n <- colorRamp2(c(0, max(n_mat, na.rm = TRUE)), c("white", "#08519C"))
+
+Heatmap(
+  n_mat,
+  name = "n pairs",
+  col = col_fun_n,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  top_annotation = ha,
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    grid.text(n_mat[i, j], x, y, gp = gpar(fontsize = 5))
+  },
+  row_names_gp = gpar(fontsize = 8),
+  column_names_gp = gpar(fontsize = 8)
+)
+```
+
+***
+
+#### Opposite effects
+
+***
+
+```{r opposite-effects-table}
+opposite_effects |>
+  select(Gene = external_gene_name, ENSG = gene, eSNP = snp,
+         Fetal_Cell = my_cell_type, Fujita_Cell = fugita_cell_type,
+         Beta_Fetal = beta_my, Beta_Fujita = beta_fugita,
+         Allele_Status_Fujita = allele_status_fugita,
+         Allele_Status_1000G = allele_status_1000G) |>
+  mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
+  small_dt()
+```
+
+***
+
+### Subcluster-specific eQTL {.tabset}
+
+- `subcluster-specific`: eGenes significant at FDR < 0.05 in an L2 subcluster but not its parent L1
+- `supercluster-specific`: vice versa
+- GO universe (background) is every gene tested in that cell type's own TensorQTL perm file
+
+***
+
+#### Counts
+
+```{r subcluster-counts}
+subcluster_tbl |>
+  count(cell_type_L2, parent_L1, name = "n_specific_eGenes") |>
+  gt()
+```
+
+***
+
+#### Parent nominal statistics
+
+```{r subcluster-parent-stats, fig.height=6, fig.width=9}
+p1 <- subcluster_tbl |>
+  filter(!is.na(pval_nom_parent)) |>
+  ggplot(aes(x = pval_nom_parent)) +
+  geom_histogram(bins = 50, fill = "#377EB8", colour = "white") +
+  facet_wrap(~ cell_type_L2, scales = "free_y") +
+  geom_vline(xintercept = 0.05, linetype = "dashed", colour = "red") +
+  labs(x = "Nominal p-value in parent L1", y = "Count") +
+  theme_classic(base_size = 11)
+
+p2 <- subcluster_tbl |>
+  filter(!is.na(slope_L2), !is.na(slope_parent)) |>
+  ggplot(aes(x = slope_L2, y = slope_parent)) +
+  geom_point(alpha = 0.3, size = 0.8) +
+  geom_abline(slope = 1, intercept = 0, colour = "red", linetype = "dashed") +
+  facet_wrap(~ cell_type_L2, scales = "free") +
+  labs(x = "Slope in L2 subcluster", y = "Slope in parent L1") +
+  theme_classic(base_size = 11)
+
+p1 / p2
+```
+
+***
+
+#### Summary per L2 type
+
+```{r subcluster-summary-table}
+subcluster_tbl |>
+  group_by(cell_type_L2, parent_L1) |>
+  summarise(
+    n_eGenes = n_distinct(phenotype_id),
+    median_pval_parent = round(median(pval_nom_parent, na.rm = TRUE), 4),
+    prop_same_direction = round(mean(sign(slope_L2) == sign(slope_parent), na.rm = TRUE), 3),
+    prop_nom_sig_parent = round(mean(pval_nom_parent < 0.05, na.rm = TRUE), 3),
+    n_de_markers = sum(is_de_marker, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  gt() |>
+  tab_options(table.font.size = px(11))
+```
+
+***
+
+#### Supercluster-specific counts
+
+```{r supercluster-counts}
+supercluster_tbl |>
+  count(parent_L1, name = "n_L1_only_eGenes") |>
+  gt()
+```
+
+***
+
+#### DE marker overlap
+
+```{r de-overlap, fig.height=5, fig.width=7}
+subcluster_tbl |>
+  count(cell_type_L2, is_de_marker) |>
+  ggplot(aes(x = cell_type_L2, y = n, fill = is_de_marker)) +
+  geom_col(position = "fill") +
+  coord_flip() +
+  scale_fill_manual(values = c("TRUE" = "#E41A1C", "FALSE" = "grey70"),
+                     labels = c("TRUE" = "DE marker", "FALSE" = "Not DE")) +
+  scale_y_continuous(labels = percent) +
+  labs(x = NULL, y = "Proportion of subcluster-specific eGenes", fill = NULL) +
+  theme_classic(base_size = 13) +
+  theme(legend.position = "top")
+```
+
+***
+
+#### GO enrichment (subcluster-specific)
+
+```{r go-subcluster, fig.height=10, fig.width=10, results='asis'}
+go_results_sub <- list()
+
+for (ct in unique(subcluster_tbl$cell_type_L2)) {
+  genes <- subcluster_tbl |> filter(cell_type_L2 == ct) |> pull(phenotype_id) |> unique()
+  if (length(genes) < 5) next
+
+  universe_genes <- read_perm_universe(ct, perm_dir)
+
+  entrez <- tryCatch(
+    AnnotationDbi::mapIds(org.Hs.eg.db, keys = genes,
+                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
+    error = function(e) NULL)
+  universe_entrez <- tryCatch(
+    AnnotationDbi::mapIds(org.Hs.eg.db, keys = universe_genes,
+                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
+    error = function(e) NULL)
+
+  if (is.null(entrez) || sum(!is.na(entrez)) < 5) {
+    cat("GO universe/entrez mapping failed or insufficient for", ct, "\n\n")
+    next
+  }
+
+  ego <- tryCatch(
+    enrichGO(gene = na.omit(entrez), universe = na.omit(universe_entrez),
+             OrgDb = org.Hs.eg.db, ont = "BP", pAdjustMethod = "BH",
+             pvalueCutoff = 0.05, readable = TRUE),
+    error = function(e) { cat("enrichGO failed for", ct, ":", conditionMessage(e), "\n\n"); NULL })
+
+  if (!is.null(ego) && nrow(as.data.frame(ego)) > 0) go_results_sub[[ct]] <- ego
+}
+
+for (ct in names(go_results_sub)) {
+  cat("\n\n#####", ct, "\n\n")
+  print(dotplot(go_results_sub[[ct]], showCategory = 15, title = ct))
+}
+if (length(go_results_sub) == 0) cat("No cell types produced GO output.\n")
+```
+
+***
+
+#### GO enrichment (supercluster-specific)
+
+***
+
+```{r go-supercluster, fig.height=10, fig.width=10, results='asis'}
+go_results_super <- list()
+
+for (ct in unique(supercluster_tbl$parent_L1)) {
+  genes <- supercluster_tbl |> filter(parent_L1 == ct) |> pull(phenotype_id) |> unique()
+  if (length(genes) < 5) next
+
+  universe_genes <- read_perm_universe(ct, perm_dir)
+
+  entrez <- tryCatch(
+    AnnotationDbi::mapIds(org.Hs.eg.db, keys = genes,
+                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
+    error = function(e) NULL)
+  universe_entrez <- tryCatch(
+    AnnotationDbi::mapIds(org.Hs.eg.db, keys = universe_genes,
+                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
+    error = function(e) NULL)
+
+  if (is.null(entrez) || sum(!is.na(entrez)) < 5) {
+    cat("GO universe/entrez mapping failed or insufficient for", ct, "\n\n")
+    next
+  }
+
+  ego <- tryCatch(
+    enrichGO(gene = na.omit(entrez), universe = na.omit(universe_entrez),
+             OrgDb = org.Hs.eg.db, ont = "BP", pAdjustMethod = "BH",
+             pvalueCutoff = 0.05, readable = TRUE),
+    error = function(e) { cat("enrichGO failed for", ct, ":", conditionMessage(e), "\n\n"); NULL })
+
+  if (!is.null(ego) && nrow(as.data.frame(ego)) > 0) go_results_super[[ct]] <- ego
+}
+
+for (ct in names(go_results_super)) {
+  cat("\n\n#####", ct, "\n\n")
+  print(dotplot(go_results_super[[ct]], showCategory = 15, title = ct))
+}
+if (length(go_results_super) == 0) cat("No cell types produced GO output.\n")
+```
+
+***
+
+#### Subcluster-specific gene table
+
+***
+
+```{r subcluster-gene-table}
+subcluster_tbl |>
+  select(Gene = gene_symbol, ENSG = phenotype_id, eSNP = variant_id,
+         L2_Type = cell_type_L2, Parent_L1 = parent_L1,
+         Slope_L2 = slope_L2, QVal_L2 = qval_L2,
+         Slope_Parent = slope_parent, Pval_Parent = pval_nom_parent,
+         DE_Marker = is_de_marker) |>
+  mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
+  small_dt()
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+***
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+files <- list.files(bmark_dir, pattern = "dev_specificity\\..*\\.txt", full.names = TRUE)
+
+benchmarks <- map_dfr(files, function(f) {
+  df <- read.table(f, header = TRUE, sep = "\t")
+  fname <- basename(f)
+  parts <- strsplit(fname, "\\.")[[1]]
+  # "dev_specificity.extract_universe.txt" -> parts[2] = "extract_universe"
+  rule <- parts[2]
+
+  tibble(
+    file = f,
+    rule = rule,
+    runtime_sec = df$s,
+    runtime_hms = df$h.m.s.,
+    max_rss = df$max_rss
+  )
+})
+
+summary <- benchmarks |>
+  group_by(rule) |>
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) |>
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) |>
+  mutate(across(where(is.numeric), ~round(., 3))) |>
+  arrange(rule)
+
+summary |>
+  gt() |>
+  tab_header(
+    title = "Benchmarking",
+    subtitle = "Means and SD across replicates"
+  ) |>
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) |>
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) |>
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+***
+
+#### Plot
+
+***
+
+```{r runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = pmax(mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min), 0),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = pmax(mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb), 0),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+```
+
+***
+
+```{r session-info}
+sessionInfo()
+```
+
+***
