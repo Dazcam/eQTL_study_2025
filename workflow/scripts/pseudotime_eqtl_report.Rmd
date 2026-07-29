@@ -1,0 +1,1505 @@
+---
+title: "Pseudotime eQTL Report"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 3
+params:
+  in_dir: null
+  cell_type_perm_dir: null
+---
+
+***
+
+```{r setup, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(stringr)
+library(cowplot)
+library(DT)
+library(gt)
+library(patchwork)
+library(ggrepel)
+library(UpSetR)
+library(ComplexHeatmap)
+library(RColorBrewer)
+library(circlize)
+
+in_dir              <- params$in_dir
+cell_type_perm_dir  <- params$cell_type_perm_dir
+
+trajectories <- c("NPC-to-Glu-DL", "NPC-to-Glu-UL")
+q_values     <- c(4, 5, 6)
+exp_pcs      <- c(10, 20, 30, 40, 50)
+geno_pc      <- 4
+norm_method  <- "quantile"
+
+selected_exp_pc <- c(
+  "NPC-to-Glu-DL" = 30,
+  "NPC-to-Glu-UL" = 30
+)
+
+cell_type_exp_pc_map <- c(
+  "NPC-to-Glu-DL" = 40,
+  "NPC-to-Glu-UL" = 50
+)
+
+cell_type_map <- c(
+  "NPC-to-Glu-DL" = "Glu-DL",
+  "NPC-to-Glu-UL" = "Glu-UL"
+)
+
+bin_palette <- setNames(
+  colorRampPalette(c("#FDE725", "#21908C", "#440154"))(6),
+  as.character(1:6)
+)
+
+# Load gene symbol lookup
+gene_lookup_file <- "../../resources/sheets/gene_lookup_hg38.tsv"
+gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
+  select(ensembl_gene_id, symbol = external_gene_name) |>
+  filter(!is.na(symbol) & symbol != "") |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
+message("Gene lookup loaded: ", nrow(gene_lookup), " entries")
+
+get_symbol <- function(ensembl_ids) {
+  syms <- gene_lookup$symbol[match(ensembl_ids, gene_lookup$ensembl_gene_id)]
+  ifelse(is.na(syms) | syms == "", ensembl_ids, syms)
+}
+```
+
+## 1. Pipeline Overview {.tabset}
+
+***
+
+This report summarises the pseudotime eQTL analysis for two neurogenic trajectories
+derived from the prenatal human cerebral cortex snRNA-seq atlas (Cameron et al.).
+
+***
+
+### Methods
+
+**Pseudotime analysis**
+
+Cells were subsetted to two neurogenic trajectories from the full 679,738-cell atlas:
+
+- **NPC-to-Glu-DL**: NPC (n=103,598) + Glu-DL (n=136,070) = 239,668 cells
+- **NPC-to-Glu-UL**: NPC (n=103,598) + Glu-UL (n=271,180) = 374,778 cells
+
+Pseudotime was computed using [Palantir](https://github.com/dpeerlab/Palantir) with:
+
+- Root cell: cell with highest PAX6 expression in NPC population
+- Terminal cell: cell with highest HS3ST4 (Glu-DL) or SATB2 (Glu-UL) expression
+- Harmony-corrected PCA as diffusion map input (n_pcs=30, n_neighbors=10)
+- 1,000 waypoints
+
+**Pseudobulk generation**
+
+Cells were binned into equal-cell-number quantiles (Q4, Q5, Q6) based on Palantir
+pseudotime. Raw counts were summed per sample per bin. Only samples with matching
+genotype data were retained.
+
+**eQTL mapping**
+
+cis-eQTL mapping was performed using [TensorQTL](https://github.com/broadinstitute/tensorqtl):
+
+- Normalisation: TMM → log2 → quantile
+- cis-window: ±500 kb
+- Covariates: PCW, sex, 4 genotype PCs, N expression PCs (sensitivity: 10–50)
+- Permutation-based FDR correction (q-value < 0.05)
+- Selected expression PCs: 30 (both trajectories)
+
+**Dynamic eQTL mapping**
+
+Dynamic eQTL mapping followed Yazar et al. (Science 2022) using linear mixed models:
+
+- Input: cell-type level eQTLs detected in ≥3 Q6 bins
+- Models: linear (genotype × quantile) and quadratic (genotype × quantile + genotype × quantile²)
+- Random effects: individual (1|sampleid) to account for repeated measures
+- Covariates: PCW, sex, genotype PCs 1-4 (expression PCs excluded — see methods note)
+- FDR: qvalue correction on LRT p-values
+
+> **Covariate note:** The per-bin TensorQTL analysis used expression PCs computed
+> independently per bin (expPC=30). For the dynamic LMM, expression PCs are excluded
+> because bin-specific PCs are not comparable across bins in a stacked model.
+> Only fixed demographic covariates (PCW, sex, genPC1-4) are used, with the
+> individual random effect accounting for inter-individual technical variation.
+
+***
+
+### Parameters
+
+```{r params_table, echo=FALSE, message=FALSE, warning=FALSE}
+tibble(
+  Parameter = c("Trajectories", "Quantile values", "Expression PCs tested",
+                "Selected expression PCs", "Genotype PCs",
+                "Normalisation", "cis-window", "FDR threshold",
+                "Dynamic eQTL min bins", "Dynamic eQTL FDR"),
+  Value     = c(paste(trajectories, collapse=", "),
+                paste(q_values, collapse=", "),
+                paste(exp_pcs, collapse=", "),
+                paste(names(selected_exp_pc), selected_exp_pc, sep="=", collapse=", "),
+                as.character(geno_pc), norm_method, "±500 kb", "q-value < 0.05",
+                "3", "q-value < 0.05")
+) |>
+  gt() |>
+  tab_header(title = "Analysis parameters") |>
+  cols_label(Parameter = "Parameter", Value = "Value") |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels())
+```
+
+***
+
+## 2. Pseudotime QC {.tabset}
+
+***
+
+```{r pseudotime_qc, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+for (traj in trajectories) {
+  cat(sprintf("\n\n### %s {.tabset}\n\n***\n\n", traj))
+
+  cat("#### Pseudotime UMAP\n\n***\n\n")
+  pt_fig <- file.path(in_dir, traj, "pseudotime_umap.png")
+  if (file.exists(pt_fig)) {
+    cat(sprintf('![Pseudotime UMAP](%s)\n\n', pt_fig))
+  } else {
+    cat(sprintf("*Figure not found: %s*\n\n", pt_fig))
+  }
+
+  cat("#### Pseudobulk QC\n\n***\n\n")
+  pb_fig <- file.path(in_dir, traj, "pseudobulk", "pseudobulk_qc.png")
+  if (file.exists(pb_fig)) {
+    cat(sprintf('![Pseudobulk QC](%s)\n\n', pb_fig))
+  } else {
+    cat(sprintf("*Figure not found: %s*\n\n", pb_fig))
+  }
+
+  cat("#### Marker genes\n\n***\n\n")
+  marker_fig <- file.path(in_dir, traj, "pseudotime_markers.png")
+  if (file.exists(marker_fig)) {
+    cat(sprintf('![Marker gene expression](%s)\n\n', marker_fig))
+  } else {
+    cat(sprintf("*Figure not found: %s*\n\n", marker_fig))
+  }
+
+  cat("#### Bin Summary\n\n***\n\n")
+  pb_csv <- file.path(in_dir, traj, "pseudobulk", "pseudobulk_summary.csv")
+  if (file.exists(pb_csv)) {
+    read_csv(pb_csv, show_col_types = FALSE) |>
+      select(-trajectory) |>
+      gt() |>
+      tab_header(title = sprintf("Pseudobulk bin summary: %s", traj)) |>
+      cols_label(
+        quantile_n              = "Q",
+        bin                     = "Bin",
+        n_cells_total           = "Cells (total)",
+        n_samples               = "Samples",
+        min_cells_per_sample    = "Min cells/sample",
+        median_cells_per_sample = "Median cells/sample",
+        max_cells_per_sample    = "Max cells/sample",
+        n_samples_below_10      = "Samples < 10 cells"
+      ) |>
+      tab_style(style = cell_text(weight = "bold"),
+                locations = cells_column_labels()) |>
+      print()
+    cat("\n\n")
+  } else {
+    cat(sprintf("*Summary CSV not found: %s*\n\n", pb_csv))
+  }
+  cat("***\n\n")
+}
+```
+
+***
+
+## 3. Sensitivity Analysis {.tabset}
+
+***
+
+eGene counts at FDR < 0.05 across expression PC values (10–50), stratified by
+trajectory, Q value, and bin.
+
+***
+
+```{r sensitivity_functions, echo=FALSE, message=FALSE, warning=FALSE}
+
+read_perm_log <- function(in_dir, trajectory, quantile_n, bin, exp_pc, geno_pc = 4) {
+  log_file <- file.path(
+    in_dir, trajectory, "tensorqtl", "perm",
+    sprintf("Q%d_bin%d_genPC%d_expPC%d", quantile_n, bin, geno_pc, exp_pc),
+    sprintf("Q%d_bin%d_perm.tensorQTL.cis.log", quantile_n, bin)
+  )
+  if (!file.exists(log_file)) { message("Not found: ", log_file); return(NULL) }
+  lines <- readLines(log_file, warn = FALSE)
+
+  extract <- function(pattern, lines, type = "integer") {
+    line <- str_subset(lines, pattern)
+    if (length(line) == 0) return(NA)
+    val <- str_extract(tail(line, 1), "[0-9]+")
+    if (type == "integer") as.integer(val) else as.numeric(val)
+  }
+  extract_last_num <- function(pattern, lines, type = "numeric") {
+    line <- str_subset(lines, pattern)
+    if (length(line) == 0) return(NA)
+    val <- str_extract(tail(line, 1), "[0-9\\.eE+-]+$")
+    if (type == "integer") as.integer(val) else as.numeric(val)
+  }
+
+  tibble(
+    trajectory   = trajectory, quantile_n = quantile_n,
+    bin          = bin,        exp_pc     = exp_pc,
+    geno_pc      = geno_pc,
+    genes_tested = extract("phenotypes tested:", lines),
+    samples      = extract("\\* [0-9]+ samples", lines),
+    covariates   = extract("\\* [0-9]+ covariates", lines),
+    variants     = extract("\\* [0-9]+ variants", lines),
+    egenes_fdr05 = extract_last_num("QTL phenotypes @ FDR 0.05:", lines, "integer"),
+    beta_cor     = extract_last_num("Correlation between Beta-approximated", lines),
+    prop_sig     = extract_last_num("Proportion of significant phenotypes", lines),
+    min_p        = extract_last_num("min p-value threshold @ FDR 0.05:", lines)
+  )
+}
+
+build_sensitivity_tbl <- function(in_dir, trajectories, q_values, exp_pcs, geno_pc = 4) {
+  rows <- list()
+  for (traj in trajectories) for (n in q_values) for (b in seq_len(n)) for (pc in exp_pcs) {
+    row <- read_perm_log(in_dir, traj, n, b, pc, geno_pc)
+    if (!is.null(row)) rows <- c(rows, list(row))
+  }
+  bind_rows(rows)
+}
+
+sensitivity_tbl <- build_sensitivity_tbl(in_dir, trajectories, q_values, exp_pcs)
+if (nrow(sensitivity_tbl) == 0) stop("No tensorQTL log files found. Check in_dir: ", in_dir)
+message("Loaded sensitivity data: ", nrow(sensitivity_tbl), " rows")
+```
+
+```{r sensitivity_plots, echo=FALSE, message=FALSE, warning=FALSE, results='asis', fig.width=14, fig.height=5}
+for (traj in trajectories) {
+  cat(sprintf("\n\n### %s {.tabset}\n\n***\n\n", traj))
+  traj_tbl <- sensitivity_tbl |> filter(trajectory == traj)
+
+  cat("#### Sensitivity plot\n\n***\n\n")
+  for (n in q_values) {
+    qtbl <- traj_tbl |> filter(quantile_n == n) |> mutate(bin_label = paste0("Bin ", bin))
+    if (nrow(qtbl) == 0) next
+    p <- ggplot(qtbl, aes(x = exp_pc, y = egenes_fdr05,
+                          colour = as.factor(bin), group = as.factor(bin))) +
+      geom_line(linewidth = 1) + geom_point(size = 2.5) +
+      scale_colour_manual(values = bin_palette, name = "Bin") +
+      facet_wrap(~ bin_label, nrow = 1) +
+      labs(title = sprintf("%s — Q%d: eGenes (FDR < 0.05) by expression PCs", traj, n),
+           x = "Expression PCs", y = "eGene count (FDR < 0.05)") +
+      theme_minimal(base_size = 12) +
+      theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+            strip.text = element_text(face = "bold"), legend.position = "none",
+            panel.grid.major = element_line(colour = "grey90"),
+            panel.grid.minor = element_line(colour = "grey95"))
+    print(p); cat("\n\n")
+  }
+
+  cat("#### Best expPC per bin\n\n***\n\n")
+  traj_tbl |>
+    group_by(quantile_n, bin) |>
+    slice_max(egenes_fdr05, n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    select(quantile_n, bin, exp_pc, genes_tested, samples,
+           covariates, egenes_fdr05, beta_cor, prop_sig) |>
+    arrange(quantile_n, bin) |>
+    gt() |>
+    tab_header(title = sprintf("Best expression PC — %s", traj),
+               subtitle = "Selected by maximum eGene count at FDR < 0.05") |>
+    cols_label(quantile_n = "Q", bin = "Bin", exp_pc = "Best expPC",
+               genes_tested = "Genes tested", samples = "Samples",
+               covariates = "Covariates", egenes_fdr05 = "eGenes (FDR<0.05)",
+               beta_cor = "Beta correlation", prop_sig = "Prop. significant") |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    fmt_number(columns = c(beta_cor, prop_sig), decimals = 3) |>
+    print()
+  cat("\n\n***\n\n")
+
+  cat("#### Full sensitivity table\n\n***\n\n")
+  traj_tbl |>
+    select(quantile_n, bin, exp_pc, genes_tested, samples,
+           covariates, egenes_fdr05, beta_cor, prop_sig) |>
+    arrange(quantile_n, bin, exp_pc) |>
+    gt() |>
+    tab_header(title = sprintf("Full sensitivity results — %s", traj)) |>
+    cols_label(quantile_n = "Q", bin = "Bin", exp_pc = "expPC",
+               genes_tested = "Genes tested", samples = "Samples",
+               covariates = "Covariates", egenes_fdr05 = "eGenes (FDR<0.05)",
+               beta_cor = "Beta cor", prop_sig = "Prop. sig") |>
+    fmt_number(columns = c(beta_cor, prop_sig), decimals = 3) |>
+    print()
+  cat("\n\n***\n\n")
+}
+```
+
+***
+
+## 4. eQTL Landscape Across Pseudotime {.tabset}
+
+***
+
+eGene counts at FDR < 0.05 across pseudotime bins using expPC=30.
+
+***
+
+```{r landscape_data, echo=FALSE, message=FALSE, warning=FALSE}
+read_perm_egenes <- function(in_dir, trajectory, quantile_n, bin, exp_pc, geno_pc = 4) {
+  perm_file <- file.path(
+    in_dir, trajectory, "tensorqtl", "perm",
+    sprintf("Q%d_bin%d_genPC%d_expPC%d", quantile_n, bin, geno_pc, exp_pc),
+    sprintf("Q%d_bin%d_perm.cis_qtl.txt.gz", quantile_n, bin)
+  )
+  if (!file.exists(perm_file)) { message("Not found: ", perm_file); return(NULL) }
+  read_tsv(perm_file, show_col_types = FALSE) |>
+    filter(!is.na(qval) & qval < 0.05) |>
+    distinct(phenotype_id) |>
+    mutate(trajectory = trajectory, quantile_n = quantile_n, bin = bin, exp_pc = exp_pc)
+}
+
+egene_list <- list()
+for (traj in trajectories) {
+  pc <- selected_exp_pc[[traj]]
+  for (n in q_values) for (b in seq_len(n)) {
+    key <- sprintf("%s_Q%d_bin%d", traj, n, b)
+    egene_list[[key]] <- read_perm_egenes(in_dir, traj, n, b, pc)
+  }
+}
+
+egene_tbl <- bind_rows(egene_list)
+landscape_counts <- egene_tbl |>
+  group_by(trajectory, quantile_n, bin) |>
+  summarise(egenes = n_distinct(phenotype_id), .groups = "drop")
+```
+
+```{r landscape_plots, echo=FALSE, message=FALSE, warning=FALSE, results='asis', fig.width=12, fig.height=5}
+for (traj in trajectories) {
+  cat(sprintf("\n\n### %s {.tabset}\n\n***\n\n", traj))
+  traj_counts <- landscape_counts |> filter(trajectory == traj)
+  pc_label    <- selected_exp_pc[[traj]]
+
+  cat("#### eGene counts across bins\n\n***\n\n")
+  p <- traj_counts |>
+    ggplot(aes(x = bin, y = egenes, colour = as.factor(bin), group = as.factor(quantile_n))) +
+    geom_line(linewidth = 1, colour = "grey70") + geom_point(size = 3) +
+    scale_colour_manual(values = bin_palette, name = "Bin") +
+    scale_x_continuous(breaks = seq_len(max(traj_counts$bin))) +
+    facet_wrap(~ paste0("Q", quantile_n), scales = "free_x") +
+    labs(title    = sprintf("%s — eGenes across pseudotime bins (expPC=%d)", traj, pc_label),
+         subtitle = "FDR < 0.05, permutation-based q-value",
+         x = "Pseudotime bin", y = "eGene count (FDR < 0.05)") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.subtitle = element_text(hjust = 0.5, colour = "grey50"),
+          strip.text = element_text(face = "bold"), legend.position = "none",
+          panel.grid.major = element_line(colour = "grey90"),
+          panel.grid.minor = element_line(colour = "grey95"))
+  print(p); cat("\n\n")
+
+  cat("#### eGene counts table\n\n***\n\n")
+  traj_counts |>
+    arrange(quantile_n, bin) |>
+    gt() |>
+    tab_header(title = sprintf("eGene counts — %s", traj),
+               subtitle = sprintf("expPC = %d, FDR < 0.05", pc_label)) |>
+    cols_label(trajectory = "Trajectory", quantile_n = "Q",
+               bin = "Bin", egenes = "eGenes (FDR<0.05)") |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    print()
+  cat("\n\n***\n\n")
+}
+```
+
+***
+
+## 5. Overlap with Full Paper eQTL Analysis {.tabset}
+
+***
+
+Comparison of pseudotime bin eGenes with all significant eGenes (FDR < 0.05)
+from the original paper across all L1 and L2 cell types. eGenes classified as:
+
+- **Shared**: detected in both the pseudotime bin and the full paper eGene set
+- **Novel**: detected only in the pseudotime bin — not an eGene in any cell type in the original paper
+- **Paper only**: significant in the paper but not detected in this pseudotime bin
+
+**Novelty definition:** An eGene is classified as novel if its Ensembl gene ID
+(`phenotype_id`) is not present as a significant eGene (FDR < 0.05) in any L1 or
+L2 cell type from the original paper. Novelty is assessed at the gene level — the
+same gene detected with a different lead eSNP in the pseudotime analysis is still
+classified as novel if the gene itself was not previously an eGene. The same novel
+eGene may be detected in multiple pseudotime bins; the novel eGene tables below
+report each gene once, retaining the bin and statistics from its most significant
+detection (lowest nominal p-value).
+
+***
+
+```{r overlap_data, echo=FALSE, message=FALSE, warning=FALSE}
+
+# ── Cell type lists and best expPC maps — from tensorqtl_report.Rmd ──────────
+
+cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+                   "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
+                   "GABA-0",   "GABA-1",   "GABA-2",
+                   "NPC-0",    "NPC-1",    "NPC-2")
+
+exppc_map_L1 <- c(
+  "Glu-UL"    = 50, "Glu-DL"    = 40, "GABA"      = 30,
+  "NPC"       = 30, "MG"        = 30, "OPC"       = 30,
+  "Endo-Peri" = 30
+)
+
+exppc_map_L2 <- c(
+  "Glu-UL-0" = 30, "Glu-UL-1" = 50, "Glu-UL-2" = 40,
+  "Glu-DL-0" = 40, "Glu-DL-1" = 40, "Glu-DL-2" = 30,
+  "GABA-0"   = 30, "GABA-1"   = 40, "GABA-2"   = 40,
+  "NPC-0"    = 50, "NPC-1"    = 30, "NPC-2"    = 20
+)
+
+# ── Function to read eGenes for one cell type ─────────────────────────────────
+
+read_egenes_ct <- function(ct, exppc_map, perm_dir,
+                            geno_pc = 4, norm_method = "quantile") {
+  pc        <- exppc_map[[ct]]
+  perm_file <- file.path(
+    perm_dir,
+    sprintf("%s_%s_genPC_%d_expPC_%d", ct, norm_method, geno_pc, pc),
+    sprintf("%s_%s_perm.cis_qtl.txt.gz", ct, norm_method)
+  )
+  if (!file.exists(perm_file)) {
+    message("Not found: ", perm_file)
+    return(NULL)
+  }
+  read_tsv(perm_file, show_col_types = FALSE) |>
+    filter(!is.na(qval) & qval < 0.05) |>
+    distinct(phenotype_id) |>
+    mutate(cell_type = ct)
+}
+
+# ── Build full paper eGene reference set — union of L1 and L2 ────────────────
+
+message("Loading L1 cell type eGenes...")
+egenes_L1 <- map_dfr(cell_types_L1, read_egenes_ct,
+                     exppc_map  = exppc_map_L1,
+                     perm_dir   = cell_type_perm_dir)
+
+message("Loading L2 cell type eGenes...")
+egenes_L2 <- map_dfr(cell_types_L2, read_egenes_ct,
+                     exppc_map  = exppc_map_L2,
+                     perm_dir   = cell_type_perm_dir)
+
+paper_egene_set <- unique(c(egenes_L1$phenotype_id, egenes_L2$phenotype_id))
+message("Total unique eGenes in full paper (L1 + L2): ", length(paper_egene_set))
+
+# ── Build overlap table ───────────────────────────────────────────────────────
+
+overlap_tbl <- map_dfr(trajectories, function(traj) {
+  map_dfr(q_values, function(n) {
+    map_dfr(seq_len(n), function(b) {
+      key       <- sprintf("%s_Q%d_bin%d", traj, n, b)
+      bin_set   <- egene_list[[key]]
+      if (is.null(bin_set)) return(NULL)
+      bin_genes <- bin_set$phenotype_id
+      tibble(
+        trajectory   = traj,
+        quantile_n   = n,
+        bin          = b,
+        n_bin        = length(bin_genes),
+        n_paper      = length(paper_egene_set),
+        n_shared     = length(intersect(bin_genes, paper_egene_set)),
+        n_novel      = length(setdiff(bin_genes, paper_egene_set)),
+        n_paper_only = length(setdiff(paper_egene_set, bin_genes)),
+        pct_shared   = round(100 * length(intersect(bin_genes, paper_egene_set)) /
+                               max(length(bin_genes), 1), 1)
+      )
+    })
+  })
+})
+```
+
+```{r overlap_and_novel, echo=FALSE, message=FALSE, warning=FALSE, results='asis', fig.width=12, fig.height=5}
+
+# ── Build novel eGene tables ──────────────────────────────────────────────────
+
+read_perm_novel <- function(in_dir, trajectory, quantile_n, bin, exp_pc,
+                             paper_egenes, geno_pc = 4) {
+  perm_file <- file.path(
+    in_dir, trajectory, "tensorqtl", "perm",
+    sprintf("Q%d_bin%d_genPC%d_expPC%d", quantile_n, bin, geno_pc, exp_pc),
+    sprintf("Q%d_bin%d_perm.cis_qtl.txt.gz", quantile_n, bin)
+  )
+  if (!file.exists(perm_file)) return(NULL)
+  read_tsv(perm_file, show_col_types = FALSE) |>
+    filter(!is.na(qval) & qval < 0.05) |>
+    filter(!phenotype_id %in% paper_egenes) |>
+    distinct(phenotype_id, .keep_all = TRUE) |>
+    select(phenotype_id, variant_id, slope, pval_nominal, qval) |>
+    mutate(trajectory = trajectory, quantile_n = quantile_n, bin = bin)
+}
+
+novel_all <- map_dfr(trajectories, function(traj) {
+  pc <- selected_exp_pc[[traj]]
+  map_dfr(q_values, function(n) {
+    map_dfr(seq_len(n), function(b) {
+      read_perm_novel(in_dir, traj, n, b, pc, paper_egene_set)
+    })
+  })
+})
+
+novel_union <- novel_all |>
+  group_by(trajectory, quantile_n, phenotype_id) |>
+  slice_min(pval_nominal, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  mutate(symbol = get_symbol(phenotype_id))
+
+novel_summary <- novel_all |>
+  group_by(trajectory, quantile_n) |>
+  summarise(
+    total_novel_detections = n(),
+    novel_egene_union      = n_distinct(phenotype_id),
+    single_bin             = sum(table(phenotype_id) == 1),
+    multi_bin              = sum(table(phenotype_id) > 1),
+    .groups = "drop"
+  )
+
+# ── Combined per-trajectory output ────────────────────────────────────────────
+
+for (traj in trajectories) {
+
+  cat(sprintf("\n\n### %s {.tabset}\n\n***\n\n", traj))
+
+  traj_overlap <- overlap_tbl |> filter(trajectory == traj)
+  pc_label     <- selected_exp_pc[[traj]]
+
+  overlap_long <- traj_overlap |>
+    select(quantile_n, bin, n_shared, n_novel, n_paper_only) |>
+    pivot_longer(cols      = c(n_novel, n_shared, n_paper_only),
+                 names_to  = "category",
+                 values_to = "count") |>
+    mutate(category = factor(category,
+                             levels = c("n_novel", "n_shared", "n_paper_only"),
+                             labels = c("Novel", "Shared", "Paper only")))
+
+  # ── Tab 1: Overlap plot (Q6) ─────────────────────────────────────────────
+
+  cat("#### Overlap plot\n\n***\n\n")
+
+  p <- overlap_long |>
+    filter(quantile_n == 6) |>
+    mutate(bin_label = paste0("Bin ", bin)) |>
+    group_by(bin_label) |>
+    mutate(prop = count / sum(count)) |>
+    ggplot(aes(x = prop, y = fct_rev(bin_label), fill = category)) +
+    geom_col(position = "stack", colour = "black", width = 0.7) +
+    geom_text(aes(label = ifelse(count > 0, count, "")),
+              position = position_stack(vjust = 0.5),
+              size = 3, colour = "black", fontface = "bold") +
+    scale_fill_manual(values = c("Novel"      = "grey70",
+                                 "Shared"     = "#B2DF8A",
+                                 "Paper only" = "#66C2A5"),
+                      name = NULL) +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+    labs(title    = sprintf("%s — Q6 overlap with full paper eGene set (expPC=%d)",
+                            traj, pc_label),
+         subtitle = sprintf("Paper reference: %d unique eGenes across all L1 + L2 cell types",
+                            length(paper_egene_set)),
+         x = "Proportion of eGenes", y = NULL) +
+    theme_classic(base_size = 12) +
+    theme(plot.title    = element_text(hjust = 0.5, face = "bold"),
+          plot.subtitle = element_text(hjust = 0.5, colour = "grey50"),
+          legend.position = "top",
+          axis.text.y   = element_text(face = "bold"))
+  print(p); cat("\n\n")
+
+  # ── Tab 2: Overlap across all Q values ───────────────────────────────────
+
+  cat("#### Overlap across all Q values\n\n***\n\n")
+
+  p2 <- overlap_long |>
+    mutate(bin_label = paste0("Bin ", bin)) |>
+    group_by(quantile_n, bin_label) |>
+    mutate(prop = count / sum(count)) |>
+    ggplot(aes(x = prop, y = fct_rev(bin_label), fill = category)) +
+    geom_col(position = "stack", colour = "black", width = 0.7) +
+    scale_fill_manual(values = c("Novel"      = "grey70",
+                                 "Shared"     = "#B2DF8A",
+                                 "Paper only" = "#66C2A5"),
+                      name = NULL) +
+    scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+    facet_wrap(~ paste0("Q", quantile_n), scales = "free_y") +
+    labs(title = sprintf("%s — overlap with full paper eGene set across Q values", traj),
+         x = "Proportion of eGenes", y = NULL) +
+    theme_classic(base_size = 11) +
+    theme(plot.title      = element_text(hjust = 0.5, face = "bold"),
+          legend.position = "top",
+          axis.text.y     = element_text(face = "bold"),
+          strip.text      = element_text(face = "bold"))
+  print(p2); cat("\n\n")
+
+  # ── Tab 3: Overlap table ─────────────────────────────────────────────────
+
+  cat("#### Overlap table\n\n***\n\n")
+
+  traj_overlap |>
+    select(quantile_n, bin, n_bin, n_shared, n_novel, n_paper_only, pct_shared) |>
+    arrange(quantile_n, bin) |>
+    gt() |>
+    tab_header(
+      title    = sprintf("eGene overlap — %s vs full paper eGene set", traj),
+      subtitle = sprintf("Pseudotime expPC=%d | Paper reference: %d eGenes (L1 + L2)",
+                         pc_label, length(paper_egene_set))
+    ) |>
+    cols_label(quantile_n   = "Q",
+               bin          = "Bin",
+               n_bin        = "Bin eGenes",
+               n_shared     = "Shared",
+               n_novel      = "Novel",
+               n_paper_only = "Paper only",
+               pct_shared   = "% shared") |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    tab_style(style     = cell_fill(color = "#B2DF8A"),
+              locations = cells_body(columns = n_shared)) |>
+    tab_style(style     = cell_fill(color = "grey90"),
+              locations = cells_body(columns = n_novel)) |>
+    print()
+  cat("\n\n")
+
+  # ── Tab 4: Novel eGene summary ───────────────────────────────────────────
+
+  cat("#### Novel eGene summary\n\n***\n\n")
+
+  novel_summary |>
+    filter(trajectory == traj) |>
+    select(-trajectory) |>
+    gt() |>
+    tab_header(
+      title    = sprintf("Novel eGene summary — %s", traj),
+      subtitle = "eGenes not found in any L1 or L2 cell type in the original paper"
+    ) |>
+    cols_label(
+      quantile_n             = "Q",
+      total_novel_detections = "Total detections (with duplicates)",
+      novel_egene_union      = "Unique novel eGenes (union)",
+      single_bin             = "Detected in 1 bin only",
+      multi_bin              = "Detected in >1 bin"
+    ) |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    tab_style(style     = cell_fill(color = "grey90"),
+              locations = cells_body(columns = novel_egene_union)) |>
+    print()
+  cat("\n\n")
+
+  # ── Tabs 5-7: Novel eGene tables per Q value ─────────────────────────────
+
+  for (n in q_values) {
+    cat(sprintf("#### Q%d novel eGenes\n\n***\n\n", n))
+
+    novel_tbl <- novel_union |>
+      filter(trajectory == traj, quantile_n == n) |>
+      arrange(pval_nominal) |>
+      select(symbol, phenotype_id, variant_id, bin, slope, pval_nominal, qval)
+
+    if (nrow(novel_tbl) == 0) {
+      cat("*No novel eGenes detected.*\n\n***\n\n")
+      next
+    }
+
+    novel_tbl |>
+      gt() |>
+      tab_header(
+        title    = sprintf("Novel eGenes — %s Q%d", traj, n),
+        subtitle = sprintf("%d unique novel eGenes | ranked by lowest nominal p-value",
+                           nrow(novel_tbl))
+      ) |>
+      cols_label(
+        symbol       = "Gene",
+        phenotype_id = "Ensembl ID",
+        variant_id   = "eSNP",
+        bin          = "Best bin",
+        slope        = "Slope",
+        pval_nominal = "Nominal p",
+        qval         = "FDR (q-value)"
+      ) |>
+      fmt_scientific(columns = c(pval_nominal, qval), decimals = 2) |>
+      fmt_number(columns = slope, decimals = 4) |>
+      tab_style(style = cell_text(weight = "bold"),
+                locations = cells_column_labels()) |>
+      tab_style(style = cell_text(style = "italic"),
+                locations = cells_body(columns = symbol)) |>
+      print()
+    cat("\n\n***\n\n")
+  }
+}
+```
+
+***
+
+## 6. Cross-Bin eQTL Sharing {.tabset}
+
+***
+
+UpSet plots showing intersections of eGene sets across Q6 pseudotime bins
+at expPC=30. Each set represents eGenes detected at FDR < 0.05 in that bin.
+
+***
+
+```{r upset_data, echo=FALSE, message=FALSE, warning=FALSE}
+read_perm_full <- function(in_dir, trajectory, quantile_n, bin, exp_pc, geno_pc = 4) {
+  perm_file <- file.path(
+    in_dir, trajectory, "tensorqtl", "perm",
+    sprintf("Q%d_bin%d_genPC%d_expPC%d", quantile_n, bin, geno_pc, exp_pc),
+    sprintf("Q%d_bin%d_perm.cis_qtl.txt.gz", quantile_n, bin)
+  )
+  if (!file.exists(perm_file)) return(NULL)
+  read_tsv(perm_file, show_col_types = FALSE) |>
+    filter(!is.na(qval) & qval < 0.05) |>
+    distinct(phenotype_id, .keep_all = TRUE) |>
+    select(phenotype_id, slope, slope_se, pval_nominal, qval) |>
+    mutate(trajectory = trajectory, quantile_n = quantile_n, bin = bin, exp_pc = exp_pc)
+}
+
+q6_slope <- map_dfr(trajectories, function(traj) {
+  pc <- selected_exp_pc[[traj]]
+  map_dfr(seq_len(6), function(b) read_perm_full(in_dir, traj, 6, b, pc))
+})
+```
+
+### NPC-to-Glu-DL {.tabset}
+
+***
+
+```{r upset_dl_data, echo=FALSE, message=FALSE, warning=FALSE}
+traj <- "NPC-to-Glu-DL"
+gene_by_bin_dl <- q6_slope |>
+  filter(trajectory == traj) |>
+  distinct(phenotype_id, bin) |>
+  mutate(present = 1, bin_label = paste0("Bin_", bin)) |>
+  pivot_wider(names_from = bin_label, values_from = present, values_fill = 0)
+
+dups <- gene_by_bin_dl |> filter(duplicated(phenotype_id))
+message("Duplicate phenotype_ids after pivot_wider: ", nrow(dups))
+
+gene_by_bin_dl <- gene_by_bin_dl |>
+  group_by(phenotype_id) |>
+  summarise(across(everything(), max), .groups = "drop") |>
+  column_to_rownames("phenotype_id")
+
+for (b in paste0("Bin_", 1:6)) {
+  if (!b %in% colnames(gene_by_bin_dl)) gene_by_bin_dl[[b]] <- 0
+}
+gene_by_bin_dl <- gene_by_bin_dl[, paste0("Bin_", 1:6)]
+```
+
+#### UpSet plot
+
+***
+
+```{r upset_dl_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.dim=c(12, 5)}
+upset(gene_by_bin_dl, nsets = 6, order.by = "freq",
+      sets = paste0("Bin_", 1:6), keep.order = TRUE,
+      mainbar.y.label = "eGene intersection size",
+      sets.x.label    = "eGenes per bin",
+      text.scale      = 1.3)
+```
+
+***
+
+### NPC-to-Glu-UL {.tabset}
+
+***
+
+```{r upset_ul_data, echo=FALSE, message=FALSE, warning=FALSE}
+traj <- "NPC-to-Glu-UL"
+gene_by_bin_ul <- q6_slope |>
+  filter(trajectory == traj) |>
+  distinct(phenotype_id, bin) |>
+  mutate(present = 1, bin_label = paste0("Bin_", bin)) |>
+  pivot_wider(names_from = bin_label, values_from = present, values_fill = 0)
+
+dups <- gene_by_bin_ul |> filter(duplicated(phenotype_id))
+message("Duplicate phenotype_ids after pivot_wider: ", nrow(dups))
+
+gene_by_bin_ul <- gene_by_bin_ul |>
+  group_by(phenotype_id) |>
+  summarise(across(everything(), max), .groups = "drop") |>
+  column_to_rownames("phenotype_id")
+
+for (b in paste0("Bin_", 1:6)) {
+  if (!b %in% colnames(gene_by_bin_ul)) gene_by_bin_ul[[b]] <- 0
+}
+gene_by_bin_ul <- gene_by_bin_ul[, paste0("Bin_", 1:6)]
+```
+
+#### UpSet plot
+
+***
+
+```{r upset_ul_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.dim=c(12, 5)}
+upset(gene_by_bin_ul, nsets = 6, order.by = "freq",
+      sets = paste0("Bin_", 1:6), keep.order = TRUE,
+      mainbar.y.label = "eGene intersection size",
+      sets.x.label    = "eGenes per bin",
+      text.scale      = 1.3)
+```
+
+***
+
+## 7. Dynamic eQTL Analysis {.tabset}
+
+***
+
+Linear mixed model testing for genotype × pseudotime interactions across Q6 bins,
+following Yazar et al. (Science 2022). Input: cell-type eQTLs detected in ≥3 bins.
+Linear model tests for monotonic changes; quadratic model tests for non-linear
+(peaked or troughed) trajectories of genetic effect across pseudotime.
+
+***
+
+```{r dynamic_load, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Load dynamic eQTL results for both trajectories
+dyn_results <- map(trajectories, function(traj) {
+  rds_file <- file.path(in_dir, traj, "dynamic_eqtl", "dynamic_eqtl_results.rds")
+  if (!file.exists(rds_file)) { message("Not found: ", rds_file); return(NULL) }
+  readRDS(rds_file) |> mutate(trajectory = traj)
+}) |> setNames(trajectories)
+
+# Load per-bin slopes from Q6 perm files for dynamic pairs — used for heatmap
+dyn_slopes <- map_dfr(trajectories, function(traj) {
+  res  <- dyn_results[[traj]]
+  if (is.null(res)) return(NULL)
+  dyn_pairs <- res |> filter(dynamic) |> pull(phenotype_id)
+  pc   <- selected_exp_pc[[traj]]
+
+  map_dfr(seq_len(6), function(b) {
+    perm_file <- file.path(
+      in_dir, traj, "tensorqtl", "perm",
+      sprintf("Q6_bin%d_genPC%d_expPC%d", b, geno_pc, pc),
+      sprintf("Q6_bin%d_perm.cis_qtl.txt.gz", b)
+    )
+    if (!file.exists(perm_file)) return(NULL)
+    read_tsv(perm_file, show_col_types = FALSE) |>
+      filter(phenotype_id %in% dyn_pairs) |>
+      select(phenotype_id, variant_id, slope) |>
+      mutate(bin = b, trajectory = traj)
+  })
+})
+
+# Load candidate data for Panel E
+dyn_candidates <- map(trajectories, function(traj) {
+  tsv_file <- file.path(in_dir, traj, "dynamic_eqtl", "dynamic_eqtl_candidates.tsv")
+  if (!file.exists(tsv_file)) { message("Not found: ", tsv_file); return(NULL) }
+  read_tsv(tsv_file, show_col_types = FALSE) |> mutate(trajectory = traj)
+}) |> setNames(trajectories)
+
+# Colour scheme matching Yazar et al.
+dyn_colours <- c(
+  "linear"              = "#38618c",
+  "quadratic"           = "#ff5964",
+  "linear_and_quadratic"= "#EFC000"
+)
+
+quantile_colours <- c(
+  Q1 = "#e6a023", Q2 = "#61b6e5", Q3 = "#efe245",
+  Q4 = "#0173b2", Q5 = "#2aa47e", Q6 = "#d4632e"
+)
+```
+
+### NPC-to-Glu-DL {.tabset}
+
+***
+
+#### Summary
+
+***
+
+```{r dyn_summary_dl, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, results='asis'}
+traj <- "NPC-to-Glu-DL"
+res  <- dyn_results[[traj]]
+
+if (!is.null(res)) {
+  summary_counts <- res |>
+    filter(dynamic) |>
+    count(dynamic_type) |>
+    mutate(
+      dynamic_type = factor(dynamic_type,
+                            levels = c("linear", "quadratic", "linear_and_quadratic"),
+                            labels = c("Linear", "Quadratic", "Linear & Quadratic"))
+    )
+
+  p_sum <- ggplot(summary_counts, aes(x = dynamic_type, y = n, fill = dynamic_type)) +
+    geom_col(colour = "black", width = 0.6) +
+    geom_text(aes(label = n), vjust = -0.4, fontface = "bold", size = 4.5) +
+    scale_fill_manual(values = c("Linear"              = "#38618c",
+                                 "Quadratic"           = "#ff5964",
+                                 "Linear & Quadratic"  = "#EFC000")) +
+    labs(title    = sprintf("Dynamic eQTL summary — %s", traj),
+         subtitle = sprintf("Cell-type eGenes tested in ≥3 Q6 bins | Total dynamic: %d",
+                            sum(res$dynamic, na.rm = TRUE)),
+         x = "Dynamic type", y = "Number of eGene-eSNP pairs") +
+    theme_classic(base_size = 14) +
+    theme(plot.title      = element_text(hjust = 0.5, face = "bold", size = 14),
+          plot.subtitle   = element_text(hjust = 0.5, colour = "grey40", size = 11),
+          legend.position = "none",
+          axis.text.x     = element_text(face = "bold", size = 12),
+          axis.title      = element_text(face = "bold"))
+  print(p_sum)
+  cat("\n\n")
+
+  res |>
+    summarise(
+      tested        = n(),
+      valid_p       = sum(!is.na(p_linear)),
+      linear        = sum(dynamic_type == "linear",               na.rm = TRUE),
+      quadratic     = sum(dynamic_type == "quadratic",            na.rm = TRUE),
+      both          = sum(dynamic_type == "linear_and_quadratic", na.rm = TRUE),
+      total_dynamic = sum(dynamic, na.rm = TRUE)
+    ) |>
+    pivot_longer(everything(), names_to = "Metric", values_to = "Count") |>
+    gt() |>
+    tab_header(title = sprintf("Dynamic eQTL summary — %s", traj)) |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    print()
+  cat("\n\n***\n\n")
+}
+```
+
+#### Heatmap
+
+***
+
+```{r dyn_heatmap_dl, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=4}
+traj <- "NPC-to-Glu-DL"
+res  <- dyn_results[[traj]]
+sl   <- dyn_slopes |> filter(trajectory == traj)
+
+if (!is.null(res) && nrow(sl) > 0) {
+
+  # Build slope matrix — genes x bins, z-score within gene
+  slope_wide <- sl |>
+    select(phenotype_id, bin, slope) |>
+    pivot_wider(names_from = bin, values_from = slope,
+                names_prefix = "Q") |>
+    column_to_rownames("phenotype_id")
+
+  # Z-score per gene across bins
+  slope_z <- t(apply(slope_wide, 1, function(x) {
+    s <- sd(x, na.rm = TRUE)
+    if (is.na(s) || s == 0) return(rep(0, length(x)))
+    (x - mean(x, na.rm = TRUE)) / s
+  }))
+  colnames(slope_z) <- paste0("Q", 1:6)
+
+  # Get dynamic type per pair for annotation
+  dyn_type <- res |>
+    filter(dynamic, phenotype_id %in% rownames(slope_z)) |>
+    select(phenotype_id, dynamic_type) |>
+    distinct(phenotype_id, .keep_all = TRUE)
+
+  slope_z <- slope_z[dyn_type$phenotype_id, , drop = FALSE]
+
+  model_ann <- dyn_type$dynamic_type
+  model_ann[model_ann == "linear"]               <- "Linear"
+  model_ann[model_ann == "quadratic"]            <- "Quadratic"
+  model_ann[model_ann == "linear_and_quadratic"] <- "Linear & Quadratic"
+
+  ha <- HeatmapAnnotation(
+    Model = model_ann,
+    col   = list(Model = c("Linear"             = "#38618c",
+                            "Quadratic"          = "#ff5964",
+                            "Linear & Quadratic" = "#EFC000")),
+    annotation_name_side = "left",
+    annotation_name_gp   = gpar(fontsize = 10, fontface = "bold")
+  )
+
+  col_fun <- colorRamp2(
+    seq(-2, 2, length.out = 11),
+    rev(brewer.pal(11, "RdYlBu"))
+  )
+
+  ht <- Heatmap(
+    t(slope_z),
+    col                  = col_fun,
+    top_annotation       = ha,
+    cluster_rows         = FALSE,
+    cluster_columns      = TRUE,
+    column_split         = model_ann,
+    column_gap           = unit(2, "mm"),
+    show_column_names    = FALSE,
+    row_title            = "Pseudotime",
+    column_title         = sprintf("Dynamic eQTL — %s (n=%d pairs)", traj, nrow(slope_z)),
+    column_title_side    = "bottom",
+    column_title_gp      = gpar(fontsize = 12, fontface = "bold"),
+    row_names_side       = "left",
+    row_names_gp         = gpar(fontsize = 11, fontface = "bold"),
+    na_col               = "grey80",
+    heatmap_legend_param = list(
+      title    = expression("Scaled " * beta),
+      at       = c(-2, -1, 0, 1, 2),
+      labels   = c("-2", "-1", "0", "1", "2"),
+      title_gp = gpar(fontsize = 10, fontface = "bold")
+    )
+  )
+  draw(ht, padding = unit(c(5, 5, 5, 5), "mm"))
+}
+```
+
+***
+
+#### Top candidates
+
+***
+
+```{r dyn_panel_e_dl, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6}
+traj <- "NPC-to-Glu-DL"
+res  <- dyn_results[[traj]]
+cand <- dyn_candidates[[traj]]
+
+if (!is.null(res) && !is.null(cand)) {
+
+  top5 <- res |>
+    filter(dynamic) |>
+    mutate(min_fdr = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE)) |>
+    arrange(min_fdr) |>
+    slice_head(n = 5) |>
+    mutate(symbol = get_symbol(phenotype_id))
+
+  plot_dat <- cand |>
+    filter(phenotype_id %in% top5$phenotype_id) |>
+    left_join(top5 |> select(phenotype_id, symbol, dynamic_type, min_fdr),
+              by = "phenotype_id") |>
+    mutate(quantile_f = factor(quantile, levels = 1:6, labels = paste0("Q", 1:6))) |>
+    group_by(phenotype_id) |>
+    mutate(gene_scaled = as.numeric(scale(gene_expr))) |>
+    ungroup()
+
+  offset_tbl <- tibble(
+    quantile_f = factor(paste0("Q", 1:6), levels = paste0("Q", 1:6)),
+    offset     = seq(-0.25, 0.25, length.out = 6)
+  )
+
+  for (i in seq_len(nrow(top5))) {
+    gene_id <- top5$phenotype_id[i]
+    sym     <- top5$symbol[i]
+    snp_id  <- top5$variant_id[i]
+
+    dat <- plot_dat |> filter(phenotype_id == gene_id)
+
+    geno_levels <- dat |>
+      distinct(genotype_call, dosage_rounded) |>
+      arrange(dosage_rounded) |>
+      pull(genotype_call) |>
+      as.character()
+
+    dat <- dat |>
+      mutate(genotype_call = factor(genotype_call, levels = geno_levels))
+
+    geno_num <- setNames(seq_along(geno_levels), geno_levels)
+
+    line_dat <- dat |>
+      group_by(genotype_call, quantile_f) |>
+      summarise(med = median(gene_scaled, na.rm = TRUE), .groups = "drop") |>
+      left_join(offset_tbl, by = "quantile_f") |>
+      mutate(
+        geno_num = geno_num[as.character(genotype_call)],
+        x        = geno_num + offset
+      ) |>
+      arrange(genotype_call, quantile_f)
+
+    p <- ggplot(dat,
+                aes(x = genotype_call, y = gene_scaled, colour = quantile_f)) +
+      geom_boxplot(
+        position      = position_dodge(width = 0.65),
+        width         = 0.3,
+        fill          = NA,
+        outlier.shape = NA,
+        linewidth     = 0.6
+      ) +
+      geom_point(
+        position = position_jitterdodge(dodge.width = 0.65, jitter.width = 0.03),
+        alpha    = 0.35,
+        size     = 0.7
+      ) +
+      geom_line(
+        data        = line_dat,
+        aes(x = x, y = med, group = genotype_call),
+        inherit.aes = FALSE,
+        colour      = "black",
+        linewidth   = 1.4
+      ) +
+      scale_colour_manual(values = quantile_colours) +
+      scale_x_discrete(limits = geno_levels) +
+      labs(
+        y        = "Scaled expression",
+        title    = sym,
+        subtitle = snp_id
+      ) +
+      theme_classic(base_size = 13) +
+      theme(
+        plot.title         = element_text(face = "bold.italic", hjust = 0.5, size = 13),
+        plot.subtitle      = element_text(hjust = 0.5, size = 11, colour = "grey30"),
+        axis.text.x        = element_text(face = "bold", size = 11, colour = "black"),
+        axis.text.y        = element_text(colour = "black"),
+        axis.title         = element_text(face = "bold", size = 12, colour = "black"),
+        axis.title.x       = element_blank(),
+        axis.ticks.x       = element_blank(),
+        legend.position    = "none",
+        panel.grid.major.y = element_line(colour = "grey90", linewidth = 0.4),
+        panel.border       = element_rect(colour = "black", fill = NA, linewidth = 0.5),
+        axis.line          = element_blank()
+      )
+
+    print(p)
+    cat("\n\n")
+  }
+}
+```
+
+***
+
+#### Candidate table
+
+***
+
+```{r dyn_table_dl, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+traj <- "NPC-to-Glu-DL"
+res  <- dyn_results[[traj]]
+
+if (!is.null(res)) {
+  res |>
+    filter(dynamic) |>
+    mutate(
+      symbol   = get_symbol(phenotype_id),
+      min_fdr  = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE),
+      dynamic_type = case_when(
+        dynamic_type == "linear"               ~ "Linear",
+        dynamic_type == "quadratic"            ~ "Quadratic",
+        dynamic_type == "linear_and_quadratic" ~ "Linear & Quadratic",
+        TRUE ~ dynamic_type
+      )
+    ) |>
+    arrange(min_fdr) |>
+    select(symbol, phenotype_id, variant_id, dynamic_type,
+           fdr_linear, fdr_quadratic, min_fdr, n_bins) |>
+    gt() |>
+    tab_header(title    = sprintf("Dynamic eQTL candidates — %s", traj),
+               subtitle = "All significant pairs, ranked by minimum FDR") |>
+    cols_label(symbol       = "Gene", phenotype_id = "Ensembl ID",
+               variant_id   = "eSNP",  dynamic_type = "Model",
+               fdr_linear   = "FDR (linear)", fdr_quadratic = "FDR (quadratic)",
+               min_fdr      = "Min FDR", n_bins = "Bins detected") |>
+    fmt_scientific(columns = c(fdr_linear, fdr_quadratic, min_fdr), decimals = 2) |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    tab_style(style = cell_text(style = "italic"),
+              locations = cells_body(columns = symbol)) |>
+    print()
+  cat("\n\n***\n\n")
+}
+```
+
+### NPC-to-Glu-UL {.tabset}
+
+***
+
+#### Summary
+
+***
+
+```{r dyn_summary_ul, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, results='asis'}
+traj <- "NPC-to-Glu-UL"
+res  <- dyn_results[[traj]]
+
+if (!is.null(res)) {
+  summary_counts <- res |>
+    filter(dynamic) |>
+    count(dynamic_type) |>
+    mutate(
+      dynamic_type = factor(dynamic_type,
+                            levels = c("linear", "quadratic", "linear_and_quadratic"),
+                            labels = c("Linear", "Quadratic", "Linear & Quadratic"))
+    )
+
+  p_sum <- ggplot(summary_counts, aes(x = dynamic_type, y = n, fill = dynamic_type)) +
+    geom_col(colour = "black", width = 0.6) +
+    geom_text(aes(label = n), vjust = -0.4, fontface = "bold", size = 4.5) +
+    scale_fill_manual(values = c("Linear"              = "#38618c",
+                                 "Quadratic"           = "#ff5964",
+                                 "Linear & Quadratic"  = "#EFC000")) +
+    labs(title    = sprintf("Dynamic eQTL summary — %s", traj),
+         subtitle = sprintf("Cell-type eGenes tested in ≥3 Q6 bins | Total dynamic: %d",
+                            sum(res$dynamic, na.rm = TRUE)),
+         x = "Dynamic type", y = "Number of eGene-eSNP pairs") +
+    theme_classic(base_size = 14) +
+    theme(plot.title      = element_text(hjust = 0.5, face = "bold", size = 14),
+          plot.subtitle   = element_text(hjust = 0.5, colour = "grey40", size = 11),
+          legend.position = "none",
+          axis.text.x     = element_text(face = "bold", size = 12),
+          axis.title      = element_text(face = "bold"))
+  print(p_sum)
+  cat("\n\n")
+
+  res |>
+    summarise(
+      tested        = n(),
+      valid_p       = sum(!is.na(p_linear)),
+      linear        = sum(dynamic_type == "linear",               na.rm = TRUE),
+      quadratic     = sum(dynamic_type == "quadratic",            na.rm = TRUE),
+      both          = sum(dynamic_type == "linear_and_quadratic", na.rm = TRUE),
+      total_dynamic = sum(dynamic, na.rm = TRUE)
+    ) |>
+    pivot_longer(everything(), names_to = "Metric", values_to = "Count") |>
+    gt() |>
+    tab_header(title = sprintf("Dynamic eQTL summary — %s", traj)) |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    print()
+  cat("\n\n***\n\n")
+}
+```
+
+#### Heatmap
+
+***
+
+```{r dyn_heatmap_ul, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=4}
+traj <- "NPC-to-Glu-UL"
+res  <- dyn_results[[traj]]
+sl   <- dyn_slopes |> filter(trajectory == traj)
+
+if (!is.null(res) && nrow(sl) > 0) {
+
+  slope_wide <- sl |>
+    select(phenotype_id, bin, slope) |>
+    pivot_wider(names_from = bin, values_from = slope, names_prefix = "Q") |>
+    column_to_rownames("phenotype_id")
+
+  slope_z <- t(apply(slope_wide, 1, function(x) {
+    s <- sd(x, na.rm = TRUE)
+    if (is.na(s) || s == 0) return(rep(0, length(x)))
+    (x - mean(x, na.rm = TRUE)) / s
+  }))
+  colnames(slope_z) <- paste0("Q", 1:6)
+
+  dyn_type <- res |>
+    filter(dynamic, phenotype_id %in% rownames(slope_z)) |>
+    select(phenotype_id, dynamic_type) |>
+    distinct(phenotype_id, .keep_all = TRUE)
+
+  slope_z <- slope_z[dyn_type$phenotype_id, , drop = FALSE]
+
+  model_ann <- dyn_type$dynamic_type
+  model_ann[model_ann == "linear"]               <- "Linear"
+  model_ann[model_ann == "quadratic"]            <- "Quadratic"
+  model_ann[model_ann == "linear_and_quadratic"] <- "Linear & Quadratic"
+
+  ha <- HeatmapAnnotation(
+    Model = model_ann,
+    col   = list(Model = c("Linear"             = "#38618c",
+                            "Quadratic"          = "#ff5964",
+                            "Linear & Quadratic" = "#EFC000")),
+    annotation_name_side = "left",
+    annotation_name_gp   = gpar(fontsize = 10, fontface = "bold")
+  )
+
+  col_fun <- colorRamp2(
+    seq(-2, 2, length.out = 11),
+    rev(brewer.pal(11, "RdYlBu"))
+  )
+
+  ht <- Heatmap(
+    t(slope_z),
+    col                  = col_fun,
+    top_annotation       = ha,
+    cluster_rows         = FALSE,
+    cluster_columns      = TRUE,
+    column_split         = model_ann,
+    column_gap           = unit(2, "mm"),
+    show_column_names    = FALSE,
+    row_title            = "Pseudotime",
+    column_title         = sprintf("Dynamic eQTL — %s (n=%d pairs)", traj, nrow(slope_z)),
+    column_title_side    = "bottom",
+    column_title_gp      = gpar(fontsize = 12, fontface = "bold"),
+    row_names_side       = "left",
+    row_names_gp         = gpar(fontsize = 11, fontface = "bold"),
+    na_col               = "grey80",
+    heatmap_legend_param = list(
+      title    = expression("Scaled " * beta),
+      at       = c(-2, -1, 0, 1, 2),
+      labels   = c("-2", "-1", "0", "1", "2"),
+      title_gp = gpar(fontsize = 10, fontface = "bold")
+    )
+  )
+  draw(ht, padding = unit(c(5, 5, 5, 5), "mm"))
+}
+```
+
+***
+
+#### Top candidates
+
+***
+
+```{r dyn_panel_e_ul, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6}
+traj <- "NPC-to-Glu-UL"
+res  <- dyn_results[[traj]]
+cand <- dyn_candidates[[traj]]
+
+if (!is.null(res) && !is.null(cand)) {
+
+  top5 <- res |>
+    filter(dynamic) |>
+    mutate(min_fdr = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE)) |>
+    arrange(min_fdr) |>
+    slice_head(n = 5) |>
+    mutate(symbol = get_symbol(phenotype_id))
+
+  plot_dat <- cand |>
+    filter(phenotype_id %in% top5$phenotype_id) |>
+    left_join(top5 |> select(phenotype_id, symbol, dynamic_type, min_fdr),
+              by = "phenotype_id") |>
+    mutate(quantile_f = factor(quantile, levels = 1:6, labels = paste0("Q", 1:6))) |>
+    group_by(phenotype_id) |>
+    mutate(gene_scaled = as.numeric(scale(gene_expr))) |>
+    ungroup()
+
+  offset_tbl <- tibble(
+    quantile_f = factor(paste0("Q", 1:6), levels = paste0("Q", 1:6)),
+    offset     = seq(-0.25, 0.25, length.out = 6)
+  )
+
+  for (i in seq_len(nrow(top5))) {
+    gene_id <- top5$phenotype_id[i]
+    sym     <- top5$symbol[i]
+    snp_id  <- top5$variant_id[i]
+
+    dat <- plot_dat |> filter(phenotype_id == gene_id)
+
+    geno_levels <- dat |>
+      distinct(genotype_call, dosage_rounded) |>
+      arrange(dosage_rounded) |>
+      pull(genotype_call) |>
+      as.character()
+
+    dat <- dat |>
+      mutate(genotype_call = factor(genotype_call, levels = geno_levels))
+
+    geno_num <- setNames(seq_along(geno_levels), geno_levels)
+
+    line_dat <- dat |>
+      group_by(genotype_call, quantile_f) |>
+      summarise(med = median(gene_scaled, na.rm = TRUE), .groups = "drop") |>
+      left_join(offset_tbl, by = "quantile_f") |>
+      mutate(
+        geno_num = geno_num[as.character(genotype_call)],
+        x        = geno_num + offset
+      ) |>
+      arrange(genotype_call, quantile_f)
+
+    p <- ggplot(dat,
+                aes(x = genotype_call, y = gene_scaled, colour = quantile_f)) +
+      geom_boxplot(
+        position      = position_dodge(width = 0.65),
+        width         = 0.3,
+        fill          = NA,
+        outlier.shape = NA,
+        linewidth     = 0.6
+      ) +
+      geom_point(
+        position = position_jitterdodge(dodge.width = 0.65, jitter.width = 0.03),
+        alpha    = 0.35,
+        size     = 0.7
+      ) +
+      geom_line(
+        data        = line_dat,
+        aes(x = x, y = med, group = genotype_call),
+        inherit.aes = FALSE,
+        colour      = "black",
+        linewidth   = 1.4
+      ) +
+      scale_colour_manual(values = quantile_colours) +
+      scale_x_discrete(limits = geno_levels) +
+      labs(
+        y        = "Scaled expression",
+        title    = sym,
+        subtitle = snp_id
+      ) +
+      theme_classic(base_size = 13) +
+      theme(
+        plot.title         = element_text(face = "bold.italic", hjust = 0.5, size = 13),
+        plot.subtitle      = element_text(hjust = 0.5, size = 11, colour = "grey30"),
+        axis.text.x        = element_text(face = "bold", size = 11, colour = "black"),
+        axis.text.y        = element_text(colour = "black"),
+        axis.title         = element_text(face = "bold", size = 12, colour = "black"),
+        axis.title.x       = element_blank(),
+        axis.ticks.x       = element_blank(),
+        legend.position    = "none",
+        panel.grid.major.y = element_line(colour = "grey90", linewidth = 0.4),
+        panel.border       = element_rect(colour = "black", fill = NA, linewidth = 0.5),
+        axis.line          = element_blank()
+      )
+
+    print(p)
+    cat("\n\n")
+  }
+}
+```
+
+***
+
+#### Candidate table
+
+***
+
+```{r dyn_table_ul, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+traj <- "NPC-to-Glu-UL"
+res  <- dyn_results[[traj]]
+
+if (!is.null(res)) {
+  res |>
+    filter(dynamic) |>
+    mutate(
+      symbol   = get_symbol(phenotype_id),
+      min_fdr  = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE),
+      dynamic_type = case_when(
+        dynamic_type == "linear"               ~ "Linear",
+        dynamic_type == "quadratic"            ~ "Quadratic",
+        dynamic_type == "linear_and_quadratic" ~ "Linear & Quadratic",
+        TRUE ~ dynamic_type
+      )
+    ) |>
+    arrange(min_fdr) |>
+    select(symbol, phenotype_id, variant_id, dynamic_type,
+           fdr_linear, fdr_quadratic, min_fdr, n_bins) |>
+    gt() |>
+    tab_header(title    = sprintf("Dynamic eQTL candidates — %s", traj),
+               subtitle = "All significant pairs, ranked by minimum FDR") |>
+    cols_label(symbol       = "Gene", phenotype_id = "Ensembl ID",
+               variant_id   = "eSNP",  dynamic_type = "Model",
+               fdr_linear   = "FDR (linear)", fdr_quadratic = "FDR (quadratic)",
+               min_fdr      = "Min FDR", n_bins = "Bins detected") |>
+    fmt_scientific(columns = c(fdr_linear, fdr_quadratic, min_fdr), decimals = 2) |>
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) |>
+    tab_style(style = cell_text(style = "italic"),
+              locations = cells_body(columns = symbol)) |>
+    print()
+  cat("\n\n***\n\n")
+}
+```
+
+***
