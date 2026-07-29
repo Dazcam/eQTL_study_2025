@@ -1,0 +1,184 @@
+configfile: "../config/config.yaml" 
+
+rule all:
+   input:
+#       config["dev_specificity"]["extract_universe"]["out_file"],
+#       config["dev_specificity"]["classify_specificity"]["out_file"]
+#       config["dev_specificity"]["ocr_enrich"]["out_file"] 
+#        config["dev_specificity"]["eqtl_effects"]["out_file"]
+        config["dev_specificity"]["report"]["html"],
+#       config["dev_specificity"]["beta_correlation"]["out_file"]    
+
+def get_egene_universe_inputs():
+    geno_pc = config["tensorQTL"]["geno_pcs"]
+    norm_method = config["tensorQTL"]["norm_methods"][0]
+    return [
+        f"{config['dev_specificity']['extract_universe']['qtl_dir']}/{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
+        f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
+        for ct in config["cell_types"]
+    ]
+
+def get_fugita_inputs():
+    fugita_dir = config["dev_specificity"]["classify_specificity"]["fugita_dir"]
+    return [f"{fugita_dir}celltype-eqtl-sumstats.{ct}.tsv" for ct in config["fugita_cell_types"]]
+
+def get_snp_lookup_files():
+    geno_pc = config["tensorQTL"]["geno_pcs"]
+    norm_method = config["tensorQTL"]["norm_methods"][0]
+    lookup_dir = config["dev_specificity"]["ocr_enrich"]["snp_lookup_dir"]
+    return [
+        f"{lookup_dir}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}.snp_lookup.rds"
+        for ct in config["cell_types"]
+    ]
+
+def get_nom_files():
+    nom_dir = config["dev_specificity"]["eqtl_effects"]["nom_dir"]
+    return [
+	f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv"
+        for ct in config["cell_types"]
+    ]
+
+rule extract_eqtl_universe:
+    input:  qtl_perm_files = get_egene_universe_inputs()
+    output: config["dev_specificity"]["extract_universe"]["out_file"]
+    params: cell_types = config["cell_types"],
+            geno_pc = config["tensorQTL"]["geno_pcs"],
+            norm_method = config["tensorQTL"]["norm_methods"][0]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Extract unique fetal eGene-eSNP universe (L1+L2) for developmental specificity analysis"
+    benchmark: "reports/benchmarks/dev_specificity.extract_universe.txt"
+    log:    config["dev_specificity"]["extract_universe"]["log"]
+    script: "../scripts/devspec_extract_universe.R"
+
+rule classify_eqtl_specificity:
+    input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"],
+            fugita_files = get_fugita_inputs()
+    output: config["dev_specificity"]["classify_specificity"]["out_file"]
+    params: fugita_cell_types = config["fugita_cell_types"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 64000, time = "01:00:00"
+    threads: 4
+    message: "Classify fetal eGene-eSNP pairs as testable/untestable and shared/fetal-specific vs Fujita adult eQTL"
+    benchmark: "reports/benchmarks/dev_specificity.classify_specificity.txt"
+    log:    config["dev_specificity"]["classify_specificity"]["log"]
+    script: "../scripts/devspec_classify_specificity.R"
+
+rule ocr_enrich:
+    input:  classification = config["dev_specificity"]["classify_specificity"]["out_file"],
+            snp_lookups = get_snp_lookup_files(),
+            li_s6 = config["dev_specificity"]["ocr_enrich"]["li_s6"],
+            li_s7 = config["dev_specificity"]["ocr_enrich"]["li_s7"]
+    output: config["dev_specificity"]["ocr_enrich"]["out_file"]
+    params: ziffra_dir = config["dev_specificity"]["ocr_enrich"]["ziffra_dir"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 32000, time = "04:00:00"
+    threads: 4
+    message: "Test fetal-specific eQTL enrichment in fetal (Ziffra) and adult (Li et al.) OCRs"
+    benchmark: "reports/benchmarks/dev_specificity.ocr_enrich.txt"
+    log:    config["dev_specificity"]["ocr_enrich"]["log"]
+    script: "../scripts/devspec_ocr_enrichment.R"
+
+rule eqtl_effect_sizes:
+    input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"],
+            nom_files = get_nom_files(),
+            fugita_files = get_fugita_inputs()
+    output: config["dev_specificity"]["eqtl_effects"]["out_file"]
+    params: cell_types = config["cell_types"],
+            fugita_cell_types = config["fugita_cell_types"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 64000, time = "02:00:00"
+    threads: 4
+    message: "Extract effect sizes for unique eGene-eSNP pairs across fetal and adult cell types"
+    benchmark: "reports/benchmarks/dev_specificity.eqtl_effect_sizes.txt"
+    log:    config["dev_specificity"]["eqtl_effects"]["log"]
+    script: "../scripts/devspec_eqtl_effect_sizes.R"
+
+rule beta_correlation:
+    input:  fugita_files = get_fugita_inputs(),
+            thousandG_frq = config["dev_specificity"]["beta_correlation"]["thousandG_frq"],
+            pvar_file = config["dev_specificity"]["beta_correlation"]["pvar_file"]
+    output: config["dev_specificity"]["beta_correlation"]["out_file"]
+    params: nom_dir = config["dev_specificity"]["beta_correlation"]["nom_dir"],
+            fugita_dir = config["dev_specificity"]["beta_correlation"]["fugita_dir"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 32000, time = "04:00:00"
+    threads: 4
+    message: "Compute fetal-adult eQTL beta correlations and flag opposite-effect pairs with allele-flip annotations"
+    benchmark: "reports/benchmarks/dev_specificity.beta_correlation.txt"
+    log:    config["dev_specificity"]["beta_correlation"]["log"]
+    script: "../scripts/devspec_beta_correlation.R"
+
+
+
+rule dev_specificity_report:
+    # input/output/benchmark paths are relative to the Snakemake working
+    # directory (workflow root). The Rmd itself lives one level down in
+    # scripts/, and rmarkdown::render() executes chunks with that as the
+    # working directory -- so every params path gets one extra "../" on
+    # top of the corresponding input/config path.
+    input:  eqtl_universe    = rules.extract_eqtl_universe.output[0],
+            classification   = rules.classify_eqtl_specificity.output[0],
+            ocr_enrich       = rules.ocr_enrich.output[0],
+            eqtl_effects     = rules.eqtl_effect_sizes.output[0],
+            beta_correlation = rules.beta_correlation.output[0],
+            gene_lookup      = config["dev_specificity"]["report"]["gene_lookup"],
+            rmd_script       = config["dev_specificity"]["report"]["script"]
+    output: config["dev_specificity"]["report"]["html"]
+    params: eqtl_universe    = lambda wc, input: "../" + input.eqtl_universe,
+            classification   = lambda wc, input: "../" + input.classification,
+            ocr_enrich       = lambda wc, input: "../" + input.ocr_enrich,
+            eqtl_effects     = lambda wc, input: "../" + input.eqtl_effects,
+            beta_correlation = lambda wc, input: "../" + input.beta_correlation,
+            perm_dir    = "../" + config["dev_specificity"]["beta_correlation"]["nom_dir"],
+            gene_lookup = "../" + config["dev_specificity"]["report"]["gene_lookup"],
+            bmark_dir   = "../" + config["dev_specificity"]["report"]["bmark_dir"],
+            output_file = config["dev_specificity"]["report"]["output_file"]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Generate developmental specificity report"
+    benchmark: "reports/benchmarks/dev_specificity.report.txt"
+    log: config["dev_specificity"]["report"]["log"]
+    shell:
+        """
+        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+            output_file = '{params.output_file}', \
+            params = list(eqtl_universe = '{params.eqtl_universe}', \
+                          classification = '{params.classification}', \
+                          ocr_enrich = '{params.ocr_enrich}', \
+                          eqtl_effects = '{params.eqtl_effects}', \
+                          beta_correlation = '{params.beta_correlation}', \
+                          perm_dir = '{params.perm_dir}', \
+                          gene_lookup = '{params.gene_lookup}', \
+                          bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+        """
+
+#rule dev_specificity_report:
+#    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
+#    input:  eqtl_universe    = config["dev_specificity"]["extract_universe"]["out_file"],
+#            classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+#            ocr_enrich       = config["dev_specificity"]["ocr_enrich"]["out_file"],
+#            eqtl_effects     = config["dev_specificity"]["eqtl_effects"]["out_file"],
+#            beta_correlation = config["dev_specificity"]["beta_correlation"]["out_file"],
+#            rmd_script       = config["dev_specificity"]["report"]["script"]
+#    output: config["dev_specificity"]["report"]["html"]
+#    params: perm_dir    = config["dev_specificity"]["beta_correlation"]["nom_dir"],
+#            bmark_dir   = config["dev_specificity"]["report"]["bmark_dir"],
+#            gene_lookup = config["dev_specificity"]["report"]["gene_lookup"],
+#            output_file = config["dev_specificity"]["report"]["output_file"]
+#    singularity: config["containers"]["r_eqtl"]
+#    message: "Generate developmental specificity report"
+#    benchmark: "reports/benchmarks/dev_specificity.report.txt"
+#    log: config["dev_specificity"]["report"]["log"]
+#    shell:
+#        """
+#        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+#            output_file = '{params.output_file}', \
+#            params = list(eqtl_universe = '{input.eqtl_universe}', \
+ #                         classification = '{input.classification}', \
+#                          ocr_enrich = '{input.ocr_enrich}', \
+#                          eqtl_effects = '{input.eqtl_effects}', \
+#                          beta_correlation = '{input.beta_correlation}', \
+#                          perm_dir = '{params.perm_dir}', \
+#                          gene_lookup = '{params.gene_lookup}', \
+#                          bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+#        """
+

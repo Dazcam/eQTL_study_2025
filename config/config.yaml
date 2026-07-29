@@ -1,4 +1,5 @@
 # ------------  GLOBAL  ----------------
+
 plate:
 #  - plate1
 #  - plate2
@@ -99,7 +100,7 @@ gwas:
 #  adhd: https://figshare.com/ndownloader/articles/22564390/versions/1    # PMID:36702997 
 #  ptsd: https://figshare.com/ndownloader/articles/26349322/versions/3    # PMID:38637617
 #  ocd: https://figshare.com/ndownloader/articles/28707155/versions/4     # PMID:40360802  
- 
+
 containers:
   genotype-qc2hrc: ../resources/containers/genotype-qc2hrc.sif
   R: ../resources/containers/seurat5f.sif
@@ -107,6 +108,9 @@ containers:
   susie: ../resources/containers/susier.sif
   ubuntu: ../resources/containers/ubuntu_22.04.sif
   twas: ../resources/containers/twas.sif
+  singler: ../resources/containers/singler.sif
+  mashr: ../resources/containers/mashr.sif
+  tensorqtl: ../resources/containers/tensorqtl.sif
 
 # -------------  SETUP  ----------------
 fastq:
@@ -671,11 +675,13 @@ susie:
 
   susie_report:
     output_file: ../reports/08SUSIE/08susie_report.html
-    script: scripts/susie_report.Rmd 
+    script: scripts/susie_report.Rmd
     html: reports/08SUSIE/08susie_report.html
     in_dir: ../../results/08SUSIE/susie/
+    gene_meta_dir: ../../results/08SUSIE/susie_input/
+    gene_lookup: ../../resources/sheets/gene_lookup_hg38.tsv
     log: ../results/00LOG/08SUSIE/08susie_report.log
-  
+
 # ------------  SLDSR  ----------------
 sldsr:  
   get_hg38_refs:
@@ -996,3 +1002,364 @@ data_sharing:
     input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
     output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
     log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
+
+
+# --- review
+review:
+  dwnld_qian:
+    output: ../resources/public_datasets/qian_2025/merscope_integrated_855.h5ad
+    web_link: https://zenodo.org/records/14422018/files/merscope_integrated_855.h5ad?download=1 
+    log: ../results/00LOG/15REVIEW/dwnld_qian.log
+
+  prep_qian_ref:
+    output: ../results/15REVIEW/qian_ref_subsampled.h5ad
+    log: ../results/00LOG/15REVIEW/prep_qian_ref.log
+    script: ../scripts/review_prep_qian_ref.py
+
+  prep_singler_query:
+    query_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    h5ad: ../results/15REVIEW/adata_clusters_v3_query_prepped.h5ad
+    umap_csv: ../results/15REVIEW/umap_coords.csv
+    log: ../results/00LOG/15REVIEW/prep_singler_query.log
+    script: ../scripts/review_prep_singler_query.py
+
+  singler_classify:
+    csv: ../results/15REVIEW/singler_results.csv
+    pred_rds: ../results/15REVIEW/singler_pred.rds
+    sce_rds:  ../results/15REVIEW/singler_sce_sub.rds
+    log: ../results/00LOG/15REVIEW/singler_classify.log
+    script: ../scripts/review_singler_classify.R
+
+  batch_correction_kbet:
+    csv:        ../results/15REVIEW/batch_correction/kbet_results.csv
+    plot:       ../results/15REVIEW/batch_correction/kbet_rejection_rates.png
+    log:        ../results/00LOG/15REVIEW/batch_correction_kbet.log
+    script:     ../scripts/review_kbet.py
+    n_subsample: 10000   # cells to subsample (stratified by cell type)
+    random_seed: 1234
+    k0:          30      # neighbourhood size for chi-squared test
+
+  batch_correction_lisi:
+    csv:        ../results/15REVIEW/batch_correction/lisi_results.csv
+    plot:       ../results/15REVIEW/batch_correction/lisi_scores.png
+    log:        ../results/00LOG/15REVIEW/batch_correction_lisi.log
+    script:     ../scripts/review_lisi.py
+    random_seed: 1234
+    perplexity:  30   
+
+  singler_report:
+    html: reports/15REVIEW/15singler_report.html
+    log:  ../results/00LOG/15REVIEW/singler_report.log
+
+  batch_corr_report:
+    html:   reports/15REVIEW/batch_correction_report.html
+    log:    ../results/00LOG/15REVIEW/batch_corr_report.log
+    script: ../scripts/review_batch_corr_report.py
+
+  pseudotime_paga:
+    h5ad:         ../results/15REVIEW/pseudotime/adata_pseudotime.h5ad
+    paga_plot:    ../results/15REVIEW/pseudotime/paga_graph.png
+    dpt_plot:     ../results/15REVIEW/pseudotime/dpt_umap.png
+    fate_plot:    ../results/15REVIEW/pseudotime/cellrank_fate_probs.png
+    summary_csv:  ../results/15REVIEW/pseudotime/pseudotime_summary.csv
+    log:          ../results/00LOG/15REVIEW/pseudotime_paga.log
+    script:       ../scripts/review_pseudotime_paga.py
+    root_cell_type: "NPC"
+    n_dcs:          15       # diffusion components for DPT
+    paga_threshold: 0.05     # edge weight threshold for PAGA graph display
+    random_seed:    1234
+    env: ../envs/pseudotime.yaml
+
+  palantir:
+    h5ad:       ../results/15REVIEW/palantir/adata_palantir.h5ad
+    summary:    ../results/15REVIEW/palantir/palantir_summary.csv
+    fig_auto:   ../results/15REVIEW/palantir/palantir_auto_terminals.png
+    fig_manual: ../results/15REVIEW/palantir/palantir_manual_terminals.png
+    fig_corr:   ../results/15REVIEW/palantir/palantir_pseudotime_correlation.png
+    log:        ../results/00LOG/15REVIEW/palantir_pseudotime.log
+    script:     ../scripts/review_palantir.py
+    env:        ../envs/pseudotime.yaml
+    random_seed: 1234
+    n_dcs:       15
+
+  palantir_report:
+    notebook:  scripts/palantir_report.ipynb
+    html:      reports/15REVIEW/palantir_report.html
+    nb_out:    ../results/15REVIEW/palantir/palantir_report_executed.ipynb
+    html_dir:  ../reports/15REVIEW
+    log:       ../results/00LOG/15REVIEW/palantir_report.log
+
+  isoform_eqtl:
+    bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
+    tensorqtl_dir:    ../results/05TENSORQTL/tensorqtl_perm
+    enst_ensg_map:    ../results/15REVIEW/isoform_eqtl/enst_ensg_map.tsv
+    egenes_combined:  ../results/15REVIEW/isoform_eqtl/egenes_all_celltypes.tsv
+    bulk_hits:        ../results/15REVIEW/isoform_eqtl/bulk_transcript_hits.tsv
+    summary:          ../results/15REVIEW/isoform_eqtl/isoform_comparison_summary.tsv
+    detail:           ../results/15REVIEW/isoform_eqtl/isoform_comparison_detail.tsv
+    log:              ../results/00LOG/15REVIEW/isoform_eqtl_comparison.log
+    script:           ../scripts/review_isoform_eqtl.py
+    fdr_threshold:    0.05
+    nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
+
+  prep_snrnaseq_refs:
+    cameron_rds:        ../resources/public_datasets/cameron_2023/seurat.pfc.final.rds
+    polioudakis_counts: ../resources/public_datasets/polioudakis_2019/raw_counts_mat.rdata
+    polioudakis_meta:   ../resources/public_datasets/polioudakis_2019/cell_metadata.csv
+    nowakowski_expr:    ../resources/public_datasets/nowakowski_2017/exprMatrix.tsv
+    nowakowski_meta:    ../resources/public_datasets/nowakowski_2017/meta.tsv
+    cameron_out:        ../results/15REVIEW/ref_cameron.rds
+    polioudakis_out:    ../results/15REVIEW/ref_polioudakis.rds
+    nowakowski_out:     ../results/15REVIEW/ref_nowakowski.rds
+    script:             ../scripts/review_extract_reference_data.R
+    log:                ../results/00LOG/15REVIEW/extract_reference_data.log
+
+  prep_singler_query_full:
+    h5ad_cameron:     "../results/15REVIEW/query_cameron.h5ad"
+    h5ad_polioudakis: "../results/15REVIEW/query_polioudakis.h5ad"
+    h5ad_nowakowski:  "../results/15REVIEW/query_nowakowski.h5ad"
+    script:           "../scripts/review_prep_singler_query_full.py"
+    log:              "../results/00LOG/15REVIEW/prep_singler_query_full.log"
+
+  singler_snrnaseq:
+    sce_cameron:      "../results/15REVIEW/singler_snrnaseq_sce_cameron.rds"
+    sce_polioudakis:  "../results/15REVIEW/singler_snrnaseq_sce_polioudakis.rds"
+    sce_nowakowski:   "../results/15REVIEW/singler_snrnaseq_sce_nowakowski.rds"
+    script:           "../scripts/review_singler_snrnaseq.R"
+    log:              "../results/00LOG/15REVIEW/singler_snrnaseq.log"
+
+  mashr:
+    input_sentinel: "../results/05TENSORQTL/tensorqtl_perm/.done"
+    in_dir:     "../results/05TENSORQTL/tensorqtl_perm/"
+    nom_dir:    "../results/06QTL-REPLICATION/cat_nom_qtl/"
+    fugita_dir: "../resources/public_datasets/fugita_2024/"
+    out_dir:    "../results/15REVIEW/mashr/"
+    lfsr_thresh: 0.05
+    n_random:    20000    # random pairs sampled per cell type per dataset
+    sentinel: "../results/15REVIEW/mashr/snps_inhibitory_GABA_Fujita_Inh_prenatal_specific.tsv"
+    script: "../scripts/review_mashr.R"
+    log:    "../results/00LOG/15REVIEW/mashr.log"
+
+
+  mashr_report:
+    pi1_dir:   ../../results/06QTL-REPLICATION/fugita
+    mashr_dir: ../../results/15REVIEW
+    rmd:       scripts/review_mashr_report.Rmd
+    html:      reports/15REVIEW/mashr_eqtl_sharing_report.html
+    log:       ../results/00LOG/15REVIEW/mashr_report.log
+
+
+
+
+singler:
+
+  dwnld_qian:
+    output: ../resources/public_datasets/qian_2025/merscope_integrated_855.h5ad
+    web_link: https://zenodo.org/records/14422018/files/merscope_integrated_855.h5ad?download=1 
+    log: ../results/00LOG/15REVIEW/dwnld_qian.log
+
+  prep_qian_ref:
+    output: ../results/15REVIEW/qian_ref_subsampled.h5ad
+    log: ../results/00LOG/15REVIEW/prep_qian_ref.log
+    script: ../scripts/review_prep_qian_ref.py
+
+  prep_singler_query:
+    query_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    h5ad: ../results/15REVIEW/adata_clusters_v3_query_prepped.h5ad
+    umap_csv: ../results/15REVIEW/umap_coords.csv
+    log: ../results/00LOG/15REVIEW/prep_singler_query.log
+    script: ../scripts/review_prep_singler_query.py
+
+  extract_reference_data:
+    cameron_rds:        ../resources/public_datasets/cameron_2023/seurat.pfc.final.rds
+    polioudakis_counts: ../resources/public_datasets/polioudakis_2019/raw_counts_mat.rdata
+    polioudakis_meta:   ../resources/public_datasets/polioudakis_2019/cell_metadata.csv
+    nowakowski_expr:    ../resources/public_datasets/nowakowski_2017/exprMatrix.tsv
+    nowakowski_meta:    ../resources/public_datasets/nowakowski_2017/meta.tsv
+    cameron:            ../results/15REVIEW/ref_raw_cameron.rds
+    polioudakis:        ../results/15REVIEW/ref_raw_polioudakis.rds
+    nowakowski:         ../results/15REVIEW/ref_raw_nowakowski.rds
+    script:             ../scripts/review_extract_reference_data.R
+    log:                ../results/00LOG/15REVIEW/extract_reference_data.log
+
+  prep_snrnaseq_refs:
+    cameron:     ../results/15REVIEW/sce_ref_cameron.rds
+    polioudakis: ../results/15REVIEW/sce_ref_polioudakis.rds
+    nowakowski:  ../results/15REVIEW/sce_ref_nowakowski.rds
+    cameron_genes:      ../results/15REVIEW/sce_ref_cameron_genes.txt
+    polioudakis_genes:  ../results/15REVIEW/sce_ref_polioudakis_genes.txt
+    nowakowski_genes:   ../results/15REVIEW/sce_ref_nowakowski_genes.txt
+    script:      ../scripts/review_prep_snrnaseq_refs.R
+    log:         ../results/00LOG/15REVIEW/prep_snrnaseq_refs.log
+
+  prep_singler_query_full:
+    sentinel:             ../results/15REVIEW/prep_singler_query_full.done
+    outdir:               ../results/15REVIEW
+    script:               ../scripts/review_prep_singler_query_full.py
+    log:                  ../results/00LOG/15REVIEW/prep_singler_query_full.log
+
+  singler_snrnaseq:
+    sentinel:             ../results/15REVIEW/singler_snrnaseq.done
+    outdir:               ../results/15REVIEW
+    script:               ../scripts/review_singler_snrnaseq.R
+    log:                  ../results/00LOG/15REVIEW/singler_snrnaseq.log
+
+  singler_report:
+    html: "reports/15REVIEW/singler_report.html"
+    log:  "../results/00LOG/15REVIEW/singler_report.log"
+
+# ------  Pseudotime  -------
+
+trajectories:
+  - 'NPC-to-Glu-DL'
+  - 'NPC-to-Glu-UL'
+
+pseudotime:
+  env: ../envs/pseudotime.yaml
+  subset:
+    input_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    h5ad:       ../results/17PSEUDOTIME/{trajectory}/adata_subset.h5ad
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/subset.log
+    script:     ../scripts/pseudotime_subset.py
+
+  palantir_all:
+    input_h5ad:    ../results/02SCANPY/adata_clusters_v3.h5ad
+    output_h5ad:   ../results/17PSEUDOTIME/palantir_all/adata_palantir_all.h5ad
+    log:           ../results/00LOG/17PSEUDOTIME/palantir_all.log
+    script:        ../scripts/pseudotime_palantir_all.py
+    exclude_types: ['MG', 'GABA', 'Endo-Peri']
+    root_gene:     'PAX6'
+    terminals:
+      Glu-DL: 'TLE4'
+      Glu-UL: 'SATB2'
+      OPC:    'PDGFRA'
+    marker_genes:  ['PAX6', 'TLE4', 'FEZF2', 'BCL11B', 'FOXP2', 'SATB2', 'RORB', 'CUX2', 'PDGFRA']
+    n_neighbors:   10
+    n_pcs:         30
+    n_dcs:         15
+    num_waypoints: 1000
+
+
+  palantair:
+    h5ad:          ../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad
+    log:           ../results/00LOG/17PSEUDOTIME/{trajectory}/pseudotime.log
+    script:        ../scripts/pseudotime_trajectory.py
+    n_neighbors:   10
+    n_pcs:         30
+    n_dcs:         15
+    num_waypoints: 1000
+    root_gene:     "PAX6"
+
+  pseudobulk:
+    sentinel:         ../results/17PSEUDOTIME/{trajectory}/pseudobulk/pseudobulk_complete.txt
+    log:              ../results/00LOG/17PSEUDOTIME/{trajectory}/pseudobulk.log
+    script:           ../scripts/pseudotime_pseudobulk.py
+    geno_sample_file: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+
+  prep_tensorqtl:
+    exp_out:      ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed
+    cov_out:      ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_base_covariates.txt
+    log:          ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.log
+    script:       ../scripts/pseudotime_prep_tensorqtl.R
+    cov_file:     ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    sex_file:     reports/02SCANPY/02_metadata_per_sample.tsv
+    gene_lookup:  ../resources/sheets/gene_lookup_hg38.tsv
+    pseudoblk_dir: ../results/17PSEUDOTIME/{trajectory}/pseudobulk/
+    out_dir:      ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/
+
+  split_covariates:
+    input:  ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_base_covariates.txt
+    output: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_genPC4_expPC{exp_pc}_split_covariates.txt
+    log:    ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_quantile_genPC4_expPC{exp_pc}_split_covariates.log
+    script: ../scripts/pseudotime_split_covariates.R
+
+  exp_pcs: [10, 20, 30, 40, 50]
+
+  zip_bed:
+    input:  ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed
+    output: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed.gz
+    log:    ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_zip_bed.log
+
+  tensorqtl_nom:
+    output:     ../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom.cis_qtl_pairs.1.parquet
+    prefix_out: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}_nom.log
+    benchmark:  ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}_nom.benchmark
+  
+  tensorqtl_perm:
+    output:     ../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm.cis_qtl.txt.gz
+    prefix_out: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}_perm.log
+    benchmark:  ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC4_expPC{exp_pc}_perm.benchmark
+
+  cell_type_exp_pc_map:
+    NPC-to-Glu-DL: 40
+    NPC-to-Glu-UL: 50
+
+  extract_dosages:
+    output:    ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dosage_subset.tsv
+    log:       ../results/00LOG/17PSEUDOTIME/{trajectory}/extract_dosages.log
+    pvar_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+
+  dynamic_eqtl:
+    candidates_tsv: ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dynamic_eqtl_candidates.tsv
+    results_rds:  ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dynamic_eqtl_results.rds
+    results_tsv:  ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dynamic_eqtl_significant.tsv
+    log:          ../results/00LOG/17PSEUDOTIME/{trajectory}/dynamic_eqtl.log
+    script:       ../scripts/pseudotime_dynamic_eqtl.R
+    dosage_file:  ../results/08SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz
+    dosage_index: ../results/08SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz.tbi
+    min_bins:     3
+    fdr_threshold: 0.05
+    quantile_n:   6
+    exp_pc:       30
+
+  report:
+    html:                reports/17PSEUDOTIME/pseudotime_eqtl_report.html
+    output_file:         ../reports/17PSEUDOTIME/pseudotime_eqtl_report.html
+    rmd_script:          scripts/pseudotime_eqtl_report.Rmd
+    in_dir:              ../../results/17PSEUDOTIME/
+    cell_type_perm_dir:  ../../results/05TENSORQTL/tensorqtl_perm/
+    log:                 ../results/00LOG/17PSEUDOTIME/pseudotime_eqtl_report.log
+
+
+# ------  Developmental Specificity  -------
+dev_specificity:
+  extract_universe:
+    qtl_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    out_file: ../results/19DEV-SPECIFICITY/extract_universe/eqtl_universe.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/extract_universe.log
+
+  classify_specificity:
+    fugita_dir: ../resources/public_datasets/fugita_2024/
+    out_file: ../results/19DEV-SPECIFICITY/classify_specificity/eqtl_specificity_classification.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/classify_specificity.log
+
+  ocr_enrich:
+    li_s6: ../resources/public_datasets/li_2023/Table_S6_List_of_cCREs_in_bed_format.bed
+    li_s7: ../resources/public_datasets/li_2023/Table_S7_Cell_type_assignment_of_cCREs.txt
+    ziffra_dir: ../resources/public_datasets/ziffra_2021/
+    snp_lookup_dir: ../results/06QTL-REPLICATION/atac_enrich/
+    out_file: ../results/19DEV-SPECIFICITY/ocr_enrich/fetal_specific_ocr_enrichment.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/ocr_enrich.log
+
+  eqtl_effects:
+    nom_dir: ../results/10SMR/smr_input/
+    out_file: ../results/19DEV-SPECIFICITY/eqtl_effects/eqtl_effect_sizes.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effects.log
+
+  beta_correlation:
+    fugita_dir: ../resources/public_datasets/fugita_2024/
+    nom_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    pvar_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    thousandG_frq: ../results/10SMR/smr_input/1000G.EUR.hg38.frq
+    out_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/beta_correlation.log
+
+  report:
+    script: scripts/devspec_report.Rmd
+    html: reports/19DEV-SPECIFICITY/dev_specificity_report.html
+    output_file: ../reports/19DEV-SPECIFICITY/dev_specificity_report.html
+    bmark_dir: reports/benchmarks/
+    gene_lookup: ../resources/sheets/gene_lookup_hg38.tsv
+    log: ../results/00LOG/19DEV-SPECIFICITY/dev_specificity_report.log
