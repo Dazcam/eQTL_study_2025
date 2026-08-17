@@ -51,11 +51,11 @@ log_msg(paste("anndataR version:", as.character(packageVersion("anndataR"))))
 
 # ── Inputs / outputs ──────────────────────────────────────────────────────────────────
 
-ref_h5ad       <- str(snakemake@input[["ref_h5ad"]])
-query_h5ad     <- str(snakemake@input[["query_h5ad"]])
-output_csv     <- str(snakemake@output[["csv"]])
-output_pred    <- str(snakemake@output[["pred_rds"]])
-output_sce     <- str(snakemake@output[["sce_rds"]])
+ref_h5ad       <- as.character(snakemake@input[["ref_h5ad"]])
+query_h5ad     <- as.character(snakemake@input[["query_h5ad"]])
+output_csv     <- as.character(snakemake@output[["csv"]])
+output_pred    <- as.character(snakemake@output[["pred_rds"]])
+output_sce     <- as.character(snakemake@output[["sce_rds"]])
 n_threads      <- snakemake@resources[["threads"]]
 n_subsample    <- 200L  # cells per L1 population for score heatmap
 

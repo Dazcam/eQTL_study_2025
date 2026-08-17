@@ -1,5 +1,5 @@
 ---
-title: "Spatial Validation: SingleR Label Transfer"
+title: "SingleR - Label transfer"
 author: "Darren Cameron"
 date: "`r Sys.Date()`"
 output:
@@ -10,22 +10,11 @@ output:
     toc_depth: 3
     code_folding: hide
 params:
-  singler_csv: null
-  umap_csv:    null
-  pred_rds:    null
-  sce_rds:     null
+  cameron_csv:     null
+  polioudakis_csv: null
+  nowakowski_csv:  null
+  umap_csv:        null
 ---
-
-***
-
-## Changelog
-
-| Version | Date       | Changes |
-|---------|------------|---------|
-| v1.0    | 2026-05-19 | Initial report. Heatmap used mean SingleR scores row-normalised to fractions. |
-| v1.1    | 2026-05-19 | Fixed heatmap metric: switched from mean scores to fraction of cells with winning H2 label. Added aggregated H2 group UMAP tab. Updated MG negative control note. |
-| v1.2    | 2026-05-19 | Combined heatmap and bar chart. Merged UMAPs into single 2x2 panel. Added H2 group breakdown table. Added interpretive note on Glu-UL signal strength. |
-| v1.3    | 2026-05-19 | Rewrote heatmaps using ComplexHeatmap with native anno_barplot(). Added mean score heatmap alongside winning label heatmap. Updated colour scheme to blue-yellow-red for clarity. Added full SingleR diagnostics section: delta distribution, score heatmap, leiden concordance. |
 
 ***
 
@@ -33,20 +22,17 @@ params:
 
 ***
 
-This report presents the results of SingleR-based label transfer from the Qian et al. 2025
-MERFISH spatial transcriptomics dataset onto our snRNA-seq data. The analysis addresses
-Reviewer Comment 2, which requested spatial and laminar validation of our L1 cell type
-annotations — specifically the distinction between upper layer (Glu-UL) and deep layer
-(Glu-DL) glutamatergic neuron populations.
+SingleR label transfer from three published fetal cortex snRNA-seq reference datasets
+onto our 679,738-cell prenatal cortex snRNA-seq query. For each reference, classification
+was run at two levels: fine-grained (reference-specific cluster labels) and L1 group
+(mapped to our seven L1 cell type categories). Queries were subsetted to genes shared
+with each reference prior to classification.
 
-**Reference:** Qian et al. 2025, *Nature*. Single-cell spatial transcriptomics of the
-developing human cortex (MERFISH, 300-gene panel, GW15–GW34).
-
-**Method:** SingleR (Bioconductor) was used to transfer H2-level spatial annotations
-from the Qian MERFISH reference onto all 679,738 cells in our snRNA-seq dataset.
-The reference was subsampled to 500 cells per H2 cluster (33 clusters, 16,500 cells total)
-after excluding V1/V2 cortical areas (transcriptionally discontinuous per Qian et al.).
-270 of 300 MERFISH panel genes (90%) were shared with our snRNA-seq data.
+| Reference | Cells | Shared genes | Fine labels |
+|-----------|-------|-------------|-------------|
+| Cameron et al. 2023 | 10,083 | 14,840 | 17 |
+| Polioudakis et al. 2019 | 33,986 | 15,561 | 16 |
+| Nowakowski et al. 2017 | 4,261 | 13,308 | 48 |
 
 ***
 
@@ -54,19 +40,20 @@ after excluding V1/V2 cortical areas (transcriptionally discontinuous per Qian e
 
 library(tidyverse)
 library(knitr)
-library(kableExtra)
 library(DT)
 library(gt)
 library(cowplot)
 library(ComplexHeatmap)
 library(circlize)
-library(RColorBrewer)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(viridis)
-library(SingleR)
-library(matrixStats)
+
+# Fix namespace conflicts from Bioconductor packages if loaded
+count  <- dplyr::count
+rename <- dplyr::rename
+select <- dplyr::select
+filter <- dplyr::filter
 
 knitr::opts_chunk$set(
   echo      = FALSE,
@@ -77,12 +64,12 @@ knitr::opts_chunk$set(
 
 # ── Parameters ────────────────────────────────────────────────────────────────────────
 
-singler_csv <- params$singler_csv
-umap_csv    <- params$umap_csv
-pred_rds    <- params$pred_rds
-sce_rds     <- params$sce_rds
+cameron_csv     <- params$cameron_csv
+polioudakis_csv <- params$polioudakis_csv
+nowakowski_csv  <- params$nowakowski_csv
+umap_csv        <- params$umap_csv
 
-# ── Cell type colour palette (from scanpy_gene_lists.py) ─────────────────────────────
+# ── Colour palette ─────────────────────────────────────────────────────────────────
 
 custom_palette <- c(
   'Glu-UL'    = '#4363d8',
@@ -94,124 +81,148 @@ custom_palette <- c(
   'Endo-Peri' = '#B200ED'
 )
 
-# ── H2 group colour palette ───────────────────────────────────────────────────────────
+l1_order <- c('Glu-UL', 'Glu-DL', 'GABA', 'NPC', 'OPC', 'MG', 'Endo-Peri')
 
-group_palette <- c(
-  'Upper EN'   = '#4363d8',
-  'Deep EN'    = '#00B6EB',
-  'Inhibitory' = '#3CBB75',
-  'Progenitor' = '#FF5959',
-  'OPC'        = '#FDE725',
-  'EC'         = '#B200ED',
-  'Migrating'  = '#A0A0A0',
-  'Astrocyte'  = '#D3D3D3'
+# Polychrome 36 palette - fixed set, no package needed
+polychrome_36 <- c(
+  "#5A5156", "#E4E1E3", "#F6222E", "#FE00FA", "#16FF32", "#3283FE",
+  "#FEAF16", "#B00068", "#1CFFCE", "#90AD1C", "#2ED9FF", "#DEA0FD",
+  "#AA0DFE", "#F8A19F", "#325A9B", "#C4451C", "#1C8356", "#85660D",
+  "#B10DA1", "#FBE426", "#1CBE4F", "#FA0087", "#FC1CBF", "#F7E1A0",
+  "#C075A6", "#782AB6", "#AAF400", "#BDCDFF", "#822E1C", "#B5EFB5",
+  "#7ED7D1", "#1C7F93", "#D85FF7", "#683B79", "#66B0FF", "#3B00FB"
 )
 
-# ── Heatmap colour scale: white -> yellow -> orange -> dark red ───────────────────────
+# ── Heatmap colour scale ──────────────────────────────────────────────────────────────
 
 heatmap_col_fun <- colorRamp2(
   c(0, 0.15, 0.35, 0.6),
   c('#FFFFFF', '#FFFFB2', '#FD8D3C', '#800026')
 )
 
-# ── L1 population order ───────────────────────────────────────────────────────────────
+# ── Reference fine label -> L1 group mappings ─────────────────────────────────────────
 
-l1_order <- c('Glu-UL', 'Glu-DL', 'GABA', 'NPC', 'OPC', 'MG', 'Endo-Peri')
-
-# ── H2 column order grouped by biological correspondence ─────────────────────────────
-
-h2_order <- c(
-  'EN-L2', 'EN-IT-L2/3', 'EN-IT-L3/4', 'EN-IT-L4', 'EN-IT-L4/5',
-  'EN-IT-L6', 'EN-ET-L5/6', 'EN-ET-SP-early', 'EN-ET-SP', 'EN-ET-SP-P', 'EN-ET-L6-early',
-  'IN-CGE', 'IN-MGE', 'IN-SST', 'IN-VZ/GE', 'INP-VZ/GE',
-  'RG1', 'oRG1', 'tRG', 'vRG-late',
-  'IPC-VZ/SVZ', 'IPC-iSVZ', 'IPC-SVZ-1', 'IPC-SVZ-2', 'IPC-oSVZ',
-  'OPC', 'EC',
-  'EN-IZ-1', 'EN-IZ-2', 'EN-oSVZ-1', 'En-oSVZ-2',
-  'Astro-1', 'Astro-late1'
+cameron_map <- c(
+  'FC-ExN-1'   = 'Glu-UL',  'FC-ExN-2'   = 'Glu-UL',  'FC-ExN-3'   = 'Glu-UL',
+  'FC-ExN-4'   = 'Glu-DL',  'FC-ExN-5'   = 'Glu-DL',
+  'FC-InN-1'   = 'GABA',    'FC-InN-2'   = 'GABA',
+  'FC-InN-3'   = 'GABA',    'FC-InN-4'   = 'GABA',
+  'FC-RG-1'    = 'NPC',     'FC-RG-2'    = 'NPC',
+  'FC-CycPro'  = 'NPC',     'FC-IP'      = 'NPC',
+  'FC-OPC'     = 'OPC',     'FC-MG'      = 'MG',
+  'FC-Endo'    = 'Endo-Peri',
+  'FC-N-undef' = 'unassigned'
 )
 
-# ── H2 to group mapping ───────────────────────────────────────────────────────────────
+polioudakis_map <- c(
+  'ExN'    = 'Glu-UL',   'ExM'    = 'Glu-UL',    'ExM-U'  = 'Glu-UL',
+  'ExDp1'  = 'Glu-DL',   'ExDp2'  = 'Glu-DL',
+  'InCGE'  = 'GABA',     'InMGE'  = 'GABA',
+  'oRG'    = 'NPC',      'vRG'    = 'NPC',
+  'PgS'    = 'NPC',      'PgG2M'  = 'NPC',        'IP'     = 'NPC',
+  'OPC'    = 'OPC',      'Mic'    = 'MG',
+  'End'    = 'Endo-Peri', 'Per'   = 'Endo-Peri'
+)
 
-h2_group_map <- c(
-  'EN-L2'          = 'Upper EN',   'EN-IT-L2/3'     = 'Upper EN',
-  'EN-IT-L3/4'     = 'Upper EN',   'EN-IT-L4'       = 'Upper EN',
-  'EN-IT-L4/5'     = 'Upper EN',
-  'EN-IT-L6'       = 'Deep EN',    'EN-ET-L5/6'     = 'Deep EN',
-  'EN-ET-SP-early' = 'Deep EN',    'EN-ET-SP'       = 'Deep EN',
-  'EN-ET-SP-P'     = 'Deep EN',    'EN-ET-L6-early' = 'Deep EN',
-  'IN-CGE'         = 'Inhibitory', 'IN-MGE'         = 'Inhibitory',
-  'IN-SST'         = 'Inhibitory', 'IN-VZ/GE'       = 'Inhibitory',
-  'INP-VZ/GE'      = 'Inhibitory',
-  'RG1'            = 'Progenitor', 'oRG1'           = 'Progenitor',
-  'tRG'            = 'Progenitor', 'vRG-late'       = 'Progenitor',
-  'IPC-VZ/SVZ'     = 'Progenitor', 'IPC-iSVZ'       = 'Progenitor',
-  'IPC-SVZ-1'      = 'Progenitor', 'IPC-SVZ-2'      = 'Progenitor',
-  'IPC-oSVZ'       = 'Progenitor',
-  'OPC'            = 'OPC',
-  'EC'             = 'EC',
-  'EN-IZ-1'        = 'Migrating',  'EN-IZ-2'        = 'Migrating',
-  'EN-oSVZ-1'      = 'Migrating',  'En-oSVZ-2'      = 'Migrating',
-  'Astro-1'        = 'Astrocyte',  'Astro-late1'    = 'Astrocyte'
+nowakowski_map <- c(
+  'EN-PFC1' = 'Glu-UL',   'EN-PFC2' = 'Glu-UL',   'EN-PFC3' = 'Glu-UL',
+  'EN-V1-1' = 'Glu-UL',   'EN-V1-2' = 'Glu-UL',   'EN-V1-3' = 'Glu-UL',
+  'nEN-early1' = 'Glu-UL', 'nEN-early2' = 'Glu-UL', 'nEN-late' = 'Glu-UL',
+  'IN-CTX-MGE1' = 'GABA', 'IN-CTX-MGE2' = 'GABA',
+  'IN-STR'  = 'GABA',
+  'nIN1'    = 'GABA',    'nIN2'    = 'GABA',    'nIN3'    = 'GABA',
+  'nIN4'    = 'GABA',    'nIN5'    = 'GABA',
+  'oRG'     = 'NPC',     'vRG'     = 'NPC',     'tRG'     = 'NPC',
+  'RG-early' = 'NPC',    'RG-div1' = 'NPC',     'RG-div2' = 'NPC',
+  'IPC-div1' = 'NPC',    'IPC-div2' = 'NPC',
+  'IPC-nEN1' = 'NPC',    'IPC-nEN2' = 'NPC',    'IPC-nEN3' = 'NPC',
+  'MGE-div'  = 'NPC',    'MGE-IPC1' = 'NPC',    'MGE-IPC2' = 'NPC',
+  'MGE-IPC3' = 'NPC',    'MGE-RG1'  = 'NPC',    'MGE-RG2'  = 'NPC',
+  'OPC'        = 'OPC',
+  'Microglia'  = 'MG',
+  'Endothelial' = 'Endo-Peri', 'Mural' = 'Endo-Peri',
+  'Astrocyte'  = 'unassigned', 'Choroid' = 'unassigned',
+  'Glyc'       = 'unassigned',
+  'U1' = 'unassigned',   'U2' = 'unassigned',
+  'U3' = 'unassigned',   'U4' = 'unassigned'
+)
+
+# Group colour palette - includes ExN and nEN for Nowakowski
+group_palette <- c(
+  'Glu-UL'     = '#4363d8',
+  'Glu-DL'     = '#00B6EB',
+  'GABA'       = '#3CBB75',
+  'NPC'        = '#FF5959',
+  'OPC'        = '#FDE725',
+  'MG'         = '#F58231',
+  'Endo-Peri'  = '#B200ED',
+  'unassigned' = '#D3D3D3'
 )
 
 # ── Load data ─────────────────────────────────────────────────────────────────────────
 
-singler <- read_csv(singler_csv, show_col_types = FALSE)
-umap    <- read_csv(umap_csv,    show_col_types = FALSE)
-pred    <- readRDS(pred_rds)
-sce_obj <- readRDS(sce_rds)
-query_sub <- sce_obj$query_sub
-pred_sub  <- sce_obj$pred_sub
+cameron     <- read_csv(cameron_csv,     show_col_types = FALSE)
+polioudakis <- read_csv(polioudakis_csv, show_col_types = FALSE)
+nowakowski  <- read_csv(nowakowski_csv,  show_col_types = FALSE)
+umap        <- read_csv(umap_csv,        show_col_types = FALSE)
 
-singler$cell_type <- factor(singler$cell_type, levels = l1_order)
-umap$cell_type    <- factor(umap$cell_type,    levels = l1_order)
+# Factor cell_type in L1 order
+for (df_name in c('cameron', 'polioudakis', 'nowakowski')) {
+  df <- get(df_name)
+  df$cell_type <- factor(df$cell_type, levels = l1_order)
+  assign(df_name, df)
+}
+umap$cell_type <- factor(umap$cell_type, levels = l1_order)
 
-umap <- umap %>%
-  left_join(singler %>% select(cell_id, H2_label), by = 'cell_id') %>%
-  mutate(H2_group = h2_group_map[H2_label])
+# ── Helper: build winning label fraction matrix ───────────────────────────────────────
 
-# Score columns
-score_cols <- setdiff(colnames(singler),
-                      c('cell_id', 'cell_type', 'H2_label', 'H2_pruned', 'delta'))
-
-# ── Helper: build fraction matrix from winning labels ─────────────────────────────────
-
-build_frac_mat <- function(df) {
+build_frac_mat <- function(df, col = 'fine_label') {
   mat <- df %>%
-    group_by(cell_type, H2_label) %>%
-    summarise(n = n(), .groups = 'drop') %>%
-    group_by(cell_type) %>%
-    mutate(fraction = n / sum(n)) %>%
-    ungroup() %>%
-    select(cell_type, H2_label, fraction) %>%
-    pivot_wider(names_from = H2_label, values_from = fraction, values_fill = 0) %>%
+    dplyr::group_by(cell_type, .data[[col]]) %>%
+    dplyr::summarise(n = n(), .groups = 'drop') %>%
+    dplyr::group_by(cell_type) %>%
+    dplyr::mutate(fraction = n / sum(n)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(cell_type, label = .data[[col]], fraction) %>%
+    pivot_wider(names_from = label, values_from = fraction, values_fill = 0) %>%
     column_to_rownames('cell_type')
-  mat[l1_order[l1_order %in% rownames(mat)],
-      h2_order[h2_order %in% colnames(mat)]]
+  mat[l1_order[l1_order %in% rownames(mat)], , drop = FALSE]
 }
 
 # ── Helper: build mean score matrix ──────────────────────────────────────────────────
 
-build_score_mat <- function(df) {
+build_score_mat <- function(df, score_prefix = 'fine_score_') {
+  score_cols <- grep(paste0('^', score_prefix), colnames(df), value = TRUE)
+  clean_names <- sub(score_prefix, '', score_cols)
   mat <- df %>%
-    select(cell_type, all_of(score_cols)) %>%
-    group_by(cell_type) %>%
-    summarise(across(everything(), mean), .groups = 'drop') %>%
+    dplyr::select(cell_type, all_of(score_cols)) %>%
+    dplyr::group_by(cell_type) %>%
+    dplyr::summarise(across(everything(), mean), .groups = 'drop') %>%
     column_to_rownames('cell_type')
+  colnames(mat) <- clean_names
   mat <- mat / rowSums(mat)
-  mat[l1_order[l1_order %in% rownames(mat)],
-      h2_order[h2_order %in% colnames(mat)]]
+  mat[l1_order[l1_order %in% rownames(mat)], , drop = FALSE]
 }
 
-frac_mat  <- build_frac_mat(singler)
-score_mat <- build_score_mat(singler)
+# ── Helper: draw ComplexHeatmap with group annotation bar ────────────────────────────
 
-# ── Helper: draw ComplexHeatmap ───────────────────────────────────────────────────────
+draw_heatmap <- function(mat, group_map, title) {
 
-draw_ch <- function(mat, title) {
+  # Order columns by group to produce diagonal enrichment
+  group_order <- c('Glu-UL', 'Glu-DL', 'GABA', 'unassigned',
+                   'NPC', 'OPC', 'MG', 'Endo-Peri')
 
-  # Row annotation: L1 cell type colour bar
+  col_groups_all <- group_map[colnames(mat)]
+  col_groups_all[is.na(col_groups_all)] <- 'unassigned'
+
+  # Sort columns by group order, then alphabetically within group
+  col_order <- order(
+    match(col_groups_all, group_order),
+    colnames(mat)
+  )
+  mat <- mat[, col_order, drop = FALSE]
+
+  # Row annotation: L1 cell type
   row_ha <- rowAnnotation(
     `Cell type` = rownames(mat),
     col         = list(`Cell type` = custom_palette[rownames(mat)]),
@@ -219,403 +230,348 @@ draw_ch <- function(mat, title) {
     annotation_width = unit(3, 'mm')
   )
 
-  # Column annotation: H2 group colour bar
-  h2_grps <- h2_group_map[colnames(mat)]
-  col_ha  <- HeatmapAnnotation(
-    Group = h2_grps,
-    col   = list(Group = group_palette[unique(h2_grps)]),
+  # Column annotation: reference group
+  col_groups <- group_map[colnames(mat)]
+  col_groups[is.na(col_groups)] <- 'unassigned'
+
+  col_ha <- HeatmapAnnotation(
+    Group = col_groups,
+    col   = list(Group = group_palette[unique(col_groups)]),
     show_legend = TRUE,
     annotation_height = unit(3, 'mm')
   )
 
-  # Max fraction bar chart as right row annotation
+  # Max fraction bar on right
   max_vals <- apply(mat, 1, max)
   bar_ha   <- rowAnnotation(
     `Max fraction` = anno_barplot(
       max_vals,
-      width       = unit(2, 'cm'),
-      gp          = gpar(fill = custom_palette[names(max_vals)], col = NA),
-      axis_param  = list(side = 'bottom', labels_rot = 0)
+      width      = unit(2, 'cm'),
+      gp         = gpar(fill = custom_palette[names(max_vals)], col = NA),
+      axis_param = list(side = 'bottom', labels_rot = 0)
     )
   )
 
   Heatmap(
     as.matrix(mat),
-    name                  = 'Fraction',
-    col                   = heatmap_col_fun,
-    cluster_rows          = FALSE,
-    cluster_columns       = FALSE,
-    show_row_names        = TRUE,
-    show_column_names     = TRUE,
-    row_names_side        = 'right',
-    column_names_rot      = 45,
-    column_names_gp       = gpar(fontsize = 8),
-    row_names_gp          = gpar(fontsize = 10),
-    top_annotation        = col_ha,
-    left_annotation       = row_ha,
-    right_annotation      = bar_ha,
-    column_title          = title,
-    column_title_gp       = gpar(fontsize = 11, fontface = 'bold'),
-    border                = FALSE,
-    use_raster            = TRUE,
-    raster_quality        = 2
+    name              = 'Fraction',
+    col               = heatmap_col_fun,
+    cluster_rows      = FALSE,
+    cluster_columns   = FALSE,
+    show_row_names    = TRUE,
+    show_column_names = TRUE,
+    row_names_side    = 'right',
+    column_names_rot  = 45,
+    column_names_gp   = gpar(fontsize = 8),
+    row_names_gp      = gpar(fontsize = 10),
+    top_annotation    = col_ha,
+    left_annotation   = row_ha,
+    right_annotation  = bar_ha,
+    column_title      = title,
+    column_title_gp   = gpar(fontsize = 11, fontface = 'bold'),
+    border            = FALSE,
+    use_raster        = TRUE,
+    raster_quality    = 2
   )
 }
 
+# ── Helper: summary table ────────────────────────────────────────────────────────────
+
+make_summary_table <- function(df, ref_name) {
+
+  cell_counts <- df %>%
+    dplyr::count(cell_type, name = 'N cells') %>%
+    dplyr::arrange(match(cell_type, l1_order))
+
+  pruning <- df %>%
+    dplyr::group_by(cell_type) %>%
+    dplyr::summarise(
+      `% pruned (fine)`  = sprintf('%.2f%%', 100 * mean(is.na(fine_pruned))),
+      `% pruned (group)` = sprintf('%.2f%%', 100 * mean(is.na(group_pruned))),
+      `Mean delta (fine)`  = round(mean(delta_fine,  na.rm = TRUE), 3),
+      `Mean delta (group)` = round(mean(delta_group, na.rm = TRUE), 3),
+      .groups = 'drop'
+    )
+
+  top_fine <- df %>%
+    dplyr::group_by(cell_type) %>%
+    dplyr::count(fine_label, name = 'n') %>%
+    dplyr::mutate(pct = sprintf('%.1f%%', 100 * n / sum(n))) %>%
+    dplyr::slice_max(n, n = 1) %>%
+    dplyr::rename(`Top fine label` = fine_label, `% of population` = pct) %>%
+    dplyr::select(cell_type, `Top fine label`, `% of population`) %>%
+    dplyr::ungroup()
+
+  top_group <- df %>%
+    dplyr::group_by(cell_type) %>%
+    dplyr::count(group_label, name = 'n') %>%
+    dplyr::mutate(pct = sprintf('%.1f%%', 100 * n / sum(n))) %>%
+    dplyr::slice_max(n, n = 1) %>%
+    dplyr::rename(`Top group label` = group_label, `% (group)` = pct) %>%
+    dplyr::select(cell_type, `Top group label`, `% (group)`) %>%
+    dplyr::ungroup()
+
+  cell_counts %>%
+    dplyr::left_join(top_fine,  by = 'cell_type') %>%
+    dplyr::left_join(top_group, by = 'cell_type') %>%
+    dplyr::left_join(pruning,   by = 'cell_type') %>%
+    gt() %>%
+    tab_header(
+      title    = paste('Table:', ref_name),
+      subtitle = 'L1 cell counts, top assignments and classification confidence'
+    ) %>%
+    cols_label(cell_type = 'Cell Type') %>%
+    tab_style(
+      style     = cell_text(weight = 'bold'),
+      locations = cells_column_labels(everything())
+    ) %>%
+    tab_options(
+      table.font.size           = px(13),
+      table.border.top.style    = 'none',
+      table.border.bottom.style = 'solid',
+      table.border.bottom.width = px(2),
+      table.border.bottom.color = 'black',
+      heading.align             = 'center'
+    )
+}
+
+# ── Helper: discrete palette for fine labels ──────────────────────────────────────────
+
+make_fine_palette <- function(labels) {
+  unique_labels <- sort(unique(na.omit(labels)))
+  n             <- length(unique_labels)
+  pal           <- rep(polychrome_36, length.out = n)
+  names(pal)    <- unique_labels
+  pal
+}
+
+# ── Helper: 2x2 UMAP panel ───────────────────────────────────────────────────────────
+
+make_umap_panel <- function(df_singler, ref_name) {
+
+  # Join both group and fine labels to UMAP
+  umap_joined <- umap %>%
+    dplyr::left_join(
+      df_singler %>% dplyr::select(cell_id, group_label, fine_label),
+      by = 'cell_id'
+    ) %>%
+    dplyr::mutate(group_label = factor(group_label,
+                                       levels = names(group_palette)))
+
+  # Generate discrete palette sized to fine labels in this reference
+  fine_pal <- make_fine_palette(umap_joined$fine_label)
+
+  # Panel A: original L1 annotations
+  p_l1 <- ggplot(umap, aes(x = UMAP1, y = UMAP2, colour = cell_type)) +
+    geom_point(size = 0.1, alpha = 0.4) +
+    scale_colour_manual(values = custom_palette, name = 'L1 cell type') +
+    labs(title = 'A: L1 annotations (this study)') +
+    umap_theme +
+    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+
+  # Panel B: SingleR group label transfer
+  p_group <- ggplot(umap_joined, aes(x = UMAP1, y = UMAP2, colour = group_label)) +
+    geom_point(size = 0.1, alpha = 0.4) +
+    scale_colour_manual(values = group_palette, name = 'SingleR group',
+                        na.value = 'grey80') +
+    labs(title = paste('B: SingleR group labels\n(', ref_name, ')')) +
+    umap_theme +
+    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+
+  # Panel C: SingleR fine labels with discrete palette
+  p_fine <- ggplot(umap_joined, aes(x = UMAP1, y = UMAP2, colour = fine_label)) +
+    geom_point(size = 0.1, alpha = 0.4) +
+    scale_colour_manual(values = fine_pal, name = 'Fine label',
+                        na.value = 'grey80') +
+    labs(title = paste('C: SingleR fine labels\n(', ref_name, ')')) +
+    umap_theme +
+    guides(colour = guide_legend(
+      override.aes = list(size = 3, alpha = 1),
+      ncol = 2
+    ))
+
+  # 2x2 grid with blank 4th panel
+  plot_grid(p_l1, p_group, p_fine, NULL,
+            ncol  = 2,
+            nrow  = 2,
+            align = 'hv')
+}
 ```
 
 ***
 
-## Classification summary
+## Cameron et al. 2023 {.tabset}
 
 ***
 
-```{r summary_table}
+**Reference:** 10,083 cells from frontal cortex (PFC), 30,290 genes, 17 cell types.
+Shared genes with query: **14,840 (49.0% of reference)**.
 
-cell_counts <- singler %>%
-  count(cell_type, name = 'N cells') %>%
-  arrange(match(cell_type, l1_order))
+***
 
-pruning <- singler %>%
-  group_by(cell_type) %>%
-  summarise(
-    `N pruned` = sum(is.na(H2_pruned)),
-    `% pruned` = sprintf('%.2f%%', 100 * mean(is.na(H2_pruned))),
-    .groups = 'drop'
-  )
+### Summary table
 
-top_h2 <- singler %>%
-  group_by(cell_type) %>%
-  count(H2_label, name = 'n') %>%
-  mutate(pct = sprintf('%.1f%%', 100 * n / sum(n))) %>%
-  slice_max(n, n = 1) %>%
-  rename(`Top H2 label` = H2_label, `N assigned` = n, `% of population` = pct) %>%
-  ungroup()
+***
 
-delta_summary <- singler %>%
-  group_by(cell_type) %>%
-  summarise(
-    `Mean delta` = round(mean(delta, na.rm = TRUE), 3),
-    `Median delta` = round(median(delta, na.rm = TRUE), 3),
-    .groups = 'drop'
-  )
-
-summary_tbl <- cell_counts %>%
-  left_join(pruning,       by = 'cell_type') %>%
-  left_join(top_h2,        by = 'cell_type') %>%
-  left_join(delta_summary, by = 'cell_type')
-
-summary_tbl %>%
-  gt() %>%
-  tab_header(
-    title    = 'Table 1. SingleR classification summary',
-    subtitle = 'Per L1 population counts, pruning rates, top H2 assignment, and delta statistics'
-  ) %>%
-  cols_label(cell_type = 'Cell Type') %>%
-  tab_style(
-    style     = cell_text(weight = 'bold'),
-    locations = cells_column_labels(everything())
-  ) %>%
-  tab_options(
-    table.font.size           = px(14),
-    table.border.top.style    = 'none',
-    table.border.bottom.style = 'solid',
-    table.border.bottom.width = px(2),
-    table.border.bottom.color = 'black',
-    heading.align             = 'center'
-  )
-
+```{r cameron_table}
+make_summary_table(cameron, "Cameron et al. 2023")
 ```
 
 ***
 
-**Note on Microglia (MG):** Microglia are absent from the Qian MERFISH reference panel.
-MG cells receive labels rather than NA because SingleR's pruning threshold is based on
-outlier detection within each label — with no microglial genes in the 300-gene panel,
-MG scores are uniformly compressed and the delta margin just clears the pruning threshold.
-MG assignments are biologically uninterpretable and the MG row serves as a **negative control**.
+### Heatmap {.tabset}
 
 ***
 
-## Correspondence heatmap {.tabset}
+#### Winning label fractions
 
 ***
 
-H2 clusters are grouped as follows:
-
-- **Upper layer EN** (EN-L2, EN-IT-L2/3, EN-IT-L3/4, EN-IT-L4, EN-IT-L4/5) → expected to enrich for Glu-UL
-- **Deep layer EN** (EN-IT-L6, EN-ET-L5/6, EN-ET-SP\*, EN-ET-L6-early) → expected to enrich for Glu-DL
-- **Inhibitory** (IN-CGE, IN-MGE, IN-SST, IN-VZ/GE, INP-VZ/GE) → expected to enrich for GABA
-- **Progenitors** (RG1, oRG1, tRG, vRG-late, IPC\*) → expected to enrich for NPC
-- **OPC, EC** → expected to enrich for OPC and Endo-Peri
-- **Migrating/immature EN, Astrocytes** → no expected L1 match (right margin)
-
-**Note on Glu-UL signal strength:** Glu-UL shows diffuse enrichment across the Upper EN
-block rather than a single dominant hit. This is expected — upper layer neurons at 12–21 PCW
-are less transcriptionally mature and more heterogeneous than deep layer neurons at the same
-stage. Subplate neurons (EN-ET-SP-P) dominate Glu-DL with a strong signal (~60%) because
-they are among the earliest and most transcriptionally distinct excitatory neurons, already
-well-established by mid-gestation. The weaker Glu-UL signal reflects genuine developmental
-biology rather than a classification failure.
-
-***
-
-### Winning label fractions
-
-***
-
-Fraction of cells from each L1 population whose **winning** SingleR label was each Qian H2
-cluster. Each row sums to 1. Directly replicates the metric in Qian et al. Extended Data Fig 3d.
-
-***
-
-```{r heatmap_winning, fig.width=16, fig.height=5}
-
-draw_ch(frac_mat, 'Correspondence with Qian et al. 2025 MERFISH H2 clusters\n(fraction of cells with winning label)')
-
+```{r cameron_heatmap_frac, fig.width=14, fig.height=5}
+frac_mat <- build_frac_mat(cameron, 'fine_label')
+draw_heatmap(frac_mat, cameron_map,
+             'Cameron et al. 2023 - fraction of cells with winning fine label')
 ```
 
 ***
 
-### Mean scores (row-normalised)
+#### Mean scores (row-normalised)
 
 ***
 
-Mean SingleR score per L1 population per H2 cluster, row-normalised to fractions. This was
-the v1.0 metric — shown here for comparison. It is less sharp than the winning label metric
-but captures the continuous score distribution.
-
-***
-
-```{r heatmap_mean, fig.width=16, fig.height=5}
-
-draw_ch(score_mat, 'Correspondence with Qian et al. 2025 MERFISH H2 clusters\n(mean scores, row-normalised)')
-
+```{r cameron_heatmap_scores, fig.width=14, fig.height=5}
+score_mat <- build_score_mat(cameron, 'fine_score_')
+draw_heatmap(score_mat, cameron_map,
+             'Cameron et al. 2023 - mean scores (row-normalised)')
 ```
 
 ***
 
-## H2 group breakdown
+### UMAP
 
 ***
 
-```{r group_breakdown_table}
-
-group_breakdown <- singler %>%
-  mutate(H2_group = h2_group_map[H2_label]) %>%
-  group_by(cell_type, H2_group) %>%
-  summarise(n = n(), .groups = 'drop') %>%
-  group_by(cell_type) %>%
-  mutate(pct = round(100 * n / sum(n), 1)) %>%
-  ungroup() %>%
-  select(cell_type, H2_group, pct) %>%
-  pivot_wider(names_from = H2_group, values_from = pct, values_fill = 0)
-
-col_order <- c('cell_type', 'Upper EN', 'Deep EN', 'Inhibitory',
-               'Progenitor', 'OPC', 'EC', 'Migrating', 'Astrocyte')
-col_order <- col_order[col_order %in% colnames(group_breakdown)]
-
-group_breakdown <- group_breakdown %>%
-  arrange(match(cell_type, l1_order)) %>%
-  select(all_of(col_order))
-
-group_breakdown %>%
-  gt() %>%
-  tab_header(
-    title    = 'Table 2. H2 group breakdown per L1 population',
-    subtitle = 'Percentage of cells whose winning SingleR label fell in each H2 group. Expected diagonal cells highlighted.'
-  ) %>%
-  cols_label(cell_type = 'Cell Type') %>%
-  tab_style(style = cell_fill(color = '#EAF4FB'),
-            locations = cells_body(columns = 'Upper EN',   rows = cell_type == 'Glu-UL')) %>%
-  tab_style(style = cell_fill(color = '#EAF4FB'),
-            locations = cells_body(columns = 'Deep EN',    rows = cell_type == 'Glu-DL')) %>%
-  tab_style(style = cell_fill(color = '#EAF4FB'),
-            locations = cells_body(columns = 'Inhibitory', rows = cell_type == 'GABA')) %>%
-  tab_style(style = cell_fill(color = '#EAF4FB'),
-            locations = cells_body(columns = 'Progenitor', rows = cell_type == 'NPC')) %>%
-  tab_style(style = cell_fill(color = '#EAF4FB'),
-            locations = cells_body(columns = 'OPC',        rows = cell_type == 'OPC')) %>%
-  tab_style(style = cell_fill(color = '#EAF4FB'),
-            locations = cells_body(columns = 'EC',         rows = cell_type == 'Endo-Peri')) %>%
-  tab_style(style = cell_text(weight = 'bold'),
-            locations = cells_column_labels(everything())) %>%
-  tab_options(
-    table.font.size           = px(14),
-    table.border.top.style    = 'none',
-    table.border.bottom.style = 'solid',
-    table.border.bottom.width = px(2),
-    table.border.bottom.color = 'black',
-    heading.align             = 'center'
-  )
-
+```{r cameron_umap, fig.width=14, fig.height=12}
+make_umap_panel(cameron, "Cameron et al. 2023")
 ```
 
 ***
 
-## SingleR diagnostics {.tabset}
+## Polioudakis et al. 2019 {.tabset}
 
 ***
 
-### Delta distribution
+**Reference:** 33,986 cells from frontal cortex, 35,543 genes, 16 cell types.
+Shared genes with query: **15,561 (43.8% of reference)**.
 
 ***
 
-The per-cell delta is the difference between the score for the assigned label and the median
-score across all labels. High deltas indicate confident, unambiguous assignments. Low deltas
-indicate the cell's true type may be absent from the reference or that scores are uniformly
-compressed. Points are coloured by whether the cell was pruned (NA) by SingleR's outlier-based
-threshold. Note that with only 58 cells pruned overall, the pruning threshold was very
-permissive — the delta distributions themselves are more informative than the pruning counts.
+### Summary table
 
 ***
 
-```{r delta_distribution, fig.width=14, fig.height=7}
-
-plotDeltaDistribution(pred, ncol = 6)
-
+```{r pol_table}
+make_summary_table(polioudakis, "Polioudakis et al. 2019")
 ```
 
 ***
 
-### Score heatmap (subsampled)
+### Heatmap {.tabset}
 
 ***
 
-Per-cell score heatmap for a random subsample of 200 cells per L1 population (1,400 cells
-total). Each column is a cell; each row is a Qian H2 reference label. Cells are grouped by
-their L1 annotation. Unambiguous assignments show one dark row per cell; flat profiles
-indicate uncertain assignments. Note that scores shown are pre-fine-tuning and the visually
-top-scoring label may differ from the final assigned label.
+#### Winning label fractions
 
 ***
 
-```{r score_heatmap, fig.width=14, fig.height=8}
-
-plotScoreHeatmap(
-  pred_sub,
-  annotation_col = as.data.frame(
-    colData(query_sub)[, c('cell_type'), drop = FALSE]
-  ),
-  show.pruned = TRUE
-)
-
+```{r pol_heatmap_frac, fig.width=14, fig.height=5}
+frac_mat <- build_frac_mat(polioudakis, 'fine_label')
+draw_heatmap(frac_mat, polioudakis_map,
+             'Polioudakis et al. 2019 - fraction of cells with winning fine label')
 ```
 
 ***
 
-### Leiden concordance
+#### Mean scores (row-normalised)
 
 ***
 
-Concordance between your original unsupervised leiden_harmony_0.2 clusters and the SingleR
-H2 winning labels. Each row is a leiden cluster and each column is a Qian H2 label. The
-fraction of cells in each leiden cluster assigned to each H2 label is shown. Strong diagonal
-enrichment here — where a leiden cluster maps predominantly to a single H2 label — provides
-additional validation that the label transfer is capturing real transcriptional structure
-rather than noise.
-
-***
-
-```{r leiden_concordance, fig.width=14, fig.height=5}
-
-# Leiden cluster is stored in the umap CSV
-leiden_concordance <- umap %>%
-  left_join(singler %>% select(cell_id, H2_label), by = 'cell_id') %>%
-  group_by(leiden_harmony_0.2, H2_label) %>%
-  summarise(n = n(), .groups = 'drop') %>%
-  group_by(leiden_harmony_0.2) %>%
-  mutate(fraction = n / sum(n)) %>%
-  ungroup() %>%
-  select(leiden_harmony_0.2, H2_label, fraction) %>%
-  pivot_wider(names_from = H2_label, values_from = fraction, values_fill = 0) %>%
-  column_to_rownames('leiden_harmony_0.2')
-
-# Order columns by h2_order
-leiden_concordance <- leiden_concordance[,
-  h2_order[h2_order %in% colnames(leiden_concordance)]]
-
-# Column annotation: H2 group
-h2_grps <- h2_group_map[colnames(leiden_concordance)]
-col_ha  <- HeatmapAnnotation(
-  Group = h2_grps,
-  col   = list(Group = group_palette),
-  show_legend = TRUE,
-  annotation_height = unit(3, 'mm')
-)
-
-Heatmap(
-  as.matrix(leiden_concordance),
-  name              = 'Fraction',
-  col               = heatmap_col_fun,
-  cluster_rows      = FALSE,
-  cluster_columns   = FALSE,
-  show_row_names    = TRUE,
-  show_column_names = TRUE,
-  row_names_side    = 'left',
-  column_names_rot  = 45,
-  column_names_gp   = gpar(fontsize = 8),
-  row_names_gp      = gpar(fontsize = 10),
-  top_annotation    = col_ha,
-  column_title      = 'Leiden cluster vs H2 label concordance',
-  column_title_gp   = gpar(fontsize = 11, fontface = 'bold'),
-  border            = FALSE,
-  use_raster        = TRUE
-)
-
+```{r pol_heatmap_scores, fig.width=14, fig.height=5}
+score_mat <- build_score_mat(polioudakis, 'fine_score_')
+draw_heatmap(score_mat, polioudakis_map,
+             'Polioudakis et al. 2019 - mean scores (row-normalised)')
 ```
 
 ***
 
-## UMAP
+### UMAP
 
 ***
 
-```{r umap_combined, fig.width=16, fig.height=12}
+```{r pol_umap, fig.width=14, fig.height=12}
+make_umap_panel(polioudakis, "Polioudakis et al. 2019")
+```
 
-umap_theme <- theme_classic(base_size = 11) +
-  theme(
-    plot.title      = element_text(hjust = 0.5, face = 'bold', size = 11),
-    legend.text     = element_text(size = 8),
-    axis.text       = element_blank(),
-    axis.ticks      = element_blank(),
-    axis.line       = element_blank(),
-    legend.key.size = unit(0.4, 'cm')
-  )
+***
 
-group_order <- c('Upper EN', 'Deep EN', 'Inhibitory', 'Progenitor',
-                 'OPC', 'EC', 'Migrating', 'Astrocyte')
+## Nowakowski et al. 2017 {.tabset}
 
-p_l1 <- ggplot(umap, aes(x = UMAP1, y = UMAP2, colour = cell_type)) +
-  geom_point(size = 0.1, alpha = 0.5) +
-  scale_colour_manual(values = custom_palette, name = 'Cell type') +
-  labs(title = 'A: L1 cell type annotations') +
-  umap_theme +
-  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+***
 
-p_h2_group <- umap %>%
-  mutate(H2_group = factor(H2_group, levels = group_order)) %>%
-  ggplot(aes(x = UMAP1, y = UMAP2, colour = H2_group)) +
-  geom_point(size = 0.1, alpha = 0.4) +
-  scale_colour_manual(values = group_palette, name = 'H2 group', na.value = 'grey80') +
-  labs(title = 'B: SingleR H2 groups (aggregated)') +
-  umap_theme +
-  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+**Reference:** 4,261 cells from developing cortex and GE, 56,864 genes, 48 cell types.
+Shared genes with query: **13,308 (23.4% of reference)**.
 
-p_h2 <- ggplot(umap, aes(x = UMAP1, y = UMAP2, colour = H2_label)) +
-  geom_point(size = 0.1, alpha = 0.4) +
-  labs(title = 'C: SingleR H2 labels (all clusters)', colour = 'H2 label') +
-  umap_theme +
-  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1), ncol = 2))
+**Note on EN-PFC and nEN clusters:** The Nowakowski 2017 cluster labels EN-PFC1/2/3, EN-V1-1/2/3
+and nEN-early1/2/nEN-late do not carry explicit upper/deep layer designations in the original publication.
+These are annotated here as ExN (area-specific excitatory neurons) and nEN (newborn excitatory neurons)
+respectively, without layer assignment.
 
-p_pcw <- ggplot(umap, aes(x = UMAP1, y = UMAP2, colour = as.numeric(PCW))) +
-  geom_point(size = 0.1, alpha = 0.5) +
-  scale_colour_viridis_c(name = 'PCW', option = 'plasma') +
-  labs(title = 'D: Post-conception weeks (PCW)') +
-  umap_theme
+***
 
-plot_grid(p_l1, p_h2_group, p_h2, p_pcw, ncol = 2, nrow = 2, align = 'hv')
+### Summary table
 
+***
+
+```{r now_table}
+make_summary_table(nowakowski, "Nowakowski et al. 2017")
+```
+
+***
+
+### Heatmap {.tabset}
+
+***
+
+#### Winning label fractions
+
+***
+
+```{r now_heatmap_frac, fig.width=18, fig.height=5}
+frac_mat <- build_frac_mat(nowakowski, 'fine_label')
+draw_heatmap(frac_mat, nowakowski_map,
+             'Nowakowski et al. 2017 - fraction of cells with winning fine label')
+```
+
+***
+
+#### Mean scores (row-normalised)
+
+***
+
+```{r now_heatmap_scores, fig.width=18, fig.height=5}
+score_mat <- build_score_mat(nowakowski, 'fine_score_')
+draw_heatmap(score_mat, nowakowski_map,
+             'Nowakowski et al. 2017 - mean scores (row-normalised)')
+```
+
+***
+
+### UMAP
+
+***
+
+```{r now_umap, fig.width=14, fig.height=12}
+make_umap_panel(nowakowski, "Nowakowski et al. 2017")
 ```
 
 ***
@@ -624,35 +580,23 @@ plot_grid(p_l1, p_h2_group, p_h2, p_pcw, ncol = 2, nrow = 2, align = 'hv')
 
 ***
 
-**Reference dataset:** Qian et al. (2025) *Nature*. MERFISH spatial transcriptomics of
-the developing human cortex. 18 million cells across 8 cortical areas and 7 developmental
-timepoints (GW15–GW34), 300-gene panel.
+**References:** Cameron et al. 2023 *Biological Psychiatry*; Polioudakis et al. 2019 *Cell*;
+Nowakowski et al. 2017 *Science*.
 
-**Reference preparation:** V1/V2 excluded (transcriptionally discontinuous per Qian et al.).
-All gestational weeks retained. Subsampled to 500 cells per H2 cluster (33 clusters,
-16,500 cells total).
+**Classification:** SingleR v2.14.0 run with `classifySingleR()` using 8 threads.
+Each reference was run twice — once with fine-grained cluster labels and once with L1 group labels.
 
-**Gene overlap:** 270 of 300 MERFISH panel genes (90%) present in our snRNA-seq data.
+**Memory strategy:** Query h5ad files store counts as sparse CSR in `layers/counts`. The R
+classification script reads these sparse components directly via `rhdf5` without densification,
+normalises with `scuttle::logNormCounts()` maintaining sparsity throughout, avoiding the
+~200GB memory requirement of `anndataR::as_SingleCellExperiment()`.
 
-**Classification:** SingleR v2.14.0, `classifySingleR()`, 8 threads, logNorm counts,
-`assay.type = "logcounts"`. 58 of 679,738 cells pruned (0.009%).
+**Gene overlap:** Queries were subsetted to genes shared with each reference prior to
+classification. Shared gene counts: Cameron 14,840 (49.0%), Polioudakis 15,561 (43.8%),
+Nowakowski 13,308 (23.4%).
 
-**Heatmap metrics:** Winning label fractions (v1.1+) use hard per-cell label assignments,
-directly replicating Qian et al. Extended Data Fig 3d. Mean score heatmap (v1.0 metric)
-shown for comparison.
-
-**Colour scale (v1.3):** White–yellow–orange–dark red replaces purple gradient for
-improved perceptual contrast of enrichment blocks.
-
-**Diagnostics (v1.3):** Delta distribution and score heatmap use the built-in SingleR
-`plotDeltaDistribution()` and `plotScoreHeatmap()` functions on a subsampled query
-(200 cells per L1 population). Leiden concordance uses leiden_harmony_0.2 cluster
-assignments from the original snRNA-seq analysis.
-
-**Interpretation:** Diagonal enrichment confirms transcriptionally-defined L1 populations
-correspond to spatially-validated Qian H2 clusters. Glu-DL shows strong Deep EN enrichment
-(~60% to EN-ET-SP-P). Glu-UL enrichment in the Upper EN group is more diffuse, consistent
-with the later maturation of upper layer neurons at mid-gestation stages. MG row is a
-negative control — assignments are biologically uninterpretable.
+**Heatmap colour scale:** White → pale yellow → orange → dark red (0 to 0.6+ fraction).
+Row annotation bar shows L1 cell type colours. Column annotation bar shows the L1 group
+each reference cluster maps to. Max fraction bar chart shown on right of each heatmap.
 
 ***
