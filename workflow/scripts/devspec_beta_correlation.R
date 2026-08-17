@@ -14,7 +14,37 @@
 #  is consistent with an allele-coding artifact or not.
 #
 #  Step 5 of the developmental-specificity pipeline.
-
+#
+#--------------------------------------------------------------------------------------
+#
+#  ADDITION -- Fujita-significant opposite effects + allele-frequency-aware allele
+#  checking (reviewer follow-up):
+#
+#    1. Fujita's own significant_by_2step_FDR call is now carried through as
+#       significant_fugita on paired_betas (previously dropped entirely).
+#    2. The opposite-effect subset (opp) is now restricted to pairs significant in
+#       BOTH datasets (fetal qval<0.05, already true upstream, AND
+#       significant_fugita == "Yes") -- i.e. only genuinely well-powered discordant
+#       calls in both datasets are examined, not fetal-significant-vs-any-Fujita-beta.
+#       Everything else about opp's construction and scope is unchanged: allele/AF
+#       annotation still applies only to this opposite-effect subset, not the full
+#       paired_betas table.
+#    3. Within that subset, REF/ALT agreement alone can be coincidental -- two SNPs
+#       can share the same two bases (A/G, say) without truly representing the same
+#       allele coding, letting a genuine flip masquerade as "aligned". Allele
+#       frequency is now checked as a second, independent line of evidence: for
+#       "aligned" calls we expect af_my ~ af_fugita; for "flipped" calls we expect
+#       af_my ~ 1 - af_fugita. AF_TOLERANCE (0.1 / 10 percentage points) is a default
+#       judgement call, not a validated threshold -- adjust below once you've seen
+#       how many rows it flags.
+#    4. overall_allele_status combines both checks into one read: aligned_confirmed,
+#       aligned_af_discordant (REF/ALT match but frequencies don't -- the masking
+#       scenario), flipped_confirmed, flipped_af_discordant, mismatched.
+#
+#    ASSUMPTION: maf_1000G is treated as the frequency of a1_1000G specifically
+#    (matching plink .frq convention), not necessarily the true minor allele -- worth
+#    confirming against how thousandG_frq is actually structured.
+#
 #--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
@@ -47,6 +77,9 @@ fugita_dir      <- snakemake@params[["fugita_dir"]]
 geno_pc     <- 4
 norm_method <- "quantile"
 
+# Allele-frequency concordance tolerance -- see ADDITION note above.
+AF_TOLERANCE <- 0.1
+
 exp_pc_map <- c(
   "Glu-UL"    = 50, "Glu-DL"    = 40, "GABA"      = 30,
   "NPC"       = 30, "MG"        = 30, "OPC"       = 30,
@@ -63,8 +96,10 @@ celltype_map <- tibble(
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("n_fugita_files", "thousandG_file", "pvar_file", "n_comparisons", "output_file"),
-  value    = c(length(fugita_files), thousandG_file, pvar_file, nrow(celltype_map), output_file)
+  variable = c("n_fugita_files", "thousandG_file", "pvar_file", "n_comparisons",
+               "af_tolerance", "output_file"),
+  value    = c(length(fugita_files), thousandG_file, pvar_file, nrow(celltype_map),
+               AF_TOLERANCE, output_file)
 ) |>
   knitr::kable(format = "simple", align = "l") |>
   print()
@@ -137,7 +172,8 @@ for (i in seq_len(nrow(celltype_map))) {
     na = c("", "NA", "na", "-"), show_col_types = FALSE
   ) %>%
     select(snp = snps, gene = gene_id, beta_fugita = beta,
-           ref_fugita = REF, alt_fugita = ALT, af_fugita = ALT_AF) %>%
+           ref_fugita = REF, alt_fugita = ALT, af_fugita = ALT_AF,
+           significant_fugita = significant_by_2step_FDR) %>%
     mutate(beta_fugita = as.numeric(beta_fugita)) %>%
     filter(str_detect(snp, "^rs"), str_detect(gene, "^ENSG"), !is.na(beta_fugita))
 
@@ -150,7 +186,7 @@ for (i in seq_len(nrow(celltype_map))) {
     , .SD[which.max(abs(beta_fugita))],
     by = .(snp, gene)
   ][, .(key = paste(snp, gene, sep = "_"), snp, gene,
-        beta_fugita, ref_fugita, alt_fugita, af_fugita)] %>%
+        beta_fugita, ref_fugita, alt_fugita, af_fugita, significant_fugita)] %>%
     as_tibble()
 
   rm(fugita_df)
@@ -161,25 +197,26 @@ for (i in seq_len(nrow(celltype_map))) {
   # --- Join fetal and Fujita on key ---
   paired_betas <- pooled_my %>%
     inner_join(
-      pooled_fugita %>% select(key, beta_fugita, ref_fugita, alt_fugita, af_fugita),
+      pooled_fugita %>%
+        select(key, beta_fugita, ref_fugita, alt_fugita, af_fugita, significant_fugita),
       by = "key"
     ) %>%
     select(snp, gene, beta_my, beta_fugita, af_my,
-           ref_fugita, alt_fugita, af_fugita) %>%
+           ref_fugita, alt_fugita, af_fugita, significant_fugita) %>%
     mutate(my_cell_type = my_ct, fugita_cell_type = fu_ct)
 
   message("  Overlapping SNP-gene pairs: ", nrow(paired_betas))
 
   paired_results[[paste(my_ct, fu_ct, sep = "_vs_")]] <- paired_betas
 
-  # --- Flag opposite effects ---
+  # --- Flag opposite effects, restricted to pairs significant in BOTH datasets ---
   opp <- paired_betas %>%
-    filter(sign(beta_my) != sign(beta_fugita))
+    filter(sign(beta_my) != sign(beta_fugita), significant_fugita == "Yes")
 
-  message("  Opposite-effect pairs: ", nrow(opp))
+  message("  Opposite-effect pairs (fetal AND Fujita significant): ", nrow(opp))
 
   if (nrow(opp) > 0) {
-    # Join in our REF/ALT from pvar
+    # Join in our REF/ALT from pvar, and 1000G alleles/frequency
     opp_dt <- as.data.table(opp)
     setkey(opp_dt, snp)
     opp_dt <- pvar_dt[opp_dt, on = "snp"]
@@ -197,6 +234,33 @@ for (i in seq_len(nrow(celltype_map))) {
           ref_my == a1_1000G & alt_my == a2_1000G       ~ "aligned",
           ref_my == a2_1000G & alt_my == a1_1000G       ~ "flipped",
           TRUE                                          ~ "mismatched"
+        ),
+
+        # AF concordance: for "aligned" expect af_my ~ af_fugita; for "flipped"
+        # expect af_my ~ 1 - af_fugita. NA where status is "mismatched" -- no
+        # expected direction to check against.
+        af_diff_fugita = case_when(
+          allele_status_fugita == "aligned" ~ abs(af_my - af_fugita),
+          allele_status_fugita == "flipped" ~ abs(af_my - (1 - af_fugita)),
+          TRUE                               ~ NA_real_
+        ),
+        af_concordant_fugita = af_diff_fugita <= AF_TOLERANCE,
+
+        af_diff_1000G = case_when(
+          is.na(allele_status_1000G)         ~ NA_real_,
+          allele_status_1000G == "aligned"   ~ abs(af_my - maf_1000G),
+          allele_status_1000G == "flipped"   ~ abs(af_my - (1 - maf_1000G)),
+          TRUE                                ~ NA_real_
+        ),
+        af_concordant_1000G = af_diff_1000G <= AF_TOLERANCE,
+
+        overall_allele_status = case_when(
+          allele_status_fugita == "aligned" & af_concordant_fugita        ~ "aligned_confirmed",
+          allele_status_fugita == "aligned" & !af_concordant_fugita       ~ "aligned_af_discordant",
+          allele_status_fugita == "flipped" & af_concordant_fugita        ~ "flipped_confirmed",
+          allele_status_fugita == "flipped" & !af_concordant_fugita       ~ "flipped_af_discordant",
+          allele_status_fugita == "mismatched"                            ~ "mismatched",
+          TRUE                                                             ~ NA_character_
         )
       ) %>%
       select(my_cell_type, fugita_cell_type, gene, snp,
@@ -204,16 +268,19 @@ for (i in seq_len(nrow(celltype_map))) {
              af_my, ref_my, alt_my,
              ref_fugita, alt_fugita, af_fugita,
              a1_1000G, a2_1000G, maf_1000G,
-             allele_status_fugita, allele_status_1000G)
+             allele_status_fugita, af_diff_fugita, af_concordant_fugita,
+             allele_status_1000G, af_diff_1000G, af_concordant_1000G,
+             overall_allele_status)
 
     opposite_results[[paste(my_ct, fu_ct, sep = "_vs_")]] <- opp_annotated
 
+    aligned_af_discordant_n <- sum(opp_annotated$overall_allele_status == "aligned_af_discordant",
+                                    na.rm = TRUE)
     message("  Allele status (vs Fujita): ",
             paste(names(table(opp_annotated$allele_status_fugita)),
                   table(opp_annotated$allele_status_fugita), sep = "=", collapse = ", "))
-    message("  Allele status (vs 1000G): ",
-            paste(names(table(opp_annotated$allele_status_1000G, useNA = "ifany")),
-                  table(opp_annotated$allele_status_1000G, useNA = "ifany"), sep = "=", collapse = ", "))
+    message("  Opposite-effect pairs where REF/ALT 'aligned' but AF discordant ",
+            "(masking scenario): ", aligned_af_discordant_n)
   }
 }
 
@@ -227,26 +294,23 @@ paired_combined <- bind_rows(paired_results)
 opposite_combined <- bind_rows(opposite_results)
 
 message("Total paired pairs across all comparisons: ", nrow(paired_combined))
-message("Total opposite-effect pairs across all comparisons: ", nrow(opposite_combined))
+message("Total opposite-effect pairs (fetal AND Fujita significant): ", nrow(opposite_combined))
 
 message("\nCorrelation per comparison:")
 paired_combined %>%
   group_by(my_cell_type, fugita_cell_type) %>%
   summarise(
     n_pairs = n(),
-    n_opposite = sum(sign(beta_my) != sign(beta_fugita)),
-    pct_opposite = round(100 * n_opposite / n_pairs, 1),
+    n_opposite_both_sig = sum(sign(beta_my) != sign(beta_fugita) & significant_fugita == "Yes"),
+    pct_opposite_both_sig = round(100 * n_opposite_both_sig / n_pairs, 1),
     pearson_r = round(cor(beta_my, beta_fugita, use = "complete.obs"), 3),
     .groups = "drop"
   ) %>%
   print(n = Inf)
 
 if (nrow(opposite_combined) > 0) {
-  message("\nAllele status summary (vs Fujita), opposite-effect pairs only:")
-  print(opposite_combined %>% count(my_cell_type, fugita_cell_type, allele_status_fugita))
-
-  message("\nAllele status summary (vs 1000G), opposite-effect pairs only:")
-  print(opposite_combined %>% count(my_cell_type, fugita_cell_type, allele_status_1000G))
+  message("\nOverall allele status summary, opposite-effect (both-significant) pairs only:")
+  print(opposite_combined %>% count(my_cell_type, fugita_cell_type, overall_allele_status))
 }
 
 # ========================================================================================
@@ -257,7 +321,8 @@ write_rds(
   list(
     paired_betas      = paired_combined,
     opposite_effects  = opposite_combined,
-    celltype_map      = celltype_map
+    celltype_map      = celltype_map,
+    af_tolerance      = AF_TOLERANCE
   ),
   output_file
 )
