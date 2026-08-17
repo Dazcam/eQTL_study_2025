@@ -3,11 +3,16 @@ configfile: "../config/config.yaml"
 rule all:
    input:
 #       config["dev_specificity"]["extract_universe"]["out_file"],
+#       config["dev_specificity"]["ld_clump"]["snp_list"],         
+#       config["dev_specificity"]["run_ld_clump"]["sentinel"],
+#       config["dev_specificity"]["parse_ld_clump"]["out_file"]
 #       config["dev_specificity"]["classify_specificity"]["out_file"]
 #       config["dev_specificity"]["ocr_enrich"]["out_file"] 
 #        config["dev_specificity"]["eqtl_effects"]["out_file"]
-        config["dev_specificity"]["report"]["html"],
+#        config["dev_specificity"]["extract_pairwise_universe"]["out_file"]
+#        config["dev_specificity"]["report"]["html"],
 #       config["dev_specificity"]["beta_correlation"]["out_file"]    
+        config["dev_specificity"]["heterogeneity_test"]["out_file"]
 
 def get_egene_universe_inputs():
     geno_pc = config["tensorQTL"]["geno_pcs"]
@@ -16,6 +21,27 @@ def get_egene_universe_inputs():
         f"{config['dev_specificity']['extract_universe']['qtl_dir']}/{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
         f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
         for ct in config["cell_types"]
+    ]
+
+DEVSPEC_L1_FETAL_TYPES = ["Glu-UL", "Glu-DL", "GABA", "MG", "OPC", "Endo-Peri", "NPC"]
+DEVSPEC_FUGITA_TYPES   = ["Exc", "Inh", "OPC", "Mic", "End"]
+
+def get_l1_pairwise_nom_files():
+    nom_dir = config["dev_specificity"]["eqtl_effects"]["nom_dir"]
+    return [f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv" for ct in DEVSPEC_L1_FETAL_TYPES]
+
+def get_l1_pairwise_fugita_files():
+    fugita_dir = config["dev_specificity"]["classify_specificity"]["fugita_dir"]
+    return [f"{fugita_dir}celltype-eqtl-sumstats.{ct}.tsv" for ct in DEVSPEC_FUGITA_TYPES]
+
+def get_l1_pairwise_perm_files():
+    qtl_dir = config["dev_specificity"]["extract_universe"]["qtl_dir"]
+    geno_pc = config["tensorQTL"]["geno_pcs"]
+    norm_method = config["tensorQTL"]["norm_methods"][0]
+    return [
+        f"{qtl_dir}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
+        f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
+        for ct in DEVSPEC_L1_FETAL_TYPES
     ]
 
 def get_fugita_inputs():
@@ -50,6 +76,35 @@ rule extract_eqtl_universe:
     log:    config["dev_specificity"]["extract_universe"]["log"]
     script: "../scripts/devspec_extract_universe.R"
 
+rule extract_pairwise_universe:
+    input:  nom_files    = get_l1_pairwise_nom_files(),
+            perm_files   = get_l1_pairwise_perm_files(),
+            fugita_files = get_l1_pairwise_fugita_files(),
+            pvar_file    = config["dev_specificity"]["beta_correlation"]["pvar_file"]
+    output: config["dev_specificity"]["extract_pairwise_universe"]["out_file"]
+    params: fetal_cell_types  = DEVSPEC_L1_FETAL_TYPES,
+            fugita_cell_types = DEVSPEC_FUGITA_TYPES,
+            af_tol             = config["dev_specificity"]["extract_pairwise_universe"]["af_tol"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 24000, time = "01:00:00"
+    threads: 4
+    message: "Build pairwise fetal-adult tested-pair background with allele harmonization (9 comparisons)"
+    benchmark: "reports/benchmarks/dev_specificity.extract_pairwise_universe.txt"
+    log:    config["dev_specificity"]["extract_pairwise_universe"]["log"]
+    script: "../scripts/devspec_extract_pairwise_universe.R"
+
+rule heterogeneity_test:
+    input:  background = config["dev_specificity"]["extract_pairwise_universe"]["out_file"]
+    output: config["dev_specificity"]["heterogeneity_test"]["out_file"]
+    params: fdr_thresh = config["dev_specificity"]["heterogeneity_test"]["fdr_thresh"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 2, mem_mb = 32000, time = "00:45:00"
+    threads: 2
+    message: "Pairwise Cochran's Q heterogeneity test, fetal vs adult, per matched cell-type comparison"
+    benchmark: "reports/benchmarks/dev_specificity.heterogeneity_test.txt"
+    log:    config["dev_specificity"]["heterogeneity_test"]["log"]
+    script: "../scripts/devspec_heterogeneity_test.R"
+
 rule classify_eqtl_specificity:
     input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"],
             fugita_files = get_fugita_inputs()
@@ -63,15 +118,100 @@ rule classify_eqtl_specificity:
     log:    config["dev_specificity"]["classify_specificity"]["log"]
     script: "../scripts/devspec_classify_specificity.R"
 
+rule prep_ld_clump_input:
+    input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"]
+    output: assoc_dir      = directory(config["dev_specificity"]["prep_ld_clump_input"]["assoc_dir"]),
+            singleton_snps = config["dev_specificity"]["prep_ld_clump_input"]["singleton_snps"],
+            snp_list       = config["dev_specificity"]["prep_ld_clump_input"]["snp_list"]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Prepare per-gene plink association files for LD-independence clumping"
+    benchmark: "reports/benchmarks/dev_specificity.prep_ld_clump_input.txt"
+    log:    config["dev_specificity"]["prep_ld_clump_input"]["log"]
+    script: "../scripts/devspec_prep_ld_clump_input.R"
+
+rule run_ld_clump:
+    input:  assoc_dir = rules.prep_ld_clump_input.output.assoc_dir,
+            snp_list  = rules.prep_ld_clump_input.output.snp_list
+    output: clump_dir = directory(config["dev_specificity"]["run_ld_clump"]["clump_dir"]),
+            sentinel  = config["dev_specificity"]["run_ld_clump"]["sentinel"]
+    params: bfile_prefix  = config["geno_post_impute"]["vcf_to_plink"]["params"],
+            subset_prefix = config["dev_specificity"]["run_ld_clump"]["subset_prefix"],
+            clump_kb = config["dev_specificity"]["run_ld_clump"]["clump_kb"],
+            clump_r2 = config["dev_specificity"]["run_ld_clump"]["clump_r2"]
+    envmodules: "PLINK"
+    message: "LD-clump multi-SNP genes' eSNPs against cohort genotypes (independence check)"
+    benchmark: "reports/benchmarks/dev_specificity.run_ld_clump.txt"
+    log:    config["dev_specificity"]["run_ld_clump"]["log"]
+    shell:
+        """
+        mkdir -p {output.clump_dir}
+        mkdir -p $(dirname {params.subset_prefix})
+
+        echo "=== Subsetting genome-wide bfile to candidate SNPs ===" > {log}
+        plink --bfile {params.bfile_prefix} \
+              --extract {input.snp_list} \
+              --make-bed \
+              --out {params.subset_prefix} >> {log} 2>&1
+
+        n_requested=$(wc -l < {input.snp_list})
+        n_extracted=$(wc -l < {params.subset_prefix}.bim)
+        echo "Candidate SNPs requested: $n_requested" >> {log}
+        echo "Candidate SNPs found in genotype data: $n_extracted" >> {log}
+        if [ "$n_requested" -ne "$n_extracted" ]; then
+            echo "WARNING: $((n_requested - n_extracted)) candidate SNPs missing from genotype data" >> {log}
+        fi
+
+        echo "" >> {log}
+        echo "=== Running per-gene clump (kb={params.clump_kb}, r2={params.clump_r2}) ===" >> {log}
+
+        n_genes=0
+        for assoc_file in {input.assoc_dir}/*.assoc; do
+            gene_id=$(basename "$assoc_file" .assoc)
+            plink --bfile {params.subset_prefix} \
+                  --clump "$assoc_file" \
+                  --clump-p1 1 --clump-p2 1 \
+                  --clump-r2 {params.clump_r2} \
+                  --clump-kb {params.clump_kb} \
+                  --clump-field P \
+                  --clump-snp-field SNP \
+                  --out {output.clump_dir}/$gene_id >> {log} 2>&1
+            n_genes=$((n_genes + 1))
+        done
+
+        n_clumped=$(find {output.clump_dir} -maxdepth 1 -name '*.clumped' 2>/dev/null | wc -l)
+        echo "" >> {log}
+        echo "Genes processed: $n_genes" >> {log}
+        echo "Clump output files produced: $n_clumped" >> {log}
+        if [ "$n_genes" -ne "$n_clumped" ]; then
+            echo "WARNING: $((n_genes - n_clumped)) genes produced no .clumped output (check log above for plink errors/warnings on those genes)" >> {log}
+            echo "Not writing sentinel -- treat this run as incomplete." >> {log}
+            exit 1
+        fi
+
+        touch {output.sentinel}
+        """
+
+rule parse_ld_clump:
+    input:  clump_dir             = rules.run_ld_clump.output.clump_dir,
+            run_ld_clump_sentinel = rules.run_ld_clump.output.sentinel,
+            singleton_snps        = rules.prep_ld_clump_input.output.singleton_snps
+    output: config["dev_specificity"]["parse_ld_clump"]["out_file"]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Parse LD clump results into final pruned, LD-independent eGene-eSNP universe"
+    benchmark: "reports/benchmarks/dev_specificity.parse_ld_clump.txt"
+    log:    config["dev_specificity"]["parse_ld_clump"]["log"]
+    script: "../scripts/devspec_parse_ld_clump.R"
+
 rule ocr_enrich:
-    input:  classification = config["dev_specificity"]["classify_specificity"]["out_file"],
-            snp_lookups = get_snp_lookup_files(),
-            li_s6 = config["dev_specificity"]["ocr_enrich"]["li_s6"],
-            li_s7 = config["dev_specificity"]["ocr_enrich"]["li_s7"]
+    input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+            independent_snps = rules.parse_ld_clump.output[0],
+            snp_lookups      = get_snp_lookup_files(),
+            li_s6            = config["dev_specificity"]["ocr_enrich"]["li_s6"],
+            li_s7            = config["dev_specificity"]["ocr_enrich"]["li_s7"]
     output: config["dev_specificity"]["ocr_enrich"]["out_file"]
     params: ziffra_dir = config["dev_specificity"]["ocr_enrich"]["ziffra_dir"]
     singularity: config["containers"]["r_eqtl"]
-    resources: threads = 4, mem_mb = 32000, time = "04:00:00"
+    resources: threads = 4, mem_mb = 32000, time = "06:00:00"
     threads: 4
     message: "Test fetal-specific eQTL enrichment in fetal (Ziffra) and adult (Li et al.) OCRs"
     benchmark: "reports/benchmarks/dev_specificity.ocr_enrich.txt"

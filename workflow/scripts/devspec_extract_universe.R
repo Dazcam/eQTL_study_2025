@@ -13,7 +13,22 @@
 #
 #  Step 1 of the developmental-specificity pipeline (independent for now;
 #  designed to fold into replication_pi1_enrichment.R later if retained for the paper).
-
+#
+#--------------------------------------------------------------------------------------
+#
+#  ADDITION -- SNPs-per-gene diagnostic (LD-independence check):
+#
+#  Before pruning eSNPs for the OCR enrichment analysis, we need to know how many
+#  of the ~6,844 unique (eGene, eSNP) pairs across all 19 cell types actually
+#  involve more than one distinct eSNP mapped to the same eGene -- since those are
+#  the only cases where LD between the two eSNPs is even a possibility, and the
+#  only cases that would need pruning before being treated as "independent" signals.
+#  This step reports the distribution of SNPs-per-gene (1, 2, 3, 4+) and lists which
+#  genes/SNPs fall into the >1 bucket, purely to size the problem before deciding on
+#  an LD-testing approach (pairwise plink --r2 vs per-gene --clump). It does not
+#  change eqtl_universe's contents or its written output -- diagnostic only, printed
+#  to the log.
+#
 #--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
@@ -129,6 +144,42 @@ message("\nTotal unique eGenes across all ", length(cell_types),
 
 message("\nRows per cell type:")
 print(eqtl_universe %>% count(cell_type, level))
+
+# --- SNPs-per-gene diagnostic (see ADDITION note at top of file) ----------------------
+message("\n--- SNPs-per-gene diagnostic (for OCR LD-independence check) ---\n")
+
+unique_gene_snp_pairs <- eqtl_universe %>%
+  distinct(phenotype_id, variant_id)
+
+message("Unique (eGene, eSNP) pairs across all cell types: ", nrow(unique_gene_snp_pairs))
+message("Unique eGenes represented: ", n_distinct(unique_gene_snp_pairs$phenotype_id))
+
+snps_per_gene <- unique_gene_snp_pairs %>%
+  count(phenotype_id, name = "n_snps")
+
+message("\nDistribution of SNPs per gene:")
+snps_per_gene %>%
+  count(n_snps, name = "n_genes") %>%
+  arrange(n_snps) %>%
+  knitr::kable(format = "simple", align = "l") %>%
+  print()
+
+n_single_snp_genes <- sum(snps_per_gene$n_snps == 1)
+n_multi_snp_genes  <- sum(snps_per_gene$n_snps > 1)
+
+message("\nGenes with exactly 1 SNP: ", n_single_snp_genes)
+message("Genes with >1 SNP (candidates for LD check): ", n_multi_snp_genes)
+
+# Full per-gene SNP listing for genes with >1 SNP -- this is the direct input
+# list for whichever LD-testing approach is chosen next (pairwise plink --r2
+# vs per-gene --clump). Diagnostic only, printed to the log -- not written to
+# any output file at this stage.
+multi_snp_gene_detail <- unique_gene_snp_pairs %>%
+  semi_join(snps_per_gene %>% filter(n_snps > 1), by = "phenotype_id") %>%
+  arrange(phenotype_id, variant_id)
+
+message("\nSNPs mapped to genes with >1 SNP (first 20 rows shown):")
+print(head(multi_snp_gene_detail, 20))
 
 # Write single tracked output ----------------------------------------------------------
 write_rds(eqtl_universe, output_universe)

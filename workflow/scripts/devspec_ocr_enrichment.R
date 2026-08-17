@@ -20,7 +20,18 @@
 #  matching our fetal cell populations, plus a cortical union set.
 #
 #  Step 3 of the developmental-specificity pipeline.
-
+#
+#--------------------------------------------------------------------------------------
+#
+#  ADDITION -- LD-independence filtering (reviewer request): before pulling
+#  fetal-specific/shared SNP lists, any_table is restricted to the LD-independent
+#  (eGene, eSNP) universe produced by the 3-step LD-clumping sub-pipeline
+#  (devspec_prep_ld_clump_input.R -> run_ld_clump -> devspec_parse_ld_clump.R). This
+#  ensures genes with multiple mapped eSNPs across cell types contribute only their
+#  LD-independent representative SNP(s) to the OCR enrichment SNP sets, rather than
+#  redundant SNPs tagging the same underlying signal. See parse_ld_clump's log for
+#  the final independent-pair counts (3,327 pairs / 3,121 genes at time of writing).
+#
 #--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
@@ -46,21 +57,22 @@ suppressPackageStartupMessages({
 })
 
 # Input and output paths ---------------------------------------------------------------
-classification_file <- snakemake@input[["classification"]]
-snp_lookup_files    <- snakemake@input[["snp_lookups"]]
-li_s6_file          <- snakemake@input[["li_s6"]]
-li_s7_file          <- snakemake@input[["li_s7"]]
-output_file         <- snakemake@output[[1]]
-ziffra_dir          <- snakemake@params[["ziffra_dir"]]
+classification_file  <- snakemake@input[["classification"]]
+independent_snps_file <- snakemake@input[["independent_snps"]]
+snp_lookup_files     <- snakemake@input[["snp_lookups"]]
+li_s6_file           <- snakemake@input[["li_s6"]]
+li_s7_file           <- snakemake@input[["li_s7"]]
+output_file          <- snakemake@output[[1]]
+ziffra_dir           <- snakemake@params[["ziffra_dir"]]
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("classification_file", "n_snp_lookups", "li_s6_file", "li_s7_file",
-               "ziffra_dir", "output_file"),
-  value    = c(classification_file, length(snp_lookup_files), li_s6_file, li_s7_file,
-               ziffra_dir, output_file)
+  variable = c("classification_file", "independent_snps_file", "n_snp_lookups",
+               "li_s6_file", "li_s7_file", "ziffra_dir", "output_file"),
+  value    = c(classification_file, independent_snps_file, length(snp_lookup_files),
+               li_s6_file, li_s7_file, ziffra_dir, output_file)
 ) |>
   knitr::kable(format = "simple", align = "l") |>
   print()
@@ -168,10 +180,20 @@ perform_permutation_test <- function(sig_snps_gr, peaks_gr, n_perm = 1000) {
 
 # Main -----------------------------------------------------------------------------------
 
-# 1. Load fetal-specific SNPs from classification output --------------------------------
+# 1. Load fetal-specific SNPs from classification output, restricted to the
+#    LD-independent universe -----------------------------------------------------------
 message("\nLoading fetal-specific SNP list from classification output ...")
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
+
+message("\nRestricting to LD-independent eGene-eSNP pairs ...")
+independent_universe <- read_rds(independent_snps_file)
+
+n_before_prune <- nrow(any_table)
+any_table <- any_table %>%
+  semi_join(independent_universe, by = c("phenotype_id", "variant_id"))
+message("  any_table rows before LD pruning: ", n_before_prune)
+message("  any_table rows after LD pruning: ", nrow(any_table))
 
 fetal_specific_snps <- any_table %>%
   filter(final_category == "testable_specific") %>%

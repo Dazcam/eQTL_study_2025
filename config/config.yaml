@@ -30,6 +30,14 @@ cell_types:
   - "NPC-0"
   - "NPC-1"
   - "NPC-2"
+#  - "NPC-to-Glu-DL-Q4-Bin1"
+#  - "NPC-to-Glu-DL-Q4-Bin2"
+#  - "NPC-to-Glu-DL-Q4-Bin3"
+#  - "NPC-to-Glu-DL-Q4-Bin4"
+#  - "NPC-to-Glu-UL-Q4-Bin1"
+#  - "NPC-to-Glu-UL-Q4-Bin2"
+#  - "NPC-to-Glu-UL-Q4-Bin3"
+#  - "NPC-to-Glu-UL-Q4-Bin4"
 
 exp_pc_map:
   Glu-UL: 50
@@ -51,6 +59,14 @@ exp_pc_map:
   NPC-0: 50
   NPC-1: 30
   NPC-2: 20
+  NPC-to-Glu-DL-Q4-Bin1: 40
+  NPC-to-Glu-DL-Q4-Bin2: 40
+  NPC-to-Glu-DL-Q4-Bin3: 40
+  NPC-to-Glu-DL-Q4-Bin4: 40
+  NPC-to-Glu-UL-Q4-Bin1: 50
+  NPC-to-Glu-UL-Q4-Bin2: 50
+  NPC-to-Glu-UL-Q4-Bin3: 50
+  NPC-to-Glu-UL-Q4-Bin4: 50
 
 ## Remove on freeze 2
 cell_types_bryois:
@@ -795,7 +811,7 @@ twas:
   twas_weights_report:
     script: scripts/twas_weights_summary.Rmd
     output: reports/11TWAS/11twas_weights_report.html
-    weights_dir: ../../results/00LOG/11TWAS/
+    log_dir: ../../results/00LOG/11TWAS/
     bmark_dir: ../reports/benchmarks/
     out_file: ../reports/11TWAS/11twas_weights_report.html
     log: ../results/00LOG/11TWAS/twas_weights_report.log   
@@ -810,7 +826,7 @@ smr:
   cat_tensorqtl_nom_snps:
     cat_snps: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
     summary: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
-    dir: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_quantile_genPC_4_expPC_40/ # Need to fix this
+#    dir: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_quantile_genPC_4_expPC_40/ # Need to fix this
     log: ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
 
   create_query:
@@ -890,7 +906,7 @@ ctwas:
     gwas: ../results/07PREP-GWAS/{gwas}_hg38.tsv
     weights: ../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done
     bim_file: ../results/10SMR/smr_input/1000G.EUR.hg38.bim
-    output: ../results/12CTWAS/output/ctwas{cell_type}_{gwas}_ctwas.rds
+    output: ../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
     ld_dir: ../results/12CTWAS/ld_mats/  
     weights_dir: ../results/12CTWAS/weights/{cell_type}/
     log: ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
@@ -1330,10 +1346,38 @@ dev_specificity:
     out_file: ../results/19DEV-SPECIFICITY/extract_universe/eqtl_universe.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/extract_universe.log
 
+  extract_pairwise_universe:
+    af_tol: 0.2
+    out_file: ../results/19DEV-SPECIFICITY/extract_pairwise_universe/pairwise_background.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/extract_pairwise_universe.log
+
+  heterogeneity_test:
+    fdr_thresh: 0.05
+    out_file: ../results/19DEV-SPECIFICITY/heterogeneity_test/heterogeneity_results.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/heterogeneity_test.log
+
   classify_specificity:
     fugita_dir: ../resources/public_datasets/fugita_2024/
     out_file: ../results/19DEV-SPECIFICITY/classify_specificity/eqtl_specificity_classification.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/classify_specificity.log
+
+  prep_ld_clump_input:
+    assoc_dir:      ../results/19DEV-SPECIFICITY/ld_clump/assoc_files/
+    singleton_snps: ../results/19DEV-SPECIFICITY/ld_clump/singleton_snps.rds
+    snp_list:       ../results/19DEV-SPECIFICITY/ld_clump/candidate_snps.txt
+    log:            ../results/00LOG/19DEV-SPECIFICITY/prep_ld_clump_input.log
+
+  run_ld_clump:
+    subset_prefix: ../results/19DEV-SPECIFICITY/ld_clump/geno_subset/candidate_snps_subset
+    clump_dir:     ../results/19DEV-SPECIFICITY/ld_clump/clumped/
+    sentinel:      ../results/19DEV-SPECIFICITY/ld_clump/run_ld_clump.done
+    clump_kb: 1000
+    clump_r2: 0.1
+    log:           ../results/00LOG/19DEV-SPECIFICITY/run_ld_clump.log
+
+  parse_ld_clump:
+    out_file: ../results/19DEV-SPECIFICITY/ld_clump/independent_eqtl_universe.rds
+    log:      ../results/00LOG/19DEV-SPECIFICITY/parse_ld_clump.log
 
   ocr_enrich:
     li_s6: ../resources/public_datasets/li_2023/Table_S6_List_of_cCREs_in_bed_format.bed
