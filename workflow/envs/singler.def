@@ -39,8 +39,17 @@ From: bioconductor/bioconductor_docker
         "ggplot2",
         "dplyr",
         "tidyr",
+        "tidyverse",
+        "knitr",
+        "kableExtra",
+        "DT",
+        "gt",
+        "cowplot",
+        "viridis",
+        "circlize",
         "data.table",
-        "Matrix"
+        "Matrix",
+        "ggplotify"
     ), repos = "https://cloud.r-project.org")
 
     # Bioconductor packages
@@ -52,7 +61,8 @@ From: bioconductor/bioconductor_docker
         "anndataR",
         "rhdf5",
         "BiocParallel",
-        "scran"
+        "scran",
+        "ComplexHeatmap"
     ), ask = FALSE, update = TRUE)
 
 %environment
@@ -70,6 +80,14 @@ From: bioconductor/bioconductor_docker
     library(anndataR)
     library(BiocParallel)
     library(pheatmap)
+    library(tidyverse)
+    library(knitr)
+    library(kableExtra)
+    library(DT)
+    library(gt)
+    library(cowplot)
+    library(viridis)
     cat("All packages loaded successfully\n")
     cat("SingleR version:", as.character(packageVersion("SingleR")), "\n")
     cat("anndataR version:", as.character(packageVersion("anndataR")), "\n")
+    cat("tidyverse version:", as.character(packageVersion("tidyverse")), "\n")
