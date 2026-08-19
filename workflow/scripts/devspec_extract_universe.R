@@ -30,6 +30,14 @@
 #  to the log.
 #
 #--------------------------------------------------------------------------------------
+#
+#  ADDITION -- slope_se retained (heterogeneity test, step C):
+#
+#  slope_se is now selected alongside slope so the heterogeneity test (C) can
+#  compute Cochran's Q directly from this table's per-row fetal beta/se, without
+#  a second read of the fetal permutation files.
+#
+#--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -98,6 +106,7 @@ get_parent_cell_type <- function(cell_type, cell_types_L1) {
 
 # Read FDR<0.05 eGene-eSNP pairs for a single cell type
 # (tensorQTL perm output already reports one lead eSNP per eGene)
+# slope_se added (see ADDITION note above) -- required by the heterogeneity test (C).
 read_sig_eqtl <- function(cell_type, file_path) {
   message("Reading sig. eQTL for: ", cell_type, " (", file_path, ")")
 
@@ -108,7 +117,7 @@ read_sig_eqtl <- function(cell_type, file_path) {
 
   read_tsv(file_path, show_col_types = FALSE) %>%
     filter(!is.na(qval) & qval < 0.05) %>%
-    select(variant_id, phenotype_id, slope, qval) %>%
+    select(variant_id, phenotype_id, slope, slope_se, af, qval) %>%
     mutate(cell_type = cell_type)
 }
 
@@ -144,6 +153,29 @@ message("\nTotal unique eGenes across all ", length(cell_types),
 
 message("\nRows per cell type:")
 print(eqtl_universe %>% count(cell_type, level))
+
+# --- Row-count relationship diagnostic ---------------------------------------------
+message("\n--- Row-count relationship diagnostic ---\n")
+
+n_rows          <- nrow(eqtl_universe)
+n_unique_genes  <- n_distinct(eqtl_universe$phenotype_id)
+n_unique_pairs  <- eqtl_universe %>% distinct(phenotype_id, variant_id) %>% nrow()
+
+tibble(
+  quantity = c("Total rows (cell_type x gene)",
+               "Unique eGenes",
+               "Unique (eGene, eSNP) pairs"),
+  value    = c(n_rows, n_unique_genes, n_unique_pairs)
+) |>
+  knitr::kable(format = "simple", align = "l") |>
+  print()
+
+if (!(n_unique_genes <= n_unique_pairs && n_unique_pairs <= n_rows)) {
+  message("WARNING: expected ordering n_unique_genes <= n_unique_pairs <= n_rows",
+          " does not hold -- check for unexpected duplication or a join/dedup bug.")
+} else {
+  message("Row-count relationship holds as expected (n_unique_genes <= n_unique_pairs <= n_rows).")
+}
 
 # --- SNPs-per-gene diagnostic (see ADDITION note at top of file) ----------------------
 message("\n--- SNPs-per-gene diagnostic (for OCR LD-independence check) ---\n")
@@ -184,3 +216,8 @@ print(head(multi_snp_gene_detail, 20))
 # Write single tracked output ----------------------------------------------------------
 write_rds(eqtl_universe, output_universe)
 message("\nEgene/eSNP universe written to: ", output_universe)
+
+# Untracked TSV for readability outside R -----------------------------------------------
+output_universe_tsv <- sub("\\.rds$", ".tsv", output_universe)
+write_tsv(eqtl_universe, output_universe_tsv)
+message("Egene/eSNP universe (TSV) written to: ", output_universe_tsv)
