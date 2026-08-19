@@ -1351,15 +1351,16 @@ dev_specificity:
     out_file: ../results/19DEV-SPECIFICITY/extract_pairwise_universe/pairwise_background.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/extract_pairwise_universe.log
 
-  heterogeneity_test:
-    fdr_thresh: 0.05
-    out_file: ../results/19DEV-SPECIFICITY/heterogeneity_test/heterogeneity_results.rds
-    log: ../results/00LOG/19DEV-SPECIFICITY/heterogeneity_test.log
-
   classify_specificity:
     fugita_dir: ../resources/public_datasets/fugita_2024/
     out_file: ../results/19DEV-SPECIFICITY/classify_specificity/eqtl_specificity_classification.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/classify_specificity.log
+
+  heterogeneity_test:
+    af_tol: 0.2
+    fdr_thresh: 0.05
+    out_file: ../results/19DEV-SPECIFICITY/heterogeneity_test/heterogeneity_results.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/heterogeneity_test.log
 
   prep_ld_clump_input:
     assoc_dir:      ../results/19DEV-SPECIFICITY/ld_clump/assoc_files/

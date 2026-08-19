@@ -9,21 +9,32 @@
 #  sn-eQTL data and, where testable, calls shared vs. fetal-specific using Fujita's
 #  own published significance call (significant_by_2step_FDR).
 #
-#  Two analyses with different units:
+#  "Any" tier (cell-type-agnostic, KEPT): operates on the 6,844 unique (gene, SNP)
+#  pairs across all cell types. Tested against all 7 Fujita cell types pooled;
+#  "shared" = significant in >=1 Fujita type. Produces the fetal-specific SNP list
+#  for the OCR enrichment step (via LD clumping) and the fetal-specific input
+#  population for the heterogeneity test (step C).
 #
-#    - "any":           operates on the 6,844 unique (gene, SNP) pairs across all
-#                        cell types. Tested against all 7 Fujita cell types pooled;
-#                        "shared" = significant in >=1 Fujita type. Produces the
-#                        fetal-specific SNP list for the OCR enrichment step.
+#  Step 2 of the developmental-specificity pipeline.
 #
-#    - "cell_specific": operates per fetal cell type. Each cell type's own pairs
-#                        tested against its a priori label-matched Fujita cell type
-#                        only (e.g. GABA -> Inh). NPC excluded (no adult equivalent).
-#                        Informative even where overlap is small.
+#--------------------------------------------------------------------------------------
 #
-#  Step 2 of the developmental-specificity pipeline (independent for now; designed
-#  to fold into replication_pi1_enrichment.R later if retained for the paper).
-
+#  ADDITION -- cell_specific tier retired:
+#
+#  The previous "cell_specific" tier (per fetal cell type, tested against its a
+#  priori label-matched Fujita cell type only, with a sign-concordance check) has
+#  been removed. It fed no downstream computation (its only consumer was the report's
+#  cell_specific display) and its role -- a formal, cell-type-matched comparison
+#  between fetal and adult effects -- is now served properly by the heterogeneity
+#  test (step C), which tests effect-size difference directly rather than relying
+#  on Fujita's own significance threshold and a bare sign check.
+#
+#  se added to the Fujita column selection, and pairs_all / gene_membership /
+#  snp_membership -- already computed here to build the "any" tier, previously
+#  discarded after use -- are now written to output. Step C reads these directly
+#  (per-Fujita-cell-type beta/se and testability, keyed by the label-matched
+#  cell type for each fetal row) rather than re-reading the Fujita files.
+#
 #--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
@@ -52,22 +63,6 @@ fugita_cell_types  <- snakemake@params[["fugita_cell_types"]]
 
 names(fugita_files) <- fugita_cell_types
 
-# L1 cell types
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-
-# A priori biological correspondence between fetal L1 cell types and Fujita adult
-# cell types. NPC has no defensible adult equivalent (no progenitor population in
-# the adult cortex), so it is excluded from cell_specific analysis entirely.
-fugita_label_match <- c(
-  "Glu-UL"    = "Exc",
-  "Glu-DL"    = "Exc",
-  "GABA"      = "Inh",
-  "NPC"       = NA_character_,
-  "MG"        = "Mic",
-  "OPC"       = "OPC",
-  "Endo-Peri" = "End"
-)
-
 # Check variable assignment
 message("\nVariables")
 cat("============================")
@@ -81,20 +76,16 @@ message("\n============================\n")
 
 # Functions ----------------------------------------------------------------------------
 
-# Strip L2 sub-cluster suffix to get parent L1 cell type
-get_parent_cell_type <- function(cell_type, cell_types_L1) {
-  if (cell_type %in% cell_types_L1) return(cell_type)
-  sub("-[^-]+$", "", cell_type)
-}
-
+# se added to col_select/col_types (see ADDITION note above) -- required by the
+# heterogeneity test (C) for the adult side of Cochran's Q.
 read_fugita_celltype <- function(file_path, fugita_ct, universe_genes, universe_snps) {
   message("Reading Fujita data for: ", fugita_ct, " (", file_path, ")")
 
   dat <- read_tsv(
     file_path,
-    col_select = c(gene_id, snps, pvalue, beta, significant_by_2step_FDR),
-    col_types = cols(gene_id = "c", snps = "c", pvalue = "d", beta = "d",
-                      significant_by_2step_FDR = "c"),
+    col_select = c(gene_id, snps, pvalue, beta, se, significant_by_2step_FDR, REF, ALT, ALT_AF),
+    col_types = cols(gene_id = "c", snps = "c", pvalue = "d", beta = "d", se = "d",
+                     significant_by_2step_FDR = "c", REF = "c", ALT = "c", ALT_AF = "d"),
     show_col_types = FALSE
   )
 
@@ -147,7 +138,10 @@ snp_set_any  <- Reduce(union, snp_sets)
 
 pairs_all <- bind_rows(pair_lookups)
 
-# Per-gene/SNP membership lookups for cell_specific testability checks
+# Per-gene/SNP membership lookups. Used to build the "any" tier's testability check
+# below, and (see ADDITION note) now also written to output for the heterogeneity
+# test (C) to re-check testability in each row's specific label-matched Fujita
+# cell type.
 gene_membership <- map_dfr(names(gene_sets), ~ tibble(fugita_cell_type = .x, gene_id = gene_sets[[.x]]))
 snp_membership  <- map_dfr(names(snp_sets),  ~ tibble(fugita_cell_type = .x, snps = snp_sets[[.x]]))
 
@@ -165,7 +159,9 @@ pairs_any_sig <- pairs_all %>%
     .groups = "drop"
   )
 
-# Provenance: which Fujita cell type gave the smallest p-value (for QC/reporting)
+# Provenance: which Fujita cell type gave the smallest p-value (for QC/reporting
+# only -- NOT used by the heterogeneity test, which looks up the label-matched
+# cell type specifically via pairs_all instead; see ADDITION note above).
 pairs_any_provenance <- pairs_all %>%
   group_by(gene_id, snps) %>%
   slice_min(pvalue, n = 1, with_ties = FALSE) %>%
@@ -191,18 +187,11 @@ any_table <- unique_pairs %>%
       snp_genotyped & !gene_expressed                         ~ "untestable_genotyped_not_expressed",
       !snp_genotyped & gene_expressed                         ~ "untestable_not_genotyped_expressed",
       gene_expressed & snp_genotyped & is.na(significant_any) ~ "testable_pair_untested",
-      significant_any & sign(pvalue_adult) >= 0               ~ ifelse(
-        !is.na(beta_adult), "testable_shared", "testable_shared"
-      ),
       significant_any                                          ~ "testable_shared",
       !significant_any                                         ~ "testable_specific",
       TRUE                                                     ~ "uncategorised_check_logic"
     )
   )
-
-# No concordance check for the "any" tier -- there's no single fetal slope to compare
-# against, since the same pair may appear in multiple fetal cell types with different
-# effect sizes. Concordance is assessed in the cell_specific tier instead.
 
 message("\n'Any' tier summary:")
 any_summary <- any_table %>%
@@ -214,114 +203,32 @@ n_fetal_specific <- sum(any_table$final_category == "testable_specific")
 message("Fetal-specific unique (gene, SNP) pairs: ", n_fetal_specific,
         " out of ", nrow(unique_pairs), " total unique pairs")
 
-# =======================================================================================
-# "CELL_SPECIFIC" TIER: per fetal cell type, matched to label-matched Fujita type
-# =======================================================================================
-message("\n--- Building 'cell_specific' tier classification ---")
-
-# Add parent cell type and label match to each row of the full universe
-cs_table <- eqtl_universe %>%
-  mutate(
-    parent_cell_type = map_chr(cell_type, get_parent_cell_type, cell_types_L1 = cell_types_L1),
-    ref_cell_type = fugita_label_match[parent_cell_type]
-  )
-
-# Exclude NPC (and NPC subtypes) -- no adult equivalent
-cs_table_testable <- cs_table %>% filter(!is.na(ref_cell_type))
-cs_table_npc      <- cs_table %>% filter(is.na(ref_cell_type))
-message("  Rows with label match: ", nrow(cs_table_testable),
-        " | NPC rows excluded: ", nrow(cs_table_npc))
-
-# Check testability: gene expressed and SNP genotyped in the SPECIFIC matched Fujita type
-cs_table_testable <- cs_table_testable %>%
-  left_join(
-    gene_membership %>% mutate(gene_expressed = TRUE),
-    by = c("phenotype_id" = "gene_id", "ref_cell_type" = "fugita_cell_type")
-  ) %>%
-  left_join(
-    snp_membership %>% mutate(snp_genotyped = TRUE),
-    by = c("variant_id" = "snps", "ref_cell_type" = "fugita_cell_type")
-  ) %>%
-  mutate(
-    gene_expressed = replace_na(gene_expressed, FALSE),
-    snp_genotyped  = replace_na(snp_genotyped, FALSE)
-  )
-
-# Look up the exact pair in the matched Fujita cell type
-cs_table_testable <- cs_table_testable %>%
-  left_join(
-    pairs_all %>%
-      transmute(phenotype_id = gene_id, variant_id = snps,
-                ref_cell_type = fugita_cell_type,
-                significant_ref = significant_by_2step_FDR == "Yes",
-                pvalue_adult = pvalue, beta_adult = beta),
-    by = c("phenotype_id", "variant_id", "ref_cell_type")
-  )
-
-# Classify
-cs_table_testable <- cs_table_testable %>%
-  mutate(
-    final_category = case_when(
-      !gene_expressed & !snp_genotyped                          ~ "untestable_not_genotyped_not_expressed",
-      snp_genotyped & !gene_expressed                           ~ "untestable_genotyped_not_expressed",
-      !snp_genotyped & gene_expressed                           ~ "untestable_not_genotyped_expressed",
-      gene_expressed & snp_genotyped & is.na(significant_ref)   ~ "testable_pair_untested",
-      significant_ref & sign(slope) == sign(beta_adult)         ~ "testable_shared_concordant",
-      significant_ref & sign(slope) != sign(beta_adult)         ~ "testable_shared_discordant",
-      !significant_ref                                          ~ "testable_specific",
-      TRUE                                                       ~ "uncategorised_check_logic"
-    )
-  )
-
-# Add NPC rows back with their own category
-cs_table_npc <- cs_table_npc %>%
-  mutate(
-    ref_cell_type = NA_character_,
-    gene_expressed = NA,
-    snp_genotyped = NA,
-    significant_ref = NA,
-    pvalue_adult = NA_real_,
-    beta_adult = NA_real_,
-    final_category = "no_adult_equivalent"
-  )
-
-cs_table <- bind_rows(cs_table_testable, cs_table_npc)
-
-# Summary per cell type
-message("\n'Cell-specific' tier summary (per cell type):")
-cs_summary <- cs_table %>%
-  count(cell_type, ref_cell_type, final_category, name = "n") %>%
-  group_by(cell_type) %>%
-  mutate(prop = round(n / sum(n), 3)) %>%
-  ungroup()
-print(cs_summary, n = Inf)
-
-# Overall cell_specific summary
-message("\n'Cell-specific' tier summary (all cell types combined):")
-print(
-  cs_table %>%
-    count(final_category, name = "n") %>%
-    mutate(prop = round(n / sum(n), 3))
-)
-
-# Sanity checks
+# Sanity check
 if (any(any_table$final_category == "uncategorised_check_logic")) {
   message("WARNING: ", sum(any_table$final_category == "uncategorised_check_logic"),
           " 'any' tier rows fell through to uncategorised.")
 }
-if (any(cs_table$final_category == "uncategorised_check_logic")) {
-  message("WARNING: ", sum(cs_table$final_category == "uncategorised_check_logic"),
-          " 'cell_specific' tier rows fell through to uncategorised.")
-}
 
-# Write single tracked output ----------------------------------------------------------
+# Write tracked output -------------------------------------------------------------------
 write_rds(
   list(
-    any_table = any_table,
-    any_summary = any_summary,
-    cell_specific_table = cs_table,
-    cell_specific_summary = cs_summary
+    any_table       = any_table,
+    any_summary     = any_summary,
+    pairs_all       = pairs_all,
+    gene_membership = gene_membership,
+    snp_membership  = snp_membership
   ),
   output_file
 )
 message("\nSpecificity classification written to: ", output_file)
+
+# Untracked TSVs for readability outside R -----------------------------------------------
+output_dir <- dirname(output_file)
+output_stem <- tools::file_path_sans_ext(basename(output_file))
+
+write_tsv(any_table,       file.path(output_dir, paste0(output_stem, "_any_table.tsv")))
+write_tsv(any_summary,     file.path(output_dir, paste0(output_stem, "_any_summary.tsv")))
+write_tsv(pairs_all,       file.path(output_dir, paste0(output_stem, "_pairs_all.tsv")))
+write_tsv(gene_membership, file.path(output_dir, paste0(output_stem, "_gene_membership.tsv")))
+write_tsv(snp_membership,  file.path(output_dir, paste0(output_stem, "_snp_membership.tsv")))
+message("\nAny-tier tables (TSV) written to: ", output_dir)

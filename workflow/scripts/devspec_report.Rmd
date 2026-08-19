@@ -13,6 +13,7 @@ output:
 params:
   eqtl_universe: null
   classification: null
+  heterogeneity_test: null
   ocr_enrich: null
   eqtl_effects: null
   beta_correlation: null
@@ -30,9 +31,6 @@ knitr::opts_chunk$set(
 suppressPackageStartupMessages({
   library(ComplexHeatmap)
   library(circlize)
-  library(clusterProfiler)
-  library(org.Hs.eg.db)
-  library(AnnotationDbi)
   library(patchwork)
   library(cowplot)
   library(scales)
@@ -46,18 +44,19 @@ suppressPackageStartupMessages({
 # rmarkdown::render(params = list(...)), not Snakemake's script: directive ---
 eqtl_universe_file    <- params$eqtl_universe
 classification_file   <- params$classification
+heterogeneity_file    <- params$heterogeneity_test
 ocr_enrich_file        <- params$ocr_enrich
 eqtl_effects_file      <- params$eqtl_effects
 beta_correlation_file  <- params$beta_correlation
-perm_dir               <- params$perm_dir
 bmark_dir              <- params$bmark_dir
 
 gene_lookup <- read_tsv(params$gene_lookup, show_col_types = FALSE) |>
   select(ensembl_gene_id, external_gene_name) |>
   distinct(ensembl_gene_id, .keep_all = TRUE)
 
-# Smaller-font DT wrapper for wide tables (Opposite effects, Subcluster-
-# specific gene table) so all columns fit on screen without horizontal scroll
+# Smaller-font DT wrapper for wide tables (Opposite effects, Heterogeneity
+# results, Subcluster-specific gene table) so all columns fit on screen
+# without horizontal scroll
 small_dt <- function(df, page_length = 20) {
   datatable(
     df, filter = "top", rownames = FALSE, class = "compact stripe hover",
@@ -76,25 +75,42 @@ small_dt <- function(df, page_length = 20) {
 ```{r load-data}
 eqtl_universe    <- read_rds(eqtl_universe_file)
 classification   <- read_rds(classification_file)
+het_test         <- read_rds(heterogeneity_file)
 ocr_enrich       <- read_rds(ocr_enrich_file)
 eqtl_effects     <- read_rds(eqtl_effects_file)
 beta_correlation <- read_rds(beta_correlation_file)
 
-# Unpack classification
+# Unpack classification -- "any" tier only; cell_specific tier retired
+# (superseded by the heterogeneity test, below)
 any_table    <- classification$any_table
 any_summary  <- classification$any_summary
-cs_table     <- classification$cell_specific_table
-cs_summary   <- classification$cell_specific_summary
+
+# Collapse the two untestable-not-expressed categories for display only --
+# B's underlying categories stay granular in its own TSV output.
+any_summary <- any_summary |>
+  mutate(final_category = recode(final_category,
+    untestable_genotyped_not_expressed     = "untestable_not_expressed",
+    untestable_not_genotyped_not_expressed = "untestable_not_expressed"
+  )) |>
+  group_by(final_category) |>
+  summarise(n = sum(n), .groups = "drop") |>
+  mutate(prop = round(n / sum(n), 3))
+
+any_table <- any_table |>
+  mutate(final_category = recode(final_category,
+    untestable_genotyped_not_expressed     = "untestable_not_expressed",
+    untestable_not_genotyped_not_expressed = "untestable_not_expressed"
+  ))
+
+# Unpack heterogeneity test (Cochran's Q on fetal-specific pairs)
+het_usable <- het_test$usable
+het_funnel <- het_test$funnel
 
 # Unpack subcluster/supercluster effect-size object
 subcluster_tbl   <- eqtl_effects$subcluster_specific
 supercluster_tbl <- eqtl_effects$supercluster_specific
-de_markers       <- eqtl_effects$de_markers_raw
 
-# Full L1+L2+adult pairwise slope matrix (reinstated from the prior report
-# version). ASSUMED still present under these two names in eqtl_effects --
-# please confirm eqtl_effect_sizes.R still writes effect_size_matrix /
-# effect_size_long alongside the subcluster/supercluster tables.
+# Full L1+L2+adult pairwise slope matrix
 effect_matrix <- eqtl_effects$effect_size_matrix
 effect_long   <- eqtl_effects$effect_size_long
 
@@ -153,67 +169,34 @@ significance_counts <- paired_betas |>
   ) |>
   mutate(comparison = paste(my_cell_type, "vs", fugita_cell_type)) |>
   arrange(factor(comparison, levels = comparison_levels))
-
-# exp_pc_map for all 19 cell types (L1 + L2), hardcoded per instruction
-exp_pc_map <- c(
-  "Glu-UL" = 50, "Glu-DL" = 40, "NPC" = 30, "GABA" = 30,
-  "Endo-Peri" = 30, "OPC" = 30, "MG" = 30,
-  "Glu-UL-0" = 30, "Glu-UL-1" = 50, "Glu-UL-2" = 40,
-  "Glu-DL-0" = 40, "Glu-DL-1" = 40, "Glu-DL-2" = 30,
-  "GABA-0" = 30, "GABA-1" = 40, "GABA-2" = 40,
-  "NPC-0" = 50, "NPC-1" = 30, "NPC-2" = 20
-)
-geno_pc     <- 4
-norm_method <- "quantile"
-
-# GO gene universe = every phenotype_id tested in that cell type's own perm
-# file (unfiltered), matching the same path pattern used in
-# devspec_beta_correlation.R
-read_perm_universe <- function(cell_type, perm_dir) {
-  expPC <- exp_pc_map[[cell_type]]
-  f <- paste0(perm_dir, cell_type, "_", norm_method, "_genPC_", geno_pc,
-              "_expPC_", expPC, "/", cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")
-  if (!file.exists(f)) {
-    warning(paste("perm file not found for", cell_type, ":", f))
-    return(character(0))
-  }
-  fread(f, select = "phenotype_id") |> pull(phenotype_id) |> unique()
-}
 ```
 
 ## Developmental specificity pipeline steps {.tabset}
 
 ***
 
-This report addresses reviewer comments requesting formal quantification of
-developmental-stage specificity in fetal brain eQTL, using Fujita et al.
-(2024) adult cortical snRNA-seq eQTL data as the adult reference.
-
-***
-
 1. `extract_eqtl_universe`: Extract unique fetal eGene-eSNP universe (L1+L2)
-2. `classify_eqtl_specificity`: Classify pairs as testable/untestable and shared/fetal-specific vs Fujita
-3. `ocr_enrich`: Test fetal-specific eQTL enrichment in fetal (Ziffra) and adult (Li et al.) OCRs
-4. `eqtl_effect_sizes`: Extract subcluster/supercluster-specific eQTL and DE marker crossref
-5. `beta_correlation`: Fetal-adult eQTL beta correlations and opposite-effect allele checks
-6. `dev_specificity_report`: Summarise developmental specificity results
+2. `classify_eqtl_specificity`: Classify pairs as testable/untestable and shared/fetal-specific vs Fujita ("any" tier)
+3. `heterogeneity_test`: Cochran's Q test on fetal-specific pairs vs matched adult Fujita cell type
+4. `prep_ld_clump_input` / `run_ld_clump` / `parse_ld_clump`: LD-independence pruning of the eGene-eSNP universe
+5. `ocr_enrich`: Test fetal-specific/shared eQTL enrichment in adult (Li et al.) cortical union OCRs
+6. `eqtl_effect_sizes`: Extract subcluster/supercluster-specific eQTL
+7. `beta_correlation`: Fetal-adult eQTL beta correlations and opposite-effect allele checks
+8. `dev_specificity_report`: Summarise developmental specificity results
 
 ***
 
 ### Classification of fetal eQTL {.tabset}
 
-Unique eGene-eSNP pairs classified against Fujita et al.
-adult eGene-eSNP pairs under two matching tiers: 
+Unique eGene-eSNP pairs sig. in fetal data classified against adult eGene-eSNP pairs:
 
-- "Any": tested against all 7 Fujita cell types, shared if sig. in at least Fugita cell type
-- "Cell-specific": Eeach fetal cell type tested only against its a priori
-label-matched Fujita cell type; NPC has no adult equivalent
+- Testable shared: if sig. in >= 1 Fugita cell type
+  - Feeds: LD-clumping, OCR enrichment, Heterogeneity test*
+- Testable specific: present in Fugita, but not sig. in any Fugita cell type
 
 ***
 
-#### "Any" tier {.tabset}
-
-##### Summary table
+#### Summary table
 
 ```{r any-tier-summary}
 any_summary |>
@@ -223,7 +206,7 @@ any_summary |>
   tab_header(title = '"Any" tier classification')
 ```
 
-##### Barplot
+#### Barplot
 
 ```{r any-tier-barplot, fig.height=5, fig.width=7}
 any_summary |>
@@ -245,7 +228,7 @@ any_summary |>
   theme(legend.position = "top")
 ```
 
-##### Testable-pairs pie
+#### Testable-pairs pie
 
 ```{r any-tier-testable-pie, fig.height=4, fig.width=5}
 any_table |>
@@ -261,41 +244,58 @@ any_table |>
 
 ***
 
-#### Cell-specific tier {.tabset}
+### Heterogeneity test (fetal-specific eQTL) {.tabset}
 
-##### Per-cell-type table
+- Cochran's Q: Tests whether the fetal and matched-adult effect  sizes differ 
+by more than combined sampling error predicts
+- FDR (BH) applied once, pooled across all usable rows
+- Notes:
+  - Q test is not directional. It tells you if the two betas differ but not which way
+  - Many SNP-gene pairs in input annotation (testable specific) dropped. Mainly due to
+    pair lacking overlap in relevant adult cell type. For example pair is sig. in 
+    GABA, but only expressed (but not sig.) in adult Mic. Het tests can only be run in
+    matching fetal and adult cell populations.
 
-```{r cs-tier-summary}
-cs_summary |>
-  filter(!is.na(ref_cell_type)) |>
-  select(Cell_Type = cell_type, Fujita_Match = ref_cell_type,
-         Category = final_category, Count = n, Proportion = prop) |>
-  datatable(filter = "top", rownames = FALSE,
-            options = list(pageLength = 20, scrollX = TRUE))
+***
+
+#### Summary
+
+```{r het-test-funnel}
+het_funnel |>
+  gt() |>
+  tab_header(title = "Population funnel")
 ```
 
-##### Barplot
+```{r het-test-summary-stats, results = "asis"}
+n_het   <- sum(het_usable$heterogeneous)
+n_total <- nrow(het_usable)
 
-```{r cs-tier-barplot, fig.height=8, fig.width=10}
-cs_summary |>
-  filter(!is.na(ref_cell_type)) |>
-  mutate(
-    fill_group = case_when(
-      str_detect(final_category, "shared")    ~ "Shared",
-      str_detect(final_category, "specific")  ~ "Fetal-specific",
-      final_category == "no_adult_equivalent" ~ "No adult equivalent",
-      TRUE                                    ~ "Untestable"
-    )
+cat(sprintf(
+  "%d of %d usable rows (%s) were formally heterogeneous (FDR < 0.05).",
+  n_het, n_total, percent(n_het / n_total, accuracy = 0.1)
+))
+```
+
+***
+
+#### Results table
+
+```{r het-test-results-table}
+het_usable |>
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+  select(
+    Cell_Type = cell_type,
+    ENSG = phenotype_id,
+    Symbol = external_gene_name,
+    eSNP = variant_id,
+    Fetal_Beta = beta_my, Fetal_SE = se_my, Fetal_AF = af_my,
+    Adult_Cell_Type = fugita_label_match,
+    Adult_Beta = beta_fugita_harmonized, Adult_SE = se_fugita, Adult_AF = af_fugita,
+    Delta_Beta = delta_beta,
+    Q, P = p, Q_value = q, Heterogeneous = heterogeneous
   ) |>
-  ggplot(aes(x = cell_type, y = n, fill = fill_group)) +
-  geom_col(position = "fill") +
-  coord_flip() +
-  scale_fill_manual(values = c("Shared" = "#4DAF4A", "Fetal-specific" = "#E41A1C",
-                                "Untestable" = "grey70", "No adult equivalent" = "grey40")) +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Proportion of eGene-eSNP pairs", fill = "Classification") +
-  theme_classic(base_size = 13) +
-  theme(legend.position = "top")
+  mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
+  small_dt()
 ```
 
 ***
@@ -304,7 +304,7 @@ cs_summary |>
 
 Pearson correlation of eQTL betas between each fetal cell type and its
 matched Fujita adult cell type. Points are highlighted only where the pair 
-is sig. in both datasets  (significant_by_2step_FDR == “Yes”):
+is sig. in both datasets  (significant_by_2step_FDR == "Yes"):
 
 - Blue: sig. in both and concordant sign
 - Red: sig. in both and and discordant sign (also shown in oppsite effects tab) 
@@ -513,8 +513,6 @@ Betas for every (eGene, eSNP) pair across all 19 fetal cell types (L1+L2)
 and all 7 Fujita adult cell types
 
 ```{r full-slope-table}
-# ASSUMED id column names in effect_matrix (phenotype_id, variant_id); adjust
-# the two names below if eqtl_effect_sizes.R actually names them differently.
 slope_full_tbl <- effect_matrix |>
   left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
   select(external_gene_name, phenotype_id, variant_id,
@@ -555,93 +553,31 @@ opposite_effects |>
 
 ### OCR enrichment {.tabset}
 
-Fetal-specific and shared eQTL SNPs tested for enrichment in fetal (Ziffra
-et al. 2021) and adult (Li et al. 2023) open chromatin regions via block
-bootstrap permutation.
+- LD-pruned fetal-specific and shared eQTL SNPs tested
+for enrichment in adult cortical OCRs (Li et al. 2023)
+- Cortical adult union peak set manually curated 
 
 ***
 
 #### Fold enrichment
 
-- Fetal-specific SNP enrichment in fetal and adult OCRs (shared SNPs omitted, but still intable) here as a contrast set not needed
-- NPC (no adult progenitor equivalent) is excluded from this pairing.
-
-```{r ocr-enrichment-barplot, fig.height=7, fig.width=9}
-# Fixed pair order: alternating fetal / matched-adult, grouped by comparison
-ocr_pair_order <- c(
-  "ulEN", "Glu-UL",
-  "dlEN", "Glu-DL",
-  "GABA", "IN_MGE",
-  "OPC", "AstroOligo",
-  "MG", "Microglia",
-  "EndoMural", "Endo-Peri",
-  "union", "cortical_union"
-)
-
+```{r ocr-enrichment-barplot, fig.height=4, fig.width=6}
 ocr_enrich |>
-  filter(snp_set == "fetal_specific") |>
   mutate(
-    peak_set = str_remove(peak_set, "^(fetal_|adult_)"),
-    peak_set = str_remove(peak_set, "_MACSpeaks$"),
-    peak_set = factor(peak_set, levels = rev(ocr_pair_order)),
     sig_label = case_when(p_value < 0.001 ~ "***",
                            p_value < 0.01  ~ "**",
                            p_value < 0.05  ~ "*",
-                           TRUE            ~ "ns")
+                           TRUE            ~ "ns"),
+    snp_set = recode(snp_set, fetal_specific = "Fetal-specific", shared = "Shared")
   ) |>
-  filter(!is.na(peak_set)) |>
-  ggplot(aes(x = peak_set, y = fold_enrichment, fill = stage)) +
-  geom_col(width = 0.7) +
+  ggplot(aes(x = snp_set, y = fold_enrichment, fill = snp_set)) +
+  geom_col(width = 0.5) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
-  geom_text(aes(label = sig_label), hjust = -0.3, size = 3.5) +
-  coord_flip() +
-  scale_fill_manual(values = c(fetal = "#984EA3", adult = "#FF7F00")) +
-  labs(x = NULL, y = "Fold enrichment (fetal-specific SNPs)", fill = "Peak stage") +
+  geom_text(aes(label = sig_label), vjust = -0.3, size = 4) +
+  scale_fill_manual(values = c("Fetal-specific" = "#E41A1C", "Shared" = "#4DAF4A")) +
+  labs(x = NULL, y = "Fold enrichment (adult cortical union)", fill = NULL) +
   theme_classic(base_size = 13) +
-  theme(legend.position = "top")
-```
-
-***
-
-#### Paired test (fetal vs adult)
-
-- Paired Wilcoxon signed-rank test on fold enrichment (fetal-specific SNPs
-only) across the 7 matched fetal/adult comparisons
-- testing whether fetal fold enrichment exceeds matched adult fold enrichment.
-- NPC excluded, no adult equivalent 
-
-```{r ocr-paired-test}
-ocr_pairs <- tribble(
-  ~comparison,   ~fetal_peak,           ~adult_peak,
-  "Glu-UL",      "fetal_ulEN_MACSpeaks",       "adult_Glu-UL",
-  "Glu-DL",      "fetal_dlEN_MACSpeaks",       "adult_Glu-DL",
-  "GABA",        "fetal_IN_MGE_MACSpeaks",     "adult_GABA",
-  "OPC",         "fetal_AstroOligo_MACSpeaks", "adult_OPC",
-  "MG",          "fetal_Microglia_MACSpeaks",  "adult_MG",
-  "Endo-Peri",   "fetal_EndoMural_MACSpeaks",  "adult_Endo-Peri",
-  "union",       "fetal_union",                "adult_cortical_union"
-)
-
-fold_lookup <- ocr_enrich |>
-  filter(snp_set == "fetal_specific") |>
-  select(peak_set, fold_enrichment)
-
-paired_fold <- ocr_pairs |>
-  left_join(fold_lookup, by = c("fetal_peak" = "peak_set")) |>
-  rename(fetal_fold = fold_enrichment) |>
-  left_join(fold_lookup, by = c("adult_peak" = "peak_set")) |>
-  rename(adult_fold = fold_enrichment) |>
-  mutate(diff = fetal_fold - adult_fold)
-
-paired_fold |>
-  select(comparison, fetal_fold, adult_fold, diff) |>
-  mutate(across(where(is.numeric), ~ round(.x, 3))) |>
-  gt() |>
-  tab_header(title = "Paired fold enrichment (fetal-specific SNPs)")
-
-wilcox_result <- wilcox.test(paired_fold$fetal_fold, paired_fold$adult_fold,
-                              paired = TRUE, alternative = "greater", exact = TRUE)
-print(wilcox_result)
+  theme(legend.position = "none")
 ```
 
 ***
@@ -653,7 +589,7 @@ ocr_enrich |>
   mutate(p_value = signif(p_value, 3),
          fold_enrichment = round(fold_enrichment, 2),
          mean_permuted_overlap = round(mean_permuted_overlap, 1)) |>
-  select(Peak_Set = peak_set, Stage = stage, SNP_Set = snp_set,
+  select(Peak_Set = peak_set, SNP_Set = snp_set,
          N_SNPs = n_snps, N_Peaks = n_peaks,
          Observed = observed_overlap, Mean_Permuted = mean_permuted_overlap,
          Fold_Enrichment = fold_enrichment, P_Value = p_value) |>
@@ -666,10 +602,8 @@ ocr_enrich |>
 
 ### Subcluster-specific eQTL {.tabset}
 
-eGenes significant at FDR < 0.05 in an L2 subcluster but not its parent L1
-("subcluster-specific"), and vice versa ("supercluster-specific"). GO
-universe is every gene tested in that cell type's own TensorQTL perm file
-(unfiltered).
+- FDR sig. eGenes in an L2 subcluster but not its parent L1
+("subcluster-specific"), and vice versa ("supercluster-specific").
 
 ***
 
@@ -679,51 +613,6 @@ universe is every gene tested in that cell type's own TensorQTL perm file
 subcluster_tbl |>
   count(cell_type_L2, parent_L1, name = "n_specific_eGenes") |>
   gt()
-```
-
-***
-
-#### Parent nominal statistics
-
-```{r subcluster-parent-stats, fig.height=6, fig.width=9}
-p1 <- subcluster_tbl |>
-  filter(!is.na(pval_nom_parent)) |>
-  ggplot(aes(x = pval_nom_parent)) +
-  geom_histogram(bins = 50, fill = "#377EB8", colour = "white") +
-  facet_wrap(~ cell_type_L2, scales = "free_y") +
-  geom_vline(xintercept = 0.05, linetype = "dashed", colour = "red") +
-  labs(x = "Nominal p-value in parent L1", y = "Count") +
-  theme_classic(base_size = 11)
-
-p2 <- subcluster_tbl |>
-  filter(!is.na(slope_L2), !is.na(slope_parent)) |>
-  ggplot(aes(x = slope_L2, y = slope_parent)) +
-  geom_point(alpha = 0.3, size = 0.8) +
-  geom_abline(slope = 1, intercept = 0, colour = "red", linetype = "dashed") +
-  facet_wrap(~ cell_type_L2, scales = "free") +
-  labs(x = "Slope in L2 subcluster", y = "Slope in parent L1") +
-  theme_classic(base_size = 11)
-
-p1 / p2
-```
-
-***
-
-#### Summary per L2 type
-
-```{r subcluster-summary-table}
-subcluster_tbl |>
-  group_by(cell_type_L2, parent_L1) |>
-  summarise(
-    n_eGenes = n_distinct(phenotype_id),
-    median_pval_parent = round(median(pval_nom_parent, na.rm = TRUE), 4),
-    prop_same_direction = round(mean(sign(slope_L2) == sign(slope_parent), na.rm = TRUE), 3),
-    prop_nom_sig_parent = round(mean(pval_nom_parent < 0.05, na.rm = TRUE), 3),
-    n_de_markers = sum(is_de_marker, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  gt() |>
-  tab_options(table.font.size = px(11))
 ```
 
 ***
@@ -738,119 +627,13 @@ supercluster_tbl |>
 
 ***
 
-#### DE marker overlap
-
-```{r de-overlap, fig.height=5, fig.width=7}
-subcluster_tbl |>
-  count(cell_type_L2, is_de_marker) |>
-  ggplot(aes(x = cell_type_L2, y = n, fill = is_de_marker)) +
-  geom_col(position = "fill") +
-  coord_flip() +
-  scale_fill_manual(values = c("TRUE" = "#E41A1C", "FALSE" = "grey70"),
-                     labels = c("TRUE" = "DE marker", "FALSE" = "Not DE")) +
-  scale_y_continuous(labels = percent) +
-  labs(x = NULL, y = "Proportion of subcluster-specific eGenes", fill = NULL) +
-  theme_classic(base_size = 13) +
-  theme(legend.position = "top")
-```
-
-***
-
-#### GO enrichment (subcluster-specific)
-
-```{r go-subcluster, fig.height=10, fig.width=10, results='asis'}
-go_results_sub <- list()
-
-for (ct in unique(subcluster_tbl$cell_type_L2)) {
-  genes <- subcluster_tbl |> filter(cell_type_L2 == ct) |> pull(phenotype_id) |> unique()
-  if (length(genes) < 5) next
-
-  universe_genes <- read_perm_universe(ct, perm_dir)
-
-  entrez <- tryCatch(
-    AnnotationDbi::mapIds(org.Hs.eg.db, keys = genes,
-                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
-    error = function(e) NULL)
-  universe_entrez <- tryCatch(
-    AnnotationDbi::mapIds(org.Hs.eg.db, keys = universe_genes,
-                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
-    error = function(e) NULL)
-
-  if (is.null(entrez) || sum(!is.na(entrez)) < 5) {
-    cat("GO universe/entrez mapping failed or insufficient for", ct, "\n\n")
-    next
-  }
-
-  ego <- tryCatch(
-    enrichGO(gene = na.omit(entrez), universe = na.omit(universe_entrez),
-             OrgDb = org.Hs.eg.db, ont = "BP", pAdjustMethod = "BH",
-             pvalueCutoff = 0.05, readable = TRUE),
-    error = function(e) { cat("enrichGO failed for", ct, ":", conditionMessage(e), "\n\n"); NULL })
-
-  if (!is.null(ego) && nrow(as.data.frame(ego)) > 0) go_results_sub[[ct]] <- ego
-}
-
-for (ct in names(go_results_sub)) {
-  cat("\n\n#####", ct, "\n\n")
-  print(dotplot(go_results_sub[[ct]], showCategory = 15, title = ct))
-}
-if (length(go_results_sub) == 0) cat("No cell types produced GO output.\n")
-```
-
-***
-
-#### GO enrichment (supercluster-specific)
-
-```{r go-supercluster, fig.height=10, fig.width=10, results='asis'}
-go_results_super <- list()
-
-for (ct in unique(supercluster_tbl$parent_L1)) {
-  genes <- supercluster_tbl |> filter(parent_L1 == ct) |> pull(phenotype_id) |> unique()
-  if (length(genes) < 5) next
-
-  universe_genes <- read_perm_universe(ct, perm_dir)
-
-  entrez <- tryCatch(
-    AnnotationDbi::mapIds(org.Hs.eg.db, keys = genes,
-                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
-    error = function(e) NULL)
-  universe_entrez <- tryCatch(
-    AnnotationDbi::mapIds(org.Hs.eg.db, keys = universe_genes,
-                          keytype = "ENSEMBL", column = "ENTREZID", multiVals = "first"),
-    error = function(e) NULL)
-
-  if (is.null(entrez) || sum(!is.na(entrez)) < 5) {
-    cat("GO universe/entrez mapping failed or insufficient for", ct, "\n\n")
-    next
-  }
-
-  ego <- tryCatch(
-    enrichGO(gene = na.omit(entrez), universe = na.omit(universe_entrez),
-             OrgDb = org.Hs.eg.db, ont = "BP", pAdjustMethod = "BH",
-             pvalueCutoff = 0.05, readable = TRUE),
-    error = function(e) { cat("enrichGO failed for", ct, ":", conditionMessage(e), "\n\n"); NULL })
-
-  if (!is.null(ego) && nrow(as.data.frame(ego)) > 0) go_results_super[[ct]] <- ego
-}
-
-for (ct in names(go_results_super)) {
-  cat("\n\n#####", ct, "\n\n")
-  print(dotplot(go_results_super[[ct]], showCategory = 15, title = ct))
-}
-if (length(go_results_super) == 0) cat("No cell types produced GO output.\n")
-```
-
-***
-
 #### Subcluster-specific gene table
 
 ```{r subcluster-gene-table}
 subcluster_tbl |>
   select(Gene = gene_symbol, ENSG = phenotype_id, eSNP = variant_id,
-         L2_Type = cell_type_L2, Parent_L1 = parent_L1,
-         Slope_L2 = slope_L2, QVal_L2 = qval_L2,
-         Slope_Parent = slope_parent, Pval_Parent = pval_nom_parent,
-         DE_Marker = is_de_marker) |>
+         cell_type_L1 = parent_L1, Slope_L1 = slope_parent, SE_L1 = se_parent, Pval_L1 = pval_nom_parent,
+         cell_type_L2 = cell_type_L2, Slope_L2 = slope_L2, SE_L2 = se_L2, Pval_L2 = pval_nom_L2) |>
   mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
   small_dt()
 ```
@@ -978,4 +761,3 @@ plot_grid(runtime_plt, mem_plt)
 ```{r session-info}
 sessionInfo()
 ```
-

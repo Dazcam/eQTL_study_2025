@@ -13,12 +13,23 @@
 #    1. effect_size_matrix — wide table for correlation heatmap (fetal-fetal
 #       and fetal-adult effect size correlations, analogous to Figure 3E/F/G)
 #    2. subcluster_specific_eqtl — L2 eGenes not significant in parent L1,
-#       with nominal stats from parent to explain why
+#       with nominal stats (slope, SE, nominal p-value) from BOTH the L2
+#       subcluster and its parent L1, for the report's subcluster gene table
 #    3. supercluster_specific — L1 eGenes not significant in any L2 subtype
 #    4. de_crossref — whether subcluster-specific genes are DE markers
 #
-#  Step 4 of the developmental-specificity pipeline.
+#  Step 6 of the developmental-specificity pipeline.
 
+#--------------------------------------------------------------------------------------
+#
+#  ADDITION -- se_L2 / pval_nom_L2 / se_parent columns:
+#
+#  subcluster_tbl now carries SE and raw nominal p-value for BOTH the L2
+#  subcluster and its parent L1, not just slope/qval for L2 and slope/pval for
+#  the parent. Sourced from fetal_effects_long (already built in step 2 for
+#  every cell type, L1 and L2 alike) -- no new file reads needed. Required by
+#  the report's rebuilt subcluster-specific gene table.
+#
 #--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
@@ -239,21 +250,34 @@ for (l2 in cell_types_L2) {
 
   message("  ", l2, " → ", parent, ": ", length(l2_specific_genes), " subcluster-specific eGenes")
 
-  # Get the L2 perm stats for these genes
+  # Get the L2 perm stats for these genes (slope/qval from permutation lead SNP)
   l2_stats <- eqtl_universe %>%
     filter(cell_type == l2, phenotype_id %in% l2_specific_genes) %>%
     select(phenotype_id, variant_id, slope_L2 = slope, qval_L2 = qval)
 
-  # Get the nominal stats from parent L1 for the same (gene, SNP) pairs
+  # L2's own nominal stats (SE, raw p-value) for the same lead SNP, sourced from
+  # fetal_effects_long (already built in step 2 for every cell type) rather than
+  # re-reading nominal files -- same source as parent_nom below, for consistency.
+  l2_nom <- fetal_effects_long[
+    cell_type == l2 & phenotype_id %in% l2_specific_genes
+  ]
+
+  # Nominal stats from parent L1 for the same (gene, SNP) pairs
   parent_nom <- fetal_effects_long[
     cell_type == parent & phenotype_id %in% l2_specific_genes
   ]
 
   l2_with_parent <- l2_stats %>%
     left_join(
+      as_tibble(l2_nom) %>%
+        select(phenotype_id, variant_id,
+               se_L2 = slope_se, pval_nom_L2 = pval_nominal),
+      by = c("phenotype_id", "variant_id")
+    ) %>%
+    left_join(
       as_tibble(parent_nom) %>%
         select(phenotype_id, variant_id,
-               slope_parent = slope, pval_nom_parent = pval_nominal),
+               slope_parent = slope, se_parent = slope_se, pval_nom_parent = pval_nominal),
       by = c("phenotype_id", "variant_id")
     ) %>%
     left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) %>%
