@@ -4,9 +4,9 @@ use-conda: True
 use-envmodules: True
 conda-frontend: conda
 use-singularity: True
-singularity-args: "--bind /shared/scratch/SCWF00021/eQTL_study_2025"
+singularity-args: "--bind /shared/scratch/SCWF00021/eQTL_study_2025 --bind /shared/apps/ --pwd /shared/scratch/SCWF00021/eQTL_study_2025/workflow"
 keep-going: True
-jobs: 3
+jobs: 10
 rerun-incomplete: True
 #restart-times: 1
 printshellcmds: True

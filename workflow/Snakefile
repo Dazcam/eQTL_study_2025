@@ -9,13 +9,12 @@ configfile: '../config/config.yaml'
 #include: 'rules/05tensorQTL.smk'
 #include: 'rules/06qtl_replication.smk'
 #include: 'rules/07prep_gwas.smk'
-include: 'rules/08susie.smk'
+#include: 'rules/08susie.smk'
 #include: 'rules/09sldsr.smk'
-#include: 'rules/10smr.smk'
+include: 'rules/10smr.smk'
 #include: 'rules/11twas.smk'
 #include: 'rules/11plotting.smk'
 #include: 'rules/12ctwas.smk'
-#include: 'rules/12jobs.smk'
 
 # Set QTL tool
 #QTL_TOOL = config["tensorQTL"]["tool"]
@@ -41,18 +40,17 @@ include: 'rules/08susie.smk'
 
 rule all:
     input:
+#        "reports/12CTWAS/12ctwas_report.html"
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
 #        config["scanpy"]["subclustering"]["output"],
 #        config["geno_pre_impute"]["geno_pre_report"]["html"],
 #        config["geno_post_impute"]["geno_post_report"]["html"]
 #        config["tensorQTL"]["tensorqtl_report"]["output"]
-        config["susie"]["susie_report"]["html"],
+#        config["susie"]["susie_report"]["html"],
 #        config["sldsr"]["ldsr_report"]["html"],
-#        config["smr"]["smr_report"]["html"],
-        
+        config["smr"]["smr_report"]["html"],
 
-
-
+#        expand(config["susie"]["prep_susie_gene_meta"]["output"], cell_type=config["cell_types"])
 #        expand("../results/11TWAS/weights/{cell_type}/{cell_type}.pos", cell_type=config["cell_types"])
 #        "reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds",
 #        "reports/11PLOTTING/boxplots_py/plot_qtl.done"
