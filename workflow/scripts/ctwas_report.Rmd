@@ -29,7 +29,6 @@ gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
 
-results_multi_lst <- list()
 results_single_lst <- list()
 ```
 
@@ -46,13 +45,11 @@ We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to inte
 1. `create_ld_matrices`: Create (1000G hg38 build) LD matrices and variant info files for cTWAS 
 2. `copy_fusion_weights`: Copy genuine FUSION weight files (cTWAS chokes if any empty files are in weight dir)
 3. `run_ctwas`: Run cTWAS on sc-eQTL and GWAS data
-4. `run_ctwas_multi`: Run multi-group cTWAS all cell types per GWAS
 4. `ctwas_report`: Generate cTWAS report
 
 TODO: 
 
-1. Just showing multi for now. Can add individual runs again later
-2. Add gene / region for plot(s) for interesting genes
+1. Add gene / region for plot(s) for interesting genes
 
 ***
 
@@ -64,7 +61,10 @@ cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
                     "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
                     "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
                     "GABA-0", "GABA-1", "GABA-2",
-                    "NPC-0", "NPC-1", "NPC-2")
+                    "NPC-0", "NPC-1", "NPC-2", "NPC-to-Glu-DL-Q4-Bin1",
+                "NPC-to-Glu-DL-Q4-Bin2","NPC-to-Glu-DL-Q4-Bin3","NPC-to-Glu-DL-Q4-Bin4",
+                "NPC-to-Glu-UL-Q4-Bin1","NPC-to-Glu-UL-Q4-Bin2","NPC-to-Glu-UL-Q4-Bin3",
+                "NPC-to-Glu-UL-Q4-Bin4")
 
 weights_root <- "../../results/12CTWAS/weights"
 
@@ -141,144 +141,6 @@ final_table |>
 
 ```
 
-### Multi {.tabset}
-
-***
-
-#### Z-scores {.tabset}
-
-```{r, cTWAS_z_score_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
-for (g in gwas) {
-  cat("##### ", toupper(g), " \n\n")
-  
-  file <- paste0(in_dir, "multi/ctwas_multi_", g, "_ctwas.rds")
-  ctw_res  <- read_rds(file)
-  # Process data
-  z_gene <- as_tibble(ctw_res$z_gene) |>
-    separate(id, into = c('gene', 'id'), sep = "\\|") |>
-    separate(id, into = c('cell_type', 'id'), sep = "_") |>
-    left_join(gene_lookup, by = join_by(gene == ensembl_id)) |>
-    mutate(pval = 2 * pnorm(-abs(z)),
-           fdr  = p.adjust(pval, method = "BH"),
-           pval_bf = pval * unique_genes_all) |>
-    mutate(pval_bf = pmin(pval_bf, 1)) |>
-    arrange(pval_bf) |>
-    filter(pval_bf < 0.05) |>
-   # arrange(fdr) |>
-    distinct(gene, .keep_all = TRUE) |>
-    mutate(across(c(pval, pval_bf, fdr), ~ signif(.x, 2)),
-           z = round(z, 2)) |>
-    dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, fdr, gene_biotype, chr)
-    
-  if (nrow(z_gene) == 0) {
-    cat("No significant genes (FDR < 0.05)\n\n")
-  } else {
-    z_gene_tbl <- z_gene |>
-    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
-    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
-    mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
-    gt() |>
-    tab_header(title = md(paste0("**", toupper(g), "**")),
-               subtitle = md(paste0("cTWAS significant genes (P<sub>BF</sub> < 0.05): **", nrow(z_gene), "**"))) |>
-    cols_label(cell_type = "Cell Type",
-               symbol = "Gene Symbol",
-               gene = "ENSG ID",
-               z = "Z-score",
-               pval = "P-value",
-               pval_bf = "BF(P)",
-               fdr = "FDR",
-               gene_biotype = "Gene Type",
-               chr = "Chr") |>
-    tab_options(
-      table.font.names = "Arial",
-      table.font.size = 12,
-      data_row.padding = px(3)
-    ) |>
-    opt_table_font(
-      font = list(default_fonts())
-    ) 
-    print(z_gene_tbl)
-  }
-  
-}
-```
-
-***
-
-#### Fine-mapping {.tabset}
-
-***
-
-```{r ctwas_fine_mapping_tbl, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
-
-for (g in gwas) {
-  cat("##### ", toupper(g), " \n\n")
-  
-  file <- paste0(in_dir, "multi/ctwas_multi_", g, "_ctwas.rds")
-  ctw_res  <- read_rds(file)
-  
-  if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
-
-    cat("**No finemapped genes (no credible sets identified)**\n\n")
-    next
-  }
-  
-  finemap_res <- as_tibble(ctw_res$finemap_res) |>
-    dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
-    separate(id, into = c('gene', 'id'), sep = "\\|") |>
-    separate(id, into = c('cell_type', 'id'), sep = "_") |>
-    left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-    mutate(pval = 2 * pnorm(-abs(z)),
-           pval_bf = pval * unique_genes_all) |>
-    mutate(pval_bf = pmin(pval_bf, 1)) |>
-    arrange(pval_bf) |>
-   # filter(pval_bf < 0.05) |>
-   # arrange(fdr) |>
-   # distinct(gene, .keep_all = TRUE) |>
-    mutate(across(c(pval, pval_bf, susie_pip), ~ signif(.x, 2)),
-           z = round(z, 2)) |>
-    dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
-  
-  if (nrow(finemap_res) == 0) {
-    cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
-} else {
-  finemap_tbl <- finemap_res |>
-    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
-    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
-    mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
-  gt() |>
-  tab_header(
-    title = md(paste0("**", toupper(g), "**")),
-    subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
-  ) |>
-  cols_label(
-    cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
-    pval = "P", pval_bf = "BF(P)", susie_pip = "PIP", cs = "CS",
-    gene_biotype = "Type", chr = "Chr"
-  ) |>
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3)
-  ) |>
-  opt_table_font(
-    font = list(default_fonts())
-  )
-  print(finemap_tbl)
-  results_multi_lst[[g]] <- finemap_res
-  }
-    
-}
-
-openxlsx::write.xlsx(
-  x = results_multi_lst,
-  file = file.path(tbl_dir, "ctwas_multi_tbl.xlsx"),
-  overwrite = TRUE
-)
-```
-
-***
-
 ### Single (Fine_mapped only) {.tabset}
 
 ***
@@ -301,6 +163,11 @@ for (g in gwas) {
     }
   
   ctw_res  <- read_rds(file)
+  
+  if (!is.null(ctw_res$status) && ctw_res$status == "skipped") {
+    cat("**Skipped:** ", ctw_res$reason, "\n\n")
+    next
+  }
   
   if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
 
