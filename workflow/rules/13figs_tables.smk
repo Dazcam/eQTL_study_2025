@@ -8,11 +8,12 @@ rule all:
 #        config['plotting']['eqtl_qc_plt']['out_file'],
 #        config['plotting']['ldsr_plt']['out_file'],
 #        config['plotting']['rep_plt']['out_file'],
-        config['plotting']['supp_plt']['out_file'],
+#        config['plotting']['supp_plt']['out_file'],
 #        config['plotting']['data_perm']['out_file'],
 #        config['plotting']['data_nominal']['out_file'],
 #        config['plotting']['data_mk_eqtl_tar']['out_file']
 #        config['plotting']['data_weights']['out_file']
+        "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
 
 rule eqtl_tbl:
     output: config['plotting']['eqtl_tbl']['out_file']
@@ -123,6 +124,22 @@ rule data_weights:
              "{params.cell_types}" \
              {threads} \
             >> {log} 2>&1
+           """
+
+rule final_genotypes:
+    input: vcf = "../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz",
+           samples = "../resources/sheets/final_134_sample_ids.txt"
+    output: "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
+    envmodules: "BCFtools"
+    resources: time="30:00"
+    log: "../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/final_genotypes.log"
+    shell: """
+           bcftools view \
+             --samples-file {input.samples} \
+             --output-type z \
+             --output {output} \
+             {input.vcf} 2>> {log}
+           bcftools index --tbi {output} 2>> {log}
            """
 
 #rule manuscript_tables_report:
