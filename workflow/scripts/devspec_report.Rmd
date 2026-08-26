@@ -102,9 +102,13 @@ any_table <- any_table |>
     untestable_not_genotyped_not_expressed = "untestable_not_expressed"
   ))
 
-# Unpack heterogeneity test (Cochran's Q on fetal-specific pairs)
-het_usable <- het_test$usable
-het_funnel <- het_test$funnel
+# Unpack heterogeneity test (Cochran's Q on fetal-specific pairs). het_usable
+# is the detail level (one row per fetal-adult comparison); het_heterogeneous
+# is the aggregated, stringent pair-level call (heterogeneous in ALL tested
+# adult comparisons).
+het_usable        <- het_test$usable
+het_heterogeneous <- het_test$heterogeneous_pairs
+het_funnel        <- het_test$funnel
 
 # Unpack subcluster/supercluster effect-size object
 subcluster_tbl   <- eqtl_effects$subcluster_specific
@@ -177,9 +181,9 @@ significance_counts <- paired_betas |>
 
 1. `extract_eqtl_universe`: Extract unique fetal eGene-eSNP universe (L1+L2)
 2. `classify_eqtl_specificity`: Classify pairs as testable/untestable and shared/fetal-specific vs Fujita ("any" tier)
-3. `heterogeneity_test`: Cochran's Q test on fetal-specific pairs vs matched adult Fujita cell type
+3. `heterogeneity_test`: Cochran's Q test on fetal-specific pairs vs all tested adult Fujita cell types
 4. `prep_ld_clump_input` / `run_ld_clump` / `parse_ld_clump`: LD-independence pruning of the eGene-eSNP universe
-5. `ocr_enrich`: Test fetal-specific/shared eQTL enrichment in adult (Li et al.) cortical union OCRs
+5. `ocr_enrich`: Test fetal-specific/shared/specific-heterogeneous eQTL enrichment in adult (Li et al.) cortical union OCRs
 6. `eqtl_effect_sizes`: Extract subcluster/supercluster-specific eQTL
 7. `beta_correlation`: Fetal-adult eQTL beta correlations and opposite-effect allele checks
 8. `dev_specificity_report`: Summarise developmental specificity results
@@ -191,8 +195,11 @@ significance_counts <- paired_betas |>
 Unique eGene-eSNP pairs sig. in fetal data classified against adult eGene-eSNP pairs:
 
 - Testable shared: if sig. in >= 1 Fugita cell type
-  - Feeds: LD-clumping, OCR enrichment, Heterogeneity test*
+  - Feeds: OCR enrichment (as the "shared" SNP set)
 - Testable specific: present in Fugita, but not sig. in any Fugita cell type
+  - Feeds: Heterogeneity test (next section), OCR enrichment (as the "fetal-specific" SNP set)
+
+Both categories are LD-pruned (see LD-clumping steps) before being used in OCR enrichment.
 
 ***
 
@@ -246,15 +253,20 @@ any_table |>
 
 ### Heterogeneity test (fetal-specific eQTL) {.tabset}
 
-- Cochran's Q: Tests whether the fetal and matched-adult effect  sizes differ 
-by more than combined sampling error predicts
+- Cochran's Q: Tests whether the fetal and adult effect sizes differ by more
+than combined sampling error predicts
+- Each `testable_specific` pair is collapsed to a single fetal reference row
+(whichever fetal cell type it's most significant in), then tested against
+EVERY adult Fujita cell type that pair was actually tested in -- not just its
+a priori biologically-matched type
 - FDR (BH) applied once, pooled across all usable rows
+- STRINGENT final call: a pair only counts as fetal-specific-and-heterogeneous
+if heterogeneous in ALL of its tested adult comparisons, not just one
 - Notes:
-  - Q test is not directional. It tells you if the two betas differ but not which way
-  - Many SNP-gene pairs in input annotation (testable specific) dropped. Mainly due to
-    pair lacking overlap in relevant adult cell type. For example pair is sig. in 
-    GABA, but only expressed (but not sig.) in adult Mic. Het tests can only be run in
-    matching fetal and adult cell populations.
+  - Q is not directional -- it tells you the betas differ, not which way
+    (see Delta_Beta in the detail table for direction)
+  - Pairs tested against more adult cell types face a harder bar under the
+    "all" rule -- see the stringency table below
 
 ***
 
@@ -267,29 +279,215 @@ het_funnel |>
 ```
 
 ```{r het-test-summary-stats, results = "asis"}
-n_het   <- sum(het_usable$heterogeneous)
-n_total <- nrow(het_usable)
+n_row_het    <- sum(het_usable$heterogeneous)
+n_row_total  <- nrow(het_usable)
+n_pair_het   <- sum(het_heterogeneous$heterogeneous_all)
+n_pair_total <- nrow(het_heterogeneous)
 
 cat(sprintf(
-  "%d of %d usable rows (%s) were formally heterogeneous (FDR < 0.05).",
-  n_het, n_total, percent(n_het / n_total, accuracy = 0.1)
+  paste0(
+    "At the individual fetal-adult comparison level, %d of %d tested comparisons (%s) ",
+    "were formally heterogeneous (FDR < 0.05). Applying the stringent rule -- heterogeneous ",
+    "in **all** tested adult comparisons -- %d of %d testable_specific pairs (%s) pass."
+  ),
+  n_row_het, n_row_total, percent(n_row_het / n_row_total, accuracy = 0.1),
+  n_pair_het, n_pair_total, percent(n_pair_het / n_pair_total, accuracy = 0.1)
 ))
+```
+
+```{r het-test-stringency-effect}
+het_heterogeneous |>
+  mutate(n_bucket = if_else(n_comparisons_tested >= 4, "4+", as.character(n_comparisons_tested))) |>
+  group_by(n_bucket) |>
+  summarise(N_Pairs = n(), N_Passed_All = sum(heterogeneous_all), .groups = "drop") |>
+  mutate(Pass_Rate = percent(N_Passed_All / N_Pairs, accuracy = 0.1)) |>
+  arrange(n_bucket) |>
+  gt() |>
+  tab_header(title = "Pass rate by number of adult comparisons tested",
+             subtitle = "Pairs tested against more adult cell types face a harder bar under the 'all' rule")
 ```
 
 ***
 
-#### Results table
+#### Final pairs (stringent)
 
-```{r het-test-results-table}
+The headline result: one row per pair, aggregated across all its tested adult
+comparisons.
+
+```{r het-test-final-pairs-table}
+het_heterogeneous |>
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+  select(
+    ENSG = phenotype_id, Symbol = external_gene_name, eSNP = variant_id,
+    Fetal_Cell_Type = fetal_cell_type,
+    N_Adult_Comparisons_Tested = n_comparisons_tested,
+    N_Heterogeneous = n_comparisons_heterogeneous,
+    Heterogeneous_All = heterogeneous_all,
+    Matched_Type_Tested = matched_type_tested,
+    Confirmed_By_Matched_Type = confirmed_by_matched_type
+  ) |>
+  arrange(desc(Heterogeneous_All), desc(N_Adult_Comparisons_Tested)) |>
+  small_dt()
+```
+
+***
+
+#### Magnitude-consistent pairs (|fetal| > |adult|)
+
+Restricts the 531 stringent (heterogeneous-in-all) pairs further: retains
+only those where |fetal beta| > |adult beta| in EVERY tested comparison for
+that pair -- not just heterogeneous, but the fetal effect strictly larger in
+magnitude, regardless of sign. This sidesteps delta_beta's ambiguity when
+fetal and adult betas have opposite signs (delta_beta can look "fetal-bigger"
+even when adult's magnitude is actually larger). NOT yet fed to OCR
+enrichment -- report-only for now.
+
+```{r het-test-magnitude-prep}
+stringent_magnitude <- het_usable |>
+  semi_join(het_heterogeneous |> filter(heterogeneous_all),
+            by = c("phenotype_id", "variant_id")) |>
+  mutate(
+    magnitude_diff = abs(beta_my) - abs(beta_fugita_harmonized),
+    fetal_bigger = magnitude_diff > 0
+  )
+
+pair_magnitude <- stringent_magnitude |>
+  group_by(phenotype_id, variant_id) |>
+  summarise(
+    fetal_cell_type = first(cell_type),
+    n_comparisons = n(),
+    n_fetal_bigger = sum(fetal_bigger),
+    magnitude_consistent = all(fetal_bigger),
+    min_magnitude_diff = min(magnitude_diff),
+    max_magnitude_diff = max(magnitude_diff),
+    .groups = "drop"
+  )
+```
+
+```{r het-test-magnitude-summary-stats, results = "asis"}
+n_pass <- sum(pair_magnitude$magnitude_consistent)
+n_total <- nrow(pair_magnitude)
+
+cat(sprintf(
+  "%d of %d stringent pairs (%s) also have |fetal beta| > |adult beta| in EVERY tested comparison.",
+  n_pass, n_total, percent(n_pass / n_total, accuracy = 0.1)
+))
+```
+
+```{r het-test-magnitude-summary-table}
+pair_magnitude |>
+  count(magnitude_consistent, name = "N_Pairs") |>
+  mutate(Proportion = percent(N_Pairs / sum(N_Pairs), accuracy = 0.1)) |>
+  gt() |>
+  tab_header(title = "Magnitude consistency (|fetal beta| > |adult beta|) across a pair's comparisons")
+```
+
+```{r het-test-magnitude-histogram, fig.height=4, fig.width=7}
+ggplot(stringent_magnitude, aes(x = magnitude_diff)) +
+  geom_histogram(bins = 30, fill = "#4DAF4A", colour = "white") +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  labs(x = "|fetal beta| - |adult beta| (per comparison)", y = "N comparisons") +
+  theme_classic(base_size = 12)
+```
+
+```{r het-test-magnitude-final-table}
+pair_magnitude |>
+  filter(magnitude_consistent) |>
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+  select(ENSG = phenotype_id, Symbol = external_gene_name, eSNP = variant_id,
+         Fetal_Cell_Type = fetal_cell_type, N_Comparisons = n_comparisons,
+         Min_Magnitude_Diff = min_magnitude_diff, Max_Magnitude_Diff = max_magnitude_diff) |>
+  arrange(Min_Magnitude_Diff) |>
+  mutate(across(where(is.numeric), ~ round(.x, 4))) |>
+  small_dt()
+```
+
+***
+
+#### Adult-larger comparisons
+
+Of the individual fetal-adult comparisons underlying the 531 stringent
+pairs, those where |adult beta| actually exceeds |fetal beta| -- the mirror
+case to the "Magnitude-consistent" tab. Some of these belong to pairs where
+adult wins in every comparison; others belong to pairs where fetal wins in
+a *different* comparison for the same gene/SNP ("mixed").
+
+```{r het-test-adult-bigger-prep}
+adult_bigger_rows <- stringent_magnitude |>
+  filter(magnitude_diff < 0) |>
+  arrange(magnitude_diff)
+
+target_pairs <- adult_bigger_rows |>
+  distinct(phenotype_id, variant_id, cell_type)
+
+target_rows <- stringent_magnitude |>
+  semi_join(target_pairs, by = c("phenotype_id", "variant_id", "cell_type"))
+
+side_by_side <- target_rows |>
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+  select(phenotype_id, external_gene_name, variant_id, cell_type,
+         beta_my, fugita_cell_type, beta_fugita_harmonized, magnitude_diff) |>
+  group_by(phenotype_id, variant_id, cell_type) |>
+  mutate(Fetal_Beta = first(beta_my)) |>
+  ungroup() |>
+  select(-beta_my) |>
+  pivot_wider(
+    id_cols = c(phenotype_id, external_gene_name, variant_id, cell_type, Fetal_Beta),
+    names_from = fugita_cell_type,
+    values_from = c(beta_fugita_harmonized, magnitude_diff),
+    names_glue = "{fugita_cell_type}_{.value}"
+  ) |>
+  rename(Gene = external_gene_name, ENSG = phenotype_id, eSNP = variant_id,
+         Fetal_Cell_Type = cell_type)
+
+mixed_flag <- target_rows |>
+  distinct(phenotype_id, variant_id) |>
+  left_join(
+    stringent_magnitude |>
+      group_by(phenotype_id, variant_id) |>
+      summarise(all_adult_bigger = all(!fetal_bigger), .groups = "drop"),
+    by = c("phenotype_id", "variant_id")
+  ) |>
+  mutate(pair_type = if_else(all_adult_bigger, "adult_bigger_everywhere",
+                              "mixed -- fetal bigger in >=1 other comparison"))
+```
+
+```{r het-test-adult-bigger-summary-stats, results = "asis"}
+cat(sprintf(
+  "%d individual comparisons (across %d unique gene/SNP/fetal-cell-type triples) show |adult beta| > |fetal beta|.",
+  nrow(adult_bigger_rows), nrow(target_pairs)
+))
+```
+
+```{r het-test-adult-bigger-breakdown}
+mixed_flag |>
+  count(pair_type, name = "N_Triples") |>
+  mutate(Proportion = percent(N_Triples / sum(N_Triples), accuracy = 0.1)) |>
+  gt() |>
+  tab_header(title = "Breakdown: adult-bigger-everywhere vs mixed")
+```
+
+```{r het-test-adult-bigger-table}
+side_by_side |>
+  mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
+  small_dt()
+```
+
+***
+
+#### Per-comparison detail
+
+Every fetal-adult comparison underlying the table above -- for checking why
+a specific pair passed or failed the "all" rule.
+
+```{r het-test-detail-table}
 het_usable |>
   left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
   select(
-    Cell_Type = cell_type,
-    ENSG = phenotype_id,
-    Symbol = external_gene_name,
-    eSNP = variant_id,
+    Fetal_Cell_Type = cell_type,
+    ENSG = phenotype_id, Symbol = external_gene_name, eSNP = variant_id,
     Fetal_Beta = beta_my, Fetal_SE = se_my, Fetal_AF = af_my,
-    Adult_Cell_Type = fugita_label_match,
+    Adult_Cell_Type = fugita_cell_type, Biologically_Matched = biologically_matched,
     Adult_Beta = beta_fugita_harmonized, Adult_SE = se_fugita, Adult_AF = af_fugita,
     Delta_Beta = delta_beta,
     Q, P = p, Q_value = q, Heterogeneous = heterogeneous
@@ -553,28 +751,37 @@ opposite_effects |>
 
 ### OCR enrichment {.tabset}
 
-- LD-pruned fetal-specific and shared eQTL SNPs tested
-for enrichment in adult cortical OCRs (Li et al. 2023)
-- Cortical adult union peak set manually curated 
+- LD-pruned fetal-specific, shared, and specific-heterogeneous eQTL SNPs
+tested for enrichment in adult cortical OCRs (Li et al. 2023)
+- Cortical adult union peak set manually curated
+- Specific-heterogeneous is a SUBSET of fetal-specific (the stringent subset
+confirmed via the heterogeneity test above), not an independent comparison
 
 ***
 
 #### Fold enrichment
 
-```{r ocr-enrichment-barplot, fig.height=4, fig.width=6}
+```{r ocr-enrichment-barplot, fig.height=4, fig.width=7}
 ocr_enrich |>
   mutate(
     sig_label = case_when(p_value < 0.001 ~ "***",
                            p_value < 0.01  ~ "**",
                            p_value < 0.05  ~ "*",
                            TRUE            ~ "ns"),
-    snp_set = recode(snp_set, fetal_specific = "Fetal-specific", shared = "Shared")
+    snp_set = factor(
+      recode(snp_set,
+             fetal_specific = "Fetal-specific",
+             shared = "Shared",
+             specific_heterogeneous = "Specific + heterogeneous"),
+      levels = c("Shared", "Fetal-specific", "Specific + heterogeneous")
+    )
   ) |>
   ggplot(aes(x = snp_set, y = fold_enrichment, fill = snp_set)) +
   geom_col(width = 0.5) +
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_text(aes(label = sig_label), vjust = -0.3, size = 4) +
-  scale_fill_manual(values = c("Fetal-specific" = "#E41A1C", "Shared" = "#4DAF4A")) +
+  scale_fill_manual(values = c("Fetal-specific" = "#E41A1C", "Shared" = "#4DAF4A",
+                                "Specific + heterogeneous" = "#984EA3")) +
   labs(x = NULL, y = "Fold enrichment (adult cortical union)", fill = NULL) +
   theme_classic(base_size = 13) +
   theme(legend.position = "none")
@@ -636,6 +843,191 @@ subcluster_tbl |>
          cell_type_L2 = cell_type_L2, Slope_L2 = slope_L2, SE_L2 = se_L2, Pval_L2 = pval_nom_L2) |>
   mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
   small_dt()
+```
+
+***
+
+#### Sibling comparison table
+
+For each subcluster-specific (gene, SNP) pair: betas, SEs, and nominal
+p-values across the significant L2 subtype, its parent L1, and its two
+non-significant L2 siblings, all on one row. Column order: the L2 subtype
+the gene is significant in, then the parent L1, then the remaining L2
+siblings. Shows whether the "subcluster-specific" call is driven by one
+strong signal diluted by null signal in the siblings when pooled at the L1
+level.
+
+```{r subcluster-sibling-table-prep}
+family_order <- list(
+  "Glu-UL" = c("Glu-UL", "Glu-UL-0", "Glu-UL-1", "Glu-UL-2"),
+  "Glu-DL" = c("Glu-DL", "Glu-DL-0", "Glu-DL-1", "Glu-DL-2"),
+  "GABA"   = c("GABA", "GABA-0", "GABA-1", "GABA-2"),
+  "NPC"    = c("NPC", "NPC-0", "NPC-1", "NPC-2")
+)
+
+build_sibling_table <- function(subcluster_tbl, effect_long, gene_lookup) {
+
+  fam_lookup <- bind_rows(lapply(names(family_order), function(f) {
+    tibble(parent_L1 = f, cell_type_L2 = family_order[[f]][-1])
+  }))
+
+  base <- subcluster_tbl |>
+    select(phenotype_id, variant_id, gene_symbol, parent_L1,
+           sig_cell_type = cell_type_L2,
+           Slope_Sig = slope_L2, SE_Sig = se_L2, Pval_Sig = pval_nom_L2,
+           Slope_L1 = slope_parent, SE_L1 = se_parent, Pval_L1 = pval_nom_parent)
+
+  sibling_map <- fam_lookup |>
+    inner_join(base |> distinct(phenotype_id, variant_id, parent_L1, sig_cell_type),
+               by = "parent_L1", relationship = "many-to-many") |>
+    filter(cell_type_L2 != sig_cell_type) |>
+    group_by(phenotype_id, variant_id) |>
+    mutate(sib_slot = paste0("Sib", row_number())) |>
+    ungroup()
+
+  sib_stats <- sibling_map |>
+    left_join(
+      effect_long |> select(phenotype_id, variant_id, cell_type,
+                             Slope = slope, SE = slope_se, Pval = pval_nominal),
+      by = c("phenotype_id", "variant_id", "cell_type_L2" = "cell_type")
+    )
+
+  sib_wide <- sib_stats |>
+    select(phenotype_id, variant_id, sib_slot, cell_type_L2, Slope, SE, Pval) |>
+    pivot_wider(
+      names_from = sib_slot,
+      values_from = c(cell_type_L2, Slope, SE, Pval),
+      names_glue = "{sib_slot}_{.value}"
+    )
+
+  base |>
+    left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+    left_join(sib_wide, by = c("phenotype_id", "variant_id"))
+}
+
+sibling_tbl <- build_sibling_table(subcluster_tbl, effect_long, gene_lookup)
+```
+
+```{r subcluster-sibling-table}
+sibling_tbl |>
+  select(
+    Gene = external_gene_name, ENSG = phenotype_id, eSNP = variant_id,
+    cell_type_L2a = sig_cell_type, Slope_L2a = Slope_Sig, SE_L2a = SE_Sig, Pval_L2a = Pval_Sig,
+    cell_type_L1 = parent_L1, Slope_L1, SE_L1, Pval_L1,
+    cell_type_L2b = Sib1_cell_type_L2, Slope_L2b = Sib1_Slope, SE_L2b = Sib1_SE, Pval_L2b = Sib1_Pval,
+    cell_type_L2c = Sib2_cell_type_L2, Slope_L2c = Sib2_Slope, SE_L2c = Sib2_SE, Pval_L2c = Sib2_Pval
+  ) |>
+  mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
+  small_dt()
+```
+
+***
+
+#### Family heatmaps {.tabset}
+
+For each L1 family with L2 subtypes, betas across the parent and its 3
+children for every subcluster-specific (gene, SNP) pair in that family.
+Black border marks the cell where the pair was actually classified
+subcluster-specific -- the pattern to look for is strong colour in one
+column, faint/near-white everywhere else in the row.
+
+```{r subcluster-family-heatmap-prep}
+build_family_matrix <- function(family, subcluster_tbl, effect_long, gene_lookup) {
+  members <- family_order[[family]]
+
+  fam_pairs <- subcluster_tbl |>
+    filter(parent_L1 == family) |>
+    distinct(phenotype_id, variant_id, cell_type_L2) |>
+    left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+    mutate(pair_label = paste0(coalesce(external_gene_name, phenotype_id), " (", variant_id, ")"))
+
+  if (nrow(fam_pairs) == 0) return(NULL)
+
+  slopes <- effect_long |>
+    filter(cell_type %in% members,
+           phenotype_id %in% fam_pairs$phenotype_id,
+           variant_id %in% fam_pairs$variant_id) |>
+    inner_join(fam_pairs |> select(phenotype_id, variant_id, pair_label),
+               by = c("phenotype_id", "variant_id"))
+
+  slope_wide <- slopes |>
+    select(pair_label, cell_type, slope) |>
+    distinct(pair_label, cell_type, .keep_all = TRUE) |>
+    pivot_wider(names_from = cell_type, values_from = slope)
+
+  for (m in members) if (!(m %in% names(slope_wide))) slope_wide[[m]] <- NA_real_
+
+  mat <- as.matrix(slope_wide[, members])
+  rownames(mat) <- slope_wide$pair_label
+
+  sig_mat <- matrix(FALSE, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
+  for (i in seq_len(nrow(fam_pairs))) {
+    pl <- fam_pairs$pair_label[i]
+    sig_ct <- fam_pairs$cell_type_L2[i]
+    if (pl %in% rownames(sig_mat) && sig_ct %in% colnames(sig_mat)) {
+      sig_mat[pl, sig_ct] <- TRUE
+    }
+  }
+
+  list(mat = mat, sig_mat = sig_mat)
+}
+
+col_fun_family <- colorRamp2(c(-1, 0, 1), c("#2166AC", "white", "#B2182B"))
+
+draw_family_heatmap <- function(family, row_height_in = NULL) {
+  fam_data <- build_family_matrix(family, subcluster_tbl, effect_long, gene_lookup)
+  if (is.null(fam_data)) {
+    cat("No subcluster-specific genes for", family, ".\n")
+    return(invisible(NULL))
+  }
+
+  ht_args <- list(
+    matrix = fam_data$mat,
+    name = "Slope",
+    col = col_fun_family,
+    cluster_rows = FALSE,
+    cluster_columns = FALSE,
+    na_col = "grey90",
+    row_names_gp = gpar(fontsize = 7),
+    column_names_gp = gpar(fontsize = 10),
+    cell_fun = function(j, i, x, y, width, height, fill) {
+      if (fam_data$sig_mat[i, j]) {
+        grid.rect(x, y, width, height, gp = gpar(col = "black", lwd = 2, fill = NA))
+      }
+    }
+  )
+
+  if (!is.null(row_height_in)) {
+    ht_args$height <- unit(row_height_in, "in") * nrow(fam_data$mat)
+  }
+
+  do.call(Heatmap, ht_args)
+
+}
+```
+
+##### Glu-UL
+
+```{r subcluster-family-glu-ul, fig.height=max(8, 0.18 * nrow(build_family_matrix("Glu-UL", subcluster_tbl, effect_long, gene_lookup)$mat)), fig.width=6, results='asis'}
+print(draw_family_heatmap("Glu-UL", row_height_in = 0.18))
+```
+
+##### Glu-DL
+
+```{r subcluster-family-glu-dl, fig.height=8, fig.width=6, results='asis'}
+print(draw_family_heatmap("Glu-DL"))
+```
+
+##### GABA
+
+```{r subcluster-family-gaba, fig.height=8, fig.width=6, results='asis'}
+print(draw_family_heatmap("GABA"))
+```
+
+##### NPC
+
+```{r subcluster-family-npc, fig.height=8, fig.width=6, results='asis'}
+print(draw_family_heatmap("NPC"))
 ```
 
 ***

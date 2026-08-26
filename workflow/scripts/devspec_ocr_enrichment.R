@@ -1,24 +1,22 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: OCR enrichment of fetal-specific/shared eQTL
-#    (SIMPLIFIED -- adult cortical union only)
+#    Developmental specificity: OCR enrichment of fetal-specific/shared/
+#    heterogeneous eQTL (adult cortical union only)
 #
 #--------------------------------------------------------------------------------------
 
-#  Tests whether fetal-specific and shared eQTL SNPs (from the "any" tier of the
-#  classification step, B), LD-pruned via the clumping sub-pipeline (D), are
-#  enriched in adult open chromatin (Li et al. 2023 snATAC-seq), restricted to the
-#  cortical union peak set only.
+#  Tests whether three fetal SNP sets are enriched in adult open chromatin
+#  (Li et al. 2023, cortical union only): testable_specific and testable_shared
+#  (from B's "any" tier, unchanged), and the new specific_heterogeneous set (from
+#  C -- testable_specific pairs additionally confirmed as formally heterogeneous
+#  in >=1 tested adult comparison). All three LD-pruned against the same
+#  independent_snps universe (D) before testing.
 #
-#  SIMPLIFIED from the original design: drops all Ziffra fetal peak-set testing
-#  (per-cell-type and fetal_union) and all per-L1 Li adult peak sets, keeping only
-#  adult_cortical_union. 2 tests total (testable_specific / testable_shared x
-#  adult_cortical_union), down from the original 10 peak sets x 2 SNP sets = 20.
-#  Note: this removes the original fetal-vs-adult contrast (the prediction that
-#  fetal-specific SNPs enrich in fetal OCRs but not adult ones) -- this script now
-#  only assesses the adult-enrichment side in isolation.
+#  NOTE: specific_heterogeneous is a SUBSET of testable_specific, not an
+#  independent comparison -- interpret side-by-side results with that nesting
+#  in mind, not as three unrelated tests.
 #
-#  Step E of the developmental-specificity pipeline.
+#  Step 5 of the developmental-specificity pipeline.
 
 #--------------------------------------------------------------------------------------
 
@@ -34,7 +32,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nTesting fetal-specific/shared eQTL enrichment in adult cortical union OCRs ...")
+message("\n\nTesting fetal-specific/shared/heterogeneous eQTL enrichment in adult cortical union OCRs ...")
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -44,29 +42,27 @@ suppressPackageStartupMessages({
 })
 
 # Input and output paths ---------------------------------------------------------------
-classification_file   <- snakemake@input[["classification"]]
-independent_snps_file <- snakemake@input[["independent_snps"]]
-snp_lookup_files       <- snakemake@input[["snp_lookups"]]
-li_s6_file            <- snakemake@input[["li_s6"]]
-li_s7_file            <- snakemake@input[["li_s7"]]
-output_file           <- snakemake@output[[1]]
+classification_file    <- snakemake@input[["classification"]]
+heterogeneity_file     <- snakemake@input[["heterogeneity_test"]]
+independent_snps_file  <- snakemake@input[["independent_snps"]]
+snp_lookup_files        <- snakemake@input[["snp_lookups"]]
+li_s6_file             <- snakemake@input[["li_s6"]]
+li_s7_file             <- snakemake@input[["li_s7"]]
+output_file            <- snakemake@output[[1]]
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("classification_file", "independent_snps_file", "n_snp_lookups",
-               "li_s6_file", "li_s7_file", "output_file"),
-  value    = c(classification_file, independent_snps_file, length(snp_lookup_files),
-               li_s6_file, li_s7_file, output_file)
+  variable = c("classification_file", "heterogeneity_file", "independent_snps_file",
+               "n_snp_lookups", "li_s6_file", "li_s7_file", "output_file"),
+  value    = c(classification_file, heterogeneity_file, independent_snps_file,
+               length(snp_lookup_files), li_s6_file, li_s7_file, output_file)
 ) |>
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
 
-# All cortical neuronal + glial Li et al. 2023 cell type labels used to build the
-# cortical union peak set. Excludes cerebellar, thalamic, midbrain, basal ganglia
-# populations. Hardcoded -- not a tunable parameter.
 all_cortical_types <- c(
   "ITL23_1", "ITL23_2", "ITL23_3", "ITL23_4", "ITL23_5", "ITL23_6",
   "ITL34", "ITL4_1", "ITL4_2", "ITL45_1", "ITL45_2",
@@ -88,7 +84,6 @@ all_cortical_types <- c(
 
 # Functions ----------------------------------------------------------------------------
 
-# Identical to the original ocr_enrichment.R's perform_permutation_test.
 perform_permutation_test <- function(sig_snps_gr, peaks_gr, n_perm = 1000) {
   message("Starting permutation test for ATAC-seq peak enrichment...")
 
@@ -154,11 +149,15 @@ perform_permutation_test <- function(sig_snps_gr, peaks_gr, n_perm = 1000) {
 
 # Main -----------------------------------------------------------------------------------
 
-# 1. Load fetal-specific + shared SNPs from classification, restricted to the
-#    LD-independent universe ---------------------------------------------------------
-message("\nLoading classification output ...")
+# 1. Load fetal-specific + shared SNPs from classification, and the new
+#    heterogeneous set from C. All restricted to the LD-independent universe. ----------
+message("\nLoading classification output (B) ...")
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
+
+message("Loading heterogeneity test output (C) ...")
+het_test <- read_rds(heterogeneity_file)
+heterogeneous_pairs <- het_test$heterogeneous_pairs %>% filter(heterogeneous_all)
 
 message("\nRestricting to LD-independent eGene-eSNP pairs ...")
 independent_universe <- read_rds(independent_snps_file)
@@ -168,6 +167,12 @@ any_table <- any_table %>%
   semi_join(independent_universe, by = c("phenotype_id", "variant_id"))
 message("  any_table rows before LD pruning: ", n_before_prune)
 message("  any_table rows after LD pruning: ", nrow(any_table))
+
+n_het_before_prune <- nrow(heterogeneous_pairs)
+heterogeneous_pairs <- heterogeneous_pairs %>%
+  semi_join(independent_universe, by = c("phenotype_id", "variant_id"))
+message("  heterogeneous_pairs rows before LD pruning: ", n_het_before_prune)
+message("  heterogeneous_pairs rows after LD pruning: ", nrow(heterogeneous_pairs))
 
 fetal_specific_snps <- any_table %>%
   filter(final_category == "testable_specific") %>%
@@ -180,6 +185,11 @@ shared_snps <- any_table %>%
   pull(variant_id) %>%
   unique()
 message("  Shared unique SNPs: ", length(shared_snps))
+
+specific_heterogeneous_snps <- heterogeneous_pairs %>%
+  pull(variant_id) %>%
+  unique()
+message("  Specific + heterogeneous unique SNPs: ", length(specific_heterogeneous_snps))
 
 # 2. Build SNP coordinate lookup from existing per-cell-type files ----------------------
 message("\nBuilding SNP coordinate lookup from ", length(snp_lookup_files), " existing files ...")
@@ -200,16 +210,13 @@ make_snp_gr <- function(snp_ids, coords) {
     )
 }
 
-specific_gr <- make_snp_gr(fetal_specific_snps, snp_coords)
-shared_gr   <- make_snp_gr(shared_snps, snp_coords)
+specific_gr             <- make_snp_gr(fetal_specific_snps, snp_coords)
+shared_gr               <- make_snp_gr(shared_snps, snp_coords)
+specific_heterogeneous_gr <- make_snp_gr(specific_heterogeneous_snps, snp_coords)
 
 message("  Fetal-specific SNPs with coordinates: ", length(specific_gr))
 message("  Shared SNPs with coordinates: ", length(shared_gr))
-
-n_missing_specific <- length(fetal_specific_snps) - length(specific_gr)
-n_missing_shared   <- length(shared_snps) - length(shared_gr)
-if (n_missing_specific > 0) message("  WARNING: ", n_missing_specific, " fetal-specific SNPs missing from lookup files")
-if (n_missing_shared > 0)   message("  WARNING: ", n_missing_shared, " shared SNPs missing from lookup files")
+message("  Specific+heterogeneous SNPs with coordinates: ", length(specific_heterogeneous_gr))
 
 # 3. Load Li et al. 2023 adult peaks, cortical union only -------------------------------
 message("\nLoading Li et al. 2023 adult brain cCREs (cortical union only) ...")
@@ -218,11 +225,8 @@ options(scipen = 999)
 
 li_s6 <- read_tsv(li_s6_file, col_names = c("chr", "start", "end", "ccre_id"),
                    col_types = "ciic", show_col_types = FALSE)
-message("  Total cCREs in S6: ", nrow(li_s6))
-
 li_s7 <- read_tsv(li_s7_file, col_names = c("ccre_id", "cell_types"),
                    col_types = "cc", show_col_types = FALSE)
-message("  Total cCREs in S7: ", nrow(li_s7))
 
 ccre_ids_union <- li_s7 %>%
   filter(map_lgl(cell_types, ~ any(str_split_1(.x, ",") %in% all_cortical_types))) %>%
@@ -239,14 +243,19 @@ adult_cortical_union_gr <- li_s6 %>%
 
 message("  adult_cortical_union: ", length(adult_cortical_union_gr), " peaks")
 
-# 4. Run the two enrichment tests --------------------------------------------------------
-message("\n--- Running enrichment tests (2 tests: testable_specific / testable_shared",
-        " x adult_cortical_union) ---\n")
+# 4. Run the three enrichment tests -------------------------------------------------------
+message("\n--- Running enrichment tests (3 sets x adult_cortical_union) ---\n")
+
+snp_sets <- list(
+  fetal_specific = specific_gr,
+  shared         = shared_gr,
+  specific_heterogeneous = specific_heterogeneous_gr
+)
 
 results <- tibble()
 
-for (snp_set_name in c("fetal_specific", "shared")) {
-  snp_gr <- if (snp_set_name == "fetal_specific") specific_gr else shared_gr
+for (snp_set_name in names(snp_sets)) {
+  snp_gr <- snp_sets[[snp_set_name]]
 
   message("\n=== adult_cortical_union vs ", snp_set_name, " SNPs (",
           length(snp_gr), " SNPs, ", length(adult_cortical_union_gr), " peaks) ===")
@@ -256,14 +265,14 @@ for (snp_set_name in c("fetal_specific", "shared")) {
   results <- bind_rows(
     results,
     tibble(
-      peak_set              = "adult_cortical_union",
-      snp_set                = snp_set_name,
-      n_snps                  = length(snp_gr),
-      n_peaks                  = length(adult_cortical_union_gr),
-      p_value                    = perm_result$p_value,
-      observed_overlap            = perm_result$observed_overlap,
-      mean_permuted_overlap        = perm_result$mean_permuted_overlap,
-      fold_enrichment                = perm_result$fold_enrichment
+      peak_set                = "adult_cortical_union",
+      snp_set                  = snp_set_name,
+      n_snps                    = length(snp_gr),
+      n_peaks                    = length(adult_cortical_union_gr),
+      p_value                      = perm_result$p_value,
+      observed_overlap              = perm_result$observed_overlap,
+      mean_permuted_overlap          = perm_result$mean_permuted_overlap,
+      fold_enrichment                  = perm_result$fold_enrichment
     )
   )
 }

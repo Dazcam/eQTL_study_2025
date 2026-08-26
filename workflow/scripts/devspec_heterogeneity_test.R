@@ -1,42 +1,38 @@
 #--------------------------------------------------------------------------------------
 #
 #    Developmental specificity: heterogeneity test on fetal-specific eQTL (Step C)
+#    (REVISED -- single most-significant fetal row per pair, ALL tested adult
+#    comparisons must be heterogeneous)
 #
 #--------------------------------------------------------------------------------------
 
-#  For every (fetal cell type, gene, SNP) row in the universe (A) whose (gene, SNP)
-#  pair was classified testable_specific by the "any" tier (B, i.e. significant in
-#  fetal, present but not significant in any of the 7 Fujita cell types pooled),
-#  looks up the JOINT (gene, SNP, matched Fujita cell type) row directly in B's
-#  pairs_all table, harmonizes alleles, and tests whether the fetal and adult beta
-#  differ by more than combined sampling error predicts (Cochran's Q):
+#  For every (gene, SNP) pair classified testable_specific by B, collapses to a
+#  SINGLE fetal reference row per pair -- whichever fetal cell type (L1 or L2)
+#  gives that pair's lowest permutation qval, i.e. where it is most significant.
+#  That one fetal row is then tested against EVERY Fujita adult cell type the
+#  pair was actually tested in (not just the a priori biologically-matched type).
 #
-#    Q = (beta_my - beta_fugita_harmonized)^2 / (se_my^2 + se_fugita^2) ~ chisq(df=1)
+#  STRINGENT rule: a pair is called fetal-specific-and-heterogeneous only if it
+#  is heterogeneous in ALL of its successfully-tested adult comparisons (not
+#  just >=1). "Successfully tested" = survived allele harmonization; a
+#  comparison dropped for unresolved allele ambiguity cannot be evaluated and is
+#  excluded from both the count and the all() requirement -- logged separately
+#  per pair so it's clear how many comparisons the "all" rule was actually
+#  applied across.
 #
-#  Matched Fujita cell type comes from A's fugita_label_match tag, already carried
-#  per-row (L1 -> its own match; L2 -> its L1 parent's match). NPC rows (no adult
-#  equivalent) are set aside, not tested, reported separately.
+#  This is a genuinely stricter bar than the "any" design: a pair tested against
+#  more adult cell types has proportionally more chances to fail on just one.
+#  The per-pair n_comparisons_tested x pass/fail breakdown is logged explicitly
+#  so this effect is visible rather than hidden in a single headline count.
 #
-#  A pair failing the joint lookup for a given row (present in pairs_all under a
-#  DIFFERENT Fujita cell type, or only under Ast/Oli, which no fetal type matches)
-#  is dropped for that row -- not a marginal gene/SNP membership check, a direct
-#  joint-pair lookup, since B's testable_specific already guarantees the pair was
-#  jointly tested somewhere among the 7, just not necessarily in this row's
-#  specific match.
+#  NPC included (no biological-match requirement for testing; biologically_matched
+#  is retained as a per-row diagnostic flag only, always FALSE for NPC).
 #
-#  Since A is L1+L2, a single (gene, SNP) pair can contribute more than one row
-#  here (e.g. significant in both an L1 parent and its L2 child) -- tracked via
-#  n_fetal_celltypes_tested, not collapsed.
+#  FDR (BH) pooled once across all usable rows (one row per pair per tested
+#  adult comparison -- no fetal-side duplication now, since each pair
+#  contributes exactly one fetal context).
 #
-#  FDR (BH) pooled across all usable rows. Classification is binary (heterogeneous
-#  / not_heterogeneous) -- every row entering this test is already fetal-sig/
-#  not-adult-sig by construction (that's what testable_specific means), so there's
-#  no adult_sig axis left to cross against.
-#
-#  Standalone: does not feed D (LD clumping) or E (OCR enrichment), both of which
-#  continue to read B's any_table directly, unchanged.
-#
-#  Step 3 (NEW) of the developmental-specificity pipeline.
+#  Step 3 of the developmental-specificity pipeline.
 
 #--------------------------------------------------------------------------------------
 
@@ -52,7 +48,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nRunning heterogeneity test on fetal-specific eQTL (Step C) ...")
+message("\n\nRunning heterogeneity test on fetal-specific eQTL (Step C, stringent 'all' rule) ...")
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -97,141 +93,87 @@ n_pairs_specific_B <- any_table %>% filter(final_category == "testable_specific"
 message("  B: unique (gene, SNP) pairs classified testable_specific: ", n_pairs_specific_B)
 
 # ========================================================================================
-# 2. Build C's starting population: A's rows, restricted to B's testable_specific pairs
+# 2. Collapse to a SINGLE fetal reference row per pair -- lowest qval (most
+#    significant) across all fetal cell types (L1+L2, incl. NPC) it appears in
 # ========================================================================================
+
+message("\n--- Collapsing to single most-significant fetal row per pair ---\n")
 
 specific_pairs <- any_table %>%
   filter(final_category == "testable_specific") %>%
   distinct(phenotype_id, variant_id)
 
-rows_specific <- eqtl_universe %>%
+rows_specific_all <- eqtl_universe %>%
   semi_join(specific_pairs, by = c("phenotype_id", "variant_id"))
 
-n_rows_specific <- nrow(rows_specific)
-n_unique_pairs_specific <- rows_specific %>% distinct(phenotype_id, variant_id) %>% nrow()
+n_fetal_celltypes_significant <- rows_specific_all %>%
+  distinct(phenotype_id, variant_id, cell_type) %>%
+  count(phenotype_id, variant_id, name = "n_fetal_celltypes_significant")
 
-message("  C: rows entering (all fetal cell types, L1+L2): ", n_rows_specific)
-message("  C: unique (gene, SNP) pairs represented: ", n_unique_pairs_specific)
+fetal_ref_row <- rows_specific_all %>%
+  group_by(phenotype_id, variant_id) %>%
+  slice_min(qval, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  left_join(n_fetal_celltypes_significant, by = c("phenotype_id", "variant_id"))
+
+n_unique_pairs_specific <- nrow(fetal_ref_row)
+message("  Unique (gene, SNP) pairs after collapsing to single fetal reference row: ",
+        n_unique_pairs_specific)
 
 if (n_unique_pairs_specific != n_pairs_specific_B) {
-  message("  WARNING: unique pairs in C's starting population (", n_unique_pairs_specific,
+  message("  WARNING: pairs after collapse (", n_unique_pairs_specific,
           ") does not match B's testable_specific count (", n_pairs_specific_B,
           "). Check A/B are from the same run.")
 }
 
+message("\nDistribution of fetal cell types a pair was significant in (before collapse):")
+n_fetal_celltypes_significant %>%
+  mutate(n_bucket = if_else(n_fetal_celltypes_significant >= 3, "3+", as.character(n_fetal_celltypes_significant))) %>%
+  count(n_bucket, name = "n_pairs") %>%
+  arrange(n_bucket) %>%
+  knitr::kable(format = "simple", align = "l") %>%
+  print()
+
+message("\nFetal reference cell type chosen, by frequency:")
+fetal_ref_row %>% count(cell_type, sort = TRUE) %>% print(n = Inf)
+
 # ========================================================================================
-# 3. Set aside NPC (no adult equivalent)
+# 3. Join the single fetal reference row against EVERY Fujita cell type the
+#    pair was tested in
 # ========================================================================================
 
-rows_npc      <- rows_specific %>% filter(is.na(fugita_label_match))
-rows_testable <- rows_specific %>% filter(!is.na(fugita_label_match))
-
-n_npc_excluded <- nrow(rows_npc)
-message("  C: set aside -- no adult equivalent (NPC): ", n_npc_excluded)
-
-# ========================================================================================
-# 4. Joint (gene, SNP, matched Fujita cell type) lookup directly in pairs_all
-# ========================================================================================
-
-message("\n--- Joint pair lookup in matched Fujita cell type ---\n")
+message("\n--- Joining against all available Fujita comparisons ---\n")
 
 pairs_all_lookup <- pairs_all %>%
   select(phenotype_id = gene_id, variant_id = snps, fugita_cell_type,
          beta_fugita = beta, se_fugita = se,
          ref_fugita = REF, alt_fugita = ALT, af_fugita = ALT_AF)
 
-joined <- rows_testable %>%
-  left_join(
-    pairs_all_lookup,
-    by = c("phenotype_id", "variant_id", "fugita_label_match" = "fugita_cell_type")
+joined <- fetal_ref_row %>%
+  inner_join(pairs_all_lookup, by = c("phenotype_id", "variant_id"))
+
+n_joined <- nrow(joined)
+message("  C: joined rows (1 fetal row per pair x all tested Fujita comparisons): ", n_joined)
+
+joined <- joined %>%
+  mutate(
+    biologically_matched = case_when(
+      is.na(fugita_label_match) ~ FALSE,
+      TRUE ~ fugita_cell_type == fugita_label_match
+    )
   )
 
-dropped   <- joined %>% filter(is.na(beta_fugita))
-matched   <- joined %>% filter(!is.na(beta_fugita))
-
-n_dropped <- nrow(dropped)
-message("  C: dropped -- pair not tested in this row's matched Fujita cell type: ", n_dropped)
-
-# Diagnostic: which Fujita cell type(s) the dropped pair WAS found in instead
-if (n_dropped > 0) {
-  dropped_found_elsewhere <- dropped %>%
-    distinct(phenotype_id, variant_id) %>%
-    left_join(
-      pairs_all %>% select(phenotype_id = gene_id, variant_id = snps, fugita_cell_type),
-      by = c("phenotype_id", "variant_id")
-    ) %>%
-    group_by(phenotype_id, variant_id) %>%
-    summarise(found_in = paste(sort(unique(fugita_cell_type)), collapse = ", "),
-              .groups = "drop")
-
-  message("\n  Where dropped pairs were found instead (unique pairs):")
-  dropped_found_elsewhere %>%
-    count(found_in, name = "n_pairs") %>%
-    arrange(desc(n_pairs)) %>%
-    knitr::kable(format = "simple", align = "l") %>%
-    print()
-} else {
-  dropped_found_elsewhere <- tibble()
-}
+message("\nDistribution of adult (Fujita) comparisons tested per pair:")
+joined %>%
+  count(phenotype_id, variant_id, name = "n_adult_tested") %>%
+  mutate(n_bucket = if_else(n_adult_tested >= 4, "4+", as.character(n_adult_tested))) %>%
+  count(n_bucket, name = "n_pairs") %>%
+  arrange(n_bucket) %>%
+  knitr::kable(format = "simple", align = "l") %>%
+  print()
 
 # ========================================================================================
-# 4b. Diagnostic: confirm drops are genuine coverage gaps, not a join key mismatch
-# ========================================================================================
-
-message("\n--- Diagnostic: verifying dropped rows are genuine coverage gaps ---\n")
-
-# Check 1: every fugita_label_match value used in A should appear somewhere in
-# B's pairs_all$fugita_cell_type -- a gross vocabulary mismatch would show up here.
-labels_in_A <- sort(unique(na.omit(eqtl_universe$fugita_label_match)))
-types_in_B  <- sort(unique(pairs_all$fugita_cell_type))
-
-missing_labels <- setdiff(labels_in_A, types_in_B)
-
-if (length(missing_labels) == 0) {
-  message("  Check 1 (vocabulary): passed -- all fugita_label_match values in A",
-          " (", paste(labels_in_A, collapse = ", "), ") are present in B's pairs_all.")
-} else {
-  message("  Check 1 (vocabulary): WARNING -- fugita_label_match value(s) not found",
-          " anywhere in pairs_all: ", paste(missing_labels, collapse = ", "),
-          ". These would never match regardless of coverage.")
-}
-
-# Check 2: for dropped rows only, redo the lookup with whitespace/case normalized
-# on both sides. If this finds a match the original strict join (step 4) missed,
-# that points to a join key mismatch (e.g. trailing whitespace, case difference)
-# rather than a genuine absence of adult data.
-normalize_label <- function(x) str_trim(toupper(x))
-
-pairs_tested_in <- pairs_all %>%
-  distinct(phenotype_id = gene_id, variant_id = snps, fugita_cell_type) %>%
-  mutate(fugita_cell_type_norm = normalize_label(fugita_cell_type))
-
-join_check <- dropped %>%
-  distinct(phenotype_id, variant_id, fugita_label_match) %>%
-  mutate(fugita_label_match_norm = normalize_label(fugita_label_match)) %>%
-  left_join(
-    pairs_tested_in,
-    by = c("phenotype_id", "variant_id",
-           "fugita_label_match_norm" = "fugita_cell_type_norm")
-  )
-
-suspicious <- join_check %>% filter(!is.na(fugita_cell_type))
-n_suspicious <- nrow(suspicious)
-
-if (n_suspicious == 0) {
-  message("  Check 2 (join integrity): passed -- no dropped (gene, SNP) pair has a",
-          " normalized-string match to its required Fujita cell type. Drops reflect",
-          " genuine absence of testing in the matched adult cell type.")
-} else {
-  message("  Check 2 (join integrity): WARNING -- ", n_suspicious,
-          " dropped (gene, SNP) pair(s) appear to have real data in their required",
-          " Fujita cell type once whitespace/case is normalized -- possible join key",
-          " mismatch. Inspect:")
-  print(suspicious)
-}
-
-# ========================================================================================
-# 5. Allele harmonization on matched rows
+# 4. Allele harmonization
 # ========================================================================================
 
 message("\n--- Allele harmonization ---\n")
@@ -243,11 +185,11 @@ pvar_lookup <- fread(
   showProgress = FALSE
 )
 
-matched <- matched %>%
+joined <- joined %>%
   rename(beta_my = slope, se_my = slope_se, af_my = af) %>%
   left_join(as_tibble(pvar_lookup), by = "variant_id")
 
-matched <- matched %>%
+joined <- joined %>%
   mutate(
     is_palindromic =
       (ref_my == "A" & alt_my == "T") | (ref_my == "T" & alt_my == "A") |
@@ -270,12 +212,12 @@ matched <- matched %>%
     )
   )
 
-status_tbl <- matched %>% count(allele_status, name = "N") %>% mutate(prop = round(N / sum(N), 4))
+status_tbl <- joined %>% count(allele_status, name = "N") %>% mutate(prop = round(N / sum(N), 4))
 message("Allele status breakdown:")
 print(status_tbl)
 
-n_allele_dropped <- sum(is.na(matched$beta_fugita_harmonized))
-usable <- matched %>% filter(!is.na(beta_fugita_harmonized))
+n_allele_dropped <- sum(is.na(joined$beta_fugita_harmonized))
+usable <- joined %>% filter(!is.na(beta_fugita_harmonized))
 n_usable <- nrow(usable)
 n_unique_pairs_usable <- usable %>% distinct(phenotype_id, variant_id) %>% nrow()
 
@@ -283,8 +225,26 @@ message("\n  C: dropped -- unresolved allele harmonization: ", n_allele_dropped)
 message("  C: usable rows entering Q-test: ", n_usable)
 message("  C: unique (gene, SNP) pairs among usable rows: ", n_unique_pairs_usable)
 
+n_pairs_lost_some_comparisons <- joined %>%
+  distinct(phenotype_id, variant_id) %>%
+  anti_join(
+    usable %>%
+      group_by(phenotype_id, variant_id) %>%
+      summarise(n_usable = n(), .groups = "drop") %>%
+      inner_join(
+        joined %>% count(phenotype_id, variant_id, name = "n_total"),
+        by = c("phenotype_id", "variant_id")
+      ) %>%
+      filter(n_usable == n_total),
+    by = c("phenotype_id", "variant_id")
+  ) %>%
+  nrow()
+message("  Pairs where >=1 (but not all) adult comparisons were dropped for allele ambiguity: ",
+        n_pairs_lost_some_comparisons,
+        " -- the 'all' rule below applies only across each pair's SURVIVING comparisons.")
+
 # ========================================================================================
-# 6. Cochran's Q, FDR (pooled across all usable rows)
+# 5. Cochran's Q, FDR (pooled across all usable rows)
 # ========================================================================================
 
 message("\n--- Running Cochran's Q ---\n")
@@ -299,29 +259,52 @@ usable <- usable %>%
     heterogeneous = q < fdr_thresh
   )
 
-message("  Heterogeneous rows (FDR<", fdr_thresh, "): ", sum(usable$heterogeneous),
-        " (", round(100 * mean(usable$heterogeneous), 2), "%)")
+n_het_rows <- sum(usable$heterogeneous)
+message("  Heterogeneous rows (FDR<", fdr_thresh, "): ", n_het_rows,
+        " (", round(100 * n_het_rows / n_usable, 2), "%)")
 
 # ========================================================================================
-# 7. Cross-cell-type duplication tracking
+# 6. Aggregate to final pair-level call: heterogeneous in ALL tested comparisons
 # ========================================================================================
 
-celltypes_per_pair <- usable %>%
-  distinct(phenotype_id, variant_id, cell_type) %>%
-  count(phenotype_id, variant_id, name = "n_fetal_celltypes_tested")
+message("\n--- Aggregating to final (gene, SNP)-level heterogeneous call (STRINGENT: all()) ---\n")
 
-usable <- usable %>% left_join(celltypes_per_pair, by = c("phenotype_id", "variant_id"))
+heterogeneous_pairs <- usable %>%
+  group_by(phenotype_id, variant_id) %>%
+  summarise(
+    fetal_cell_type              = first(cell_type),
+    n_comparisons_tested          = n(),
+    n_comparisons_heterogeneous    = sum(heterogeneous),
+    heterogeneous_all               = all(heterogeneous),
+    confirmed_by_matched_type        = any(biologically_matched & heterogeneous),
+    matched_type_tested               = any(biologically_matched),
+    .groups = "drop"
+  )
 
-message("\nDistribution of fetal cell types tested per (gene, SNP) pair, among usable rows:")
-celltypes_per_pair %>%
-  mutate(n_bucket = if_else(n_fetal_celltypes_tested >= 3, "3+", as.character(n_fetal_celltypes_tested))) %>%
-  count(n_bucket, name = "n_pairs") %>%
+message("\nPass/fail by number of comparisons tested (shows the stringency effect --",
+        " pairs tested against more adult cell types are harder to pass):")
+heterogeneous_pairs %>%
+  mutate(n_bucket = if_else(n_comparisons_tested >= 4, "4+", as.character(n_comparisons_tested))) %>%
+  group_by(n_bucket) %>%
+  summarise(n_pairs = n(), n_passed_all = sum(heterogeneous_all), .groups = "drop") %>%
   arrange(n_bucket) %>%
   knitr::kable(format = "simple", align = "l") %>%
   print()
 
+n_het_pairs <- sum(heterogeneous_pairs$heterogeneous_all)
+message("\n  Unique (gene, SNP) pairs heterogeneous in ALL tested comparisons: ", n_het_pairs,
+        " / ", nrow(heterogeneous_pairs))
+message("  Of which the biologically matched comparison was itself tested and confirmed: ",
+        sum(heterogeneous_pairs$heterogeneous_all & heterogeneous_pairs$confirmed_by_matched_type))
+message("  Of which NO biologically matched comparison was available at all (incl. all NPC pairs): ",
+        sum(heterogeneous_pairs$heterogeneous_all & !heterogeneous_pairs$matched_type_tested))
+
+heterogeneous_snps <- heterogeneous_pairs %>%
+  filter(heterogeneous_all) %>%
+  distinct(phenotype_id, variant_id)
+
 # ========================================================================================
-# 8. Funnel summary
+# 7. Funnel summary
 # ========================================================================================
 
 message("\n--- Population funnel ---\n")
@@ -329,39 +312,39 @@ message("\n--- Population funnel ---\n")
 funnel <- tibble(
   stage = c(
     "B: unique (gene, SNP) pairs classified testable_specific",
-    "C: rows entering (all fetal cell types, L1+L2)",
-    "C: unique (gene, SNP) pairs represented",
-    "C: set aside -- no adult equivalent (NPC)",
-    "C: dropped -- pair not tested in matched Fujita cell type",
+    "C: unique pairs after collapsing to single fetal reference row",
+    "C: joined rows (1 fetal row/pair x all tested adult comparisons)",
     "C: dropped -- unresolved allele harmonization",
     "C: usable rows entering Q-test",
-    "C: unique (gene, SNP) pairs among usable rows"
+    "C: unique (gene, SNP) pairs among usable rows",
+    "C: heterogeneous rows (FDR<thresh)",
+    "C: unique (gene, SNP) pairs heterogeneous in ALL tested comparisons (final, stringent)"
   ),
-  N = c(n_pairs_specific_B, n_rows_specific, n_unique_pairs_specific, n_npc_excluded,
-        n_dropped, n_allele_dropped, n_usable, n_unique_pairs_usable)
+  N = c(n_pairs_specific_B, n_unique_pairs_specific, n_joined,
+        n_allele_dropped, n_usable, n_unique_pairs_usable, n_het_rows, n_het_pairs)
 )
 print(funnel)
 
 # ========================================================================================
-# 9. Write output
+# 8. Write output
 # ========================================================================================
 
 usable_out <- usable %>%
   select(cell_type, level, parent_cell_type, phenotype_id, variant_id,
-         fugita_label_match, beta_my, se_my, af_my,
+         n_fetal_celltypes_significant,
+         fugita_cell_type, fugita_label_match, biologically_matched,
+         beta_my, se_my, af_my,
          beta_fugita, beta_fugita_harmonized, se_fugita, af_fugita,
          ref_my, alt_my, ref_fugita, alt_fugita, allele_status,
-         delta_beta, se_delta, Q, p, q, heterogeneous, n_fetal_celltypes_tested)
+         delta_beta, se_delta, Q, p, q, heterogeneous)
 
 write_rds(
   list(
     usable                  = usable_out,
-    npc_excluded             = rows_npc,
-    dropped_not_tested        = dropped,
-    dropped_found_elsewhere    = dropped_found_elsewhere,
-    allele_status_summary        = status_tbl,
-    celltypes_per_pair             = celltypes_per_pair,
-    funnel                           = funnel
+    heterogeneous_pairs      = heterogeneous_pairs,
+    heterogeneous_snps        = heterogeneous_snps,
+    allele_status_summary       = status_tbl,
+    funnel                         = funnel
   ),
   output_file
 )
@@ -371,9 +354,8 @@ message("\nHeterogeneity test results written to: ", output_file)
 output_dir  <- dirname(output_file)
 output_stem <- tools::file_path_sans_ext(basename(output_file))
 
-write_tsv(usable_out,             file.path(output_dir, paste0(output_stem, "_usable.tsv")))
-write_tsv(rows_npc,               file.path(output_dir, paste0(output_stem, "_npc_excluded.tsv")))
-write_tsv(dropped_found_elsewhere, file.path(output_dir, paste0(output_stem, "_dropped_found_elsewhere.tsv")))
-write_tsv(status_tbl,             file.path(output_dir, paste0(output_stem, "_allele_status_summary.tsv")))
-write_tsv(funnel,                 file.path(output_dir, paste0(output_stem, "_funnel.tsv")))
+write_tsv(usable_out,          file.path(output_dir, paste0(output_stem, "_usable.tsv")))
+write_tsv(heterogeneous_pairs, file.path(output_dir, paste0(output_stem, "_heterogeneous_pairs.tsv")))
+write_tsv(status_tbl,          file.path(output_dir, paste0(output_stem, "_allele_status_summary.tsv")))
+write_tsv(funnel,              file.path(output_dir, paste0(output_stem, "_funnel.tsv")))
 message("Tables (TSV) written to: ", output_dir)
