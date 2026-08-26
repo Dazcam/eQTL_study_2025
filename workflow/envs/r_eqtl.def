@@ -21,18 +21,18 @@ From: bioconductor/bioconductor_docker
     R -e "install.packages('tidyverse', repos='https://cloud.r-project.org/')"
 
     # Install Bioconductor package edgeR
-    R -e "BiocManager::install(c('edgeR','limma','sva','GenomicRanges','GenomeInfoDb','nullranges'))"
+    R -e "BiocManager::install(c('edgeR','limma','sva','GenomicRanges','GenomeInfoDb','nullranges',
+                                 'ComplexHeatmap', 'org.Hs.eg.db', 'clusterProfiler'))"
 
     # Install remaining CRAN packages
-    R -e "install.packages(c('knitr', 'DT', 'viridis', 'cowplot', 'rmarkdown', 'glue', 'kableExtra', 'gt', 'gtExtras','qvalue','UpSetR','patchwork','ggrepel'), repos='https://cloud.r-project.org/')"
+    R -e "install.packages(c('knitr', 'DT', 'viridis', 'cowplot', 'rmarkdown', 'glue', 'kableExtra', 
+                             'gt', 'gtExtras','qvalue','UpSetR','patchwork','ggrepel', 'LDlinkR',
+                             'lme4', 'ggplotify', 'openxlsx'), repos='https://cloud.r-project.org/')"
     
     # Install additional packages for JOBs
     R -e "install.packages(c('R.utils', 'pracma', 'quadprog'))"
     R -e "devtools::install_github('LidaWangPSU/JOBS/JOBS')"
     
-    # Install LDlinkR
-    R -e "install.packages('LDlinkR')"
-
 %environment
     export PATH=/usr/local/bin:$PATH
 
