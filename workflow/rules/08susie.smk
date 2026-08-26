@@ -113,7 +113,7 @@ rule merge_susie:
             susie_batches=config["susie_batches"],
             susie_suffix=wildcards.susie_suffix
         )
-    envmodules: "htslib/1.9"
+    envmodules: "HTSlib/1.21-GCC-13.3.0"
     output: config["susie"]["merge_susie"]["output"]
     message: "Merge SuSiE fine-mapping output into a single file for {wildcards.cell_type}"
     benchmark: "reports/benchmarks/08susie.merge_susie_{cell_type}_{susie_suffix}.txt",
@@ -131,7 +131,7 @@ rule sort_susie:
     log:    config["susie"]["sort_susie"]["log"]
     message: "Sort SuSiE fine-mapping output for {wildcards.cell_type}"
     benchmark: "reports/benchmarks/08susie.sort_susie_{cell_type}.txt",
-    envmodules: "htslib/1.9"
+    envmodules: "HTSlib/1.21-GCC-13.3.0"
     shell:
         """
         set -euo pipefail
@@ -145,10 +145,14 @@ rule sort_susie:
 rule susie_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  susie_files = expand(rules.sort_susie.output, cell_type = config["cell_types"]),
+            gene_meta_files = expand(rules.prep_susie_gene_meta.output, cell_type = config["cell_types"]),
+            gene_lookup = "../resources/sheets/gene_lookup_hg38.tsv",
             rmd_script = config["susie"]["susie_report"]["script"]
     output: config["susie"]["susie_report"]["html"]
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
             in_dir = config["susie"]["susie_report"]["in_dir"],
+            gene_meta_dir = config["susie"]["susie_report"]["gene_meta_dir"],
+            gene_lookup = config["susie"]["susie_report"]["gene_lookup"],
             output_file = config["susie"]["susie_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SuSiE report"
@@ -158,5 +162,8 @@ rule susie_report:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(cell_types = c({params.cell_types}), in_dir = '{params.in_dir}'))" > {log} 2>&1
+            params = list(cell_types = c({params.cell_types}), \
+                          in_dir = '{params.in_dir}', \
+                          gene_meta_dir = '{params.gene_meta_dir}', \
+                          gene_lookup = '{params.gene_lookup}'))" > {log} 2>&1
         """
