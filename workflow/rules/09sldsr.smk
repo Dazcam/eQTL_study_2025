@@ -34,7 +34,7 @@ rule make_annot:
             cs95 = config["sldsr"]["make_annot"]["cs95"]
     log:    config["sldsr"]["make_annot"]["log"]
     singularity: config["containers"]["r_eqtl"]
-    benchmark: "reports/benchmarks/09sldsr.make_annot_{chr}_{cell_type}.txt"
+    benchmark: "reports/benchmarks/09sldsr.make_annot_{cell_type}_{chr}.txt"
     message: "Generating maxCPP and CS95 annotations for {wildcards.cell_type}, chr {wildcards.chr}"
     script: "../scripts/ldsr_make_annot.R"
 
@@ -55,6 +55,7 @@ rule ldsr_ld_scores_hg38:
     output: config["sldsr"]["ldsr_ld_scores_hg38"]["output"]
     params: bfile = config["sldsr"]["ldsr_ld_scores_hg38"]["bfile"],
             ldscores = config["sldsr"]["ldsr_ld_scores_hg38"]["ldscores"]
+    benchmark: "reports/benchmarks/09sldsr.ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.txt"
     message: "Generating LD scores on hg38 for {wildcards.cell_type}, {wildcards.annot_type}, chr {wildcards.chr}" 
     log: config["sldsr"]["ldsr_ld_scores_hg38"]["log"]
     shell:
@@ -81,6 +82,7 @@ rule ldsr_strat_hg38_bl_v12:
             ldscores = config["sldsr"]["ldsr_strat_hg38_bl_v12"]["ldscores"],
             out_prefix = config["sldsr"]["ldsr_strat_hg38_bl_v12"]["out_prefix"]
     message: "Running stratified LDSR with {wildcards.cell_type} using hg38 refs, baseline 1.2, {wildcards.annot_type} and {wildcards.gwas} GWAS"
+    benchmark: "reports/benchmarks/09sldsr.ldsr_strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.txt"
     log: config["sldsr"]["ldsr_strat_hg38_bl_v12"]["log"]
     shell:
         """
@@ -113,7 +115,8 @@ rule ldsr_report:
     output: config["sldsr"]["ldsr_report"]["html"]
     params: in_dir = config["sldsr"]["ldsr_report"]["in_dir"],
 #            in_files = lambda wildcards: " ".join(expand("../../results/09SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.{annot_type}.summary.tsv", annot_type=config["annot_types"])),
-            output_file = "../reports/09SLDSR/09ldsr_report.html"
+            output_file = "../reports/09SLDSR/09ldsr_report.html",
+            bmark_dir = "../reports/benchmarks/"
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SLDSR report"
     benchmark: "reports/benchmarks/09sldsr.sldsr_report.txt"
@@ -122,5 +125,6 @@ rule ldsr_report:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(in_dir = c('{params.in_dir}')))" > {log} 2>&1
+            params = list(in_dir = c('{params.in_dir}'),
+            bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
