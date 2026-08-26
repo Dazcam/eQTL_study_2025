@@ -1,9 +1,9 @@
 configfile: "../config/config.yaml"
 
-rule all:
-    input:
+#rule all:
+#    input:
 #        '../results/10SMR/beta_cor/smr_beta_correlation_single.done'
-        "reports/10SMR/10smr_report.html"
+#        "reports/10SMR/10smr_report.html"
 #        expand("../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr", cell_type=config["cell_types"], gwas=config["gwas"])
      
 
@@ -48,25 +48,45 @@ rule cat_refs:
         echo "Concatenated frq, bed, bim, fam files" > {log}
         """
 
-# Move this to tensorflow rules when debugged
 rule cat_tensorqtl_nom_snps:
     input: lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
                 geno_pc=config['tensorQTL']['geno_pcs']:
                 f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/{w.cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet"
     output: cat_snps = config["smr"]["cat_tensorqtl_nom_snps"]["cat_snps"],
             summary = config["smr"]["cat_tensorqtl_nom_snps"]["summary"]
-    params: config["smr"]["cat_tensorqtl_nom_snps"]["dir"]
+    params: dir = lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
+                geno_pc=config['tensorQTL']['geno_pcs']:
+                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/"
     message: "Cat TensorQTL parquet files into single file for SMR"
     benchmark: "reports/benchmarks/10smr.cat_tensorqtl_nom_snps_{cell_type}.txt"
     log: config["smr"]["cat_tensorqtl_nom_snps"]["log"]
     shell:
         """
         python scripts/smr_cat_tensorqtl_nom_snps.py \
-          --nom_dir {params} \
+          --nom_dir {params.dir} \
           --cell_type {wildcards.cell_type} \
           --concat_out {output.cat_snps} \
           --summary_out {output.summary}  >> {log} 2>&1
         """
+
+#rule cat_tensorqtl_nom_snps:
+#    input: lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
+#                geno_pc=config['tensorQTL']['geno_pcs']:
+#                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/{w.cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet"
+#    output: cat_snps = config["smr"]["cat_tensorqtl_nom_snps"]["cat_snps"],
+#            summary = config["smr"]["cat_tensorqtl_nom_snps"]["summary"]
+#    params: config["smr"]["cat_tensorqtl_nom_snps"]["dir"]
+#    message: "Cat TensorQTL parquet files into single file for SMR"
+#    benchmark: "reports/benchmarks/10smr.cat_tensorqtl_nom_snps_{cell_type}.txt"
+#    log: config["smr"]["cat_tensorqtl_nom_snps"]["log"]
+#    shell:
+#        """
+#        python scripts/smr_cat_tensorqtl_nom_snps.py \
+#          --nom_dir {params} \
+#          --cell_type {wildcards.cell_type} \
+#          --concat_out {output.cat_snps} \
+#          --summary_out {output.summary}  >> {log} 2>&1
+#        """
 
 rule create_query:
     input:  eqtl = rules.cat_tensorqtl_nom_snps.output.cat_snps,
