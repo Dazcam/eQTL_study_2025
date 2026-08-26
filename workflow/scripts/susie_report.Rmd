@@ -8,16 +8,27 @@ output:
 params:
   cell_types: null
   in_dir: null
+  gene_meta_dir: null
+  gene_lookup: null
 ---
 
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(rmarkdown)
 library(gt)
+library(scales)
 #cell_types <- c("Endo-Peri", "ExN-2", "InN", "OPC", "ExN-1", "InN", "MG", "RG")
 #in_dir <- '~/Desktop/test/susie_test/'
+#gene_meta_dir <- '~/Desktop/test/susie_test/gene_meta/'
+#gene_lookup <- '~/Desktop/test/susie_test/gene_lookup_hg38.tsv'
 in_dir <- params$in_dir
 cell_types <- params$cell_types
+gene_meta_dir <- params$gene_meta_dir
+
+# Gene symbol lookup (used to add a Gene Symbol column to credible set tables)
+gene_lookup <- read_tsv(params$gene_lookup, show_col_types = FALSE) |>
+  select(ensembl_gene_id, external_gene_name) |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
 ```
 
 ## SuSiE finemapping pipeline steps {.tabset}
@@ -134,7 +145,8 @@ for (cell_type in cell_types) {
   
   cs_tbl <- susie_tbl[!duplicated(susie_tbl$cs_id), ] |>
     select(cs_id, cs_size, finemapped_region, phenotype_id) |>
-    arrange(desc(cs_size))
+    left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+    arrange(cs_size)
   
 
   gt_tbl <- gt(cs_tbl) |>
@@ -148,7 +160,8 @@ for (cell_type in cell_types) {
         cs_id = "CS ID",
         cs_size = "CS Size",
         finemapped_region = "Finemapped Region",
-        phenotype_id = "Phenotype ID"
+        phenotype_id = "Phenotype ID",
+        external_gene_name = "Gene Symbol"
       )
     
     # Render gt table
@@ -158,3 +171,360 @@ for (cell_type in cell_types) {
 
 ```
 
+***
+
+### Fine-mapping diagnostics (reviewer response) {.tabset}
+
+***
+
+The sections below address reviewer 2's questions about fine-mapping performance:
+
+- Table of credible set LBF estimates per credible set per gene
+- How many genes had at least one credible set per cell type
+- How many credible sets were identified per successfully finemapped gene
+- Average size in terms of the number of variants of the credible sets per cell type
+- Average distance to the TSS of the credible set index variants
+  - is this dependent on the effect size of the credible set index variant
+
+
+- A credible set's "index variant" is defined here as the SNP in the set with the highest PIP.
+- This is distinct from SuSiE's own `cs_index` (`L1`, `L2`, etc.), the number of independent 
+credible sets SuSiE found at that locus. Note that these labels don't guarantee that 
+L1 is "the strongest" signal.
+
+```{r compute_reviewer_response_summary, echo=FALSE, message=FALSE, warning=FALSE}
+# Index variant = highest-PIP SNP within each cs_id (not the same as SuSiE's
+# internal cs_index L1/L2/... label, which is just a model slot and is not
+# guaranteed to be ordered by effect size or evidence strength).
+get_index_variants <- function(cell_type) {
+
+  susie_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
+  meta_path  <- paste0(gene_meta_dir, cell_type, '_gene_meta.tsv')  # adjust suffix if your snakemake output differs
+
+  if (!file.exists(susie_path) || !file.exists(meta_path)) {
+    message("Skipping ", cell_type, " - missing susie or gene meta file")
+    return(NULL)
+  }
+
+  susie_tbl <- read_tsv(susie_path, show_col_types = FALSE)
+  gene_meta <- read_tsv(meta_path, show_col_types = FALSE) |>
+    select(phenotype_id, phenotype_pos)
+
+  susie_tbl |>
+    group_by(cs_id) |>
+    slice_max(pip, n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    select(phenotype_id, cs_id, cs_size, cs_min_r2, cs_avg_r2, cs_log10bf,
+           variant_id, chr, pos, pip, z) |>
+    rename(index_variant_id = variant_id, index_pip = pip, index_z = z) |>
+    left_join(gene_meta, by = "phenotype_id") |>
+    left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+    rename(gene_symbol = external_gene_name) |>
+    mutate(dist_to_tss = abs(pos - phenotype_pos)) |>
+    group_by(phenotype_id) |>
+    mutate(
+      n_cs_for_gene = n(),
+      cs_rank = rank(-abs(index_z), ties.method = "first")
+    ) |>
+    ungroup() |>
+    mutate(
+      cs_rank_label = case_when(
+        cs_rank == 1 ~ "primary",
+        cs_rank == 2 ~ "secondary",
+        TRUE         ~ "tertiary_or_lower"
+      ),
+      cell_type = cell_type
+    )
+}
+
+cs_summary_all <- map_dfr(cell_types, get_index_variants)
+
+# Write the CS-level supplementary table (in_dir already has a trailing slash)
+if (nrow(cs_summary_all) > 0) {
+  cs_summary_all |>
+    select(cell_type, phenotype_id, gene_symbol, cs_id, n_cs_for_gene, cs_rank, cs_rank_label,
+           index_variant_id, chr, pos, phenotype_pos, dist_to_tss,
+           index_pip, index_z, cs_size, cs_min_r2, cs_avg_r2, cs_log10bf) |>
+    arrange(cell_type, phenotype_id, cs_rank) |>
+    write_tsv(paste0(in_dir, "susie_credible_set_summary.tsv"))
+}
+```
+
+#### Credible sets per gene
+
+```{r cs_per_gene_tbl, echo=FALSE, message=FALSE}
+cs_per_gene_summary <- cs_summary_all |>
+  distinct(cell_type, phenotype_id, n_cs_for_gene) |>
+  group_by(cell_type) |>
+  summarise(
+    n_genes_with_cs     = n_distinct(phenotype_id),
+    mean_cs_per_gene    = mean(n_cs_for_gene),
+    pct_genes_1_cs      = mean(n_cs_for_gene == 1) * 100,
+    pct_genes_2_cs      = mean(n_cs_for_gene == 2) * 100,
+    pct_genes_3plus_cs  = mean(n_cs_for_gene >= 3) * 100,
+    .groups = "drop"
+  )
+
+gt(cs_per_gene_summary) |>
+  tab_header(title = "Credible sets per fine-mapped gene") |>
+  tab_options(
+    table.width = pct(80),
+    table.font.size = 12,
+    data_row.padding = px(5)
+  ) |>
+  fmt_number(columns = c(mean_cs_per_gene, pct_genes_1_cs, pct_genes_2_cs, pct_genes_3plus_cs),
+             decimals = 1) |>
+  cols_label(
+    cell_type           = "Cell Type",
+    n_genes_with_cs     = "Genes with \u22651 CS",
+    mean_cs_per_gene    = "Mean CS / Gene",
+    pct_genes_1_cs      = "% Genes, 1 CS",
+    pct_genes_2_cs      = "% Genes, 2 CS",
+    pct_genes_3plus_cs  = "% Genes, \u22653 CS"
+  )
+```
+
+```{r cs_per_gene_plot, echo=FALSE, message=FALSE, fig.dim=c(10,6)}
+cs_summary_all |>
+  distinct(cell_type, phenotype_id, n_cs_for_gene) |>
+  mutate(n_cs_capped = if_else(n_cs_for_gene >= 4, "4+", as.character(n_cs_for_gene))) |>
+  count(cell_type, n_cs_capped) |>
+  ggplot(aes(x = n_cs_capped, y = n, fill = cell_type)) +
+  geom_col(position = "dodge") +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  labs(x = "Credible sets per gene", y = "Number of genes", fill = "Cell Type",
+       title = "Distribution of credible-set counts per fine-mapped gene")
+```
+
+#### Credible set size & LBF
+
+```{r cs_size_lbf_tbl, echo=FALSE, message=FALSE}
+cs_size_summary <- cs_summary_all |>
+  group_by(cell_type) |>
+  summarise(
+    n_credible_sets = n_distinct(cs_id),
+    mean_cs_size    = mean(cs_size),
+    median_cs_size  = median(cs_size),
+    mean_log10bf    = mean(cs_log10bf),
+    .groups = "drop"
+  )
+
+gt(cs_size_summary) |>
+  tab_header(title = "Credible set size and Bayes factor summary") |>
+  tab_options(
+    table.width = pct(80),
+    table.font.size = 12,
+    data_row.padding = px(5)
+  ) |>
+  fmt_number(columns = c(mean_cs_size, median_cs_size, mean_log10bf), decimals = 2) |>
+  cols_label(
+    cell_type       = "Cell Type",
+    n_credible_sets = "Credible Sets",
+    mean_cs_size    = "Mean CS Size",
+    median_cs_size  = "Median CS Size",
+    mean_log10bf    = "Mean log10(BF)"
+  )
+```
+
+```{r cs_lbf_boxplot, echo=FALSE, message=FALSE, fig.dim=c(10,6)}
+ggplot(cs_summary_all, aes(x = cell_type, y = cs_log10bf)) +
+  geom_boxplot(outlier.shape = NA, fill = "#69b3a2") +
+  geom_jitter(width = 0.2, alpha = 0.1) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = NULL, y = "log10(Bayes Factor)",
+       title = "Credible set log10(BF) distribution by cell type")
+```
+
+#### Distance to TSS
+
+- Table: Average / Median distance to TSS per cell type across all credible sets
+- Boxplot: 
+- Wilcoxon test: rank-sum test comparing dist_to_tss between primary CS 
+  and all lower-ranked CS pooled, restricted to genes with >1 credible set. 
+  Tests whether primary CS index variants are categorically closer to the 
+  TSS than lower-ranked CS index variants. 
+- Rank definition: Within each gene with >1 credible set, credible sets are 
+  ranked by |z| of their index variant (highest-PIP SNP per CS), descending. 
+  Rank is independent of SuSiE's cs_index (L1/L2/...).
+
+```{r dist_to_tss_summary_tbl, echo=FALSE, message=FALSE}
+dist_to_tss_summary <- cs_summary_all |>
+  group_by(cell_type) |>
+  summarise(
+    n_credible_sets    = n(),
+    mean_dist_to_tss   = mean(dist_to_tss, na.rm = TRUE),
+    median_dist_to_tss = median(dist_to_tss, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+gt(dist_to_tss_summary) |>
+  tab_header(title = "Index-variant distance to TSS, all credible sets") |>
+  tab_options(
+    table.width = pct(80),
+    table.font.size = 12,
+    data_row.padding = px(5)
+  ) |>
+  fmt_number(columns = c(mean_dist_to_tss, median_dist_to_tss), decimals = 0) |>
+  cols_label(
+    cell_type          = "Cell Type",
+    n_credible_sets    = "Credible Sets",
+    mean_dist_to_tss   = "Mean Distance to TSS (bp)",
+    median_dist_to_tss = "Median Distance to TSS (bp)"
+  )
+```
+
+```{r dist_to_tss_plot, echo=FALSE, message=FALSE, fig.dim=c(8,6)}
+cs_summary_all |>
+  filter(n_cs_for_gene > 1) |>
+  ggplot(aes(x = cs_rank_label, y = dist_to_tss)) +
+  geom_boxplot(outlier.shape = NA, fill = "#69b3a2") +
+  geom_jitter(width = 0.2, alpha = 0.1) +
+  scale_y_continuous(labels = scales::comma) +
+  theme_minimal() +
+  labs(x = NULL, y = "Distance from index variant to TSS (bp)",
+       title = "CS index-variant distance to TSS, genes with >1 credible set")
+```
+
+```{r dist_to_tss_test, echo=FALSE, message=FALSE, results='asis'}
+multi_cs <- cs_summary_all |> filter(n_cs_for_gene > 1)
+
+if (nrow(multi_cs) > 0 && n_distinct(multi_cs$cs_rank_label) > 1) {
+  wt <- wilcox.test(dist_to_tss ~ I(cs_rank_label == "primary"), data = multi_cs)
+  cat(sprintf(
+    "**Wilcoxon rank-sum test** (genes with >1 credible set only): primary vs lower-ranked CS distance to TSS, W = %.0f, p = %.3g\n\n",
+    wt$statistic, wt$p.value
+  ))
+} else {
+  cat("Not enough genes with multiple credible sets to test primary vs lower-ranked CS distance to TSS.\n\n")
+}
+```
+
+#### Effect size vs distance to TSS
+
+- Spearman's rho (rank-based, not loess) is the test statistic; loess curves are descriptive only.
+- Negative correlation: higher |z| associates with smaller distance to TSS.
+
+```{r effect_size_dist_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.dim=c(11,5)}
+ggplot(cs_summary_all, aes(x = abs(index_z), y = dist_to_tss)) +
+  geom_point(alpha = 0.15, colour = "#2c3e50") +
+  geom_smooth(method = "loess", se = FALSE, colour = "firebrick") +
+  facet_wrap(~ cs_rank_label, nrow = 1) +
+  scale_x_continuous(trans = "sqrt") +
+  scale_y_continuous(trans = "sqrt", labels = scales::comma) +
+  theme_minimal() +
+  labs(x = "|z| of index variant (sqrt scale)", y = "Distance to TSS, bp (sqrt scale)",
+       title = "Index-variant effect size vs distance to TSS, by credible set rank")
+```
+
+```{r effect_size_dist_test, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+cor_res_all <- cor.test(abs(cs_summary_all$index_z), cs_summary_all$dist_to_tss, method = "spearman")
+
+cor_by_rank <- cs_summary_all |>
+  group_by(cs_rank_label) |>
+  summarise(
+    rho = cor(abs(index_z), dist_to_tss, method = "spearman"),
+    p   = suppressWarnings(cor.test(abs(index_z), dist_to_tss, method = "spearman")$p.value),
+    n   = n(),
+    .groups = "drop"
+  )
+
+cat(sprintf(
+  "**Spearman correlation, pooled across all credible sets and cell types**: |z| of index variant vs distance to TSS, rho = %.3f, p = %.3g (n = %d)\n\n",
+  cor_res_all$estimate, cor_res_all$p.value, nrow(cs_summary_all)
+))
+
+cat("**Spearman correlation within each credible set rank** (controls for the fact that primary CS mechanically occupy a higher `|z|` range than secondary/tertiary CS, isolating the within-rank trend):\n\n")
+
+cor_by_rank |>
+  mutate(rho = sprintf("%.3f", rho), p = sprintf("%.3g", p)) |>
+  knitr::kable(col.names = c("CS rank", "Spearman rho", "p-value", "n"))
+```
+
+#### MaxCPP source credible set rank
+
+- Assess rank of credible set that each MaxCPP variant is assigned to.
+
+```{r compute_maxcpp_source_rank, echo=FALSE, message=FALSE, warning=FALSE}
+compute_maxcpp_source <- function(ct) {
+
+  susie_path <- paste0(in_dir, ct, '/', ct, '.mrgd.srtd.susie.cred.hp.txt.gz')
+  if (!file.exists(susie_path)) {
+    message("Skipping ", ct, " - susie file not found")
+    return(NULL)
+  }
+  susie_tbl <- read_tsv(susie_path, show_col_types = FALSE)
+
+  # For each variant, find the credible set that gives it its maxCPP value
+  # (mirrors ldsr_make_annot.R's group_by(variant_id) |> mutate(maxCPP = max(pip)),
+  # but additionally keeps track of *which* (phenotype_id, cs_id) achieved it)
+  winning_cs <- susie_tbl |>
+    group_by(variant_id) |>
+    slice_max(pip, n = 1, with_ties = FALSE) |>
+    ungroup() |>
+    select(variant_id, phenotype_id, cs_id, maxCPP = pip) |>
+    mutate(cell_type = ct)
+
+  cs_ranks_ct <- cs_summary_all |>
+    filter(cell_type == ct) |>
+    select(phenotype_id, cs_id, cs_rank_label)
+
+  winning_cs |>
+    left_join(cs_ranks_ct, by = c("phenotype_id", "cs_id"))
+}
+
+maxcpp_source_rank <- map_dfr(cell_types, compute_maxcpp_source)
+
+maxcpp_rank_pct <- maxcpp_source_rank |>
+  count(cell_type, cs_rank_label) |>
+  group_by(cell_type) |>
+  mutate(pct = n / sum(n) * 100) |>
+  ungroup() |>
+  select(-n) |>
+  pivot_wider(names_from = cs_rank_label, values_from = pct, values_fill = 0)
+
+gt(maxcpp_rank_pct) |>
+  tab_header(title = "Source credible-set rank of MaxCPP-contributing variants") |>
+  tab_options(
+    table.width = pct(80),
+    table.font.size = 12,
+    data_row.padding = px(5)
+  ) |>
+  fmt_number(columns = -cell_type, decimals = 1) |>
+  cols_label(cell_type = "Cell Type")
+```
+
+```{r maxcpp_source_rank_plot, echo=FALSE, message=FALSE, fig.dim=c(10,6)}
+maxcpp_source_rank |>
+  count(cell_type, cs_rank_label) |>
+  group_by(cell_type) |>
+  mutate(pct = n / sum(n) * 100) |>
+  ungroup() |>
+  ggplot(aes(x = cell_type, y = pct, fill = cs_rank_label)) +
+  geom_col() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom") +
+  labs(x = NULL, y = "% of MaxCPP-contributing variants", fill = "Source CS rank",
+       title = "Which credible set rank contributes the MaxCPP value, per cell type")
+```
+
+```{r maxcpp_source_rank_overall, echo=FALSE, message=FALSE, results='asis'}
+overall_pct <- maxcpp_source_rank |>
+  count(cs_rank_label) |>
+  mutate(pct = n / sum(n) * 100)
+
+cat("**Overall, pooled across all cell types:**\n\n")
+overall_pct |>
+  mutate(pct = sprintf("%.1f%%", pct)) |>
+  select(cs_rank_label, n, pct) |>
+  knitr::kable(col.names = c("Source CS rank", "n variants", "% of total"))
+```
+
+***
+
+A full credible-set-level table (cell type, gene, gene symbol, CS rank, index variant, 
+distance to TSS, PIP, z, CS size, purity, log10 Bayes factor) for all cell types has 
+been written to `r paste0(in_dir, "susie_credible_set_summary.tsv")`.
+
+***
