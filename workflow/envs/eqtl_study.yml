@@ -261,4 +261,6 @@ dependencies:
       - scikit-image==0.25.0
       - tifffile==2024.12.12
       - xlrd==2.0.1
+      - synapseclient
+      - zenodo-get
 prefix: /scratch/SCWF00021/.conda/envs/eqtl_study
