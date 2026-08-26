@@ -18,7 +18,7 @@ def get_egene_universe_inputs():
     geno_pc = config["tensorQTL"]["geno_pcs"]
     norm_method = config["tensorQTL"]["norm_methods"][0]
     return [
-        f"{config['dev_specificity']['extract_universe']['qtl_dir']}/{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
+        f"{config['dev_specificity']['extract_universe']['qtl_dir']}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
         f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
         for ct in config["cell_types"]
     ]
@@ -253,8 +253,24 @@ rule parse_ld_clump:
 #    log:    config["dev_specificity"]["ocr_enrich"]["log"]
 #    script: "../scripts/devspec_ocr_enrichment.R"
 
+#rule ocr_enrich:
+#    input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+#            independent_snps = rules.parse_ld_clump.output[0],
+#            snp_lookups      = get_snp_lookup_files(),
+#            li_s6            = config["dev_specificity"]["ocr_enrich"]["li_s6"],
+#            li_s7            = config["dev_specificity"]["ocr_enrich"]["li_s7"]
+#    output: config["dev_specificity"]["ocr_enrich"]["out_file"]
+#    singularity: config["containers"]["r_eqtl"]
+#    resources: threads = 4, mem_mb = 16000, time = "01:00:00"
+#    threads: 4
+#    message: "Test fetal-specific/shared eQTL enrichment in adult cortical union OCRs (simplified)"
+#    benchmark: "reports/benchmarks/dev_specificity.ocr_enrich.txt"
+#    log:    config["dev_specificity"]["ocr_enrich"]["log"]
+#    script: "../scripts/devspec_ocr_enrichment.R"
+
 rule ocr_enrich:
     input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+            heterogeneity_test = rules.heterogeneity_test.output[0],
             independent_snps = rules.parse_ld_clump.output[0],
             snp_lookups      = get_snp_lookup_files(),
             li_s6            = config["dev_specificity"]["ocr_enrich"]["li_s6"],
@@ -263,7 +279,7 @@ rule ocr_enrich:
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 16000, time = "01:00:00"
     threads: 4
-    message: "Test fetal-specific/shared eQTL enrichment in adult cortical union OCRs (simplified)"
+    message: "Test fetal-specific/shared/heterogeneous eQTL enrichment in adult cortical union OCRs"
     benchmark: "reports/benchmarks/dev_specificity.ocr_enrich.txt"
     log:    config["dev_specificity"]["ocr_enrich"]["log"]
     script: "../scripts/devspec_ocr_enrichment.R"
