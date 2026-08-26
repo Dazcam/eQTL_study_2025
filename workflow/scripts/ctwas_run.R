@@ -43,6 +43,51 @@ processed_weights_dir <- file.path(out_dir, 'processed_weights/')
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
 threads <- snakemake@threads
 
+## Skip known-failing cell_type / gwas combinations  ----------------------------------
+# These combinations reliably fail (chiefly OOM during LD computation in
+# preprocess_weights(), e.g. "cannot allocate vector of size 2020.4 Gb" on chr7).
+# Rather than let snakemake mark the whole pipeline as failed, we write a
+# clearly-flagged placeholder .rds and exit cleanly so downstream rules
+# (ctwas_report) can detect and report these as skipped rather than crash.
+skip_pairs <- tibble::tribble(
+  ~cell_type,                 ~gwas,   ~reason,
+  "Glu-UL-2",                 "ocd",   "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
+  "GABA-2",                   "ocd",   "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
+  "GABA-2",                   "bpd",   "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
+  "Glu-UL-2",                 "adhd",  "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
+  "GABA-2",                   "adhd",  "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
+  "NPC",		      "adhd",  "Job terminated with no error message after chr17-19 LD step (likely OOM-killed by scheduler before R could report)",	
+  "NPC-to-Glu-DL-Q4-Bin1",    "adhd",  "Job terminated with no error message after chr17-19 LD step (likely OOM-killed by scheduler before R could report)",
+  "NPC-to-Glu-UL-Q4-Bin2",    "adhd",  "Job terminated with no error message after chr17-19 LD step (likely OOM-killed by scheduler before R could report)"
+)
+
+this_pair <- dplyr::filter(skip_pairs, cell_type == !!cell_type, gwas == !!gwas_trait)
+
+if (nrow(this_pair) > 0) {
+
+  message("=== SKIPPING known-failing combination ===")
+  message("cell_type: ", cell_type)
+  message("gwas: ", gwas_trait)
+  message("Reason: ", this_pair$reason[1])
+
+  placeholder <- list(
+    status = "skipped",
+    cell_type = cell_type,
+    gwas_trait = gwas_trait,
+    reason = this_pair$reason[1],
+    skipped_at = as.character(Sys.time()),
+    finemap_res = NULL,
+    z_gene = NULL
+  )
+
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  write_rds(placeholder, output)
+
+  message("Placeholder output written to: ", output)
+  message("=== Skip complete, exiting cleanly ===")
+  quit(save = "no", status = 0)
+}
+
 # Read in data
 message("\nLoading data ...\n")
 message("GWAS loaded from: ", gwas)
