@@ -7,6 +7,7 @@ output:
     df_print: paged
 params:
   in_dir: null
+  bmark_dir: null
 ---
 
 ***
@@ -14,7 +15,9 @@ params:
 ```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(gt)
+library(cowplot)
 in_dir  <- params$in_dir
+bmark_dir <- params$bmark_dir
 ```
 
 ## SLDSR pipeline steps 
@@ -33,479 +36,6 @@ in_dir  <- params$in_dir
 
 ## Results {.tabset}
 
-### CS95 {.tabset}
-
-***
-
-#### P-value
-
-***
-
-```{r, cs95_p-val_plot, echo = FALSE, message=FALSE, warning=FALSE}
-# --- Read and prepare table
-ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.CS95.summary.tsv')) |>
-  separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
-  separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
-  mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd|adhd|ocd"))) |>
-  select(-Category, -suffix) |>
-  relocate(cell_type, disorder) |>
-  mutate(ldsr = if_else(`Coefficient_z-score` > 0,
-                        -log10(pnorm(`Coefficient_z-score`, lower.tail = FALSE)), 0)) |>
-  mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD", "ADHD", "OCD")))
-
-# --- Custom colour palette
-custom_palette <- c(
-  'Glu-UL' = '#4363d8',
-  'Glu-DL' = '#00B6EB',
-  'NPC' = '#FF5959',
-  'GABA' = '#3CBB75FF',
-  'Endo-Peri' = '#B200ED',
-  'MG' = '#F58231',
-  'OPC' = '#FDE725FF'
-)
-
-# --- Assign main cluster to subclusters
-ldsr_tbl <- ldsr_tbl |>
-  mutate(main_type = case_when(
-    str_detect(cell_type, "Glu-UL") ~ "Glu-UL",
-    str_detect(cell_type, "Glu-DL") ~ "Glu-DL",
-    str_detect(cell_type, "GABA") ~ "GABA",
-    str_detect(cell_type, "NPC") ~ "NPC",
-    str_detect(cell_type, "OPC") ~ "OPC",
-    str_detect(cell_type, "MG") ~ "MG",
-    str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
-    TRUE ~ cell_type
-  ))
-
-# --- Specify y-axis order
-cell_order <- c(
-  "Glu-UL", grep("^Glu-UL", ldsr_tbl$cell_type, value = TRUE),
-  "Glu-DL", grep("^Glu-DL", ldsr_tbl$cell_type, value = TRUE),
-  "GABA", grep("^GABA", ldsr_tbl$cell_type, value = TRUE),
-  "NPC", grep("^NPC", ldsr_tbl$cell_type, value = TRUE),
-  "OPC", "MG", "Endo-Peri"
-) |> unique()
-
-ldsr_tbl <- ldsr_tbl |>
-  mutate(cell_type = factor(cell_type, levels = rev(cell_order))) |>
-  mutate(cluster_level = if_else(cell_type == main_type, "Main Cluster", "Subcluster"))
-
-vline_data <- tibble(
-  cluster_level = c("Main Cluster", "Subcluster"),
-  intercept = c(-log10(0.05 / 7), -log10(0.05 / 13))
-)
-
-# --- Plot
-ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
-  geom_col(width = 0.7, colour = 'black') +
-  facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
-  scale_fill_manual(values = custom_palette, name = "Cell Type") +
-  theme_minimal(base_size = 12) +
-
-  # facet-specific dashed/dotted thresholds
-  geom_vline(
-    data = vline_data,
-    aes(xintercept = intercept, linetype = cluster_level),
-    color = "black",
-    inherit.aes = FALSE
-  ) +
-  scale_linetype_manual(
-    values = c("Main Cluster" = "dashed", "Subcluster" = "dashed")
-  ) +
-
-  # global nominal threshold
-  geom_vline(
-    xintercept = -log10(0.05),
-    linetype = "dotted",
-    color = "black"
-  ) +
-
-  theme(
-    axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(size = 10),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold"),
-    legend.position = "none"
-                           
-  ) +
-  labs(
-    x = expression(-log[10](P)),
-    y = "Cell Type",
-    title = "Stratified LDSR P (95% CS)",
-    fill = "Main Type",
-    linetype = "Cluster Level"
-  ) +
-  coord_cartesian(xlim = c(0, 6))
-```
-
-***
-
-#### Enrichment
-
-***
-
-```{r, cs95_enrich_plot, echo = FALSE, message=FALSE}
-ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
-  geom_col(width = 0.7, colour = 'black') +
-   geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
-                    xmax = (Enrichment+Enrichment_std_error)), 
-                 width = .2) +
-  facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
-  scale_fill_manual(values = custom_palette, name = "Cell Type") +
-  theme_minimal(base_size = 12) +
-  theme(
-    axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(size = 10),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold"),
-    legend.position = "none"
-  ) +
-  labs(
-    x = 'Enrichment',
-    y = "Cell Type",
-    title = "Stratified LDSR Enrichment (95% CS)",
-    fill = "Main Type"
-  )
-```
-
-***
-
-#### Table {.tabset}
-
-***
-
-##### SCZ
-
-***
-
-```{r, cs95_scz_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'SCZ') %>%
-  # Round numeric columns to avoid excessive precision
-  mutate(
-    Prop._SNPs = signif(Prop._SNPs, 3),
-    Prop._h2 = signif(Prop._h2, 3),
-    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
-    Enrichment = signif(Enrichment, 3),
-    Enrichment_std_error = signif(Enrichment_std_error, 3),
-    Enrichment_p = signif(Enrichment_p, 3),
-    Coefficient = signif(Coefficient, 3),
-    Coefficient_std_error = signif(Coefficient_std_error, 3),
-    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
-    ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level) %>%
-  # Create the gt table
-  gt() %>%
-  # Add table header and subtitle
-  tab_header(
-    title = "Table 1. Schizophrenia S-LDSC Results",
-    subtitle = "95% CS eQTL used as annotation"
-  ) %>%
-  # Rename columns for display
-  cols_label(
-    cell_type = "Cell Type",
-    disorder = "Disorder",
-    Prop._SNPs = "Prop. SNPs",
-    Prop._h2 = "Prop. Heritability",
-    Prop._h2_std_error = "Prop. Heritability SE",
-    Enrichment = "Enrichment",
-    Enrichment_std_error = "Enrichment SE",
-    Enrichment_p = "Enrichment p-value",
-    Coefficient = "Coefficient",
-    Coefficient_std_error = "Coefficient SE",
-    `Coefficient_z-score` = "Coefficient z-score",
-    ldsr = "LDSR"
-  ) %>%
-  # Format small values in scientific notation with 2 decimal places
-  fmt_scientific(
-    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
-    decimals = 2
-  ) %>%
-  # Format other numeric columns with 3 decimal places
-  fmt_number(
-    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
-    decimals = 3,
-    use_seps = TRUE
-  ) %>%
-  # Customize table appearance
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3),
-    heading.align = "center",
-    column_labels.font.weight = "bold"
-  )
-```
-
-***
-
-##### BPD {.tabset}
-
-***
-
-```{r, cs95_bpd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'BPD') %>%
-  # Round numeric columns to avoid excessive precision
-  mutate(
-    Prop._SNPs = signif(Prop._SNPs, 3),
-    Prop._h2 = signif(Prop._h2, 3),
-    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
-    Enrichment = signif(Enrichment, 3),
-    Enrichment_std_error = signif(Enrichment_std_error, 3),
-    Enrichment_p = signif(Enrichment_p, 3),
-    Coefficient = signif(Coefficient, 3),
-    Coefficient_std_error = signif(Coefficient_std_error, 3),
-    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
-    ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level) %>%
-  # Create the gt table
-  gt() %>%
-  # Add table header and subtitle
-  tab_header(
-    title = "Table 2. Bipolar Disorder S-LDSC Results",
-    subtitle = "95% CS eQTL used as annotation"
-  ) %>%
-  # Rename columns for display
-  cols_label(
-    cell_type = "Cell Type",
-    disorder = "Disorder",
-    Prop._SNPs = "Prop. SNPs",
-    Prop._h2 = "Prop. Heritability",
-    Prop._h2_std_error = "Prop. Heritability SE",
-    Enrichment = "Enrichment",
-    Enrichment_std_error = "Enrichment SE",
-    Enrichment_p = "Enrichment p-value",
-    Coefficient = "Coefficient",
-    Coefficient_std_error = "Coefficient SE",
-    `Coefficient_z-score` = "Coefficient z-score",
-    ldsr = "LDSR"
-  ) %>%
-  # Format small values in scientific notation with 2 decimal places
-  fmt_scientific(
-    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
-    decimals = 2
-  ) %>%
-  # Format other numeric columns with 3 decimal places
-  fmt_number(
-    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
-    decimals = 3,
-    use_seps = TRUE
-  ) %>%
-  # Customize table appearance
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3),
-    heading.align = "center",
-    column_labels.font.weight = "bold"
-  )
-```
-
-***
-
-##### MDD {.tabset}
-
-***
-
-```{r, cs95_mdd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'MDD') %>%
-  # Round numeric columns to avoid excessive precision
-  mutate(
-    Prop._SNPs = signif(Prop._SNPs, 3),
-    Prop._h2 = signif(Prop._h2, 3),
-    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
-    Enrichment = signif(Enrichment, 3),
-    Enrichment_std_error = signif(Enrichment_std_error, 3),
-    Enrichment_p = signif(Enrichment_p, 3),
-    Coefficient = signif(Coefficient, 3),
-    Coefficient_std_error = signif(Coefficient_std_error, 3),
-    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
-    ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level) %>%
-  # Create the gt table
-  gt() %>%
-  # Add table header and subtitle
-  tab_header(
-    title = "Table 3. Major Depressive Disorder S-LDSC Results",
-    subtitle = "95% CS eQTL used as annotation"
-  ) %>%
-  # Rename columns for display
-  cols_label(
-    cell_type = "Cell Type",
-    disorder = "Disorder",
-    Prop._SNPs = "Prop. SNPs",
-    Prop._h2 = "Prop. Heritability",
-    Prop._h2_std_error = "Prop. Heritability SE",
-    Enrichment = "Enrichment",
-    Enrichment_std_error = "Enrichment SE",
-    Enrichment_p = "Enrichment p-value",
-    Coefficient = "Coefficient",
-    Coefficient_std_error = "Coefficient SE",
-    `Coefficient_z-score` = "Coefficient z-score",
-    ldsr = "LDSR"
-  ) %>%
-  # Format small values in scientific notation with 2 decimal places
-  fmt_scientific(
-    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
-    decimals = 2
-  ) %>%
-  # Format other numeric columns with 3 decimal places
-  fmt_number(
-    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
-    decimals = 3,
-    use_seps = TRUE
-  ) %>%
-  # Customize table appearance
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3),
-    heading.align = "center",
-    column_labels.font.weight = "bold"
-  )
-```
-
-***
-
-##### ADHD {.tabset}
-
-***
-
-```{r, cs95_adhd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'ADHD') %>%
-  # Round numeric columns to avoid excessive precision
-  mutate(
-    Prop._SNPs = signif(Prop._SNPs, 3),
-    Prop._h2 = signif(Prop._h2, 3),
-    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
-    Enrichment = signif(Enrichment, 3),
-    Enrichment_std_error = signif(Enrichment_std_error, 3),
-    Enrichment_p = signif(Enrichment_p, 3),
-    Coefficient = signif(Coefficient, 3),
-    Coefficient_std_error = signif(Coefficient_std_error, 3),
-    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
-    ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level) %>%
-  # Create the gt table
-  gt() %>%
-  # Add table header and subtitle
-  tab_header(
-    title = "Table 4. ADHD S-LDSC Results",
-    subtitle = "95% CS eQTL used as annotation"
-  ) %>%
-  # Rename columns for display
-  cols_label(
-    cell_type = "Cell Type",
-    disorder = "Disorder",
-    Prop._SNPs = "Prop. SNPs",
-    Prop._h2 = "Prop. Heritability",
-    Prop._h2_std_error = "Prop. Heritability SE",
-    Enrichment = "Enrichment",
-    Enrichment_std_error = "Enrichment SE",
-    Enrichment_p = "Enrichment p-value",
-    Coefficient = "Coefficient",
-    Coefficient_std_error = "Coefficient SE",
-    `Coefficient_z-score` = "Coefficient z-score",
-    ldsr = "LDSR"
-  ) %>%
-  # Format small values in scientific notation with 2 decimal places
-  fmt_scientific(
-    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
-    decimals = 2
-  ) %>%
-  # Format other numeric columns with 3 decimal places
-  fmt_number(
-    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
-    decimals = 3,
-    use_seps = TRUE
-  ) %>%
-  # Customize table appearance
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3),
-    heading.align = "center",
-    column_labels.font.weight = "bold"
-  )
-```
-
-***
-
-##### OCD {.tabset}
-
-***
-
-```{r, cs95_ocd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'OCD') %>%
-  # Round numeric columns to avoid excessive precision
-  mutate(
-    Prop._SNPs = signif(Prop._SNPs, 3),
-    Prop._h2 = signif(Prop._h2, 3),
-    Prop._h2_std_error = signif(Prop._h2_std_error, 3),
-    Enrichment = signif(Enrichment, 3),
-    Enrichment_std_error = signif(Enrichment_std_error, 3),
-    Enrichment_p = signif(Enrichment_p, 3),
-    Coefficient = signif(Coefficient, 3),
-    Coefficient_std_error = signif(Coefficient_std_error, 3),
-    `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
-    ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level) %>%
-  # Create the gt table
-  gt() %>%
-  # Add table header and subtitle
-  tab_header(
-    title = "Table 5. OCD S-LDSC Results",
-    subtitle = "95% CS eQTL used as annotation"
-  ) %>%
-  # Rename columns for display
-  cols_label(
-    cell_type = "Cell Type",
-    disorder = "Disorder",
-    Prop._SNPs = "Prop. SNPs",
-    Prop._h2 = "Prop. Heritability",
-    Prop._h2_std_error = "Prop. Heritability SE",
-    Enrichment = "Enrichment",
-    Enrichment_std_error = "Enrichment SE",
-    Enrichment_p = "Enrichment p-value",
-    Coefficient = "Coefficient",
-    Coefficient_std_error = "Coefficient SE",
-    `Coefficient_z-score` = "Coefficient z-score",
-    ldsr = "LDSR"
-  ) %>%
-  # Format small values in scientific notation with 2 decimal places
-  fmt_scientific(
-    columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
-    decimals = 2
-  ) %>%
-  # Format other numeric columns with 3 decimal places
-  fmt_number(
-    columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
-    decimals = 3,
-    use_seps = TRUE
-  ) %>%
-  # Customize table appearance
-  tab_options(
-    table.font.names = "Arial",
-    table.font.size = 12,
-    data_row.padding = px(3),
-    heading.align = "center",
-    column_labels.font.weight = "bold"
-  )
-```
-
-***
-
 ### MaxCPP {.tabset}
 
 ***
@@ -514,7 +44,7 @@ ldsr_tbl %>%
 
 ***
 
-```{r, maxCPP_p_val_plot, echo = FALSE, message=FALSE, warning=FALSE}
+```{r, maxCPP_p_val_plot, echo = FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=10}
 # --- Read and prepare table
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
@@ -527,6 +57,9 @@ ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')
   mutate(disorder = factor(disorder, levels = c("SCZ", "BPD", "MDD", "ADHD", "OCD")))
 
 # --- Custom colour palette
+# Main cluster colours match the UMAP cell-type colours used elsewhere.
+# Trajectory colours are deliberately distinct from every main-cluster colour
+# so pseudotime-bin bars can never be mistaken for a subcluster shade.
 custom_palette <- c(
   'Glu-UL' = '#4363d8',
   'Glu-DL' = '#00B6EB',
@@ -534,39 +67,71 @@ custom_palette <- c(
   'GABA' = '#3CBB75FF',
   'Endo-Peri' = '#B200ED',
   'MG' = '#F58231',
-  'OPC' = '#FDE725FF'
+  'OPC' = '#FDE725FF',
+  'Trajectory-to-Glu-UL' = '#E91E8C',
+  'Trajectory-to-Glu-DL' = '#2F4F4F'
 )
 
-# --- Assign main cluster to subclusters
+# --- Identify pseudotime trajectory cell types (checked BEFORE the main_type
+# cascade below, since names like "NPC-to-Glu-UL-Q4-Bin1" contain "Glu-UL" as
+# a substring and would otherwise be mis-classified as a Glu-UL subcluster)
 ldsr_tbl <- ldsr_tbl |>
-  mutate(main_type = case_when(
-    str_detect(cell_type, "Glu-UL") ~ "Glu-UL",
-    str_detect(cell_type, "Glu-DL") ~ "Glu-DL",
-    str_detect(cell_type, "GABA") ~ "GABA",
-    str_detect(cell_type, "NPC") ~ "NPC",
-    str_detect(cell_type, "OPC") ~ "OPC",
-    str_detect(cell_type, "MG") ~ "MG",
-    str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
-    TRUE ~ cell_type
-  ))
+  mutate(
+    is_trajectory = str_detect(cell_type, "-to-"),
+    main_type = case_when(
+      is_trajectory & str_detect(cell_type, "to-Glu-UL") ~ "Trajectory-to-Glu-UL",
+      is_trajectory & str_detect(cell_type, "to-Glu-DL") ~ "Trajectory-to-Glu-DL",
+      str_detect(cell_type, "Glu-UL") ~ "Glu-UL",
+      str_detect(cell_type, "Glu-DL") ~ "Glu-DL",
+      str_detect(cell_type, "GABA") ~ "GABA",
+      str_detect(cell_type, "NPC") ~ "NPC",
+      str_detect(cell_type, "OPC") ~ "OPC",
+      str_detect(cell_type, "MG") ~ "MG",
+      str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
+      TRUE ~ cell_type
+    )
+  )
 
 # --- Specify y-axis order
+# Subcluster patterns are anchored ("-[0-9]+$") so they can't accidentally
+# re-catch the trajectory names (e.g. a loose "^NPC" grep would otherwise
+# also match "NPC-to-Glu-UL-Q4-Bin1").
 cell_order <- c(
-  "Glu-UL", grep("^Glu-UL", ldsr_tbl$cell_type, value = TRUE),
-  "Glu-DL", grep("^Glu-DL", ldsr_tbl$cell_type, value = TRUE),
-  "GABA", grep("^GABA", ldsr_tbl$cell_type, value = TRUE),
-  "NPC", grep("^NPC", ldsr_tbl$cell_type, value = TRUE),
-  "OPC", "MG", "Endo-Peri"
+  "Glu-UL", grep("^Glu-UL-[0-9]+$", ldsr_tbl$cell_type, value = TRUE),
+  "Glu-DL", grep("^Glu-DL-[0-9]+$", ldsr_tbl$cell_type, value = TRUE),
+  "GABA", grep("^GABA-[0-9]+$", ldsr_tbl$cell_type, value = TRUE),
+  "NPC", grep("^NPC-[0-9]+$", ldsr_tbl$cell_type, value = TRUE),
+  "OPC", "MG", "Endo-Peri",
+  sort(grep("^NPC-to-Glu-UL", ldsr_tbl$cell_type, value = TRUE)),
+  sort(grep("^NPC-to-Glu-DL", ldsr_tbl$cell_type, value = TRUE))
 ) |> unique()
 
 ldsr_tbl <- ldsr_tbl |>
   mutate(cell_type = factor(cell_type, levels = rev(cell_order))) |>
-  mutate(cluster_level = if_else(cell_type == main_type, "Main Cluster", "Subcluster"))
+  mutate(cluster_level = case_when(
+    is_trajectory ~ "Trajectory",
+    cell_type == main_type ~ "Main Cluster",
+    TRUE ~ "Subcluster"
+  )) |>
+  mutate(cluster_level = factor(cluster_level, levels = c("Main Cluster", "Subcluster", "Trajectory")))
 
-vline_data <- tibble(
-  cluster_level = c("Main Cluster", "Subcluster"),
-  intercept = c(-log10(0.05 / 7), -log10(0.05 / 13))
-)
+# --- Bonferroni correction per facet, derived from the data rather than
+# hardcoded, so the divisor always matches however many groups are actually
+# present in that facet (this previously drifted out of sync: 13 was used
+# for a 12-group subcluster facet after a cluster was dropped upstream).
+vline_data <- ldsr_tbl |>
+  distinct(cluster_level, cell_type) |>
+  count(cluster_level, name = "n_groups") |>
+  mutate(intercept = -log10(0.05 / n_groups))
+
+# --- Caption reporting the correction actually applied, built from the same
+# vline_data used to draw the lines so the two can never disagree
+p_val_caption <- vline_data |>
+  mutate(lbl = paste0(cluster_level, ": 0.05/", n_groups)) |>
+  pull(lbl) |>
+  paste(collapse = "; ") |>
+  (\(x) paste0("Dashed lines: Bonferroni threshold per facet (", x, "). Dotted line: nominal P = 0.05."))() |>
+  str_wrap(width = 110)
 
 # --- Plot
 ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
@@ -583,7 +148,7 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     inherit.aes = FALSE
   ) +
   scale_linetype_manual(
-    values = c("Main Cluster" = "dashed", "Subcluster" = "dashed")
+    values = c("Main Cluster" = "dashed", "Subcluster" = "dashed", "Trajectory" = "dashed")
   ) +
 
   # global nominal threshold
@@ -598,14 +163,16 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
     axis.text.x = element_text(size = 10),
     panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.2, "lines"),
     strip.text = element_text(face = "bold"),
-    legend.position = "none"
-                           
+    legend.position = "none",
+    plot.caption = element_text(hjust = 0, size = 9, margin = margin(t = 10))
   ) +
   labs(
     x = expression(-log[10](P)),
     y = "Cell Type",
     title = "Stratified LDSR P (maxCPP)",
+    caption = p_val_caption,
     fill = "Main Type",
     linetype = "Cluster Level"
   ) +
@@ -618,7 +185,7 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
 
 ***
 
-```{r, maxCPP_enrich_plot, echo = FALSE, message=FALSE}
+```{r, maxCPP_enrich_plot, echo = FALSE, message=FALSE, fig.width=12, fig.height=10}
 
 ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
   geom_col(width = 0.7, colour = 'black') +
@@ -633,6 +200,7 @@ ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
     axis.text.x = element_text(size = 10),
     panel.grid.major.y = element_blank(),
     panel.grid.minor = element_blank(),
+    panel.spacing = unit(1.2, "lines"),
     strip.text = element_text(face = "bold"),
     legend.position = "none"
   ) +
@@ -670,7 +238,7 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
-  select(-main_type, -cluster_level) %>%
+  select(-main_type, -cluster_level, -is_trajectory) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
@@ -736,7 +304,7 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
-    select(-main_type, -cluster_level) %>%
+    select(-main_type, -cluster_level, -is_trajectory) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
@@ -802,7 +370,7 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
-    select(-main_type, -cluster_level) %>%
+    select(-main_type, -cluster_level, -is_trajectory) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
@@ -868,7 +436,7 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
-  select(-main_type, -cluster_level) %>%
+  select(-main_type, -cluster_level, -is_trajectory) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
@@ -934,7 +502,7 @@ ldsr_tbl %>%
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
   ) %>%
-  select(-main_type, -cluster_level) %>%
+  select(-main_type, -cluster_level, -is_trajectory) %>%
   # Create the gt table
   gt() %>%
   # Add table header and subtitle
@@ -979,3 +547,155 @@ ldsr_tbl %>%
 ```
 
 ***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+***
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+# List all benchmark files for the pipeline
+files <- list.files(bmark_dir, pattern = "09sldsr.*\\.txt", full.names = TRUE)
+
+# Rule names as declared in the Snakefile (see `benchmark:` directives).
+# Matched by longest-prefix first, since several rule names share a common
+# prefix with another rule (e.g. get_hg38_refs / get_hg19_refs both start
+# with "get_hg", and ldsr_ld_scores_hg38 is itself a prefix of what
+# ldsr_strat_hg38_bl_v12's benchmark filename would also match) - a naive
+# "first token split on _" match, as used in the SMR benchmarking template,
+# would collapse distinct rules into one bucket here. lift_hapmap3_snps has
+# no benchmark: directive in the Snakefile, so it produces no file to match.
+known_rules <- c(
+  "ldsr_strat_hg38_bl_v12",
+  "ldsr_ld_scores_hg38",
+  "get_hg38_refs",
+  "get_hg19_refs",
+  "make_annot",
+  "sldsr_report"
+)
+known_rules <- known_rules[order(-nchar(known_rules))]
+
+match_rule <- function(rule_full, known_rules) {
+  hit <- known_rules[str_starts(rule_full, known_rules)]
+  if (length(hit) > 0) hit[1] else rule_full
+}
+
+benchmarks <- map_dfr(files, function(f) {
+  df <- read.table(f, header = TRUE, sep = "\t")
+  fname <- basename(f)
+  parts <- strsplit(fname, "\\.")[[1]]
+
+  # parts[2] holds things like:
+  # "get_hg38_refs", "make_annot_Glu-UL_1",
+  # "ldsr_ld_scores_hg38_Glu-UL_maxCPP_1", "ldsr_strat_hg38_bl_v12_Glu-UL_maxCPP_scz"
+  rule_full <- parts[2]
+  rule <- match_rule(rule_full, known_rules)
+
+  tibble(
+    file = f,
+    rule = rule,
+    runtime_sec = df$s,
+    runtime_hms = df$h.m.s.,
+    max_rss = df$max_rss
+  )
+})
+
+# Summarise by rule
+summary <- benchmarks %>%
+  group_by(rule) %>%
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  arrange(rule)
+
+# Table
+summary %>%
+  gt() %>%
+  tab_header(
+    title = "Table 12. Benchmarking",
+    subtitle = "Means and SD across replicates"
+  ) %>%
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) %>%
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) %>%
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+***
+
+#### Plot
+
+***
+
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = pmax(mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min), 0),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)", 
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = pmax(mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb), 0),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)", 
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+```
