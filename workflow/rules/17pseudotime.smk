@@ -23,9 +23,20 @@ def get_pseudotime_tensorqtl(wildcards=None):
         )
     return files
 
+PT_Q4_EXPORT_TARGETS = [
+    f"../results/05TENSORQTL/prep_input/.pt_export_{traj}_Q4_bin{b}.done"
+    for traj in config["trajectories"]
+    for b in range(1, 5)
+]
+
 rule all:
     input:
-        config["pseudotime"]["report"]["html"]
+        config["pseudotime"]["report"]["html"],
+#        [
+#            f"../results/05TENSORQTL/prep_input/.pt_export_{traj}_Q4_bin{bin}.done"
+#            for traj in config["trajectories"]
+#            for bin in range(1, 5)
+#        ]
 #        config["pseudotime"]["palantir_all"]["output_h5ad"],        
 #        expand(config["pseudotime"]["dynamic_eqtl"]["candidates_tsv"], trajectory = config["trajectories"])
 #        get_pseudotime_tensorqtl()
@@ -219,13 +230,114 @@ rule pseudotime_dynamic_eqtl:
     message:     "Running dynamic eQTL LMM for trajectory: {wildcards.trajectory}"
     script:      config["pseudotime"]["dynamic_eqtl"]["script"]
 
+rule pseudotime_export_smr_twas_inputs:
+    input:
+        parquet_sentinel = lambda w: (
+            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/"
+            "Q4_bin{bin}_genPC4_expPC{pc}/Q4_bin{bin}_nom.cis_qtl_pairs.1.parquet"
+        ).format(trajectory=w.trajectory, bin=w.bin,
+                  pc=config["pseudotime"]["bin_exp_pc_map"][w.trajectory][int(w.bin)]),
+        perm = lambda w: (
+            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/"
+            "Q4_bin{bin}_genPC4_expPC{pc}/Q4_bin{bin}_perm.cis_qtl.txt.gz"
+        ).format(trajectory=w.trajectory, bin=w.bin,
+                  pc=config["pseudotime"]["bin_exp_pc_map"][w.trajectory][int(w.bin)]),
+        bed = "../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q4_bin{bin}_quantile.bed",
+        cov = lambda w: (
+            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/"
+            "Q4_bin{bin}_quantile_genPC4_expPC{pc}_split_covariates.txt"
+        ).format(trajectory=w.trajectory, bin=w.bin,
+                  pc=config["pseudotime"]["bin_exp_pc_map"][w.trajectory][int(w.bin)])
+    output:
+        touch("../results/05TENSORQTL/prep_input/.pt_export_{trajectory}_Q4_bin{bin}.done")
+    log:
+        "../results/00LOG/17PSEUDOTIME/{trajectory}/export_smr_twas_Q4_bin{bin}.log"
+    benchmark:
+        "reports/benchmarks/17pseudotime.export_smr_twas_inputs_{trajectory}_Q4_bin{bin}.txt"
+    wildcard_constraints:
+        trajectory = "|".join(config["trajectories"]),
+        bin = "[1-4]"
+    message: "Exporting {wildcards.trajectory} Q4 bin {wildcards.bin} inputs for SMR/TWAS/SuSiE"
+    run:
+        import glob, os, shutil
+
+        pc = config["pseudotime"]["bin_exp_pc_map"][wildcards.trajectory][int(wildcards.bin)]
+        pt_group = f"{wildcards.trajectory}-Q4-Bin{wildcards.bin}"
+
+        src_dir = os.path.dirname(input.parquet_sentinel)
+        dest_dir = f"../results/05TENSORQTL/tensorqtl_nom/{pt_group}_quantile_genPC_4_expPC_{pc}"
+        os.makedirs(dest_dir, exist_ok=True)
+        for src in glob.glob(os.path.join(src_dir, "Q4_bin*_nom.cis_qtl_pairs.*.parquet")):
+            chrom_part = os.path.basename(src).split("cis_qtl_pairs.")[1]
+            shutil.copy(src, os.path.join(dest_dir, f"{pt_group}_quantile_nom.cis_qtl_pairs.{chrom_part}"))
+
+        perm_dest_dir = f"../results/05TENSORQTL/tensorqtl_perm/{pt_group}_quantile_genPC_4_expPC_{pc}"
+        os.makedirs(perm_dest_dir, exist_ok=True)
+        shutil.copy(input.perm, os.path.join(perm_dest_dir, f"{pt_group}_quantile_perm.cis_qtl.txt.gz"))
+
+        bed_dest = f"../results/05TENSORQTL/prep_input/{pt_group}_quantile.bed"
+        shutil.copy(input.bed, bed_dest)
+
+        cov_dest = f"../results/05TENSORQTL/prep_input/{pt_group}_quantile_genPC_4_expPC_{pc}_split_covariates.txt"
+        shutil.copy(input.cov, cov_dest)
+
+#rule pseudotime_export_smr_twas_inputs:
+#    input:
+#        parquet_sentinel = lambda w: (
+#            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/"
+#            "Q4_bin{bin}_genPC4_expPC{pc}/Q4_bin{bin}_nom.cis_qtl_pairs.1.parquet"
+#        ).format(trajectory=w.trajectory, bin=w.bin,
+#                  pc=config["pseudotime"]["cell_type_exp_pc_map"][w.trajectory]),
+#        perm = lambda w: (
+#            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/"
+#            "Q4_bin{bin}_genPC4_expPC{pc}/Q4_bin{bin}_perm.cis_qtl.txt.gz"
+#        ).format(trajectory=w.trajectory, bin=w.bin,
+#                  pc=config["pseudotime"]["cell_type_exp_pc_map"][w.trajectory]),
+#        bed = "../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q4_bin{bin}_quantile.bed",
+#        cov = lambda w: (
+#            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/"
+#            "Q4_bin{bin}_quantile_genPC4_expPC{pc}_split_covariates.txt"
+#        ).format(trajectory=w.trajectory, bin=w.bin,
+#                  pc=config["pseudotime"]["cell_type_exp_pc_map"][w.trajectory])
+#    output:
+#        touch("../results/05TENSORQTL/prep_input/.pt_export_{trajectory}_Q4_bin{bin}.done")
+#    log:
+#        "../results/00LOG/17PSEUDOTIME/{trajectory}/export_smr_twas_Q4_bin{bin}.log"
+#    benchmark:
+#        "reports/benchmarks/17pseudotime.export_smr_twas_inputs_{trajectory}_Q4_bin{bin}.txt"
+#    wildcard_constraints:
+#        trajectory = "|".join(config["trajectories"]),
+#        bin = "[1-4]"
+#    message: "Exporting {wildcards.trajectory} Q4 bin {wildcards.bin} inputs for SMR/TWAS/SuSiE"
+#    run:
+#        import glob, os, shutil
+
+#        pc = config["pseudotime"]["cell_type_exp_pc_map"][wildcards.trajectory]
+#        pt_group = f"{wildcards.trajectory}-Q4-Bin{wildcards.bin}"
+
+#        # Nominal parquets
+#        src_dir = os.path.dirname(input.parquet_sentinel)
+#        dest_dir = f"../results/05TENSORQTL/tensorqtl_nom/{pt_group}_quantile_genPC_4_expPC_{pc}"
+#        os.makedirs(dest_dir, exist_ok=True)
+#        for src in glob.glob(os.path.join(src_dir, "Q4_bin*_nom.cis_qtl_pairs.*.parquet")):
+#            chrom_part = os.path.basename(src).split("cis_qtl_pairs.")[1]
+#            shutil.copy(src, os.path.join(dest_dir, f"{pt_group}_quantile_nom.cis_qtl_pairs.{chrom_part}"))
+
+#        # Permutation output (single file — needed by SuSiE's get_sig_eGenes/run_susie)
+#        perm_dest_dir = f"../results/05TENSORQTL/tensorqtl_perm/{pt_group}_quantile_genPC_4_expPC_{pc}"
+#        os.makedirs(perm_dest_dir, exist_ok=True)
+#        shutil.copy(input.perm, os.path.join(perm_dest_dir, f"{pt_group}_quantile_perm.cis_qtl.txt.gz"))
+
+#        # Expression bed
+#        bed_dest = f"../results/05TENSORQTL/prep_input/{pt_group}_quantile.bed"
+#        shutil.copy(input.bed, bed_dest)
+
+#        # Split covariates
+#        cov_dest = f"../results/05TENSORQTL/prep_input/{pt_group}_quantile_genPC_4_expPC_{pc}_split_covariates.txt"
+#        shutil.copy(input.cov, cov_dest)
 
 rule pseudotime_report:
     input:  perm           = get_pseudotime_tensorqtl(),
-            dynamic        = expand(
-                                config["pseudotime"]["dynamic_eqtl"]["candidates_tsv"],
-                                trajectory = config["trajectories"]
-                             ),
             rmd_script     = config["pseudotime"]["report"]["rmd_script"]
     output: config["pseudotime"]["report"]["html"]
     params: in_dir              = config["pseudotime"]["report"]["in_dir"],
@@ -244,4 +356,29 @@ rule pseudotime_report:
                 cell_type_perm_dir = '{params.cell_type_perm_dir}'
             ))" > {log} 2>&1
         """
+
+#rule pseudotime_report:
+#    input:  perm           = get_pseudotime_tensorqtl(),
+#            dynamic        = expand(
+#                                config["pseudotime"]["dynamic_eqtl"]["candidates_tsv"],
+#                                trajectory = config["trajectories"]
+#                             ),
+#            rmd_script     = config["pseudotime"]["report"]["rmd_script"]
+#    output: config["pseudotime"]["report"]["html"]
+#    params: in_dir              = config["pseudotime"]["report"]["in_dir"],
+#            cell_type_perm_dir  = config["pseudotime"]["report"]["cell_type_perm_dir"],
+#            output_file         = config["pseudotime"]["report"]["output_file"]
+#    singularity: config["containers"]["r_eqtl"]
+#    resources: threads = 1, mem_mb = 8000, time = "1:00:00"
+#    log:    config["pseudotime"]["report"]["log"]
+#    message: "Generating pseudotime eQTL report"
+#    shell:
+#        """
+#        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+#            output_file = '{params.output_file}', \
+#            params = list(
+#                in_dir             = '{params.in_dir}',
+#                cell_type_perm_dir = '{params.cell_type_perm_dir}'
+#            ))" > {log} 2>&1
+#        """
 
