@@ -39,16 +39,6 @@ exp_pcs      <- c(10, 20, 30, 40, 50)
 geno_pc      <- 4
 norm_method  <- "quantile"
 
-selected_exp_pc <- c(
-  "NPC-to-Glu-DL" = 30,
-  "NPC-to-Glu-UL" = 30
-)
-
-cell_type_exp_pc_map <- c(
-  "NPC-to-Glu-DL" = 40,
-  "NPC-to-Glu-UL" = 50
-)
-
 cell_type_map <- c(
   "NPC-to-Glu-DL" = "Glu-DL",
   "NPC-to-Glu-UL" = "Glu-UL"
@@ -112,23 +102,7 @@ cis-eQTL mapping was performed using [TensorQTL](https://github.com/broadinstitu
 - cis-window: ±500 kb
 - Covariates: PCW, sex, 4 genotype PCs, N expression PCs (sensitivity: 10–50)
 - Permutation-based FDR correction (q-value < 0.05)
-- Selected expression PCs: 30 (both trajectories)
-
-**Dynamic eQTL mapping**
-
-Dynamic eQTL mapping followed Yazar et al. (Science 2022) using linear mixed models:
-
-- Input: cell-type level eQTLs detected in ≥3 Q6 bins
-- Models: linear (genotype × quantile) and quadratic (genotype × quantile + genotype × quantile²)
-- Random effects: individual (1|sampleid) to account for repeated measures
-- Covariates: PCW, sex, genotype PCs 1-4 (expression PCs excluded — see methods note)
-- FDR: qvalue correction on LRT p-values
-
-> **Covariate note:** The per-bin TensorQTL analysis used expression PCs computed
-> independently per bin (expPC=30). For the dynamic LMM, expression PCs are excluded
-> because bin-specific PCs are not comparable across bins in a stacked model.
-> Only fixed demographic covariates (PCW, sex, genPC1-4) are used, with the
-> individual random effect accounting for inter-individual technical variation.
+- Selected expression PCs: bin-specific, chosen per bin by maximum eGene count at FDR < 0.05 (see Section 3)
 
 ***
 
@@ -138,14 +112,12 @@ Dynamic eQTL mapping followed Yazar et al. (Science 2022) using linear mixed mod
 tibble(
   Parameter = c("Trajectories", "Quantile values", "Expression PCs tested",
                 "Selected expression PCs", "Genotype PCs",
-                "Normalisation", "cis-window", "FDR threshold",
-                "Dynamic eQTL min bins", "Dynamic eQTL FDR"),
+                "Normalisation", "cis-window", "FDR threshold"),
   Value     = c(paste(trajectories, collapse=", "),
                 paste(q_values, collapse=", "),
                 paste(exp_pcs, collapse=", "),
-                paste(names(selected_exp_pc), selected_exp_pc, sep="=", collapse=", "),
-                as.character(geno_pc), norm_method, "±500 kb", "q-value < 0.05",
-                "3", "q-value < 0.05")
+                "Bin-specific (see Section 3)",
+                as.character(geno_pc), norm_method, "±500 kb", "q-value < 0.05")
 ) |>
   gt() |>
   tab_header(title = "Analysis parameters") |>
@@ -278,6 +250,23 @@ build_sensitivity_tbl <- function(in_dir, trajectories, q_values, exp_pcs, geno_
 sensitivity_tbl <- build_sensitivity_tbl(in_dir, trajectories, q_values, exp_pcs)
 if (nrow(sensitivity_tbl) == 0) stop("No tensorQTL log files found. Check in_dir: ", in_dir)
 message("Loaded sensitivity data: ", nrow(sensitivity_tbl), " rows")
+
+# ── Single source of truth for "best" expPC per (trajectory, quantile_n, bin) ──
+# Selected by maximum eGene count at FDR < 0.05, same criterion as the
+# "Best expPC per bin" table below. Every section from here on reads from
+# this lookup rather than a separately hardcoded value.
+
+best_exp_pc_tbl <- sensitivity_tbl |>
+  group_by(trajectory, quantile_n, bin) |>
+  slice_max(egenes_fdr05, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  select(trajectory, quantile_n, bin, exp_pc)
+
+get_best_exp_pc <- function(traj, n, b) {
+  best_exp_pc_tbl |>
+    filter(trajectory == traj, quantile_n == n, bin == b) |>
+    pull(exp_pc)
+}
 ```
 
 ```{r sensitivity_plots, echo=FALSE, message=FALSE, warning=FALSE, results='asis', fig.width=14, fig.height=5}
@@ -348,7 +337,8 @@ for (traj in trajectories) {
 
 ***
 
-eGene counts at FDR < 0.05 across pseudotime bins using expPC=30.
+eGene counts at FDR < 0.05 across pseudotime bins, using each bin's best
+expression PC (selected by maximum eGene count; see Section 3).
 
 ***
 
@@ -368,8 +358,8 @@ read_perm_egenes <- function(in_dir, trajectory, quantile_n, bin, exp_pc, geno_p
 
 egene_list <- list()
 for (traj in trajectories) {
-  pc <- selected_exp_pc[[traj]]
   for (n in q_values) for (b in seq_len(n)) {
+    pc <- get_best_exp_pc(traj, n, b)
     key <- sprintf("%s_Q%d_bin%d", traj, n, b)
     egene_list[[key]] <- read_perm_egenes(in_dir, traj, n, b, pc)
   }
@@ -385,7 +375,6 @@ landscape_counts <- egene_tbl |>
 for (traj in trajectories) {
   cat(sprintf("\n\n### %s {.tabset}\n\n***\n\n", traj))
   traj_counts <- landscape_counts |> filter(trajectory == traj)
-  pc_label    <- selected_exp_pc[[traj]]
 
   cat("#### eGene counts across bins\n\n***\n\n")
   p <- traj_counts |>
@@ -394,8 +383,8 @@ for (traj in trajectories) {
     scale_colour_manual(values = bin_palette, name = "Bin") +
     scale_x_continuous(breaks = seq_len(max(traj_counts$bin))) +
     facet_wrap(~ paste0("Q", quantile_n), scales = "free_x") +
-    labs(title    = sprintf("%s — eGenes across pseudotime bins (expPC=%d)", traj, pc_label),
-         subtitle = "FDR < 0.05, permutation-based q-value",
+    labs(title    = sprintf("%s — eGenes across pseudotime bins", traj),
+         subtitle = "FDR < 0.05, permutation-based q-value (bin-specific best expPC)",
          x = "Pseudotime bin", y = "eGene count (FDR < 0.05)") +
     theme_minimal(base_size = 12) +
     theme(plot.title = element_text(hjust = 0.5, face = "bold"),
@@ -410,7 +399,7 @@ for (traj in trajectories) {
     arrange(quantile_n, bin) |>
     gt() |>
     tab_header(title = sprintf("eGene counts — %s", traj),
-               subtitle = sprintf("expPC = %d, FDR < 0.05", pc_label)) |>
+               subtitle = "FDR < 0.05 (bin-specific best expPC)") |>
     cols_label(trajectory = "Trajectory", quantile_n = "Q",
                bin = "Bin", egenes = "eGenes (FDR<0.05)") |>
     tab_style(style = cell_text(weight = "bold"),
@@ -549,9 +538,9 @@ read_perm_novel <- function(in_dir, trajectory, quantile_n, bin, exp_pc,
 }
 
 novel_all <- map_dfr(trajectories, function(traj) {
-  pc <- selected_exp_pc[[traj]]
   map_dfr(q_values, function(n) {
     map_dfr(seq_len(n), function(b) {
+      pc <- get_best_exp_pc(traj, n, b)
       read_perm_novel(in_dir, traj, n, b, pc, paper_egene_set)
     })
   })
@@ -580,7 +569,6 @@ for (traj in trajectories) {
   cat(sprintf("\n\n### %s {.tabset}\n\n***\n\n", traj))
 
   traj_overlap <- overlap_tbl |> filter(trajectory == traj)
-  pc_label     <- selected_exp_pc[[traj]]
 
   overlap_long <- traj_overlap |>
     select(quantile_n, bin, n_shared, n_novel, n_paper_only) |>
@@ -591,12 +579,12 @@ for (traj in trajectories) {
                              levels = c("n_novel", "n_shared", "n_paper_only"),
                              labels = c("Novel", "Shared", "Paper only")))
 
-  # ── Tab 1: Overlap plot (Q6) ─────────────────────────────────────────────
+  # ── Tab 1: Overlap plot (Q4) ─────────────────────────────────────────────
 
   cat("#### Overlap plot\n\n***\n\n")
 
   p <- overlap_long |>
-    filter(quantile_n == 6) |>
+    filter(quantile_n == 4) |>
     mutate(bin_label = paste0("Bin ", bin)) |>
     group_by(bin_label) |>
     mutate(prop = count / sum(count)) |>
@@ -610,8 +598,7 @@ for (traj in trajectories) {
                                  "Paper only" = "#66C2A5"),
                       name = NULL) +
     scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
-    labs(title    = sprintf("%s — Q6 overlap with full paper eGene set (expPC=%d)",
-                            traj, pc_label),
+    labs(title    = sprintf("%s — Q4 overlap with full paper eGene set", traj),
          subtitle = sprintf("Paper reference: %d unique eGenes across all L1 + L2 cell types",
                             length(paper_egene_set)),
          x = "Proportion of eGenes", y = NULL) +
@@ -657,8 +644,8 @@ for (traj in trajectories) {
     gt() |>
     tab_header(
       title    = sprintf("eGene overlap — %s vs full paper eGene set", traj),
-      subtitle = sprintf("Pseudotime expPC=%d | Paper reference: %d eGenes (L1 + L2)",
-                         pc_label, length(paper_egene_set))
+      subtitle = sprintf("Pseudotime: bin-specific best expPC | Paper reference: %d eGenes (L1 + L2)",
+                         length(paper_egene_set))
     ) |>
     cols_label(quantile_n   = "Q",
                bin          = "Bin",
@@ -743,6 +730,69 @@ for (traj in trajectories) {
     cat("\n\n***\n\n")
   }
 }
+
+# ── Combined (cross-trajectory) Q4 novel eGene summary ────────────────────────
+
+cat("\n\n### Combined — Q4 novel eGenes {.tabset}\n\n***\n\n")
+
+q4_novel_combined <- novel_union |>
+  filter(quantile_n == 4)
+
+combined_summary <- tibble(
+  metric = c(
+    "Paper eGenes (L1 + L2 reference)",
+    sprintf("%s — unique Q4 novel eGenes", trajectories[1]),
+    sprintf("%s — unique Q4 novel eGenes", trajectories[2]),
+    "Combined — unique Q4 novel eGenes (union across trajectories)"
+  ),
+  n = c(
+    length(paper_egene_set),
+    novel_summary |> filter(trajectory == trajectories[1], quantile_n == 4) |> pull(novel_egene_union),
+    novel_summary |> filter(trajectory == trajectories[2], quantile_n == 4) |> pull(novel_egene_union),
+    n_distinct(q4_novel_combined$phenotype_id)
+  )
+)
+
+cat("#### Summary\n\n***\n\n")
+
+combined_summary |>
+  gt() |>
+  tab_header(
+    title    = "Q4 novel eGenes — combined across trajectories",
+    subtitle = "Pseudotime-derived eGenes not detected as significant (FDR < 0.05) in any L1 or L2 cell type in the original paper"
+  ) |>
+  cols_label(metric = "Metric", n = "N genes") |>
+  tab_style(style = cell_text(weight = "bold"), locations = cells_column_labels()) |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_body(rows = metric == "Combined — unique Q4 novel eGenes (union across trajectories)")) |>
+  print()
+cat("\n\n")
+
+cat("#### Combined gene list\n\n***\n\n")
+
+q4_novel_combined |>
+  group_by(phenotype_id) |>
+  slice_min(pval_nominal, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(pval_nominal) |>
+  select(symbol, phenotype_id, trajectory, bin, variant_id, slope, pval_nominal, qval) |>
+  gt() |>
+  tab_header(
+    title    = "Q4 novel eGenes — combined unique gene list",
+    subtitle = sprintf("%d unique genes across both trajectories | ranked by lowest nominal p-value",
+                       n_distinct(q4_novel_combined$phenotype_id))
+  ) |>
+  cols_label(
+    symbol       = "Gene", phenotype_id = "Ensembl ID", trajectory = "Trajectory",
+    bin          = "Best bin", variant_id = "eSNP", slope = "Slope",
+    pval_nominal = "Nominal p", qval = "FDR (q-value)"
+  ) |>
+  fmt_scientific(columns = c(pval_nominal, qval), decimals = 2) |>
+  fmt_number(columns = slope, decimals = 4) |>
+  tab_style(style = cell_text(weight = "bold"), locations = cells_column_labels()) |>
+  tab_style(style = cell_text(style = "italic"), locations = cells_body(columns = symbol)) |>
+  print()
+cat("\n\n")
 ```
 
 ***
@@ -751,8 +801,9 @@ for (traj in trajectories) {
 
 ***
 
-UpSet plots showing intersections of eGene sets across Q6 pseudotime bins
-at expPC=30. Each set represents eGenes detected at FDR < 0.05 in that bin.
+UpSet plots showing intersections of eGene sets across Q4 pseudotime bins,
+using each bin's best expression PC. Each set represents eGenes detected at
+FDR < 0.05 in that bin.
 
 ***
 
@@ -771,9 +822,11 @@ read_perm_full <- function(in_dir, trajectory, quantile_n, bin, exp_pc, geno_pc 
     mutate(trajectory = trajectory, quantile_n = quantile_n, bin = bin, exp_pc = exp_pc)
 }
 
-q6_slope <- map_dfr(trajectories, function(traj) {
-  pc <- selected_exp_pc[[traj]]
-  map_dfr(seq_len(6), function(b) read_perm_full(in_dir, traj, 6, b, pc))
+q4_slope <- map_dfr(trajectories, function(traj) {
+  map_dfr(seq_len(4), function(b) {
+    pc <- get_best_exp_pc(traj, 4, b)
+    read_perm_full(in_dir, traj, 4, b, pc)
+  })
 })
 ```
 
@@ -783,7 +836,7 @@ q6_slope <- map_dfr(trajectories, function(traj) {
 
 ```{r upset_dl_data, echo=FALSE, message=FALSE, warning=FALSE}
 traj <- "NPC-to-Glu-DL"
-gene_by_bin_dl <- q6_slope |>
+gene_by_bin_dl <- q4_slope |>
   filter(trajectory == traj) |>
   distinct(phenotype_id, bin) |>
   mutate(present = 1, bin_label = paste0("Bin_", bin)) |>
@@ -797,10 +850,10 @@ gene_by_bin_dl <- gene_by_bin_dl |>
   summarise(across(everything(), max), .groups = "drop") |>
   column_to_rownames("phenotype_id")
 
-for (b in paste0("Bin_", 1:6)) {
+for (b in paste0("Bin_", 1:4)) {
   if (!b %in% colnames(gene_by_bin_dl)) gene_by_bin_dl[[b]] <- 0
 }
-gene_by_bin_dl <- gene_by_bin_dl[, paste0("Bin_", 1:6)]
+gene_by_bin_dl <- gene_by_bin_dl[, paste0("Bin_", 1:4)]
 ```
 
 #### UpSet plot
@@ -808,8 +861,8 @@ gene_by_bin_dl <- gene_by_bin_dl[, paste0("Bin_", 1:6)]
 ***
 
 ```{r upset_dl_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.dim=c(12, 5)}
-upset(gene_by_bin_dl, nsets = 6, order.by = "freq",
-      sets = paste0("Bin_", 1:6), keep.order = TRUE,
+upset(gene_by_bin_dl, nsets = 4, order.by = "freq",
+      sets = paste0("Bin_", 1:4), keep.order = TRUE,
       mainbar.y.label = "eGene intersection size",
       sets.x.label    = "eGenes per bin",
       text.scale      = 1.3)
@@ -823,7 +876,7 @@ upset(gene_by_bin_dl, nsets = 6, order.by = "freq",
 
 ```{r upset_ul_data, echo=FALSE, message=FALSE, warning=FALSE}
 traj <- "NPC-to-Glu-UL"
-gene_by_bin_ul <- q6_slope |>
+gene_by_bin_ul <- q4_slope |>
   filter(trajectory == traj) |>
   distinct(phenotype_id, bin) |>
   mutate(present = 1, bin_label = paste0("Bin_", bin)) |>
@@ -837,10 +890,10 @@ gene_by_bin_ul <- gene_by_bin_ul |>
   summarise(across(everything(), max), .groups = "drop") |>
   column_to_rownames("phenotype_id")
 
-for (b in paste0("Bin_", 1:6)) {
+for (b in paste0("Bin_", 1:4)) {
   if (!b %in% colnames(gene_by_bin_ul)) gene_by_bin_ul[[b]] <- 0
 }
-gene_by_bin_ul <- gene_by_bin_ul[, paste0("Bin_", 1:6)]
+gene_by_bin_ul <- gene_by_bin_ul[, paste0("Bin_", 1:4)]
 ```
 
 #### UpSet plot
@@ -848,658 +901,11 @@ gene_by_bin_ul <- gene_by_bin_ul[, paste0("Bin_", 1:6)]
 ***
 
 ```{r upset_ul_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.dim=c(12, 5)}
-upset(gene_by_bin_ul, nsets = 6, order.by = "freq",
-      sets = paste0("Bin_", 1:6), keep.order = TRUE,
+upset(gene_by_bin_ul, nsets = 4, order.by = "freq",
+      sets = paste0("Bin_", 1:4), keep.order = TRUE,
       mainbar.y.label = "eGene intersection size",
       sets.x.label    = "eGenes per bin",
       text.scale      = 1.3)
-```
-
-***
-
-## 7. Dynamic eQTL Analysis {.tabset}
-
-***
-
-Linear mixed model testing for genotype × pseudotime interactions across Q6 bins,
-following Yazar et al. (Science 2022). Input: cell-type eQTLs detected in ≥3 bins.
-Linear model tests for monotonic changes; quadratic model tests for non-linear
-(peaked or troughed) trajectories of genetic effect across pseudotime.
-
-***
-
-```{r dynamic_load, echo=FALSE, message=FALSE, warning=FALSE}
-
-# Load dynamic eQTL results for both trajectories
-dyn_results <- map(trajectories, function(traj) {
-  rds_file <- file.path(in_dir, traj, "dynamic_eqtl", "dynamic_eqtl_results.rds")
-  if (!file.exists(rds_file)) { message("Not found: ", rds_file); return(NULL) }
-  readRDS(rds_file) |> mutate(trajectory = traj)
-}) |> setNames(trajectories)
-
-# Load per-bin slopes from Q6 perm files for dynamic pairs — used for heatmap
-dyn_slopes <- map_dfr(trajectories, function(traj) {
-  res  <- dyn_results[[traj]]
-  if (is.null(res)) return(NULL)
-  dyn_pairs <- res |> filter(dynamic) |> pull(phenotype_id)
-  pc   <- selected_exp_pc[[traj]]
-
-  map_dfr(seq_len(6), function(b) {
-    perm_file <- file.path(
-      in_dir, traj, "tensorqtl", "perm",
-      sprintf("Q6_bin%d_genPC%d_expPC%d", b, geno_pc, pc),
-      sprintf("Q6_bin%d_perm.cis_qtl.txt.gz", b)
-    )
-    if (!file.exists(perm_file)) return(NULL)
-    read_tsv(perm_file, show_col_types = FALSE) |>
-      filter(phenotype_id %in% dyn_pairs) |>
-      select(phenotype_id, variant_id, slope) |>
-      mutate(bin = b, trajectory = traj)
-  })
-})
-
-# Load candidate data for Panel E
-dyn_candidates <- map(trajectories, function(traj) {
-  tsv_file <- file.path(in_dir, traj, "dynamic_eqtl", "dynamic_eqtl_candidates.tsv")
-  if (!file.exists(tsv_file)) { message("Not found: ", tsv_file); return(NULL) }
-  read_tsv(tsv_file, show_col_types = FALSE) |> mutate(trajectory = traj)
-}) |> setNames(trajectories)
-
-# Colour scheme matching Yazar et al.
-dyn_colours <- c(
-  "linear"              = "#38618c",
-  "quadratic"           = "#ff5964",
-  "linear_and_quadratic"= "#EFC000"
-)
-
-quantile_colours <- c(
-  Q1 = "#e6a023", Q2 = "#61b6e5", Q3 = "#efe245",
-  Q4 = "#0173b2", Q5 = "#2aa47e", Q6 = "#d4632e"
-)
-```
-
-### NPC-to-Glu-DL {.tabset}
-
-***
-
-#### Summary
-
-***
-
-```{r dyn_summary_dl, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, results='asis'}
-traj <- "NPC-to-Glu-DL"
-res  <- dyn_results[[traj]]
-
-if (!is.null(res)) {
-  summary_counts <- res |>
-    filter(dynamic) |>
-    count(dynamic_type) |>
-    mutate(
-      dynamic_type = factor(dynamic_type,
-                            levels = c("linear", "quadratic", "linear_and_quadratic"),
-                            labels = c("Linear", "Quadratic", "Linear & Quadratic"))
-    )
-
-  p_sum <- ggplot(summary_counts, aes(x = dynamic_type, y = n, fill = dynamic_type)) +
-    geom_col(colour = "black", width = 0.6) +
-    geom_text(aes(label = n), vjust = -0.4, fontface = "bold", size = 4.5) +
-    scale_fill_manual(values = c("Linear"              = "#38618c",
-                                 "Quadratic"           = "#ff5964",
-                                 "Linear & Quadratic"  = "#EFC000")) +
-    labs(title    = sprintf("Dynamic eQTL summary — %s", traj),
-         subtitle = sprintf("Cell-type eGenes tested in ≥3 Q6 bins | Total dynamic: %d",
-                            sum(res$dynamic, na.rm = TRUE)),
-         x = "Dynamic type", y = "Number of eGene-eSNP pairs") +
-    theme_classic(base_size = 14) +
-    theme(plot.title      = element_text(hjust = 0.5, face = "bold", size = 14),
-          plot.subtitle   = element_text(hjust = 0.5, colour = "grey40", size = 11),
-          legend.position = "none",
-          axis.text.x     = element_text(face = "bold", size = 12),
-          axis.title      = element_text(face = "bold"))
-  print(p_sum)
-  cat("\n\n")
-
-  res |>
-    summarise(
-      tested        = n(),
-      valid_p       = sum(!is.na(p_linear)),
-      linear        = sum(dynamic_type == "linear",               na.rm = TRUE),
-      quadratic     = sum(dynamic_type == "quadratic",            na.rm = TRUE),
-      both          = sum(dynamic_type == "linear_and_quadratic", na.rm = TRUE),
-      total_dynamic = sum(dynamic, na.rm = TRUE)
-    ) |>
-    pivot_longer(everything(), names_to = "Metric", values_to = "Count") |>
-    gt() |>
-    tab_header(title = sprintf("Dynamic eQTL summary — %s", traj)) |>
-    tab_style(style = cell_text(weight = "bold"),
-              locations = cells_column_labels()) |>
-    print()
-  cat("\n\n***\n\n")
-}
-```
-
-#### Heatmap
-
-***
-
-```{r dyn_heatmap_dl, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=4}
-traj <- "NPC-to-Glu-DL"
-res  <- dyn_results[[traj]]
-sl   <- dyn_slopes |> filter(trajectory == traj)
-
-if (!is.null(res) && nrow(sl) > 0) {
-
-  # Build slope matrix — genes x bins, z-score within gene
-  slope_wide <- sl |>
-    select(phenotype_id, bin, slope) |>
-    pivot_wider(names_from = bin, values_from = slope,
-                names_prefix = "Q") |>
-    column_to_rownames("phenotype_id")
-
-  # Z-score per gene across bins
-  slope_z <- t(apply(slope_wide, 1, function(x) {
-    s <- sd(x, na.rm = TRUE)
-    if (is.na(s) || s == 0) return(rep(0, length(x)))
-    (x - mean(x, na.rm = TRUE)) / s
-  }))
-  colnames(slope_z) <- paste0("Q", 1:6)
-
-  # Get dynamic type per pair for annotation
-  dyn_type <- res |>
-    filter(dynamic, phenotype_id %in% rownames(slope_z)) |>
-    select(phenotype_id, dynamic_type) |>
-    distinct(phenotype_id, .keep_all = TRUE)
-
-  slope_z <- slope_z[dyn_type$phenotype_id, , drop = FALSE]
-
-  model_ann <- dyn_type$dynamic_type
-  model_ann[model_ann == "linear"]               <- "Linear"
-  model_ann[model_ann == "quadratic"]            <- "Quadratic"
-  model_ann[model_ann == "linear_and_quadratic"] <- "Linear & Quadratic"
-
-  ha <- HeatmapAnnotation(
-    Model = model_ann,
-    col   = list(Model = c("Linear"             = "#38618c",
-                            "Quadratic"          = "#ff5964",
-                            "Linear & Quadratic" = "#EFC000")),
-    annotation_name_side = "left",
-    annotation_name_gp   = gpar(fontsize = 10, fontface = "bold")
-  )
-
-  col_fun <- colorRamp2(
-    seq(-2, 2, length.out = 11),
-    rev(brewer.pal(11, "RdYlBu"))
-  )
-
-  ht <- Heatmap(
-    t(slope_z),
-    col                  = col_fun,
-    top_annotation       = ha,
-    cluster_rows         = FALSE,
-    cluster_columns      = TRUE,
-    column_split         = model_ann,
-    column_gap           = unit(2, "mm"),
-    show_column_names    = FALSE,
-    row_title            = "Pseudotime",
-    column_title         = sprintf("Dynamic eQTL — %s (n=%d pairs)", traj, nrow(slope_z)),
-    column_title_side    = "bottom",
-    column_title_gp      = gpar(fontsize = 12, fontface = "bold"),
-    row_names_side       = "left",
-    row_names_gp         = gpar(fontsize = 11, fontface = "bold"),
-    na_col               = "grey80",
-    heatmap_legend_param = list(
-      title    = expression("Scaled " * beta),
-      at       = c(-2, -1, 0, 1, 2),
-      labels   = c("-2", "-1", "0", "1", "2"),
-      title_gp = gpar(fontsize = 10, fontface = "bold")
-    )
-  )
-  draw(ht, padding = unit(c(5, 5, 5, 5), "mm"))
-}
-```
-
-***
-
-#### Top candidates
-
-***
-
-```{r dyn_panel_e_dl, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6}
-traj <- "NPC-to-Glu-DL"
-res  <- dyn_results[[traj]]
-cand <- dyn_candidates[[traj]]
-
-if (!is.null(res) && !is.null(cand)) {
-
-  top5 <- res |>
-    filter(dynamic) |>
-    mutate(min_fdr = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE)) |>
-    arrange(min_fdr) |>
-    slice_head(n = 5) |>
-    mutate(symbol = get_symbol(phenotype_id))
-
-  plot_dat <- cand |>
-    filter(phenotype_id %in% top5$phenotype_id) |>
-    left_join(top5 |> select(phenotype_id, symbol, dynamic_type, min_fdr),
-              by = "phenotype_id") |>
-    mutate(quantile_f = factor(quantile, levels = 1:6, labels = paste0("Q", 1:6))) |>
-    group_by(phenotype_id) |>
-    mutate(gene_scaled = as.numeric(scale(gene_expr))) |>
-    ungroup()
-
-  offset_tbl <- tibble(
-    quantile_f = factor(paste0("Q", 1:6), levels = paste0("Q", 1:6)),
-    offset     = seq(-0.25, 0.25, length.out = 6)
-  )
-
-  for (i in seq_len(nrow(top5))) {
-    gene_id <- top5$phenotype_id[i]
-    sym     <- top5$symbol[i]
-    snp_id  <- top5$variant_id[i]
-
-    dat <- plot_dat |> filter(phenotype_id == gene_id)
-
-    geno_levels <- dat |>
-      distinct(genotype_call, dosage_rounded) |>
-      arrange(dosage_rounded) |>
-      pull(genotype_call) |>
-      as.character()
-
-    dat <- dat |>
-      mutate(genotype_call = factor(genotype_call, levels = geno_levels))
-
-    geno_num <- setNames(seq_along(geno_levels), geno_levels)
-
-    line_dat <- dat |>
-      group_by(genotype_call, quantile_f) |>
-      summarise(med = median(gene_scaled, na.rm = TRUE), .groups = "drop") |>
-      left_join(offset_tbl, by = "quantile_f") |>
-      mutate(
-        geno_num = geno_num[as.character(genotype_call)],
-        x        = geno_num + offset
-      ) |>
-      arrange(genotype_call, quantile_f)
-
-    p <- ggplot(dat,
-                aes(x = genotype_call, y = gene_scaled, colour = quantile_f)) +
-      geom_boxplot(
-        position      = position_dodge(width = 0.65),
-        width         = 0.3,
-        fill          = NA,
-        outlier.shape = NA,
-        linewidth     = 0.6
-      ) +
-      geom_point(
-        position = position_jitterdodge(dodge.width = 0.65, jitter.width = 0.03),
-        alpha    = 0.35,
-        size     = 0.7
-      ) +
-      geom_line(
-        data        = line_dat,
-        aes(x = x, y = med, group = genotype_call),
-        inherit.aes = FALSE,
-        colour      = "black",
-        linewidth   = 1.4
-      ) +
-      scale_colour_manual(values = quantile_colours) +
-      scale_x_discrete(limits = geno_levels) +
-      labs(
-        y        = "Scaled expression",
-        title    = sym,
-        subtitle = snp_id
-      ) +
-      theme_classic(base_size = 13) +
-      theme(
-        plot.title         = element_text(face = "bold.italic", hjust = 0.5, size = 13),
-        plot.subtitle      = element_text(hjust = 0.5, size = 11, colour = "grey30"),
-        axis.text.x        = element_text(face = "bold", size = 11, colour = "black"),
-        axis.text.y        = element_text(colour = "black"),
-        axis.title         = element_text(face = "bold", size = 12, colour = "black"),
-        axis.title.x       = element_blank(),
-        axis.ticks.x       = element_blank(),
-        legend.position    = "none",
-        panel.grid.major.y = element_line(colour = "grey90", linewidth = 0.4),
-        panel.border       = element_rect(colour = "black", fill = NA, linewidth = 0.5),
-        axis.line          = element_blank()
-      )
-
-    print(p)
-    cat("\n\n")
-  }
-}
-```
-
-***
-
-#### Candidate table
-
-***
-
-```{r dyn_table_dl, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
-traj <- "NPC-to-Glu-DL"
-res  <- dyn_results[[traj]]
-
-if (!is.null(res)) {
-  res |>
-    filter(dynamic) |>
-    mutate(
-      symbol   = get_symbol(phenotype_id),
-      min_fdr  = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE),
-      dynamic_type = case_when(
-        dynamic_type == "linear"               ~ "Linear",
-        dynamic_type == "quadratic"            ~ "Quadratic",
-        dynamic_type == "linear_and_quadratic" ~ "Linear & Quadratic",
-        TRUE ~ dynamic_type
-      )
-    ) |>
-    arrange(min_fdr) |>
-    select(symbol, phenotype_id, variant_id, dynamic_type,
-           fdr_linear, fdr_quadratic, min_fdr, n_bins) |>
-    gt() |>
-    tab_header(title    = sprintf("Dynamic eQTL candidates — %s", traj),
-               subtitle = "All significant pairs, ranked by minimum FDR") |>
-    cols_label(symbol       = "Gene", phenotype_id = "Ensembl ID",
-               variant_id   = "eSNP",  dynamic_type = "Model",
-               fdr_linear   = "FDR (linear)", fdr_quadratic = "FDR (quadratic)",
-               min_fdr      = "Min FDR", n_bins = "Bins detected") |>
-    fmt_scientific(columns = c(fdr_linear, fdr_quadratic, min_fdr), decimals = 2) |>
-    tab_style(style = cell_text(weight = "bold"),
-              locations = cells_column_labels()) |>
-    tab_style(style = cell_text(style = "italic"),
-              locations = cells_body(columns = symbol)) |>
-    print()
-  cat("\n\n***\n\n")
-}
-```
-
-### NPC-to-Glu-UL {.tabset}
-
-***
-
-#### Summary
-
-***
-
-```{r dyn_summary_ul, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=5, results='asis'}
-traj <- "NPC-to-Glu-UL"
-res  <- dyn_results[[traj]]
-
-if (!is.null(res)) {
-  summary_counts <- res |>
-    filter(dynamic) |>
-    count(dynamic_type) |>
-    mutate(
-      dynamic_type = factor(dynamic_type,
-                            levels = c("linear", "quadratic", "linear_and_quadratic"),
-                            labels = c("Linear", "Quadratic", "Linear & Quadratic"))
-    )
-
-  p_sum <- ggplot(summary_counts, aes(x = dynamic_type, y = n, fill = dynamic_type)) +
-    geom_col(colour = "black", width = 0.6) +
-    geom_text(aes(label = n), vjust = -0.4, fontface = "bold", size = 4.5) +
-    scale_fill_manual(values = c("Linear"              = "#38618c",
-                                 "Quadratic"           = "#ff5964",
-                                 "Linear & Quadratic"  = "#EFC000")) +
-    labs(title    = sprintf("Dynamic eQTL summary — %s", traj),
-         subtitle = sprintf("Cell-type eGenes tested in ≥3 Q6 bins | Total dynamic: %d",
-                            sum(res$dynamic, na.rm = TRUE)),
-         x = "Dynamic type", y = "Number of eGene-eSNP pairs") +
-    theme_classic(base_size = 14) +
-    theme(plot.title      = element_text(hjust = 0.5, face = "bold", size = 14),
-          plot.subtitle   = element_text(hjust = 0.5, colour = "grey40", size = 11),
-          legend.position = "none",
-          axis.text.x     = element_text(face = "bold", size = 12),
-          axis.title      = element_text(face = "bold"))
-  print(p_sum)
-  cat("\n\n")
-
-  res |>
-    summarise(
-      tested        = n(),
-      valid_p       = sum(!is.na(p_linear)),
-      linear        = sum(dynamic_type == "linear",               na.rm = TRUE),
-      quadratic     = sum(dynamic_type == "quadratic",            na.rm = TRUE),
-      both          = sum(dynamic_type == "linear_and_quadratic", na.rm = TRUE),
-      total_dynamic = sum(dynamic, na.rm = TRUE)
-    ) |>
-    pivot_longer(everything(), names_to = "Metric", values_to = "Count") |>
-    gt() |>
-    tab_header(title = sprintf("Dynamic eQTL summary — %s", traj)) |>
-    tab_style(style = cell_text(weight = "bold"),
-              locations = cells_column_labels()) |>
-    print()
-  cat("\n\n***\n\n")
-}
-```
-
-#### Heatmap
-
-***
-
-```{r dyn_heatmap_ul, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=4}
-traj <- "NPC-to-Glu-UL"
-res  <- dyn_results[[traj]]
-sl   <- dyn_slopes |> filter(trajectory == traj)
-
-if (!is.null(res) && nrow(sl) > 0) {
-
-  slope_wide <- sl |>
-    select(phenotype_id, bin, slope) |>
-    pivot_wider(names_from = bin, values_from = slope, names_prefix = "Q") |>
-    column_to_rownames("phenotype_id")
-
-  slope_z <- t(apply(slope_wide, 1, function(x) {
-    s <- sd(x, na.rm = TRUE)
-    if (is.na(s) || s == 0) return(rep(0, length(x)))
-    (x - mean(x, na.rm = TRUE)) / s
-  }))
-  colnames(slope_z) <- paste0("Q", 1:6)
-
-  dyn_type <- res |>
-    filter(dynamic, phenotype_id %in% rownames(slope_z)) |>
-    select(phenotype_id, dynamic_type) |>
-    distinct(phenotype_id, .keep_all = TRUE)
-
-  slope_z <- slope_z[dyn_type$phenotype_id, , drop = FALSE]
-
-  model_ann <- dyn_type$dynamic_type
-  model_ann[model_ann == "linear"]               <- "Linear"
-  model_ann[model_ann == "quadratic"]            <- "Quadratic"
-  model_ann[model_ann == "linear_and_quadratic"] <- "Linear & Quadratic"
-
-  ha <- HeatmapAnnotation(
-    Model = model_ann,
-    col   = list(Model = c("Linear"             = "#38618c",
-                            "Quadratic"          = "#ff5964",
-                            "Linear & Quadratic" = "#EFC000")),
-    annotation_name_side = "left",
-    annotation_name_gp   = gpar(fontsize = 10, fontface = "bold")
-  )
-
-  col_fun <- colorRamp2(
-    seq(-2, 2, length.out = 11),
-    rev(brewer.pal(11, "RdYlBu"))
-  )
-
-  ht <- Heatmap(
-    t(slope_z),
-    col                  = col_fun,
-    top_annotation       = ha,
-    cluster_rows         = FALSE,
-    cluster_columns      = TRUE,
-    column_split         = model_ann,
-    column_gap           = unit(2, "mm"),
-    show_column_names    = FALSE,
-    row_title            = "Pseudotime",
-    column_title         = sprintf("Dynamic eQTL — %s (n=%d pairs)", traj, nrow(slope_z)),
-    column_title_side    = "bottom",
-    column_title_gp      = gpar(fontsize = 12, fontface = "bold"),
-    row_names_side       = "left",
-    row_names_gp         = gpar(fontsize = 11, fontface = "bold"),
-    na_col               = "grey80",
-    heatmap_legend_param = list(
-      title    = expression("Scaled " * beta),
-      at       = c(-2, -1, 0, 1, 2),
-      labels   = c("-2", "-1", "0", "1", "2"),
-      title_gp = gpar(fontsize = 10, fontface = "bold")
-    )
-  )
-  draw(ht, padding = unit(c(5, 5, 5, 5), "mm"))
-}
-```
-
-***
-
-#### Top candidates
-
-***
-
-```{r dyn_panel_e_ul, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6}
-traj <- "NPC-to-Glu-UL"
-res  <- dyn_results[[traj]]
-cand <- dyn_candidates[[traj]]
-
-if (!is.null(res) && !is.null(cand)) {
-
-  top5 <- res |>
-    filter(dynamic) |>
-    mutate(min_fdr = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE)) |>
-    arrange(min_fdr) |>
-    slice_head(n = 5) |>
-    mutate(symbol = get_symbol(phenotype_id))
-
-  plot_dat <- cand |>
-    filter(phenotype_id %in% top5$phenotype_id) |>
-    left_join(top5 |> select(phenotype_id, symbol, dynamic_type, min_fdr),
-              by = "phenotype_id") |>
-    mutate(quantile_f = factor(quantile, levels = 1:6, labels = paste0("Q", 1:6))) |>
-    group_by(phenotype_id) |>
-    mutate(gene_scaled = as.numeric(scale(gene_expr))) |>
-    ungroup()
-
-  offset_tbl <- tibble(
-    quantile_f = factor(paste0("Q", 1:6), levels = paste0("Q", 1:6)),
-    offset     = seq(-0.25, 0.25, length.out = 6)
-  )
-
-  for (i in seq_len(nrow(top5))) {
-    gene_id <- top5$phenotype_id[i]
-    sym     <- top5$symbol[i]
-    snp_id  <- top5$variant_id[i]
-
-    dat <- plot_dat |> filter(phenotype_id == gene_id)
-
-    geno_levels <- dat |>
-      distinct(genotype_call, dosage_rounded) |>
-      arrange(dosage_rounded) |>
-      pull(genotype_call) |>
-      as.character()
-
-    dat <- dat |>
-      mutate(genotype_call = factor(genotype_call, levels = geno_levels))
-
-    geno_num <- setNames(seq_along(geno_levels), geno_levels)
-
-    line_dat <- dat |>
-      group_by(genotype_call, quantile_f) |>
-      summarise(med = median(gene_scaled, na.rm = TRUE), .groups = "drop") |>
-      left_join(offset_tbl, by = "quantile_f") |>
-      mutate(
-        geno_num = geno_num[as.character(genotype_call)],
-        x        = geno_num + offset
-      ) |>
-      arrange(genotype_call, quantile_f)
-
-    p <- ggplot(dat,
-                aes(x = genotype_call, y = gene_scaled, colour = quantile_f)) +
-      geom_boxplot(
-        position      = position_dodge(width = 0.65),
-        width         = 0.3,
-        fill          = NA,
-        outlier.shape = NA,
-        linewidth     = 0.6
-      ) +
-      geom_point(
-        position = position_jitterdodge(dodge.width = 0.65, jitter.width = 0.03),
-        alpha    = 0.35,
-        size     = 0.7
-      ) +
-      geom_line(
-        data        = line_dat,
-        aes(x = x, y = med, group = genotype_call),
-        inherit.aes = FALSE,
-        colour      = "black",
-        linewidth   = 1.4
-      ) +
-      scale_colour_manual(values = quantile_colours) +
-      scale_x_discrete(limits = geno_levels) +
-      labs(
-        y        = "Scaled expression",
-        title    = sym,
-        subtitle = snp_id
-      ) +
-      theme_classic(base_size = 13) +
-      theme(
-        plot.title         = element_text(face = "bold.italic", hjust = 0.5, size = 13),
-        plot.subtitle      = element_text(hjust = 0.5, size = 11, colour = "grey30"),
-        axis.text.x        = element_text(face = "bold", size = 11, colour = "black"),
-        axis.text.y        = element_text(colour = "black"),
-        axis.title         = element_text(face = "bold", size = 12, colour = "black"),
-        axis.title.x       = element_blank(),
-        axis.ticks.x       = element_blank(),
-        legend.position    = "none",
-        panel.grid.major.y = element_line(colour = "grey90", linewidth = 0.4),
-        panel.border       = element_rect(colour = "black", fill = NA, linewidth = 0.5),
-        axis.line          = element_blank()
-      )
-
-    print(p)
-    cat("\n\n")
-  }
-}
-```
-
-***
-
-#### Candidate table
-
-***
-
-```{r dyn_table_ul, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
-traj <- "NPC-to-Glu-UL"
-res  <- dyn_results[[traj]]
-
-if (!is.null(res)) {
-  res |>
-    filter(dynamic) |>
-    mutate(
-      symbol   = get_symbol(phenotype_id),
-      min_fdr  = pmin(fdr_linear, fdr_quadratic, na.rm = TRUE),
-      dynamic_type = case_when(
-        dynamic_type == "linear"               ~ "Linear",
-        dynamic_type == "quadratic"            ~ "Quadratic",
-        dynamic_type == "linear_and_quadratic" ~ "Linear & Quadratic",
-        TRUE ~ dynamic_type
-      )
-    ) |>
-    arrange(min_fdr) |>
-    select(symbol, phenotype_id, variant_id, dynamic_type,
-           fdr_linear, fdr_quadratic, min_fdr, n_bins) |>
-    gt() |>
-    tab_header(title    = sprintf("Dynamic eQTL candidates — %s", traj),
-               subtitle = "All significant pairs, ranked by minimum FDR") |>
-    cols_label(symbol       = "Gene", phenotype_id = "Ensembl ID",
-               variant_id   = "eSNP",  dynamic_type = "Model",
-               fdr_linear   = "FDR (linear)", fdr_quadratic = "FDR (quadratic)",
-               min_fdr      = "Min FDR", n_bins = "Bins detected") |>
-    fmt_scientific(columns = c(fdr_linear, fdr_quadratic, min_fdr), decimals = 2) |>
-    tab_style(style = cell_text(weight = "bold"),
-              locations = cells_column_labels()) |>
-    tab_style(style = cell_text(style = "italic"),
-              locations = cells_body(columns = symbol)) |>
-    print()
-  cat("\n\n***\n\n")
-}
 ```
 
 ***

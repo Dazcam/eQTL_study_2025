@@ -54,7 +54,7 @@ np.random.seed(RANDOM_SEED)
 # Terminal marker genes for each Glu population — used to select the terminal
 # cell for Palantir. Modify here if markers change.
 TERMINAL_MARKERS = {
-    'Glu-DL': 'HS3ST4',
+    'Glu-DL': 'TLE4',
     'Glu-UL': 'SATB2',
 }
 
@@ -71,7 +71,7 @@ MARKER_GENES = [
 
 # Genes to mark terminal cell positions on the overlay panel.
 # Shows where the max-expression cell for each gene sits on the UMAP.
-# Does not affect Palantir terminal selection — HS3ST4/SATB2 are still used for that.
+# Does not affect Palantir terminal selection — TLE4/SATB2 are still used for that.
 TERMINAL_OVERLAY_GENES   = ['TLE4', 'FEZF2', 'BCL11B', 'FOXP2', 'HS3ST4']
 TERMINAL_OVERLAY_COLOURS = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#fce205']
 
@@ -354,7 +354,7 @@ pt_size  = max(0.2, 20000 / adata.n_obs)
 # ── 9. Six-panel figure ───────────────────────────────────────────────────────
 #
 #  A: cell type                D: PAX6 expression
-#  B: Palantir pseudotime      E: terminal marker gene (HS3ST4 or SATB2)
+#  B: Palantir pseudotime      E: terminal marker gene (TLE4 or SATB2)
 #  C: PCW                      F: pseudotime violin by cell type
 #
 #  All UMAP panels use direct matplotlib scatter to avoid scanpy rendering
