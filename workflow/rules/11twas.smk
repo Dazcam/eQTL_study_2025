@@ -78,7 +78,6 @@ rule get_ldref_snplist:
     message:    "Restrict genotyped SNPs to LD reference SNPs"
     benchmark:  "reports/benchmarks/11twas.restrict_geno_to_ldref.benchmark.txt"
     log:        config["twas"]["get_ldref_snplist"]["log"]
-"../results/00LOG/11TWAS/restrict_genotypes_to_ldref.log"
     shell:      """
                 # Extract SNP IDs from LD reference .bim files
                 cat {input} | cut -f 2 > {output} 2>&1 | tee {log}                
@@ -110,7 +109,7 @@ rule compute_weights:
             gemma = config["twas"]["get_gemma"]["output"]
     output: touch(config["twas"]["compute_weights"]["output"])
     params: prefix_in = config["twas"]["convert_vcf"]["prefix"],
-            outdir = config["twas"]["convert_vcf"]["outdir"]
+            outdir = config["twas"]["compute_weights"]["outdir"]
     singularity: config["containers"]["twas"]
     message: "Running FUSION weights for ALL genes in {wildcards.cell_type}"
     benchmark: "reports/benchmarks/11twas.compute_all_weights_{cell_type}.benchmark.txt"
@@ -169,7 +168,7 @@ rule compute_weights:
                     --tmp $OUTPREFIX.tmp \
                     --PATH_gemma $GEMMA \
                     --PATH_gcta ../resources/fusion/gcta_nr_robust \
-                    --PATH_plink /apps/genomics/plink/1.9/el7/AVX512/intel-2018/serial/plink-1.9/usr/local/bin/plink \
+                    --PATH_plink /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink \
                     --verbose 2 \
                     --models top1,lasso,enet \
                     --out $OUTPREFIX >> {log} 2>&1 || true
@@ -246,9 +245,9 @@ rule twas_weights_report:
             rmd_script = config["twas"]["twas_weights_report"]["script"]
     output: config["twas"]["twas_weights_report"]["output"]
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
-            weights_dir = config["twas"]["twas_weights_report"]["weights_dir"],
+            log_dir = config["twas"]["twas_weights_report"]["log_dir"],
             bmark_dir = config["twas"]["twas_weights_report"]["bmark_dir"],
-            out_file = config["twas"]["twas_weights_report"]["out_file"]
+            output_file = config["twas"]["twas_weights_report"]["out_file"]
     singularity: config["containers"]["r_eqtl"]
     message:  "Generate TWAS weights report data for report"
     benchmark: "reports/benchmarks/11twas.twas_weights_summary.benchmark.txt"
