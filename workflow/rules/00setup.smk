@@ -8,7 +8,9 @@ rule all:
     input:
 #        config["setup"]["get_containers"]["output"],
 #        expand(config["setup"]["create_parse_json"]["output"], plate=PLATES),
-        config["setup"]["liftover"]["output"]
+#        config["setup"]["liftover"]["output"],
+#        config["setup"]["get_fugita_data"]["output"],
+        config["setup"]["get_jang_singlebrain"]["output"]
 
 rule get_containers:
     output:  config["setup"]["get_containers"]["output"],
@@ -45,3 +47,31 @@ rule setup_liftover:
              touch {output}
              """
 
+# Requires scanpy env so need to set up envs first
+rule get_fugita_data:
+    output:  config["setup"]["get_fugita_data"]["output"]
+    params:  outdir=config["setup"]["get_fugita_data"]["outdir"],
+             token=config["setup"]["get_fugita_data"]["token"]
+    conda:   config["scanpy"]["env"]
+    message: "Downloading Fugita et al. cell cell type and subtype data from Synapse"
+    log:     config["setup"]["get_fugita_data"]["log"]
+    shell:
+             """
+             python scripts/setup_get_fugita_data.py \
+             --token {params.token} \
+             --outdir {params.outdir} > {log} 2>&1
+             touch {output}
+             """
+
+rule get_jang_singlebrain:
+    output:  config["setup"]["get_jang_singlebrain"]["output"]
+    params:  outdir=config["setup"]["get_jang_singlebrain"]["outdir"]
+    conda:   config["scanpy"]["env"]
+    message: "Downloading Jang et al. SingleBrain eQTL summary statistics from Zenodo"
+    log:     config["setup"]["get_jang_singlebrain"]["log"]
+    shell:
+             """
+             mkdir -p {params.outdir}
+             zenodo_get 10.5281/zenodo.14908182 -o {params.outdir} > {log} 2>&1
+             touch {output}
+             """
