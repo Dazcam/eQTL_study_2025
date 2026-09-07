@@ -8,8 +8,8 @@
 #  L1 + L2 fetal cell types, tagging each row with:
 #    - level (L1 / L2)
 #    - parent_cell_type (L2 -> parent L1 label; L1 -> itself)
-#    - fugita_label_match (a priori adult Fujita cell type, via parent for L2;
-#      NA where no defensible adult equivalent exists, e.g. NPC)
+#    - jang_label_match (a priori adult Jang et al. 2026 cell type, via parent
+#      for L2; NA where no defensible adult equivalent exists, e.g. NPC)
 #
 #  Step 1 of the developmental-specificity pipeline (independent for now;
 #  designed to fold into replication_pi1_enrichment.R later if retained for the paper).
@@ -69,17 +69,24 @@ names(qtl_perm_files) <- cell_types  # preserve cell_type <-> file correspondenc
 # L1 cell types -- fixed by cell-type annotation, not a tunable pipeline parameter.
 cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 
-# A priori biological correspondence between fetal L1 cell types and Fujita adult
-# cell types. Fixed mapping -- not a tunable pipeline parameter, hence hardcoded
-# here rather than in config. NPC has no defensible adult equivalent (no progenitor
-# population in the adult cortex), so it is excluded from label/best-match
-# comparisons and only included in the "any" matching tier downstream.
-fugita_label_match <- c(
-  "Glu-UL"    = "Exc",
-  "Glu-DL"    = "Exc",
-  "GABA"      = "Inh",
+# A priori biological correspondence between fetal L1 cell types and Jang et al.
+# 2026 (SingleBrain) adult cell types. Fixed mapping -- not a tunable pipeline
+# parameter, hence hardcoded here rather than in config. NPC has no defensible
+# adult equivalent (no progenitor population in the adult cortex), so it is
+# excluded from label/best-match comparisons and only included in the "any"
+# matching tier downstream.
+#
+# NOTE: values updated from Fujita's L1 labels (Exc/Inh/Mic) to Jang's own L1
+# labels (Ext/IN/MG) as part of the Fujita -> Jang reference-dataset migration.
+# OPC and End are unchanged (Jang uses the same labels). Column renamed
+# fugita_label_match -> jang_label_match accordingly; classify_eqtl_specificity.R
+# and devspec_heterogeneity_test.R (Step C) both need the matching rename.
+jang_label_match <- c(
+  "Glu-UL"    = "Ext",
+  "Glu-DL"    = "Ext",
+  "GABA"      = "IN",
   "NPC"       = NA_character_,
-  "MG"        = "Mic",
+  "MG"        = "MG",
   "OPC"       = "OPC",
   "Endo-Peri" = "End"
 )
@@ -137,12 +144,12 @@ if (n_before != n_after) {
   message("No duplicate (cell_type, phenotype_id) rows found.")
 }
 
-# Tag level, parent cell type, and a priori Fujita label-match
+# Tag level, parent cell type, and a priori Jang label-match
 eqtl_universe <- eqtl_universe %>%
   mutate(
     level = ifelse(cell_type %in% cell_types_L1, "L1", "L2"),
     parent_cell_type = map_chr(cell_type, get_parent_cell_type, cell_types_L1 = cell_types_L1),
-    fugita_label_match = fugita_label_match[parent_cell_type]
+    jang_label_match = jang_label_match[parent_cell_type]
   )
 
 # Sanity check against manuscript's reported ~3,121 unique eGene figure
