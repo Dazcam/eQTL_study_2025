@@ -1,18 +1,47 @@
 configfile: "../config/config.yaml" 
 
+# Pseudotime bins (NPC-to-*) excluded from dev_specificity pipeline 
+DEVSPEC_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
+
+DEVSPEC_FETAL_L1 = ["Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri"]
+
+jang_pi1_inputs = []
+for ct in DEVSPEC_FETAL_L1:
+    jang_pi1_inputs.extend(
+        expand(
+            config["dev_specificity"]["pi1_enrich_jang"]["pi1"],
+            cell_type=[ct],
+            jang_cell_type=config["jang_l1_types"],
+            exp_pc=[config["exp_pc_map"][ct]],
+            geno_pc=config["tensorQTL"]["geno_pcs"],
+            norm_method=config["tensorQTL"]["norm_methods"]
+        )
+    )
+
+def get_smr_files():
+    smr_dir = config["dev_specificity"]["smr_overlap"]["smr_dir"]
+    disorders = list(config["gwas"].keys())
+    return [
+	f"{smr_dir}{ct}/{ct}_{gwas}.smr"
+        for ct in DEVSPEC_CELL_TYPES
+        for gwas in disorders
+    ]
+
 rule all:
    input:
 #       config["dev_specificity"]["extract_universe"]["out_file"],
+#       config["dev_specificity"]["classify_specificity"]["out_file"]
+#        config["dev_specificity"]["heterogeneity_test"]["out_file"]
 #       config["dev_specificity"]["ld_clump"]["snp_list"],         
 #       config["dev_specificity"]["run_ld_clump"]["sentinel"],
 #       config["dev_specificity"]["parse_ld_clump"]["out_file"]
-#       config["dev_specificity"]["classify_specificity"]["out_file"]
 #       config["dev_specificity"]["ocr_enrich"]["out_file"] 
 #        config["dev_specificity"]["eqtl_effects"]["out_file"]
-#        config["dev_specificity"]["extract_pairwise_universe"]["out_file"]
-        config["dev_specificity"]["report"]["html"],
-#       config["dev_specificity"]["beta_correlation"]["out_file"]    
-#        config["dev_specificity"]["heterogeneity_test"]["out_file"]
+#       config["dev_specificity"]["beta_correlation"]["out_file"]   
+#       jang_pi1_inputs, 
+        config["dev_specificity"]["smr_overlap"]["out_file"]
+#        config["dev_specificity"]["report"]["html"],
+
 
 def get_egene_universe_inputs():
     geno_pc = config["tensorQTL"]["geno_pcs"]
@@ -20,33 +49,21 @@ def get_egene_universe_inputs():
     return [
         f"{config['dev_specificity']['extract_universe']['qtl_dir']}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
         f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
-        for ct in config["cell_types"]
+        for ct in DEVSPEC_CELL_TYPES
     ]
 
-DEVSPEC_L1_FETAL_TYPES = ["Glu-UL", "Glu-DL", "GABA", "MG", "OPC", "Endo-Peri", "NPC"]
-DEVSPEC_FUGITA_TYPES   = ["Exc", "Inh", "OPC", "Mic", "End"]
+def get_jang_full_inputs():
+    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
+    return [f"{jang_dir}{ct}_eqtl_full_assoc.tsv.gz" for ct in config["jang_cell_types"]]
 
-def get_l1_pairwise_nom_files():
-    nom_dir = config["dev_specificity"]["eqtl_effects"]["nom_dir"]
-    return [f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv" for ct in DEVSPEC_L1_FETAL_TYPES]
+def get_jang_top_inputs():
+    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
+    return [f"{jang_dir}{ct}_eqtl_top_assoc.tsv.gz" for ct in config["jang_cell_types"]]
 
-def get_l1_pairwise_fugita_files():
-    fugita_dir = config["dev_specificity"]["classify_specificity"]["fugita_dir"]
-    return [f"{fugita_dir}celltype-eqtl-sumstats.{ct}.tsv" for ct in DEVSPEC_FUGITA_TYPES]
-
-def get_l1_pairwise_perm_files():
-    qtl_dir = config["dev_specificity"]["extract_universe"]["qtl_dir"]
-    geno_pc = config["tensorQTL"]["geno_pcs"]
-    norm_method = config["tensorQTL"]["norm_methods"][0]
-    return [
-        f"{qtl_dir}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
-        f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
-        for ct in DEVSPEC_L1_FETAL_TYPES
-    ]
-
-def get_fugita_inputs():
-    fugita_dir = config["dev_specificity"]["classify_specificity"]["fugita_dir"]
-    return [f"{fugita_dir}celltype-eqtl-sumstats.{ct}.tsv" for ct in config["fugita_cell_types"]]
+def get_jang_l1_inputs():
+    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
+    return [f"{jang_dir}{ct}_eqtl_full_assoc.tsv.gz"
+            for ct in ["Ast", "End", "Ext", "IN", "MG", "OD", "OPC"]]
 
 def get_snp_lookup_files():
     geno_pc = config["tensorQTL"]["geno_pcs"]
@@ -54,20 +71,29 @@ def get_snp_lookup_files():
     lookup_dir = config["dev_specificity"]["ocr_enrich"]["snp_lookup_dir"]
     return [
         f"{lookup_dir}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}.snp_lookup.rds"
-        for ct in config["cell_types"]
+        for ct in DEVSPEC_CELL_TYPES
     ]
 
 def get_nom_files():
     nom_dir = config["dev_specificity"]["eqtl_effects"]["nom_dir"]
     return [
 	f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv"
-        for ct in config["cell_types"]
+        for ct in DEVSPEC_CELL_TYPES
     ]
+
+def get_jang_beta_corr_full_inputs():
+    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
+    return [f"{jang_dir}{ct}_eqtl_full_assoc.tsv.gz" for ct in ["Ext", "IN", "MG", "OPC", "End"]]
+
+def get_jang_beta_corr_top_inputs():
+    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
+    return [f"{jang_dir}{ct}_eqtl_top_assoc.tsv.gz" for ct in ["Ext", "IN", "MG", "OPC", "End"]]
+
 
 rule extract_eqtl_universe:
     input:  qtl_perm_files = get_egene_universe_inputs()
     output: config["dev_specificity"]["extract_universe"]["out_file"]
-    params: cell_types = config["cell_types"],
+    params: cell_types = DEVSPEC_CELL_TYPES,
             geno_pc = config["tensorQTL"]["geno_pcs"],
             norm_method = config["tensorQTL"]["norm_methods"][0]
     singularity: config["containers"]["r_eqtl"]
@@ -77,14 +103,15 @@ rule extract_eqtl_universe:
     script: "../scripts/devspec_extract_universe.R"
 
 rule classify_eqtl_specificity:
-    input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"],
-            fugita_files = get_fugita_inputs()
+    input:  eqtl_universe   = config["dev_specificity"]["extract_universe"]["out_file"],
+            jang_full_files = get_jang_full_inputs(),
+            jang_top_files  = get_jang_top_inputs()
     output: config["dev_specificity"]["classify_specificity"]["out_file"]
-    params: fugita_cell_types = config["fugita_cell_types"]
+    params: jang_cell_types = config["jang_cell_types"]
     singularity: config["containers"]["r_eqtl"]
-    resources: threads = 4, mem_mb = 64000, time = "01:00:00"
+    resources: threads = 4, mem_mb = 128000, time = "04:00:00"
     threads: 4
-    message: "Classify fetal eGene-eSNP pairs as testable/untestable and shared/fetal-specific vs Fujita adult eQTL"
+    message: "Classify fetal eGene-eSNP pairs as testable/untestable and shared/fetal-specific vs Jang et al. 2026 adult eQTL (all L1+L2 types)"
     benchmark: "reports/benchmarks/dev_specificity.classify_specificity.txt"
     log:    config["dev_specificity"]["classify_specificity"]["log"]
     script: "../scripts/devspec_classify_specificity.R"
@@ -94,8 +121,7 @@ rule heterogeneity_test:
             classification = rules.classify_eqtl_specificity.output[0],
             pvar_file      = config["dev_specificity"]["beta_correlation"]["pvar_file"]
     output: config["dev_specificity"]["heterogeneity_test"]["out_file"]
-    params: af_tol     = config["dev_specificity"]["heterogeneity_test"]["af_tol"],
-            fdr_thresh  = config["dev_specificity"]["heterogeneity_test"]["fdr_thresh"]
+    params: fdr_thresh  = config["dev_specificity"]["heterogeneity_test"]["fdr_thresh"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 2, mem_mb = 8000, time = "00:20:00"
     threads: 2
@@ -206,11 +232,11 @@ rule ocr_enrich:
 
 rule eqtl_effect_sizes:
     input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"],
-            nom_files = get_nom_files(),
-            fugita_files = get_fugita_inputs()
+            nom_files     = get_nom_files(),
+            jang_l1_files = get_jang_l1_inputs()
     output: config["dev_specificity"]["eqtl_effects"]["out_file"]
-    params: cell_types = config["cell_types"],
-            fugita_cell_types = config["fugita_cell_types"]
+    params: cell_types    = DEVSPEC_CELL_TYPES,
+            jang_l1_types = ["Ast", "End", "Ext", "IN", "MG", "OD", "OPC"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 64000, time = "02:00:00"
     threads: 4
@@ -220,33 +246,62 @@ rule eqtl_effect_sizes:
     script: "../scripts/devspec_eqtl_effect_sizes.R"
 
 rule beta_correlation:
-    input:  fugita_files = get_fugita_inputs(),
-            thousandG_frq = config["dev_specificity"]["beta_correlation"]["thousandG_frq"],
-            pvar_file = config["dev_specificity"]["beta_correlation"]["pvar_file"]
+    input:  jang_l1_files     = get_jang_beta_corr_full_inputs(),
+            jang_l1_top_files = get_jang_beta_corr_top_inputs(),
+            pvar_file         = config["dev_specificity"]["beta_correlation"]["pvar_file"]
     output: config["dev_specificity"]["beta_correlation"]["out_file"]
-    params: nom_dir = config["dev_specificity"]["beta_correlation"]["nom_dir"],
-            fugita_dir = config["dev_specificity"]["beta_correlation"]["fugita_dir"]
+    params: nom_dir = config["dev_specificity"]["beta_correlation"]["nom_dir"]
     singularity: config["containers"]["r_eqtl"]
-    resources: threads = 4, mem_mb = 32000, time = "04:00:00"
+    resources: threads = 4, mem_mb = 64000, time = "04:00:00"
     threads: 4
     message: "Compute fetal-adult eQTL beta correlations and flag opposite-effect pairs with allele-flip annotations"
     benchmark: "reports/benchmarks/dev_specificity.beta_correlation.txt"
     log:    config["dev_specificity"]["beta_correlation"]["log"]
     script: "../scripts/devspec_beta_correlation.R"
 
+rule pi1_enrich_jang:
+    input: public_all = config["dev_specificity"]["pi1_enrich_jang"]["public_all"],
+           public_top = config["dev_specificity"]["pi1_enrich_jang"]["public_top"],
+           qtl_all    = config["dev_specificity"]["eqtl_effects"]["nom_dir"] + "{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv",
+           qtl_top    = lambda wildcards: config["tensorQTL"]["tensorqtl_perm"]["output"].format(
+                            cell_type   = wildcards.cell_type,
+                            norm_method = config["tensorQTL"]["norm_methods"][0],
+                            geno_pc     = config["tensorQTL"]["geno_pcs"],
+                            exp_pc      = config["exp_pc_map"][wildcards.cell_type]
+                        )
+    output: enrich = config["dev_specificity"]["pi1_enrich_jang"]["enrich"],
+            pi1    = config["dev_specificity"]["pi1_enrich_jang"]["pi1"]
+    resources: threads = 4, mem_mb = 60000, time="1:00:00"
+    message: "Calc pi1 enrichments between fetal L1 sn-eQTL and Jang et al. 2026 L1 eQTL"
+    singularity: config["containers"]["r_eqtl"]
+    benchmark: "reports/benchmarks/dev_specificity.pi1_enrich_jang_{cell_type}_vs_{jang_cell_type}.txt"
+    log:    config["dev_specificity"]["pi1_enrich_jang"]["log"]
+    script: "../scripts/replication_pi1_enrichment.R"
+
+rule smr_dev_spec_overlap:
+    input:  smr_files      = get_smr_files(),
+            classification = rules.classify_eqtl_specificity.output[0],
+            gene_lookup    = config["dev_specificity"]["report"]["gene_lookup"]
+    output: config["dev_specificity"]["smr_overlap"]["out_file"]
+    params: cell_types = DEVSPEC_CELL_TYPES,
+            gwas_list  = list(config["gwas"].keys()),
+            p_smr      = config["p_smr"],
+            p_heidi    = config["p_heidi"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 2, mem_mb = 8000, time = "00:30:00"
+    message: "Overlap SMR-significant SNPs with dev-specificity classification"
+    benchmark: "reports/benchmarks/dev_specificity.smr_dev_spec_overlap.txt"
+    log:    config["dev_specificity"]["smr_overlap"]["log"]
+    script: "../scripts/devspec_smr_overlap.R"
 
 rule dev_specificity_report:
-    # input/output/benchmark paths are relative to the Snakemake working
-    # directory (workflow root). The Rmd itself lives one level down in
-    # scripts/, and rmarkdown::render() executes chunks with that as the
-    # working directory -- so every params path gets one extra "../" on
-    # top of the corresponding input/config path.
     input:  eqtl_universe    = rules.extract_eqtl_universe.output[0],
             classification   = rules.classify_eqtl_specificity.output[0],
             heterogeneity_test = rules.heterogeneity_test.output[0],
             ocr_enrich       = rules.ocr_enrich.output[0],
             eqtl_effects     = rules.eqtl_effect_sizes.output[0],
             beta_correlation = rules.beta_correlation.output[0],
+            pi1_jang         = jang_pi1_inputs,
             gene_lookup      = config["dev_specificity"]["report"]["gene_lookup"],
             rmd_script       = config["dev_specificity"]["report"]["script"]
     output: config["dev_specificity"]["report"]["html"]
@@ -256,11 +311,13 @@ rule dev_specificity_report:
             ocr_enrich       = lambda wc, input: "../" + input.ocr_enrich,
             eqtl_effects     = lambda wc, input: "../" + input.eqtl_effects,
             beta_correlation = lambda wc, input: "../" + input.beta_correlation,
+            pi1_dir     = "../" + config["dev_specificity"]["report"]["pi1_dir"],
             perm_dir    = "../" + config["dev_specificity"]["beta_correlation"]["nom_dir"],
             gene_lookup = "../" + config["dev_specificity"]["report"]["gene_lookup"],
             bmark_dir   = "../" + config["dev_specificity"]["report"]["bmark_dir"],
             output_file = config["dev_specificity"]["report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 64000, time = "01:00:00"
     message: "Generate developmental specificity report"
     benchmark: "reports/benchmarks/dev_specificity.report.txt"
     log: config["dev_specificity"]["report"]["log"]
@@ -274,8 +331,8 @@ rule dev_specificity_report:
                           ocr_enrich = '{params.ocr_enrich}', \
                           eqtl_effects = '{params.eqtl_effects}', \
                           beta_correlation = '{params.beta_correlation}', \
+                          pi1_dir = '{params.pi1_dir}', \
                           perm_dir = '{params.perm_dir}', \
                           gene_lookup = '{params.gene_lookup}', \
                           bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
-

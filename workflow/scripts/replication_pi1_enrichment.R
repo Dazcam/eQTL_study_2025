@@ -4,11 +4,12 @@
 #
 #--------------------------------------------------------------------------------------
 
-#  Built to handle 5 options
+#  Built to handle 6 options
 #   - Our eQTL vs. O'Brien bulk eQTL 
 #   - Our eQTL vs. Wen bulk eQTL
 #   - Our eQTL vs. Bryois
 #   - Our eQTL vs. Fugita
+#   - Our eQTL vs. Jang et al. 2026 (SingleBrain)
 #   - Our eQTL vs. Our eQTL (internal comparison)
 #     - For latter R gens dummy file if cell_type == ref_cell_type for smk to track
 
@@ -16,6 +17,39 @@
 #     - Forward: pi1 enrichment of our sig. sn-eQTL in public nominal eQTL data
 #     - Reverse: pi1 of public sig. sn-eQTL in our nominal sn-eQTL data
 
+#--------------------------------------------------------------------------------------
+#
+#  ADDITION -- Jang et al. 2026 (SingleBrain) branch:
+#
+#  Jang publishes one file per cell type already (unlike Fugita's single
+#  combined file with a `celltype` column to filter on) -- the right cell type
+#  is selected purely via the jang_cell_type wildcard's file path, no
+#  in-script filtering needed.
+#
+#  Forward test p-value: Random_P (not Fixed_P) -- consistent with using the
+#  random-effects side for significance/evidence throughout the Fujita->Jang
+#  migration elsewhere in this pipeline (classify_specificity.R,
+#  heterogeneity_test.R, beta_correlation.R all use Random_FDR/qval).
+#  qvalue() needs a raw p-value to estimate pi0 itself, so this must be
+#  Random_P, not the already-FDR-adjusted Random_FDR/qval.
+#
+#  Sign normalization: Jang's beta is relative to the `Allele` column, not
+#  always `alt` (unlike Fugita, where beta was implicitly always
+#  ALT-relative). This directly affects prop_same_direction (computed by
+#  compute_pi1() below via sign(slope_my) == sign(slope_ref)) -- skipping
+#  this normalization would silently corrupt that output for any row where
+#  Allele != alt. Applied at read time for both public_full and public_top.
+#
+#  Placeholder-cohort artifact filter: some cohorts encode "not tested for
+#  this pair" as beta=0/sd=0 rather than NA, which gives that cohort
+#  infinite weight (1/SE^2) in the meta-analysis and forces the pooled
+#  result to Random_P == Fixed_P == 1 exactly -- a data artifact, not a
+#  genuine null, confirmed by manual inspection (see git history / analysis
+#  log for the diagnostic session). Rows matching this exact signature are
+#  removed from public_full before it feeds compute_pi1(), with the removed
+#  count logged -- otherwise this spike at p=1 biases qvalue()'s pi0
+#  estimate toward 1 and masks real signal elsewhere in the distribution.
+#
 #--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
@@ -52,13 +86,15 @@ ref_cell_type <- if ("ref_cell_type" %in% names(snakemake@wildcards)) {
   snakemake@wildcards[["ref_cell_type"]]
 } else if ("fugita_cell_type" %in% names(snakemake@wildcards)) {
   snakemake@wildcards[["fugita_cell_type"]]
+} else if ("jang_cell_type" %in% names(snakemake@wildcards)) {
+  snakemake@wildcards[["jang_cell_type"]]
 } else {
   NA_character_
 }
 
-exp_pc <- snakemake@wildcards[["exp_pc"]]
-geno_pc <- snakemake@wildcards[["geno_pc"]]
-norm_method <- snakemake@wildcards[["norm_method"]]
+exp_pc <- if ("exp_pc" %in% names(snakemake@wildcards)) snakemake@wildcards[["exp_pc"]] else NA_character_
+geno_pc <- if ("geno_pc" %in% names(snakemake@wildcards)) snakemake@wildcards[["geno_pc"]] else NA_character_
+norm_method <- if ("norm_method" %in% names(snakemake@wildcards)) snakemake@wildcards[["norm_method"]] else NA_character_
 ref_name <- str_split_i(output_pi1, "/", 4)
 
 # Map ref_cell_type to Excel cell_type column
@@ -275,9 +311,90 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     message("Fugita: number of top (two-step Yes) eQTL retained: ", nrow(public_top))
     message("Fugita: number of nominal (full) rows retained: ", nrow(public_full))
   }
+
+  if (str_detect(ref_name, "jang")) {
+    message("Loading Jang et al. 2026 (SingleBrain) full-association eQTL...")
+
+    # One file per cell type already (unlike Fugita's single combined file
+    # with a `celltype` column) -- the right cell type is selected via the
+    # jang_cell_type wildcard's file path, no in-script filtering needed.
+    public_full_raw <- read_tsv(
+      public_all_qtl,
+      col_select = c(feature, variant_id, ref, alt, Allele, fixed_beta, Random_P, Fixed_P),
+      show_col_types = FALSE
+    )
+
+    # ADDITION -- placeholder-cohort artifact filter (confirmed via manual
+    # diagnosis): some cohorts encode "not tested for this pair" as
+    # beta=0/sd=0 rather than NA. An SE of exactly 0 gives that cohort
+    # infinite weight (1/SE^2) in the inverse-variance-weighted meta-
+    # analysis, forcing the pooled beta to exactly 0 regardless of what
+    # other cohorts show, and producing Random_P == Fixed_P == 1 exactly
+    # (not just a large p-value -- an exact tie at the boundary). This is a
+    # data-encoding artifact, not a genuine null result, and left in place
+    # it creates a spike at p=1 that biases qvalue()'s pi0 (smoother)
+    # estimate toward 1 regardless of real signal elsewhere in the
+    # distribution. Excluded here on the signature Random_P==1 & Fixed_P==1
+    # (both checked -- an artifact row shows this identical exact tie;
+    # genuine strong nulls essentially never produce two different
+    # meta-analysis models landing on the identical floating-point value).
+    n_before_artifact_filter <- nrow(public_full_raw)
+    public_full_raw <- public_full_raw %>%
+      filter(!(Random_P == 1 & Fixed_P == 1))
+    n_removed_artifact <- n_before_artifact_filter - nrow(public_full_raw)
+    message("Jang full-association: removed ", n_removed_artifact,
+            " placeholder-cohort artifact rows (Random_P==1 & Fixed_P==1 exactly) out of ",
+            n_before_artifact_filter, " (",
+            round(100 * n_removed_artifact / n_before_artifact_filter, 3), "%)")
+
+    # Sign-normalize against Allele: Jang's beta is relative to Allele, not
+    # always alt (see ADDITION note at top of file). This directly affects
+    # prop_same_direction below, so skipping it would silently corrupt that
+    # output for any row where Allele != alt.
+    public_full <- public_full_raw %>%
+      mutate(
+        phenotype_id = str_extract(feature, "ENSG[0-9]+"),
+        slope_ref = if_else(Allele == alt, fixed_beta, -fixed_beta),
+        pval = suppressWarnings(as.numeric(Random_P))
+      ) %>%
+      select(variant_id, phenotype_id, pval, slope_ref)
+
+    message("Loading Jang top-association (lead SNP) eQTL...")
+    public_top_raw <- read_tsv(
+      public_top_qtl,
+      col_select = c(feature, variant_id, ref, alt, Allele, fixed_beta, Random_P, Fixed_P, qval),
+      show_col_types = FALSE
+    )
+
+    # Same artifact filter applied defensively to the top file too. In
+    # practice this should remove ~0 rows here, since qval is itself
+    # derived from Random_P and an artifact row's Random_P==1 should already
+    # fail the qval<0.05 filter below -- logged anyway so that assumption is
+    # visible rather than silently relied upon.
+    n_before_artifact_filter_top <- nrow(public_top_raw)
+    public_top_raw <- public_top_raw %>%
+      filter(!(Random_P == 1 & Fixed_P == 1))
+    n_removed_artifact_top <- n_before_artifact_filter_top - nrow(public_top_raw)
+    message("Jang top-association: removed ", n_removed_artifact_top,
+            " placeholder-cohort artifact rows (Random_P==1 & Fixed_P==1 exactly) out of ",
+            n_before_artifact_filter_top, " (expected ~0, since these should already fail qval<0.05)")
+
+    # top table = gene's lead SNP with qval<0.05 (FDR across variants within
+    # gene, then Storey's q across genes -- Jang's own two-stage correction)
+    public_top <- public_top_raw %>%
+      filter(!is.na(qval) & qval < 0.05) %>%
+      mutate(
+        phenotype_id = str_extract(feature, "ENSG[0-9]+"),
+        slope_my = if_else(Allele == alt, fixed_beta, -fixed_beta)
+      ) %>%
+      select(variant_id, phenotype_id, slope_my)
+
+    message("Jang: number of top (qval<0.05) eQTL retained: ", nrow(public_top))
+    message("Jang: number of nominal (full) rows retained: ", nrow(public_full))
+  }
   
   
-  if (!(str_detect(ref_name, "wen") | str_detect(ref_name, "obrien") | str_detect(ref_name, "bryois") | str_detect(ref_name, "fugita"))) {
+  if (!(str_detect(ref_name, "wen") | str_detect(ref_name, "obrien") | str_detect(ref_name, "bryois") | str_detect(ref_name, "fugita") | str_detect(ref_name, "jang"))) {
     message("Internal mode: comparing ", cell_type, " ↔ ", ref_cell_type)
     
     # Load ref cell type all-eQTL

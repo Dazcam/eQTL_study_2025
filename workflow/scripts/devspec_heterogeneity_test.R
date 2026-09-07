@@ -9,8 +9,9 @@
 #  For every (gene, SNP) pair classified testable_specific by B, collapses to a
 #  SINGLE fetal reference row per pair -- whichever fetal cell type (L1 or L2)
 #  gives that pair's lowest permutation qval, i.e. where it is most significant.
-#  That one fetal row is then tested against EVERY Fujita adult cell type the
-#  pair was actually tested in (not just the a priori biologically-matched type).
+#  That one fetal row is then tested against EVERY Jang et al. 2026 adult cell
+#  type the pair was actually tested in (not just the a priori biologically-
+#  matched type).
 #
 #  STRINGENT rule: a pair is called fetal-specific-and-heterogeneous only if it
 #  is heterogeneous in ALL of its successfully-tested adult comparisons (not
@@ -33,7 +34,28 @@
 #  contributes exactly one fetal context).
 #
 #  Step 3 of the developmental-specificity pipeline.
-
+#
+#--------------------------------------------------------------------------------------
+#
+#  MIGRATION NOTE -- Fujita -> Jang et al. 2026 (SingleBrain):
+#
+#  All fugita_* naming renamed to jang_* throughout (jang_cell_type,
+#  jang_label_match, beta_jang, se_jang, ref_jang, alt_jang,
+#  beta_jang_harmonized), matching the rename already made in
+#  devspec_extract_universe.R and devspec_classify_specificity.R.
+#
+#  Jang's data has no allele-frequency column (unlike Fujita's ALT_AF), so the
+#  previous AF-based palindromic-SNP resolution (aligned/flipped disambiguation
+#  via allele frequency for A/T, C/G pairs) has been REMOVED entirely -- not
+#  substituted with an external reference (e.g. 1000G), since there is no
+#  guarantee Jang's own allele/strand conventions were harmonized against 1000G,
+#  and introducing that assumption to paper over a missing check would trade one
+#  unvalidated assumption for another. Every palindromic pair is now
+#  unconditionally categorised "palindromic_unresolved" and dropped from the
+#  Q-test (beta_jang_harmonized = NA), regardless of allele frequency. This is
+#  more conservative than the previous af_tol-based partial resolution -- the
+#  af_tol parameter is no longer used by this script.
+#
 #--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
@@ -48,7 +70,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nRunning heterogeneity test on fetal-specific eQTL (Step C, stringent 'all' rule) ...")
+message("\n\nRunning heterogeneity test on fetal-specific eQTL vs Jang et al. 2026 (Step C, stringent 'all' rule) ...")
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -60,10 +82,8 @@ eqtl_universe_file  <- snakemake@input[["eqtl_universe"]]
 classification_file <- snakemake@input[["classification"]]
 pvar_file           <- snakemake@input[["pvar_file"]]
 output_file         <- snakemake@output[[1]]
-af_tol              <- snakemake@params[["af_tol"]]
 fdr_thresh          <- snakemake@params[["fdr_thresh"]]
 
-if (is.null(af_tol))     af_tol <- 0.2
 if (is.null(fdr_thresh)) fdr_thresh <- 0.05
 
 # Check variable assignment
@@ -71,9 +91,9 @@ message("\nVariables")
 cat("============================")
 tibble(
   variable = c("eqtl_universe_file", "classification_file", "pvar_file",
-               "af_tol", "fdr_thresh", "output_file"),
+               "fdr_thresh", "output_file"),
   value    = c(eqtl_universe_file, classification_file, pvar_file,
-               af_tol, fdr_thresh, output_file)
+               fdr_thresh, output_file)
 ) |>
   knitr::kable(format = "simple", align = "l") |>
   print()
@@ -138,32 +158,32 @@ message("\nFetal reference cell type chosen, by frequency:")
 fetal_ref_row %>% count(cell_type, sort = TRUE) %>% print(n = Inf)
 
 # ========================================================================================
-# 3. Join the single fetal reference row against EVERY Fujita cell type the
+# 3. Join the single fetal reference row against EVERY Jang cell type the
 #    pair was tested in
 # ========================================================================================
 
-message("\n--- Joining against all available Fujita comparisons ---\n")
+message("\n--- Joining against all available Jang comparisons ---\n")
 
 pairs_all_lookup <- pairs_all %>%
-  select(phenotype_id = gene_id, variant_id = snps, fugita_cell_type,
-         beta_fugita = beta, se_fugita = se,
-         ref_fugita = REF, alt_fugita = ALT, af_fugita = ALT_AF)
+  select(phenotype_id = gene_id, variant_id, jang_cell_type,
+         beta_jang = beta, se_jang = se,
+         ref_jang = ref, alt_jang = alt)
 
 joined <- fetal_ref_row %>%
   inner_join(pairs_all_lookup, by = c("phenotype_id", "variant_id"))
 
 n_joined <- nrow(joined)
-message("  C: joined rows (1 fetal row per pair x all tested Fujita comparisons): ", n_joined)
+message("  C: joined rows (1 fetal row per pair x all tested Jang comparisons): ", n_joined)
 
 joined <- joined %>%
   mutate(
     biologically_matched = case_when(
-      is.na(fugita_label_match) ~ FALSE,
-      TRUE ~ fugita_cell_type == fugita_label_match
+      is.na(jang_label_match) ~ FALSE,
+      TRUE ~ jang_cell_type == jang_label_match
     )
   )
 
-message("\nDistribution of adult (Fujita) comparisons tested per pair:")
+message("\nDistribution of adult (Jang) comparisons tested per pair:")
 joined %>%
   count(phenotype_id, variant_id, name = "n_adult_tested") %>%
   mutate(n_bucket = if_else(n_adult_tested >= 4, "4+", as.character(n_adult_tested))) %>%
@@ -173,10 +193,11 @@ joined %>%
   print()
 
 # ========================================================================================
-# 4. Allele harmonization
+# 4. Allele harmonization (REF/ALT string comparison only -- no AF check; see
+#    MIGRATION NOTE above)
 # ========================================================================================
 
-message("\n--- Allele harmonization ---\n")
+message("\n--- Allele harmonization (REF/ALT only, no AF check) ---\n")
 
 pvar_lookup <- fread(
   pvar_file,
@@ -194,21 +215,17 @@ joined <- joined %>%
     is_palindromic =
       (ref_my == "A" & alt_my == "T") | (ref_my == "T" & alt_my == "A") |
       (ref_my == "C" & alt_my == "G") | (ref_my == "G" & alt_my == "C"),
-    af_diff_aligned = abs(af_my - af_fugita),
-    af_diff_flipped = abs(af_my - (1 - af_fugita)),
     allele_status = case_when(
-      is.na(ref_my) | is.na(alt_my) | is.na(ref_fugita) | is.na(alt_fugita) ~ "missing_allele_info",
-      !is_palindromic & ref_my == ref_fugita & alt_my == alt_fugita         ~ "aligned",
-      !is_palindromic & ref_my == alt_fugita & alt_my == ref_fugita         ~ "flipped",
-      !is_palindromic                                                      ~ "mismatched",
-      is_palindromic & af_diff_aligned < af_tol & af_diff_flipped >= af_tol ~ "palindromic_af_aligned",
-      is_palindromic & af_diff_flipped < af_tol & af_diff_aligned >= af_tol ~ "palindromic_af_flipped",
-      TRUE                                                                 ~ "palindromic_ambiguous"
+      is.na(ref_my) | is.na(alt_my) | is.na(ref_jang) | is.na(alt_jang) ~ "missing_allele_info",
+      is_palindromic                                                    ~ "palindromic_unresolved",
+      ref_my == ref_jang & alt_my == alt_jang                           ~ "aligned",
+      ref_my == alt_jang & alt_my == ref_jang                           ~ "flipped",
+      TRUE                                                              ~ "mismatched"
     ),
-    beta_fugita_harmonized = case_when(
-      allele_status %in% c("flipped", "palindromic_af_flipped") ~ -beta_fugita,
-      allele_status %in% c("aligned", "palindromic_af_aligned")  ~  beta_fugita,
-      TRUE                                                       ~ NA_real_
+    beta_jang_harmonized = case_when(
+      allele_status == "flipped" ~ -beta_jang,
+      allele_status == "aligned" ~  beta_jang,
+      TRUE                        ~ NA_real_
     )
   )
 
@@ -216,12 +233,13 @@ status_tbl <- joined %>% count(allele_status, name = "N") %>% mutate(prop = roun
 message("Allele status breakdown:")
 print(status_tbl)
 
-n_allele_dropped <- sum(is.na(joined$beta_fugita_harmonized))
-usable <- joined %>% filter(!is.na(beta_fugita_harmonized))
+n_allele_dropped <- sum(is.na(joined$beta_jang_harmonized))
+usable <- joined %>% filter(!is.na(beta_jang_harmonized))
 n_usable <- nrow(usable)
 n_unique_pairs_usable <- usable %>% distinct(phenotype_id, variant_id) %>% nrow()
 
-message("\n  C: dropped -- unresolved allele harmonization: ", n_allele_dropped)
+message("\n  C: dropped -- unresolved allele harmonization (mismatched/palindromic/missing): ",
+        n_allele_dropped)
 message("  C: usable rows entering Q-test: ", n_usable)
 message("  C: unique (gene, SNP) pairs among usable rows: ", n_unique_pairs_usable)
 
@@ -251,8 +269,8 @@ message("\n--- Running Cochran's Q ---\n")
 
 usable <- usable %>%
   mutate(
-    delta_beta = beta_my - beta_fugita_harmonized,
-    se_delta   = sqrt(se_my^2 + se_fugita^2),
+    delta_beta = beta_my - beta_jang_harmonized,
+    se_delta   = sqrt(se_my^2 + se_jang^2),
     Q          = (delta_beta / se_delta)^2,
     p          = pchisq(Q, df = 1, lower.tail = FALSE),
     q          = p.adjust(p, method = "BH"),
@@ -332,10 +350,10 @@ print(funnel)
 usable_out <- usable %>%
   select(cell_type, level, parent_cell_type, phenotype_id, variant_id,
          n_fetal_celltypes_significant,
-         fugita_cell_type, fugita_label_match, biologically_matched,
+         jang_cell_type, jang_label_match, biologically_matched,
          beta_my, se_my, af_my,
-         beta_fugita, beta_fugita_harmonized, se_fugita, af_fugita,
-         ref_my, alt_my, ref_fugita, alt_fugita, allele_status,
+         beta_jang, beta_jang_harmonized, se_jang,
+         ref_my, alt_my, ref_jang, alt_jang, allele_status,
          delta_beta, se_delta, Q, p, q, heterogeneous)
 
 write_rds(

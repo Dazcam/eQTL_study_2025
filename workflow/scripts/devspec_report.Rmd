@@ -17,6 +17,7 @@ params:
   ocr_enrich: null
   eqtl_effects: null
   beta_correlation: null
+  pi1_dir: null
   perm_dir: null
   gene_lookup: null
   bmark_dir: null
@@ -48,6 +49,7 @@ heterogeneity_file    <- params$heterogeneity_test
 ocr_enrich_file        <- params$ocr_enrich
 eqtl_effects_file      <- params$eqtl_effects
 beta_correlation_file  <- params$beta_correlation
+pi1_dir                <- params$pi1_dir
 bmark_dir              <- params$bmark_dir
 
 gene_lookup <- read_tsv(params$gene_lookup, show_col_types = FALSE) |>
@@ -85,12 +87,20 @@ beta_correlation <- read_rds(beta_correlation_file)
 any_table    <- classification$any_table
 any_summary  <- classification$any_summary
 
-# Collapse the two untestable-not-expressed categories for display only --
-# B's underlying categories stay granular in its own TSV output.
+# Collapse categories that aren't actionable for the reader into a single
+# "untestable" display bucket -- display only, any_table's real categories
+# (and therefore what OCR/heterogeneity actually consume) stay granular in
+# B's own TSV output:
+#   - untestable_genotyped_not_expressed / untestable_not_genotyped_not_expressed
+#   - testable_pair_untested (gene expressed somewhere, SNP genotyped somewhere,
+#     but the two were never tested TOGETHER in any single Jang cell type --
+#     a genuine edge case, present in the underlying logic even before the
+#     Fujita->Jang migration, just 0 pairs under Fujita vs 4 under Jang)
 any_summary <- any_summary |>
   mutate(final_category = recode(final_category,
-    untestable_genotyped_not_expressed     = "untestable_not_expressed",
-    untestable_not_genotyped_not_expressed = "untestable_not_expressed"
+    untestable_genotyped_not_expressed     = "untestable",
+    untestable_not_genotyped_not_expressed = "untestable",
+    testable_pair_untested                 = "untestable"
   )) |>
   group_by(final_category) |>
   summarise(n = sum(n), .groups = "drop") |>
@@ -98,8 +108,9 @@ any_summary <- any_summary |>
 
 any_table <- any_table |>
   mutate(final_category = recode(final_category,
-    untestable_genotyped_not_expressed     = "untestable_not_expressed",
-    untestable_not_genotyped_not_expressed = "untestable_not_expressed"
+    untestable_genotyped_not_expressed     = "untestable",
+    untestable_not_genotyped_not_expressed = "untestable",
+    testable_pair_untested                 = "untestable"
   ))
 
 # Unpack heterogeneity test (Cochran's Q on fetal-specific pairs). het_usable
@@ -118,11 +129,11 @@ supercluster_tbl <- eqtl_effects$supercluster_specific
 effect_matrix <- eqtl_effects$effect_size_matrix
 effect_long   <- eqtl_effects$effect_size_long
 
-# Unpack beta correlation object (real structure from devspec_beta_correlation.R)
+# Unpack beta correlation object (Jang et al. 2026 -- real structure from
+# devspec_beta_correlation.R)
 paired_betas     <- beta_correlation$paired_betas
 opposite_effects <- beta_correlation$opposite_effects
 celltype_map     <- beta_correlation$celltype_map
-af_tolerance     <- beta_correlation$af_tolerance
 
 # Add gene symbols (paired_betas/opposite_effects only carry ENSG in `gene`)
 paired_betas <- paired_betas |>
@@ -135,13 +146,14 @@ opposite_effects <- opposite_effects |>
 # both datasets), blue (significant in both, concordant), red (significant in
 # both, discordant). Plotted on every overlapping pair regardless of category --
 # only the colour/highlight is restricted to the both-significant subset.
+# significant_jang is already boolean (two-check design: is the gene's Jang
+# lead SNP AND qval<0.05) -- not a "Yes"/"No" string like Fujita's flag was.
 paired_betas <- paired_betas |>
   mutate(
-    significant_both = significant_fugita == "Yes",
-    concordant = sign(beta_my) == sign(beta_fugita),
+    concordant = sign(beta_my) == sign(beta_jang),
     point_category = case_when(
-      significant_both & concordant  ~ "concordant_both_sig",
-      significant_both & !concordant ~ "discordant_both_sig",
+      significant_jang & concordant  ~ "concordant_both_sig",
+      significant_jang & !concordant ~ "discordant_both_sig",
       TRUE                            ~ "other"
     )
   )
@@ -149,29 +161,29 @@ paired_betas <- paired_betas |>
 # Per-comparison Pearson r (no cor_summary is written by the beta_correlation
 # rule, so compute it here)
 beta_cor_summary <- paired_betas |>
-  group_by(my_cell_type, fugita_cell_type) |>
+  group_by(my_cell_type, jang_cell_type) |>
   summarise(
     n = n(),
-    r = cor(beta_my, beta_fugita, use = "complete.obs"),
+    r = cor(beta_my, beta_jang, use = "complete.obs"),
     .groups = "drop"
   ) |>
-  mutate(comparison = paste(my_cell_type, "vs", fugita_cell_type))
+  mutate(comparison = paste(my_cell_type, "vs", jang_cell_type))
 
-comparison_levels <- paste(celltype_map$my_cell, "vs", celltype_map$fugita_cell)
+comparison_levels <- paste(celltype_map$my_cell, "vs", celltype_map$jang_cell)
 
 # Significance-count summary table (one row per comparison): significant in
-# fetal & present in adult; also significant in Fujita; of those, concordant;
+# fetal & present in adult; also significant in Jang; of those, concordant;
 # of those, discordant.
 significance_counts <- paired_betas |>
-  group_by(my_cell_type, fugita_cell_type) |>
+  group_by(my_cell_type, jang_cell_type) |>
   summarise(
     n_fetal_sig_present_adult = n(),
-    n_also_sig_fujita = sum(significant_both, na.rm = TRUE),
-    n_both_sig_concordant = sum(significant_both & concordant, na.rm = TRUE),
-    n_both_sig_discordant = sum(significant_both & !concordant, na.rm = TRUE),
+    n_also_sig_jang = sum(significant_jang, na.rm = TRUE),
+    n_both_sig_concordant = sum(significant_jang & concordant, na.rm = TRUE),
+    n_both_sig_discordant = sum(significant_jang & !concordant, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  mutate(comparison = paste(my_cell_type, "vs", fugita_cell_type)) |>
+  mutate(comparison = paste(my_cell_type, "vs", jang_cell_type)) |>
   arrange(factor(comparison, levels = comparison_levels))
 ```
 
@@ -180,26 +192,37 @@ significance_counts <- paired_betas |>
 ***
 
 1. `extract_eqtl_universe`: Extract unique fetal eGene-eSNP universe (L1+L2)
-2. `classify_eqtl_specificity`: Classify pairs as testable/untestable and shared/fetal-specific vs Fujita ("any" tier)
-3. `heterogeneity_test`: Cochran's Q test on fetal-specific pairs vs all tested adult Fujita cell types
+2. `classify_eqtl_specificity`: Classify pairs as testable/untestable and shared/fetal-specific vs Jang et al. 2026 ("any" tier, all L1+L2 Jang types pooled)
+3. `heterogeneity_test`: Cochran's Q test on fetal-specific pairs vs all tested adult Jang cell types
 4. `prep_ld_clump_input` / `run_ld_clump` / `parse_ld_clump`: LD-independence pruning of the eGene-eSNP universe
 5. `ocr_enrich`: Test fetal-specific/shared/specific-heterogeneous eQTL enrichment in adult (Li et al.) cortical union OCRs
-6. `eqtl_effect_sizes`: Extract subcluster/supercluster-specific eQTL
-7. `beta_correlation`: Fetal-adult eQTL beta correlations and opposite-effect allele checks
-8. `dev_specificity_report`: Summarise developmental specificity results
+6. `eqtl_effect_sizes`: Extract subcluster/supercluster-specific eQTL (fetal L1 vs Jang L1 effect-size correlation)
+7. `beta_correlation`: Fetal-adult eQTL beta correlations and opposite-effect allele checks vs Jang et al. 2026
+8. `pi1_enrich_jang`: pi1 replication test between fetal L1 sn-eQTL and Jang et al. 2026 L1 eQTL
+9. `dev_specificity_report`: Summarise developmental specificity results
 
 ***
 
 ### Classification of fetal eQTL {.tabset}
 
-Unique eGene-eSNP pairs sig. in fetal data classified against adult eGene-eSNP pairs:
+Classify fetal eQTL against Jang et al. 2026 (SingleBrain) adult eGene-eSNP pairs, 
+pooled across all L1+L2 Jang cell types (35 types; MiGA3 excluded -- 
+a separate microglia-only meta-analysis, not part of the core L1+L2 hierarchy).
 
-- Testable shared: if sig. in >= 1 Fugita cell type
+- `testable_shared`: fetal eQTL is present in nom file, and top assoc file, AND `qval < 0.05` in latter (in >= 1 Jang cell type)
   - Feeds: OCR enrichment (as the "shared" SNP set)
-- Testable specific: present in Fugita, but not sig. in any Fugita cell type
+- `testable_specific`: present in Jang nom file, but not sig. in any Jang cell type
   - Feeds: Heterogeneity test (next section), OCR enrichment (as the "fetal-specific" SNP set)
 
+**Significance note**: Jang has no `significant_by_2step_FDR` column, only a qval
+column in the top assoc. file (i.e. the perm file). 
+
+This makes `testable_specific` more permissive here than under Fujita.
+
 Both categories are LD-pruned (see LD-clumping steps) before being used in OCR enrichment.
+
+*Note*: qval in top assoc. is derived from Random_P, beta and se in Jang derived from
+fixed_P and fixed_SD.
 
 ***
 
@@ -257,14 +280,15 @@ any_table |>
 than combined sampling error predicts
 - Each `testable_specific` pair is collapsed to a single fetal reference row
 (whichever fetal cell type it's most significant in), then tested against
-EVERY adult Fujita cell type that pair was actually tested in -- not just its
-a priori biologically-matched type
+EVERY adult Jang cell type that pair was actually tested in 
 - FDR (BH) applied once, pooled across all usable rows
 - STRINGENT final call: a pair only counts as fetal-specific-and-heterogeneous
 if heterogeneous in ALL of its tested adult comparisons, not just one
+- **Allele harmonization**: No AF column in Jang, so
+palindromic (A/T, C/G) SNPs cannot be disambiguated via frequency the way
+they could against Fujita. Every palindromic pair is therefore uniformly `palindromic_unresolved` and excluded from the Q-test.
 - Notes:
   - Q is not directional -- it tells you the betas differ, not which way
-    (see Delta_Beta in the detail table for direction)
   - Pairs tested against more adult cell types face a harder bar under the
     "all" rule -- see the stringency table below
 
@@ -311,9 +335,6 @@ het_heterogeneous |>
 
 #### Final pairs (stringent)
 
-The headline result: one row per pair, aggregated across all its tested adult
-comparisons.
-
 ```{r het-test-final-pairs-table}
 het_heterogeneous |>
   left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
@@ -334,7 +355,7 @@ het_heterogeneous |>
 
 #### Magnitude-consistent pairs (|fetal| > |adult|)
 
-Restricts the 531 stringent (heterogeneous-in-all) pairs further: retains
+Restricts the `r n_pair_het` stringent (heterogeneous-in-all) pairs further: retains
 only those where |fetal beta| > |adult beta| in EVERY tested comparison for
 that pair -- not just heterogeneous, but the fetal effect strictly larger in
 magnitude, regardless of sign. This sidesteps delta_beta's ambiguity when
@@ -347,7 +368,7 @@ stringent_magnitude <- het_usable |>
   semi_join(het_heterogeneous |> filter(heterogeneous_all),
             by = c("phenotype_id", "variant_id")) |>
   mutate(
-    magnitude_diff = abs(beta_my) - abs(beta_fugita_harmonized),
+    magnitude_diff = abs(beta_my) - abs(beta_jang_harmonized),
     fetal_bigger = magnitude_diff > 0
   )
 
@@ -406,12 +427,6 @@ pair_magnitude |>
 
 #### Adult-larger comparisons
 
-Of the individual fetal-adult comparisons underlying the 531 stringent
-pairs, those where |adult beta| actually exceeds |fetal beta| -- the mirror
-case to the "Magnitude-consistent" tab. Some of these belong to pairs where
-adult wins in every comparison; others belong to pairs where fetal wins in
-a *different* comparison for the same gene/SNP ("mixed").
-
 ```{r het-test-adult-bigger-prep}
 adult_bigger_rows <- stringent_magnitude |>
   filter(magnitude_diff < 0) |>
@@ -426,16 +441,16 @@ target_rows <- stringent_magnitude |>
 side_by_side <- target_rows |>
   left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
   select(phenotype_id, external_gene_name, variant_id, cell_type,
-         beta_my, fugita_cell_type, beta_fugita_harmonized, magnitude_diff) |>
+         beta_my, jang_cell_type, beta_jang_harmonized, magnitude_diff) |>
   group_by(phenotype_id, variant_id, cell_type) |>
   mutate(Fetal_Beta = first(beta_my)) |>
   ungroup() |>
   select(-beta_my) |>
   pivot_wider(
     id_cols = c(phenotype_id, external_gene_name, variant_id, cell_type, Fetal_Beta),
-    names_from = fugita_cell_type,
-    values_from = c(beta_fugita_harmonized, magnitude_diff),
-    names_glue = "{fugita_cell_type}_{.value}"
+    names_from = jang_cell_type,
+    values_from = c(beta_jang_harmonized, magnitude_diff),
+    names_glue = "{jang_cell_type}_{.value}"
   ) |>
   rename(Gene = external_gene_name, ENSG = phenotype_id, eSNP = variant_id,
          Fetal_Cell_Type = cell_type)
@@ -487,8 +502,8 @@ het_usable |>
     Fetal_Cell_Type = cell_type,
     ENSG = phenotype_id, Symbol = external_gene_name, eSNP = variant_id,
     Fetal_Beta = beta_my, Fetal_SE = se_my, Fetal_AF = af_my,
-    Adult_Cell_Type = fugita_cell_type, Biologically_Matched = biologically_matched,
-    Adult_Beta = beta_fugita_harmonized, Adult_SE = se_fugita, Adult_AF = af_fugita,
+    Adult_Cell_Type = jang_cell_type, Biologically_Matched = biologically_matched,
+    Adult_Beta = beta_jang_harmonized, Adult_SE = se_jang,
     Delta_Beta = delta_beta,
     Q, P = p, Q_value = q, Heterogeneous = heterogeneous
   ) |>
@@ -501,12 +516,12 @@ het_usable |>
 ### Effect-size concordance {.tabset}
 
 Pearson correlation of eQTL betas between each fetal cell type and its
-matched Fujita adult cell type. Points are highlighted only where the pair 
-is sig. in both datasets  (significant_by_2step_FDR == "Yes"):
+matched Jang et al. 2026 adult cell type. Points are highlighted only where
+the pair is sig. in both datasets:
 
 - Blue: sig. in both and concordant sign
-- Red: sig. in both and and discordant sign (also shown in oppsite effects tab) 
-- Grey: sig. in fetal, not sig. in Fugita
+- Red: sig. in both and discordant sign (also shown in opposite effects tab)
+- Grey: sig. in fetal, not sig. in Jang
 
 ***
 
@@ -516,7 +531,7 @@ is sig. in both datasets  (significant_by_2step_FDR == "Yes"):
 significance_counts |>
   select(Comparison = comparison,
          `Fetal-sig, present in adult` = n_fetal_sig_present_adult,
-         `Also Fujita-sig` = n_also_sig_fujita,
+         `Also Jang-sig` = n_also_sig_jang,
          `Both-sig, concordant` = n_both_sig_concordant,
          `Both-sig, discordant` = n_both_sig_discordant) |>
   gt() |>
@@ -530,7 +545,7 @@ significance_counts |>
 ```{r beta-scatter-grid, fig.height=8, fig.width=14}
 plot_df <- paired_betas |>
   mutate(
-    comparison = factor(paste(my_cell_type, "vs", fugita_cell_type), levels = comparison_levels)
+    comparison = factor(paste(my_cell_type, "vs", jang_cell_type), levels = comparison_levels)
   ) |>
   # Plot "other" (grey) points first so blue/red highlighted points draw on top
   arrange(point_category == "other")
@@ -539,7 +554,7 @@ r_labels <- beta_cor_summary |>
   mutate(comparison = factor(comparison, levels = comparison_levels),
          label = paste0("r = ", round(r, 3), "\nn = ", n))
 
-ggplot(plot_df, aes(x = beta_my, y = beta_fugita)) +
+ggplot(plot_df, aes(x = beta_my, y = beta_jang)) +
   geom_point(aes(colour = point_category, alpha = point_category != "other", size = point_category != "other")) +
   geom_abline(slope = 1, intercept = 0, colour = "grey40", linetype = "dashed") +
   geom_smooth(method = "lm", se = FALSE, colour = "#377EB8", linewidth = 0.6) +
@@ -554,7 +569,7 @@ ggplot(plot_df, aes(x = beta_my, y = beta_fugita)) +
   scale_alpha_manual(values = c(`TRUE` = 0.7, `FALSE` = 0.25), guide = "none") +
   scale_size_manual(values = c(`TRUE` = 1.1, `FALSE` = 0.6), guide = "none") +
   facet_wrap(~ comparison, ncol = 4, scales = "free") +
-  labs(x = "Fetal slope", y = "Adult (Fujita) slope", colour = NULL) +
+  labs(x = "Fetal slope", y = "Adult (Jang) slope", colour = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "top")
 ```
@@ -563,113 +578,80 @@ ggplot(plot_df, aes(x = beta_my, y = beta_fugita)) +
 
 #### Correlation heatmap {.tabset}
 
-Pairwise Pearson correlations of eQTL effect sizes (slope) across all fetal
-L1 cell types, fetal L2 subclusters, and Fujita adult cell types, computed
-on the subset of (eGene, eSNP) pairs with non-missing slopes in both cell
-types of each comparison.
-
-##### Clustered (original)
-
-```{r effect-size-heatmap, fig.height=8, fig.width=9}
+```{r effect-size-heatmap-setup}
 slope_cols <- grep("^slope_", names(effect_matrix), value = TRUE)
 slope_mat <- as.matrix(effect_matrix[, slope_cols])
 colnames(slope_mat) <- str_remove(colnames(slope_mat), "^slope_")
 
-fetal_L1_cols <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-fetal_L2_cols <- sort(setdiff(
-  colnames(slope_mat)[!str_starts(colnames(slope_mat), "Fujita_")],
-  fetal_L1_cols
-))
-fujita_cols <- sort(colnames(slope_mat)[str_starts(colnames(slope_mat), "Fujita_")])
+fetal_l1_order <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+jang_l1_order  <- c("Jang_Ext", "Jang_IN", "Jang_MG", "Jang_OPC", "Jang_End", "Jang_Ast", "Jang_OD")
 
-col_order <- c(fetal_L1_cols, fetal_L2_cols, fujita_cols)
-col_order <- col_order[col_order %in% colnames(slope_mat)]
-slope_mat <- slope_mat[, col_order]
+full_order <- c(fetal_l1_order, jang_l1_order)
+full_order <- full_order[full_order %in% colnames(slope_mat)]
+slope_mat <- slope_mat[, full_order]
 
 cor_mat <- cor(slope_mat, use = "pairwise.complete.obs")
-
-stage_anno <- ifelse(str_starts(colnames(cor_mat), "Fujita_"), "Adult", "Fetal")
-ha <- HeatmapAnnotation(
-  Stage = stage_anno,
-  col = list(Stage = c(Fetal = "#984EA3", Adult = "#FF7F00"))
-)
-
 col_fun <- colorRamp2(c(-1, 0, 1), c("#2166AC", "white", "#B2182B"))
-
-Heatmap(
-  cor_mat,
-  name = "Pearson r",
-  col = col_fun,
-  top_annotation = ha,
-  clustering_method_rows = "ward.D2",
-  clustering_method_columns = "ward.D2",
-  cell_fun = function(j, i, x, y, width, height, fill) {
-    grid.text(sprintf("%.2f", cor_mat[i, j]), x, y, gp = gpar(fontsize = 6))
-  },
-  row_names_gp = gpar(fontsize = 8),
-  column_names_gp = gpar(fontsize = 8)
-)
 ```
 
-##### Cell-type ordered
+##### Fetal vs Fetal
 
-Dendrogram removed, rows/columns fixed so each L1 cell type sits next to its
-own L2 subclusters
-
-```{r effect-size-heatmap-grouped, fig.height=8, fig.width=9}
-grouped_order <- c(
-  "GABA", "GABA-0", "GABA-1", "GABA-2",
+```{r effect-size-heatmap-fetal, fig.height=9, fig.width=9}
+fetal_family_order <- c(
   "Glu-UL", "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
   "Glu-DL", "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
+  "GABA", "GABA-0", "GABA-1", "GABA-2",
   "NPC", "NPC-0", "NPC-1", "NPC-2",
-  "OPC", "MG", "Endo-Peri",
-  "Fujita_Exc", "Fujita_Inh", "Fujita_Mic", "Fujita_OPC", "Fujita_End",
-  "Fujita_Ast", "Fujita_Oli"
-)
-grouped_order <- grouped_order[grouped_order %in% colnames(cor_mat)]
-
-cor_mat_grouped <- cor_mat[grouped_order, grouped_order]
-stage_anno_grouped <- ifelse(str_starts(colnames(cor_mat_grouped), "Fujita_"), "Adult", "Fetal")
-ha_grouped <- HeatmapAnnotation(
-  Stage = stage_anno_grouped,
-  col = list(Stage = c(Fetal = "#984EA3", Adult = "#FF7F00"))
+  "MG", "OPC", "Endo-Peri"
 )
 
-Heatmap(
-  cor_mat_grouped,
-  name = "Pearson r",
-  col = col_fun,
-  top_annotation = ha_grouped,
-  cluster_rows = FALSE,
-  cluster_columns = FALSE,
-  cell_fun = function(j, i, x, y, width, height, fill) {
-    grid.text(sprintf("%.2f", cor_mat_grouped[i, j]), x, y, gp = gpar(fontsize = 6))
-  },
-  row_names_gp = gpar(fontsize = 8),
-  column_names_gp = gpar(fontsize = 8)
-)
-```
+fetal_long <- effect_long |>
+  filter(cell_type %in% fetal_family_order) |>
+  select(phenotype_id, variant_id, cell_type, slope) |>
+  distinct(phenotype_id, variant_id, cell_type, .keep_all = TRUE)
 
-##### Fetal only
+fetal_wide <- fetal_long |>
+  pivot_wider(names_from = cell_type, values_from = slope)
 
-Adult (Fujita) cell types removed entirely; fetal L1/L2 comparisons only,
-re-clustered on this fetal-only subset.
+fetal_slope_mat <- as.matrix(fetal_wide[, setdiff(names(fetal_wide), c("phenotype_id", "variant_id"))])
+fetal_family_order_present <- fetal_family_order[fetal_family_order %in% colnames(fetal_slope_mat)]
+fetal_slope_mat <- fetal_slope_mat[, fetal_family_order_present]
 
-```{r effect-size-heatmap-fetal-only, fig.height=8, fig.width=8}
-fetal_only_cols <- colnames(cor_mat)[!str_starts(colnames(cor_mat), "Fujita_")]
-cor_mat_fetal <- cor_mat[fetal_only_cols, fetal_only_cols]
+cor_mat_fetal <- cor(fetal_slope_mat, use = "pairwise.complete.obs")
 
 Heatmap(
   cor_mat_fetal,
   name = "Pearson r",
   col = col_fun,
-  clustering_method_rows = "ward.D2",
-  clustering_method_columns = "ward.D2",
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
   cell_fun = function(j, i, x, y, width, height, fill) {
-    grid.text(sprintf("%.2f", cor_mat_fetal[i, j]), x, y, gp = gpar(fontsize = 7))
+    grid.text(sprintf("%.2f", cor_mat_fetal[i, j]), x, y, gp = gpar(fontsize = 6))
   },
-  row_names_gp = gpar(fontsize = 9),
-  column_names_gp = gpar(fontsize = 9)
+  row_names_gp = gpar(fontsize = 8),
+  column_names_gp = gpar(fontsize = 8)
+)
+```
+
+##### Fetal vs Jang
+
+```{r effect-size-heatmap-fetal-jang, fig.height=6, fig.width=7}
+fetal_cols <- fetal_l1_order[fetal_l1_order %in% colnames(cor_mat)]
+jang_cols <- jang_l1_order[jang_l1_order %in% colnames(cor_mat)]
+cor_mat_cross <- cor_mat[fetal_cols, jang_cols]
+colnames(cor_mat_cross) <- str_remove(colnames(cor_mat_cross), "^Jang_")
+
+Heatmap(
+  cor_mat_cross,
+  name = "Pearson r",
+  col = col_fun,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    grid.text(sprintf("%.2f", cor_mat_cross[i, j]), x, y, gp = gpar(fontsize = 9))
+  },
+  row_names_gp = gpar(fontsize = 10),
+  column_names_gp = gpar(fontsize = 10)
 )
 ```
 
@@ -677,7 +659,7 @@ Heatmap(
 
 #### Pairwise n
 
-```{r pairwise-n, fig.height=8, fig.width=9}
+```{r pairwise-n, fig.height=7, fig.width=8}
 n_mat <- matrix(NA, ncol(slope_mat), ncol(slope_mat),
                 dimnames = list(colnames(slope_mat), colnames(slope_mat)))
 for (i in seq_len(ncol(slope_mat))) {
@@ -685,6 +667,12 @@ for (i in seq_len(ncol(slope_mat))) {
     n_mat[i, j] <- sum(complete.cases(slope_mat[, c(i, j)]))
   }
 }
+
+stage_anno <- ifelse(str_starts(colnames(n_mat), "Jang_"), "Adult", "Fetal")
+ha <- HeatmapAnnotation(
+  Stage = stage_anno,
+  col = list(Stage = c(Fetal = "#984EA3", Adult = "#FF7F00"))
+)
 
 col_fun_n <- colorRamp2(c(0, max(n_mat, na.rm = TRUE)), c("white", "#08519C"))
 
@@ -696,10 +684,10 @@ Heatmap(
   cluster_columns = FALSE,
   top_annotation = ha,
   cell_fun = function(j, i, x, y, width, height, fill) {
-    grid.text(n_mat[i, j], x, y, gp = gpar(fontsize = 5))
+    grid.text(n_mat[i, j], x, y, gp = gpar(fontsize = 7))
   },
-  row_names_gp = gpar(fontsize = 8),
-  column_names_gp = gpar(fontsize = 8)
+  row_names_gp = gpar(fontsize = 9),
+  column_names_gp = gpar(fontsize = 9)
 )
 ```
 
@@ -707,14 +695,14 @@ Heatmap(
 
 #### Full slope table
 
-Betas for every (eGene, eSNP) pair across all 19 fetal cell types (L1+L2)
-and all 7 Fujita adult cell types
+Betas for every (eGene, eSNP) pair across the 7 fetal L1 cell types and 7
+Jang adult L1-pooled cell types.
 
 ```{r full-slope-table}
 slope_full_tbl <- effect_matrix |>
   left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
   select(external_gene_name, phenotype_id, variant_id,
-         all_of(paste0("slope_", col_order))) |>
+         all_of(paste0("slope_", full_order))) |>
   rename(Symbol = external_gene_name, ENSG_ID = phenotype_id, SNP = variant_id) |>
   rename_with(~ str_remove(., "^slope_"), starts_with("slope_"))
 
@@ -725,26 +713,200 @@ small_dt(slope_full_tbl)
 
 #### Opposite effects
 
-- Sig. eQTL Pairs in both fetal and Fujita datasets with discordant effect
-sign (the red points in the scatter grid). 
-- Fetal/Fujita/1000G columns show `REF/ALT; allele frequency` for each dataset 
-- AF concordance tolerance: `r af_tolerance`.
+- Sig. eQTL pairs in both fetal and Jang datasets with discordant effect
+sign (the red points in the scatter grid).
+- Fetal/Jang columns show `REF/ALT` for each dataset. No 
+AF column in Jang, so  `Allele_Status` is REF/ALT string comparison only. 
+Palindromic pairs (A/T, C/G) cannot be resolved so were excluded upstream (see beta_correlation.R).
 
 ```{r opposite-effects-table}
 opposite_effects |>
   mutate(
-    Fetal  = paste0(ref_my, "/", alt_my, "; ", round(af_my, 4)),
-    Fujita = paste0(ref_fugita, "/", alt_fugita, "; ", round(af_fugita, 4)),
-    `1000G` = ifelse(is.na(a1_1000G), NA_character_,
-                      paste0(a1_1000G, "/", a2_1000G, "; ", round(maf_1000G, 4)))
+    Fetal = paste0(ref_my, "/", alt_my),
+    Jang  = paste0(ref_jang, "/", alt_jang)
   ) |>
   select(Gene = external_gene_name, ENSG = gene, eSNP = snp,
-         Fetal_Cell = my_cell_type, Fujita_Cell = fugita_cell_type,
-         Beta_Fetal = beta_my, Beta_Fujita = beta_fugita,
-         Fetal, Fujita, `1000G`,
-         Allele_Status = overall_allele_status) |>
+         Fetal_Cell = my_cell_type, Jang_Cell = jang_cell_type,
+         Beta_Fetal = beta_my, Beta_Jang = beta_jang,
+         Fetal, Jang,
+         Allele_Status = allele_status) |>
   mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
   small_dt()
+```
+
+***
+
+### Jang pi1 enrichment {.tabset}
+
+pi1 replication test (Storey & Tibshirani): what proportion of the tested
+eQTL set shows non-null evidence in the comparison dataset, estimated from
+the p-value distribution rather than a fixed significance threshold.
+
+- Forward: pi1 of fetal-sig eQTL in Jang's nominal (full) data
+- Reverse: pi1 of Jang-sig eQTL in fetal nominal data
+- Forward and reverse are not symmetric: Jang (a 4-cohort meta-analysis) is
+much better powered than any single fetal cell type, so forward pi1 tends
+to run higher than reverse -- an asymmetric pair here reflects a power
+difference between datasets, not necessarily a biological asymmetry
+
+***
+
+```{r pi1-jang-setup}
+# Shared setup for both the Table and Heatmap subtabs below -- defined here,
+# before either, since tabs render in document order regardless of heading
+# nesting (same issue as the effect-size correlation heatmap's col_order).
+pi1_fetal_l1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+pi1_jang_l1  <- c("Ext", "IN", "MG", "OPC", "End", "Ast", "OD")
+
+pi1_combinations <- expand.grid(cell_type = pi1_fetal_l1, jang_cell_type = pi1_jang_l1,
+                                 stringsAsFactors = FALSE)
+```
+
+#### Table
+
+```{r pi1-jang-enrich-table-prep}
+read_pi1_jang_enrich <- function(ct, jang_ct, pi1_dir) {
+  file_path <- paste0(pi1_dir, ct, "_vs_", jang_ct, "_pi1_enrich_tbl.rds")
+  if (file.exists(file_path)) {
+    read_rds(file_path)
+  } else {
+    message("File missing: ", file_path)
+    NULL
+  }
+}
+
+pi1_jang_enrich_tbl <- map2_dfr(pi1_combinations$cell_type, pi1_combinations$jang_cell_type,
+                                 ~ read_pi1_jang_enrich(.x, .y, pi1_dir))
+```
+
+```{r pi1-jang-enrich-table}
+pi1_jang_enrich_tbl |>
+  mutate(
+    pi1 = ifelse(is.na(pi1), NA, round(as.numeric(pi1), 2)),
+    prop_replicating = ifelse(is.na(prop_replicating), NA, round(as.numeric(prop_replicating), 2)),
+    prop_same_direction = ifelse(is.na(prop_same_direction), NA, round(as.numeric(prop_same_direction), 2)),
+    pi1_cell_ref = ifelse(is.na(pi1_cell_ref), NA, round(as.numeric(pi1_cell_ref), 2)),
+    prop_replicating_cell_ref = ifelse(is.na(prop_replicating_cell_ref), NA, round(as.numeric(prop_replicating_cell_ref), 2)),
+    prop_same_direction_cell_ref = ifelse(is.na(prop_same_direction_cell_ref), NA, round(as.numeric(prop_same_direction_cell_ref), 2))
+  ) |>
+  gt() |>
+  tab_header(
+    title = "pi1 Enrichment Summary: fetal L1 vs Jang et al. 2026 L1"
+  ) |>
+  cols_label(
+    cell_type = "Cell Type",
+    ref_cell_type = "Reference Cell Type",
+    pi1 = "pi1",
+    prop_replicating = "Prop. Replicating",
+    prop_same_direction = "Prop. Same Dir.",
+    overlap_count = "Overlap Count",
+    pi1_cell_ref = "pi1",
+    prop_replicating_cell_ref = "Prop. Replicating",
+    prop_same_direction_cell_ref = "Prop. Same Dir.",
+    overlap_count_cell_ref = "Overlap Count"
+  ) |>
+  tab_spanner(
+    label = "Forward Test",
+    columns = c(pi1, prop_replicating, prop_same_direction, overlap_count)
+  ) |>
+  tab_spanner(
+    label = "Reference Test",
+    columns = c(pi1_cell_ref, prop_replicating_cell_ref, prop_same_direction_cell_ref, overlap_count_cell_ref)
+  ) |>
+  fmt_missing(
+    columns = everything(),
+    missing_text = "NA"
+  ) |>
+  tab_options(
+    table.font.size = 12,
+    column_labels.font.weight = "bold",
+    table.border.top.width = px(2),
+    table.border.bottom.width = px(2),
+    column_labels.border.top.width = px(2),
+    column_labels.border.top.color = "black",
+    column_labels.border.bottom.width = px(2),
+    column_labels.border.bottom.color = "black"
+  )
+```
+
+***
+
+#### Heatmap {.tabset}
+
+```{r pi1-jang-heatmap-prep}
+read_pi1_jang_results <- function(ct, jang_ct, pi1_dir) {
+  file_path <- paste0(pi1_dir, ct, "_vs_", jang_ct, "_pi1_results_tbl.rds")
+  if (file.exists(file_path)) {
+    pi1_list <- read_rds(file_path)
+    tibble(
+      cell_type = ct,
+      jang_cell_type = jang_ct,
+      pi1_forward = pi1_list$forward$pi1,
+      pi1_reverse = pi1_list$reverse$pi1
+    )
+  } else {
+    message("File missing: ", file_path)
+    NULL
+  }
+}
+
+pi1_jang_tbl <- map2_dfr(pi1_combinations$cell_type, pi1_combinations$jang_cell_type,
+                          ~ read_pi1_jang_results(.x, .y, pi1_dir))
+
+pi1_jang_long <- pi1_jang_tbl |>
+  pivot_longer(cols = c(pi1_forward, pi1_reverse),
+               names_to = "direction", values_to = "pi1") |>
+  mutate(
+    direction = recode(direction, pi1_forward = "Forward", pi1_reverse = "Reverse"),
+    cell_type = factor(cell_type, levels = pi1_fetal_l1),
+    jang_cell_type = factor(jang_cell_type, levels = pi1_jang_l1)
+  )
+
+plot_pi1_jang_heatmap <- function(df) {
+  ggplot(df, aes(x = jang_cell_type, y = cell_type, fill = pi1)) +
+    geom_tile(color = "black", lwd = 1.1, linetype = 1) +
+    geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
+              color = "black", size = 3.5) +
+    scale_fill_gradientn(
+      colours = c("white", "yellow", "red"),
+      limits = c(0, 1.0),
+      na.value = "grey80",
+      name = expression(pi[1])
+    ) +
+    coord_equal() +
+    labs(x = "Cell type (Jang Ref)", y = "Cell type (Fetal Query)") +
+    theme_minimal(base_size = 13) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+      axis.text.y = element_text(face = "bold"),
+      panel.grid = element_blank()
+    )
+}
+```
+
+##### Forward
+
+```{r pi1-jang-heatmap-forward, fig.dim=c(6,6)}
+plot_pi1_jang_heatmap(pi1_jang_long |> filter(direction == "Forward"))
+```
+
+##### Reverse
+
+```{r pi1-jang-heatmap-reverse, fig.dim=c(6,6)}
+plot_pi1_jang_heatmap(pi1_jang_long |> filter(direction == "Reverse"))
+```
+
+***
+
+#### Summary table
+
+```{r pi1-jang-summary-table}
+pi1_jang_tbl |>
+  mutate(across(c(pi1_forward, pi1_reverse), ~ round(.x, 2))) |>
+  select(Fetal_Cell_Type = cell_type, Jang_Cell_Type = jang_cell_type,
+         Pi1_Forward = pi1_forward, Pi1_Reverse = pi1_reverse) |>
+  gt() |>
+  tab_header(title = "pi1 enrichment: fetal L1 vs Jang et al. 2026 L1")
 ```
 
 ***
@@ -754,8 +916,6 @@ opposite_effects |>
 - LD-pruned fetal-specific, shared, and specific-heterogeneous eQTL SNPs
 tested for enrichment in adult cortical OCRs (Li et al. 2023)
 - Cortical adult union peak set manually curated
-- Specific-heterogeneous is a SUBSET of fetal-specific (the stringent subset
-confirmed via the heterogeneity test above), not an independent comparison
 
 ***
 
@@ -849,14 +1009,6 @@ subcluster_tbl |>
 
 #### Sibling comparison table
 
-For each subcluster-specific (gene, SNP) pair: betas, SEs, and nominal
-p-values across the significant L2 subtype, its parent L1, and its two
-non-significant L2 siblings, all on one row. Column order: the L2 subtype
-the gene is significant in, then the parent L1, then the remaining L2
-siblings. Shows whether the "subcluster-specific" call is driven by one
-strong signal diluted by null signal in the siblings when pooled at the L1
-level.
-
 ```{r subcluster-sibling-table-prep}
 family_order <- list(
   "Glu-UL" = c("Glu-UL", "Glu-UL-0", "Glu-UL-1", "Glu-UL-2"),
@@ -928,8 +1080,7 @@ sibling_tbl |>
 For each L1 family with L2 subtypes, betas across the parent and its 3
 children for every subcluster-specific (gene, SNP) pair in that family.
 Black border marks the cell where the pair was actually classified
-subcluster-specific -- the pattern to look for is strong colour in one
-column, faint/near-white everywhere else in the row.
+subcluster-specific.
 
 ```{r subcluster-family-heatmap-prep}
 build_family_matrix <- function(family, subcluster_tbl, effect_long, gene_lookup) {

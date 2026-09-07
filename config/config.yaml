@@ -89,6 +89,52 @@ fugita_cell_types:
   - "Mic"
   - "End"
 
+jang_cell_types:
+  - "Ast"
+  - "Ast1"
+  - "Ast2"
+  - "Ast3"
+  - "Ast4"
+  - "End"
+  - "Ext"
+  - "Ext1"
+  - "Ext2"
+  - "Ext3"
+  - "Ext4"
+  - "Ext5"
+  - "Ext6"
+  - "Ext7"
+  - "Ext8"
+  - "IN"
+  - "IN1"
+  - "IN2"
+  - "IN3"
+  - "IN4"
+  - "IN5"
+  - "IN6"
+  - "IN7"
+  - "MG"
+  - "MG1"
+  - "MG2"
+  - "MG3"
+  - "MG4"
+  - "OD"
+  - "OD1"
+  - "OD2"
+  - "OD3"
+  - "OPC"
+  - "OPC1"
+  - "OPC2"
+
+jang_l1_types:
+  - "Ast"
+  - "End"
+  - "Ext"
+  - "IN"
+  - "MG"
+  - "OD"
+  - "OPC"
+
 eqtl_fdr: 0.05
 
 susie_window: 1000000
@@ -169,6 +215,11 @@ setup:
     output: ../resources/public_datasets/Jang_2026/.setup_get_jang_singlebrain.done
     outdir: ../resources/public_datasets/Jang_2026/
     log: ../results/00LOG/00SETUP/get_jang_singlebrain.log
+  
+  get_obrien_supp:
+    output: ../resources/public_datasets/obrien_2018/obrien_2018_supp_tables.xlsx
+    web_link: https://media.springernature.com/original/springer-static/esm/art%3A10.1186%2Fs13059-018-1567-1/MediaObjects/13059_2018_1567_MOESM1_ESM.xlsx
+    log: ../results/00LOG/00SETUP/get_obrien_supp.log
 
 # -------------  PARSE  ----------------
 
@@ -1375,7 +1426,7 @@ dev_specificity:
     log: ../results/00LOG/19DEV-SPECIFICITY/extract_pairwise_universe.log
 
   classify_specificity:
-    fugita_dir: ../resources/public_datasets/fugita_2024/
+    jang_dir: ../resources/public_datasets/Jang_2026/
     out_file: ../results/19DEV-SPECIFICITY/classify_specificity/eqtl_specificity_classification.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/classify_specificity.log
 
@@ -1424,10 +1475,50 @@ dev_specificity:
     out_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/beta_correlation.log
 
+  pi1_enrich_jang:
+    public_all: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_full_assoc.tsv.gz
+    public_top: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_top_assoc.tsv.gz
+    enrich: ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_enrich_tbl.rds
+    pi1:    ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_results_tbl.rds
+    log:    ../results/00LOG/19DEV-SPECIFICITY/{cell_type}_vs_{jang_cell_type}_pi1_enrich_jang.log
+
+  smr_overlap:
+    smr_dir: ../results/10SMR/smr/
+    out_file: ../results/19DEV-SPECIFICITY/smr_overlap/smr_dev_spec_overlap.tsv
+    log: ../results/00LOG/19DEV-SPECIFICITY/smr_overlap.log
+
   report:
     script: scripts/devspec_report.Rmd
     html: reports/19DEV-SPECIFICITY/dev_specificity_report.html
     output_file: ../reports/19DEV-SPECIFICITY/dev_specificity_report.html
+    pi1_dir: ../results/19DEV-SPECIFICITY/pi1_jang/
     bmark_dir: reports/benchmarks/
     gene_lookup: ../resources/sheets/gene_lookup_hg38.tsv
     log: ../results/00LOG/19DEV-SPECIFICITY/dev_specificity_report.log
+
+
+# Replication bulk
+replication_bulk:
+  extract_unique_egenes:
+    qtl_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    out_file: ../results/21REPLICATION-BULK/extract_unique_egenes/egenes_per_celltype.tsv
+    log: ../results/00LOG/21REPLICATION-BULK/extract_unique_egenes.log
+
+  overlap_obrien:
+    obrien_supp: ../resources/public_datasets/obrien_2018/obrien_2018_supp_tables.xlsx
+    out_file: ../results/21REPLICATION-BULK/overlap_obrien/fetal_obrien_overlap.tsv
+    log: ../results/00LOG/21REPLICATION-BULK/overlap_obrien.log
+
+  isoform_eqtl:
+    bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
+    summary:          ../results/21REPLICATION-BULK/isoform_eqtl/isoform_comparison_summary.tsv
+    log:              ../results/00LOG/21REPLICATION-BULK/isoform_eqtl_comparison.log
+    script:           ../scripts/repl_bulk_isoform_eqtl.py
+    nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
+
+  report:
+    script: scripts/repl_bulk_report.Rmd
+    html: reports/21REPLICATION-BULK/repl_bulk_report.html
+    output_file: ../reports/21REPLICATION-BULK/repl_bulk_report.html
+    bmark_dir: reports/benchmarks/
+    log: ../results/00LOG/21REPLICATION-BULK/repl_bulk_report.log
