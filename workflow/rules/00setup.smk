@@ -10,7 +10,8 @@ rule all:
 #        expand(config["setup"]["create_parse_json"]["output"], plate=PLATES),
 #        config["setup"]["liftover"]["output"],
 #        config["setup"]["get_fugita_data"]["output"],
-        config["setup"]["get_jang_singlebrain"]["output"]
+#        config["setup"]["get_jang_singlebrain"]["output"]
+        config["setup"]["get_obrien_supp"]["output"]
 
 rule get_containers:
     output:  config["setup"]["get_containers"]["output"],
@@ -75,3 +76,25 @@ rule get_jang_singlebrain:
              zenodo_get 10.5281/zenodo.14908182 -o {params.outdir} > {log} 2>&1
              touch {output}
              """
+
+#rule get_obrien_data:
+#    output: all_qtl = config["setup"]["get_obrien_data"]["all_qtl"],
+#            top_qtl = config["setup"]["get_obrien_data"]["top_qtl"]
+#    params: out_dir = config["setup"]["get_obrien_data"]["out_dir"],
+#            web_link = config["setup"]["get_obrien_data"]["web_link"],
+#            zip_out = config["setup"]["get_obrien_data"]["zip_out"]
+#    message: "Download bulk brain gene eQTL files from O'Brien 2018, PMID:30419947"
+#    log:    config["setup"]["get_obrien_data"]["log"]
+#    shell:  """
+#            curl -L -b "cookies.txt" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" -o {params.zip_out} {params.web_link} &&
+#            unzip -j -o {params.zip_out} all_eqtls_gene.txt.gz -d {params.out_dir} &&
+#            unzip -j -o {params.zip_out} top_eqtls_gene.txt.gz -d {params.out_dir} &&
+#            rm -f {params.zip_out} 2>> {log}
+#            """
+
+rule get_obrien_supp:
+    output: config["setup"]["get_obrien_supp"]["output"],
+    params: web_link = config["setup"]["get_obrien_supp"]["web_link"],
+    message: "Download bulk eQTL supp tables for from O'Brien 2018, PMID:30419947"
+    log:    config["setup"]["get_obrien_supp"]["log"]
+    shell:   "wget -O {output} {params.web_link}"  
