@@ -41,6 +41,10 @@ message('  expr_dir: ', expr_dir)
 message('  out_dir: ', out_dir)
 message('  out_file (tracked by snakemake): ', out_file)
 
+# NOTE: these old-format names (Glu-UL / Glu-DL) drive the log file paths read
+# by summarise_logs() below, which are still stored under the old naming on
+# disk. Do not rename these - relabel_cell_type() handles renaming for
+# display only, applied to the summary tables after they're built.
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
                    "Glu-DL-0", "Glu-DL-1", "Glu-DL-2", 
@@ -50,9 +54,16 @@ exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- 'quantile'
 
+# --- Relabel map for cell type name changes, for display/plotting only
+relabel_cell_type <- function(x) {
+  x <- str_replace(x, "Glu-UL", "Glu-A")
+  x <- str_replace(x, "Glu-DL", "Glu-B")
+  x
+}
+
 custom_palette <- c(
-  'Glu-UL' = '#4363d8',
-  'Glu-DL' = '#00B6EB',
+  'Glu-A' = '#4363d8',
+  'Glu-B' = '#00B6EB',
   'NPC' = '#FF5959',
   'GABA' = '#3CBB75FF',
   'Endo-Peri' = '#B200ED',
@@ -60,36 +71,21 @@ custom_palette <- c(
   'OPC' = '#FDE725FF'
 )
 
-# custom_palette_L2 <- c(
-#   "NPC-0" = '#FF5959',
-#   "NPC-1" = '#FF5959',
-#   "NPC-2" = '#FF5959',
-#   "Glu-UL-0" = '#4363d8',
-#   "Glu-UL-1" = '#4363d8',
-#   "Glu-UL-2" = '#4363d8',
-#   "Glu-DL-0" = '#00B6EB',
-#   "Glu-DL-1" = '#00B6EB',
-#   "Glu-DL-2" = '#00B6EB',
-#   "GABA-0" = '#3CBB75FF',
-#   "GABA-1" = '#3CBB75FF',
-#   "GABA-2" = '#3CBB75FF'
-# )
-
 custom_palette_L2 <- c(
   # NPCs
   "NPC-0"    = '#e6194b', # Red
   "NPC-1"    = '#ffd8b1', # Magenta
   "NPC-2"    = '#800000', # Pink
   
-  # Glu-UL
-  "Glu-UL-0" = '#4363d8', # Blue
-  "Glu-UL-1" = "#911EB4", # Purple
-  "Glu-UL-2" = "#9A6324", # Brown
+  # Glu-A
+  "Glu-A-0" = '#4363d8', # Blue
+  "Glu-A-1" = "#911EB4", # Purple
+  "Glu-A-2" = "#9A6324", # Brown
   
-  # Glu-DL
-  "Glu-DL-0" = '#46f0f0', # Cyan
-  "Glu-DL-1" = '#008080', # Teal
-  "Glu-DL-2" = "#FFE119", # Yellow
+  # Glu-B
+  "Glu-B-0" = '#46f0f0', # Cyan
+  "Glu-B-1" = '#008080', # Teal
+  "Glu-B-2" = "#FFE119", # Yellow
   
   # GABA
   "GABA-0"   = "#3CB44B", # Green
@@ -251,11 +247,26 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
   return(summary_list)
 }
 
+# --- Legend order (matches the Glu-A, Glu-B, GABA, NPC, OPC, MG, Endo-Peri
+# convention used in the other manuscript figures) - applied via explicit
+# factor levels, since ggplot otherwise falls back to alphabetical order
+cell_order_L1 <- relabel_cell_type(c("Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"))
+cell_order_L2 <- relabel_cell_type(c(
+  "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+  "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
+  "GABA-0", "GABA-1", "GABA-2",
+  "NPC-0", "NPC-1", "NPC-2"
+))
+
 summary_L1_list <- summarise_logs(cell_types, expr_dir)
-summary_L1_tbl <- bind_rows(summary_L1_list)
+summary_L1_tbl <- bind_rows(summary_L1_list) |>
+  mutate(cell_type = relabel_cell_type(cell_type),
+         cell_type = factor(cell_type, levels = cell_order_L1))
 
 summary_L2_list <- summarise_logs(cell_types_L2, expr_dir)
-summary_L2_tbl <- bind_rows(summary_L2_list)
+summary_L2_tbl <- bind_rows(summary_L2_list) |>
+  mutate(cell_type = relabel_cell_type(cell_type),
+         cell_type = factor(cell_type, levels = cell_order_L2))
 
 # Plot
 message('Generating expression L1 PC plot ...')
