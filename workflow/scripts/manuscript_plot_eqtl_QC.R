@@ -43,6 +43,9 @@ eqtl_list <- list()
 genPC <- 4
 norm_method <- 'quantile'
 
+# NOTE: Hardcoding last mainute cell type name change later in script
+# Glu-UL -> Glu-A
+# Glu-DL -> Glu-B 
 cell_types <- c("Glu-UL", "Glu-DL", "NPC", "GABA",
                 "Endo-Peri", "OPC", "MG",
                 "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
@@ -94,13 +97,31 @@ custom_palette <- c(
 )
 
 # --- Specify y-axis order
+# Order (pre-relabel, old names): Glu-UL, Glu-DL, GABA, NPC, OPC, MG, Endo-Peri
+# which becomes Glu-A, Glu-B, GABA, NPC, OPC, MG, Endo-Peri once relabelled below.
+# This drives ordering in Fig A (eqtl_cnt_plt / density_plt).
 cell_order <- c(
-  "Glu-DL", paste0("Glu-DL-", 0:2), 
   "Glu-UL", paste0("Glu-UL-", 0:2),
-  "NPC", paste0("NPC-", 0:2),
+  "Glu-DL", paste0("Glu-DL-", 0:2), 
   "GABA", paste0("GABA-", 0:2),
-  "Endo-Peri", "OPC", "MG"
+  "NPC", paste0("NPC-", 0:2),
+  "OPC", "MG", "Endo-Peri"
 )
+
+# --- Relabel map for cell type name changes (applied only for plotting/labels, not
+# file I/O, which must keep using the old Glu-UL / Glu-DL names to match pipeline output)
+relabel_map <- c("Glu-UL" = "Glu-A", "Glu-DL" = "Glu-B")
+
+relabel_cell_type <- function(x) {
+  x <- str_replace(x, "Glu-UL", "Glu-A")
+  x <- str_replace(x, "Glu-DL", "Glu-B")
+  x
+}
+
+# Relabelled versions of the order/palette vectors, for use in plots only
+cell_order_new <- relabel_cell_type(cell_order)
+custom_palette_new <- custom_palette
+names(custom_palette_new) <- relabel_cell_type(names(custom_palette_new))
 
 # --- Base theme
 base_theme <- theme_minimal(base_size = 14) +
@@ -158,12 +179,19 @@ eqtls_all <- eqtls_all |>
     TRUE ~ cell_type
   )) 
 
+# --- Relabel Glu-UL/Glu-DL -> Glu-A/Glu-B for plotting (cell_type + main_type)
+eqtls_all <- eqtls_all |>
+  mutate(cell_type = relabel_cell_type(as.character(cell_type)),
+         cell_type = fct_relevel(cell_type, cell_order_new),
+         cell_type = fct_rev(cell_type),
+         main_type = relabel_cell_type(main_type))
+
 density_plt <- ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
   geom_density() +
   geom_vline(xintercept = 0, linetype="dashed", color = "black") +
   geom_hline(yintercept = 0, color = "black", linewidth = 0.6) +
-  #scale_color_manual(values=custom_palette) +
-  #scale_fill_manual(values=custom_palette) +
+  #scale_color_manual(values=custom_palette_new) +
+  #scale_fill_manual(values=custom_palette_new) +
   scale_x_continuous(limits=c(-600,600), breaks=seq(-600,600,200)) +
   labs(x="Distance to TSS (kb)", y="Density") +
   base_theme +
@@ -182,8 +210,8 @@ gene_cell <- eqtls_all %>%
 egene_per_cell <- gene_cell %>% 
   count(cell_type) %>%
   mutate(main_type = case_when(
-    str_detect(cell_type, "Glu-UL") ~ "Glu-UL",
-    str_detect(cell_type, "Glu-DL") ~ "Glu-DL",
+    str_detect(cell_type, "Glu-A") ~ "Glu-A",
+    str_detect(cell_type, "Glu-B") ~ "Glu-B",
     str_detect(cell_type, "GABA") ~ "GABA",
     str_detect(cell_type, "NPC") ~ "NPC",
     str_detect(cell_type, "OPC") ~ "OPC",
@@ -195,7 +223,7 @@ egene_per_cell <- gene_cell %>%
 
 eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
   geom_col(width = 0.7, colour = 'black') +
-  scale_fill_manual(values = custom_palette) +
+  scale_fill_manual(values = custom_palette_new) +
   labs(x="Cell Type", y="Number of eGenes") +
   coord_flip() +
   base_theme +
@@ -204,8 +232,10 @@ eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
         legend.position = "none")
 
 # --- Scatter plot
+# cell_counts (file-path/original names) is relabelled at join time so it matches
+# egene_per_cell (already relabelled) on cell_type
 scatter_dat <- egene_per_cell %>%
-  left_join(cell_counts, by="cell_type") |>
+  left_join(cell_counts %>% mutate(cell_type = relabel_cell_type(cell_type)), by="cell_type") |>
   mutate(level = if_else(str_detect(cell_type, "\\d"), 2L, 1L))
 
 # Correlation
@@ -221,7 +251,7 @@ scatter_plt <- ggplot(scatter_dat, aes(x=n_cells, y=n)) +
   #                 force=2,      # pushes labels apart
   #                 nudge_y=100,  # pushes labels up a bit
   # ) +
-  scale_color_manual(values=custom_palette) +
+  scale_color_manual(values=custom_palette_new) +
   scale_shape_manual(values = c("1" = 16, "2" = 17), guide = "none") +  # 16: filled circle, 17: filled triangle
   scale_size_manual(values = c("1" = 4, "2" = 2.5), guide = "none") +
   scale_x_continuous(
@@ -282,6 +312,12 @@ comparison_tbl <- map_dfr(cell_types_L1, function(ct) {
   )
 })
 
+# --- Relabel Glu-UL/Glu-DL -> Glu-A/Glu-B for plotting, with an explicit factor
+# order (Glu-A, Glu-B, GABA, NPC)
+comparison_tbl <- comparison_tbl %>%
+  mutate(cell_type = relabel_cell_type(cell_type),
+         cell_type = factor(cell_type, levels = relabel_cell_type(cell_types_L1)))
+
 # Plot
 comparison_long <- comparison_tbl %>%
   pivot_longer(cols = c(unique_L1, shared, unique_L2),
@@ -313,14 +349,18 @@ combined_plt <- ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fi
         plot.margin = unit(c(1, 1, 1, 1), "cm"))
 
 # --- Ziffra
+# Relabel Glu-UL/Glu-DL -> Glu-A/Glu-B on the source columns before building the
+# compound `test` label, so `test` reflects the new names throughout
 ziffra_tbl <- read_tsv(paste0(ziffra_dir, 'ziffra_overlaps_primary.tsv')) |>
   mutate(clean_peak = str_replace_all(peak_cell_type, "_MACSpeaks", ""),
+         eqtl_cell_type = relabel_cell_type(eqtl_cell_type),
+         clean_peak = relabel_cell_type(clean_peak),
          test = paste(eqtl_cell_type, clean_peak, sep = ' in '))
   
-# --- Specify y-axis order
+# --- Specify y-axis order (patterns updated to match relabelled `test` strings)
 cell_order <- c(
-  sort(grep("^Glu-UL",  ziffra_tbl$test, value = TRUE)),
-  sort(grep("^Glu-DL",  ziffra_tbl$test, value = TRUE)),
+  sort(grep("^Glu-A",  ziffra_tbl$test, value = TRUE)),
+  sort(grep("^Glu-B",  ziffra_tbl$test, value = TRUE)),
   sort(grep("^GABA",    ziffra_tbl$test, value = TRUE)),
   sort(grep("^NPC",     ziffra_tbl$test, value = TRUE)),
   sort(grep("^OPC",       ziffra_tbl$test, value = TRUE)),
@@ -332,8 +372,8 @@ cell_order <- c(
 ziffra_tbl <- ziffra_tbl |>
   mutate(test = factor(test, levels = cell_order)) |>
   mutate(main_type = case_when(
-    str_detect(test, "Glu-UL") ~ "Glu-UL",
-    str_detect(test, "Glu-DL") ~ "Glu-DL",
+    str_detect(test, "Glu-A") ~ "Glu-A",
+    str_detect(test, "Glu-B") ~ "Glu-B",
     str_detect(test, "GABA") ~ "GABA",
     str_detect(test, "NPC") ~ "NPC",
     str_detect(test, "OPC") ~ "OPC",
@@ -350,7 +390,7 @@ ziffra_plt <- ziffra_tbl |>
   geom_hline(yintercept = 0, color = "black", linewidth = 0.6) +
 #  geom_vline(yintercept = 1, linetype = "dashed", color = "black") +
   geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
-  scale_fill_manual(values = custom_palette) +
+  scale_fill_manual(values = custom_palette_new) +
   labs(
     x = "Enrichment Test",
     y = "Fold Enrichment"

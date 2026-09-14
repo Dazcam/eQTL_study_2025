@@ -7,10 +7,10 @@
 # A: Pie chart of shared eGenes accross cell types
 # B: Upset Plot
 # C: Internal Pi1 heatmap
-# D: Fetal vs. adult Pi1 heatmap (only Glu and GABA only)
-# E: Fetal vs. adult beta correlation 1
-# F: Fetal vs. adult beta correlation 2
-# G: Fetal vs. adult beta correlation 3
+# D: Fetal vs. adult Pi1 heatmap (Jang et al. 2026; Glu-A, Glu-B, GABA, NPC only)
+# E: Fetal vs. adult beta correlation - Glu-A vs Ext (Jang)
+# F: Fetal vs. adult beta correlation - Glu-B vs Ext (Jang)
+# G: Fetal vs. adult beta correlation - GABA vs IN (Jang)
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -37,22 +37,24 @@ library(grid)
 
 # --- Set variables
 in_dir <- snakemake@params[['in_dir']]
-internal_dir <- snakemake@params[['internal_dir']] 
-fugita_dir <- snakemake@params[['fugita_dir']] 
-beta_dir <- snakemake@params[['beta_dir']] 
+internal_dir <- snakemake@params[['internal_dir']]
+jang_pi1_dir <- snakemake@params[['jang_pi1_dir']]
+jang_beta_file <- snakemake@input[['beta_file']]
 out_file <- snakemake@output[[1]]
 
 # in_dir <- '../results/05TENSORQTL/tensorqtl_perm/'
 # internal_dir <- "../results/06QTL-REPLICATION/internal/"
-# fugita_dir <- "../results/06QTL-REPLICATION/fugita/"
+# jang_pi1_dir <- "../results/19DEV-SPECIFICITY/pi1_jang/"
+# jang_beta_file <- "../results/19DEV-SPECIFICITY/<step5_output>.rds"
 # out_dir <- "../results/13MANUSCRIPT_PLOTS_TABLES/"
-# beta_dir <- "../results/06QTL-REPLICATION/beta_cor/"
 
+# NOTE: these old-format names (Glu-UL / Glu-DL) drive file paths for the eQTL
+# input files (Panel A) and the internal Pi1 comparison (Panel C), which are
+# still stored under the old naming on disk. Do not rename these - the
+# relabel_cell_type() helper below handles renaming for display only.
 cell_types <- c("Glu-UL", "Glu-DL", "NPC", "GABA", "Endo-Peri", "OPC", "MG")
-cell_types_sub <- c("Glu-UL", "Glu-DL", "NPC", "GABA")
-fugita_cell_types <- c('Ast', 'Exc', 'Inh', 'Oli', 'OPC', 'Mic', 'End')
 
-# Exp PC map
+# Exp PC map (old names - keys file paths for Panels A and C)
 expPC_map <- c(
   "Glu-UL"     = 50,
   "Glu-DL"     = 40,
@@ -63,10 +65,20 @@ expPC_map <- c(
   "Endo-Peri"  = 30
 )
 
-# Define custom color palette
+# --- Relabel map for cell type name changes, for display/plotting only
+relabel_cell_type <- function(x) {
+  x <- str_replace(x, "Glu-UL", "Glu-A")
+  x <- str_replace(x, "Glu-DL", "Glu-B")
+  x
+}
+
+cell_types_new <- relabel_cell_type(cell_types)
+
+# Define custom color palette (new Glu-A/Glu-B keys, since this is applied
+# only to already-relabelled data downstream)
 custom_palette <- c(
-  'Glu-UL' = '#4363d8',
-  'Glu-DL' = '#00B6EB',
+  'Glu-A' = '#4363d8',
+  'Glu-B' = '#00B6EB',
   'NPC' = '#FF5959',
   'GABA' = '#3CBB75FF',
   'Endo-Peri' = '#B200ED',
@@ -82,7 +94,7 @@ gene_lookup <- read_tsv('../resources/sheets/gene_lookup_hg38.tsv') |>
   select(gene = ensembl_gene_id, symbol = external_gene_name)
 
 
-# ----- Pie chart shared eQTL amoung L1 cell types -----
+# ----- Pie chart shared eQTL amoung L1 cell types (Panel A - unchanged) -----
 for (cell_type in cell_types) {
   
   expPC <- expPC_map[[cell_type]]
@@ -107,8 +119,11 @@ for (cell_type in cell_types) {
 
 eqtls_all <- bind_rows(eqtl_list)
 
+# Relabel here (feeds both Panel A's counts, which are cell-type-agnostic,
+# and Panel B's set names, which do need the new labels)
 gene_cell <- eqtls_all %>%
-  distinct(phenotype_id, cell_type)
+  distinct(phenotype_id, cell_type) %>%
+  mutate(cell_type = relabel_cell_type(cell_type))
 
 gene_counts <- gene_cell %>%
   count(phenotype_id) %>%  
@@ -171,7 +186,7 @@ pie_chart <- ggplot(pie_dat,aes(ymax = ymax, ymin = ymin, xmax = 1,
     color = "black"
   )
 
-# --- Upset Plot ----
+# --- Upset Plot (Panel B - relabelled set names) ----
 gene_by_cell <- gene_cell %>%
   pivot_wider(names_from = cell_type, values_from = cell_type,
               values_fill = 0, values_fn = function(x) 1) %>%
@@ -184,10 +199,10 @@ png(tmp_upset, width = 2800, height = 1800, res = 300)
 
 upset(
   gene_by_cell,
-  nsets          = length(cell_types),
+  nsets          = length(cell_types_new),
   order.by       = "freq",
   nintersects    = 20,
-  sets.bar.color = custom_palette[cell_types],
+  sets.bar.color = custom_palette[cell_types_new],
   point.size     = 3.8,
   line.size      = 2,
   # text.scale: c(intersection size title, intersection size tick labels, 
@@ -211,7 +226,7 @@ upset_plt <- ggplotify::as.ggplot(upset_grob) +
     plot.margin = margin(t = 40, r = 0, b = 40, l = 0, unit = "pt")
   )
 
-# --- Internal pi1 heatmap -----
+# --- Internal pi1 heatmap (Panel C - relabelled + new axis titles) -----
 read_pi1_results <- function(ct, ref_ct) {
   
   expPC <- expPC_map[[ct]]
@@ -238,23 +253,13 @@ read_pi1_results <- function(ct, ref_ct) {
   }
 }
 
-# Generate all combinations
+# Generate all combinations (old names - matches file paths on disk)
 combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, stringsAsFactors = FALSE)
 
 # Read all pi1 results
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
 
-# # Prepare data for Forward only (upper triangle including diagonal)
-# pi1_forward_tbl <- pi1_result_tbl %>%
-#   select(query = cell_type, ref = ref_cell_type, pi1 = pi1_forward) %>%
-#   mutate(
-#     pi1 = ifelse(query == ref, 1.0, pi1),  # diagonal = 1.0
-#     row_idx = match(query, cell_types),
-#     col_idx = match(ref, cell_types)
-#   ) %>%
-#   filter(row_idx <= col_idx)  # upper triangle including diagonal (opposite direction)
-
-# 1. Prepare the full square data without manual mirroring
+# Prepare the full square data without manual mirroring
 pi1_square_tbl <- pi1_result_tbl %>%
   mutate(
     # Use the specific Forward result for every unique combination provided by expand.grid
@@ -262,17 +267,12 @@ pi1_square_tbl <- pi1_result_tbl %>%
   ) %>%
   select(ref = cell_type, query = ref_cell_type, pi1 = pi1_final) %>%
   mutate(
+    ref = relabel_cell_type(ref),
+    query = relabel_cell_type(query),
     # rev() ensures the first cell type is at the top (standard matrix view)
-    query = factor(query, levels = rev(cell_types)), 
-    ref = factor(ref, levels = cell_types)
+    query = factor(query, levels = rev(cell_types_new)), 
+    ref = factor(ref, levels = cell_types_new)
   )
-
-# Force factor levels for correct ordering
-# pi1_int_tbl <- pi1_forward_tbl %>%
-#   mutate(
-#     query = factor(query, levels = cell_types),
-#     ref = factor(ref, levels = cell_types)
-#   )
 
 # Updated heatmap function
 plot_int_heatmap <- function(df) {
@@ -287,7 +287,7 @@ plot_int_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Cell type (Query)", y = "Cell type (Reference)") +
+    labs(x = "Prenatal cell type (replication)", y = "Prenatal cell type (discovery)") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -300,13 +300,13 @@ plot_int_heatmap <- function(df) {
 pi1_int_heatmap <- plot_int_heatmap(pi1_square_tbl)
 
 
-# --- Fugita pi1 heatmap -----
-# Function to read pi1 results
-read_pi1_results <- function(ct, ref_ct) {
-  
-  expPC <- expPC_map[[ct]]
-  
-  file_path <- paste0(fugita_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", expPC ,"_pi1_results_tbl.rds")
+# --- Jang pi1 heatmap (Panel D - replaces Fugita; restricted to Glu-A, Glu-B,
+# GABA, NPC rows in that order, all 7 Jang adult reference types as columns) -----
+jang_L1_cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC")  # old names - match file names on disk
+jang_adult_cell_types <- c("Ast", "End", "Ext", "IN", "MG", "OD", "OPC")
+
+read_jang_pi1_results <- function(ct, ref_ct, jang_dir) {
+  file_path <- paste0(jang_dir, ct, "_vs_", ref_ct, "_pi1_results_tbl.rds")
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
     
@@ -314,11 +314,7 @@ read_pi1_results <- function(ct, ref_ct) {
       cell_type = ct,
       ref_cell_type = ref_ct,
       pi1_forward = pi1_list$forward$pi1,
-      pi1_reverse = pi1_list$reverse$pi1,
-      prop_replicating_forward = pi1_list$forward$prop_replicating,
-      prop_replicating_reverse = pi1_list$reverse$prop_replicating,
-      prop_same_direction_forward = pi1_list$forward$prop_same_direction,
-      prop_same_direction_reverse = pi1_list$reverse$prop_same_direction
+      pi1_reverse = pi1_list$reverse$pi1
     )
   } else {
     message("File missing: ", file_path)
@@ -326,33 +322,23 @@ read_pi1_results <- function(ct, ref_ct) {
   }
 }
 
-# Generate all combinations
-combinations <- expand.grid(cell_type = cell_types_sub, ref_cell_type = fugita_cell_types, stringsAsFactors = FALSE)
+jang_combinations <- expand.grid(cell_type = jang_L1_cell_types, ref_cell_type = jang_adult_cell_types,
+                                 stringsAsFactors = FALSE)
 
-# Read all pi1 results
-pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
+pi1_jang_tbl <- map2_dfr(jang_combinations$cell_type, jang_combinations$ref_cell_type,
+                         read_jang_pi1_results, jang_dir = jang_pi1_dir)
 
-# Pivot for plotting
-pi1_long <- pi1_result_tbl %>%
-  select(cell_type, ref_cell_type, pi1_forward, pi1_reverse) %>%
-  pivot_longer(cols = c(pi1_forward, pi1_reverse),
-               names_to = "direction", values_to = "pi1") %>%
-  mutate(direction = recode(direction,
-                            pi1_forward = "Forward",
-                            pi1_reverse = "Reverse"))
-
-# Split the data by direction and filter to neurons only
-pi1_forward_tbl <- pi1_long %>% 
-  filter(direction == "Forward",
-    (
-      (ref_cell_type == "Exc" & (cell_type == "Glu-UL" | cell_type == "Glu-DL" | cell_type == "GABA")) |
-        (ref_cell_type == "Inh" & (cell_type == "Glu-UL" | cell_type == "Glu-DL" | cell_type == "GABA"))
-    )
+pi1_jang_square_tbl <- pi1_jang_tbl %>%
+  select(cell_type, ref_cell_type, pi1 = pi1_forward) %>%
+  mutate(
+    cell_type = relabel_cell_type(cell_type),
+    # rev() so Glu-A appears at the top (standard matrix view)
+    cell_type = factor(cell_type, levels = rev(relabel_cell_type(jang_L1_cell_types))),
+    ref_cell_type = factor(ref_cell_type, levels = jang_adult_cell_types)
   )
 
-
-# Function to generate a heatmap
-plot_fugita_heatmap <- function(df) {
+# Function to generate the Jang heatmap
+plot_jang_heatmap <- function(df) {
   ggplot(df, aes(x = ref_cell_type, y = cell_type, fill = pi1)) +
     geom_tile(color = "black", lwd = 1.1, linetype = 1) +
     geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
@@ -364,7 +350,7 @@ plot_fugita_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Adult Cell Type", y = "Prenatal Cell type") +
+    labs(x = "Adult cell type (replication)", y = "Prenatal cell type (discovery)") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
@@ -374,57 +360,66 @@ plot_fugita_heatmap <- function(df) {
     ) 
 }
 
-# Generate heatmaps
-pi1_fugita_heatmap <- plot_fugita_heatmap(pi1_forward_tbl)
+pi1_jang_heatmap <- plot_jang_heatmap(pi1_jang_square_tbl)
 
-### --- beta correlation plt -----
-beta_files <- c(
-#  "All"    = paste0(beta_dir, "replication_beta_correlation.tsv"),
-  "GABA"   = paste0(beta_dir, "GABA_beta_cor_single_tbl.tsv"),
-  "Glu-DL" = paste0(beta_dir, "Glu-DL_beta_cor_single_tbl.tsv"),
-  "Glu-UL" = paste0(beta_dir, "Glu-UL_beta_cor_single_tbl.tsv")
-)
 
-make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = NULL) {
+### --- beta correlation plt (Panels E-G - Jang data) -----
+jang_beta_list <- read_rds(jang_beta_file)
+paired_betas_all <- jang_beta_list$paired_betas
+
+# genes dropped from the table entirely (not just left unlabelled) for E/F/G
+exclude_genes <- c("ABCC8", "CLHC1")
+
+make_jang_beta_plot <- function(paired_betas_all, my_ct, jang_ct, gene_lookup,
+                                exclude_genes = character(0), label_genes = NULL,
+                                ct_labels) {
   
-  paired_betas <- read_tsv(tbl_path, show_col_types = FALSE) |>
-    separate(key, into = c("snp", "gene")) |>
-    left_join(gene_lookup, by = "gene") |>
-    distinct()
+  paired_betas <- paired_betas_all %>%
+    filter(my_cell_type == my_ct, jang_cell_type == jang_ct) %>%
+    left_join(gene_lookup, by = "gene") %>%
+    mutate(label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol)) %>%
+    filter(!(label_text %in% exclude_genes))
   
   ## Correlation
   cor_val <- cor(
     paired_betas$beta_my,
-    paired_betas$beta_fugita,
+    paired_betas$beta_jang,
     use = "complete.obs",
     method = "pearson"
   )
   
   cor_label <- sprintf("r = %.2f", cor_val)
   
-  ## Linear model
-  model <- lm(beta_my ~ beta_fugita, data = paired_betas)
-  
+  # --- Point classification: two-check "significant_jang" convention (see
+  # devspec_beta_correlation.R / devspec_report.Rmd), replacing the old
+  # sign-mismatch-only "discordant" rule. A pair is only highlighted as
+  # concordant/discordant if it is ALSO significant in Jang (i.e. it IS that
+  # gene's lead SNP in Jang's top-association file AND qval < 0.05) -
+  # everything else, including sign-mismatched pairs that aren't
+  # Jang-significant, falls into a single grey "other" bucket.
   paired_betas <- paired_betas |>
     mutate(
-      .resid = resid(model),
-      .dist  = abs(.resid),
-      discordant = sign(beta_my) != sign(beta_fugita) &
-        !is.na(beta_my) & !is.na(beta_fugita),
-      label_text = ifelse(is.na(symbol) | symbol == "NA", gene, symbol),
-      is_strong_outlier = .dist > quantile(.dist, 0.92, na.rm = TRUE),
+      concordant = sign(beta_my) == sign(beta_jang),
+      point_category = case_when(
+        significant_jang & concordant  ~ "concordant_both_sig",
+        significant_jang & !concordant ~ "discordant_both_sig",
+        TRUE                            ~ "other"
+      ),
       should_label = if (!is.null(label_genes)) label_text %in% label_genes else FALSE
     )
   
-  ggplot(paired_betas, aes(x = beta_fugita, y = beta_my)) +
-    geom_point(alpha = 0.2, color = "grey70", size = 1.8) +
+  ggplot(paired_betas, aes(x = beta_jang, y = beta_my)) +
     geom_point(
-      data = filter(paired_betas, is_strong_outlier & discordant),
-      color = "#d32f2f", size = 3, alpha = 0.5
+      data = filter(paired_betas, point_category == "other"),
+      alpha = 0.2, color = "grey70", size = 1.8
     ) +
     geom_point(
-      data = filter(paired_betas, is_strong_outlier & !discordant),
-      color = "#1976d2", size = 3, alpha = 0.5
+      data = filter(paired_betas, point_category == "discordant_both_sig"),
+      color = "#d32f2f", size = 3, alpha = 0.6
+    ) +
+    geom_point(
+      data = filter(paired_betas, point_category == "concordant_both_sig"),
+      color = "#1976d2", size = 3, alpha = 0.6
     ) +
     geom_smooth(method = "lm", color = "red", se = TRUE, linewidth = 0.9) +
     geom_abline(
@@ -452,8 +447,8 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
       hjust = 0, vjust = 1.8, size = 5
     ) +
     labs(
-      x = substitute("Adult" ~ x ~ beta, list(x = ct[2])),
-      y = substitute("Prenatal" ~ x ~ beta, list(x = ct[1]))
+      x = substitute("Adult" ~ x ~ beta, list(x = ct_labels[2])),
+      y = substitute("Prenatal" ~ x ~ beta, list(x = ct_labels[1]))
     ) +
     coord_cartesian(clip = "off") +
     theme_minimal(base_size = 13) +
@@ -466,12 +461,20 @@ make_beta_cor_plot <- function(tbl_path, gene_lookup, ct = NULL, label_genes = N
     )
 }
 
-beta_gaba_plt <- make_beta_cor_plot(beta_files[["GABA"]], gene_lookup, 
-                                    c("GABA", "Inh"), 'ABCC8')
-beta_gluDL_plt <- make_beta_cor_plot(beta_files[["Glu-DL"]], gene_lookup, 
-                                     c("Glu-DL", "Exc"), 'ABI3BP')
-beta_gluUL_plt <- make_beta_cor_plot(beta_files[["Glu-UL"]], gene_lookup, 
-                                     c("Glu-UL", "Exc"), 'ABCC8')
+beta_gluA_plt <- make_jang_beta_plot(paired_betas_all, "Glu-UL", "Ext", gene_lookup,
+                                     exclude_genes = exclude_genes,
+                                     label_genes = "PLBD2",
+                                     ct_labels = c("Glu-A", "Ext"))
+
+beta_gluB_plt <- make_jang_beta_plot(paired_betas_all, "Glu-DL", "Ext", gene_lookup,
+                                     exclude_genes = exclude_genes,
+                                     label_genes = c("PLBD2", "PTPA"),
+                                     ct_labels = c("Glu-B", "Ext"))
+
+beta_gaba_plt <- make_jang_beta_plot(paired_betas_all, "GABA", "IN", gene_lookup,
+                                     exclude_genes = exclude_genes,
+                                     label_genes = "PLBD2",
+                                     ct_labels = c("GABA", "IN"))
 
 ### --- plot -----
 # Final plot
@@ -480,8 +483,8 @@ top_row <- plot_grid(pie_chart, upset_plt, labels = c("A", "B"),
 
 # Stack heatmaps
 heatmaps_stacked <- plot_grid(
-  pi1_int_heatmap, #+ theme(plot.margin = margin(5,10,5,5,"pt")),
-  pi1_fugita_heatmap, #+ theme(plot.margin = margin(5,10,5,5,"pt")),
+  pi1_int_heatmap,
+  pi1_jang_heatmap,
   ncol = 1,
   rel_heights = c(1, 0.8),   # C slightly taller
   labels = c("C", "D"),
@@ -491,7 +494,7 @@ heatmaps_stacked <- plot_grid(
 
 # Stack betas 
 betas_stacked <- plot_grid(
-  beta_gluUL_plt, beta_gluDL_plt, beta_gaba_plt,
+  beta_gluA_plt, beta_gluB_plt, beta_gaba_plt,
   ncol = 1,
   rel_heights = c(1,1,1),
   labels = c("E", "F", "G"),
