@@ -760,6 +760,11 @@ susie:
     gene_lookup: ../../resources/sheets/gene_lookup_hg38.tsv
     log: ../results/00LOG/08SUSIE/08susie_report.log
 
+  lbf_comparison:
+     lbf_thresh: 2          # confirm base (log10 vs natural-log) before trusting this
+     overall: "../results/08SUSIE/lbf_comparison/lbf_comparison_overall.tsv"
+     log:     "logs/08susie.lbf_comparison.log"
+
 # ------------  SLDSR  ----------------
 sldsr:  
   get_hg38_refs:
@@ -1006,6 +1011,14 @@ plotting:
     out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/eQTL_tbl.xlsx
     log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/eqtl_tbl.log
 
+  diff_exp_tbl:
+    nb: scripts/manuscript_diff_exp_tbl.ipynb
+    nb_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_tbl_pm.ipynb
+    html_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_tbl.html
+    xlsx_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_genes_L1_L2_pseudotime.xlsx
+    pseudotime_dir: ../results/17PSEUDOTIME/
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/diff_exp_tbl.log
+
   smr_tbl:
     smr_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/
     eqtl_nom_dir: ../results/10SMR/smr_input/
@@ -1025,9 +1038,9 @@ plotting:
 
   rep_plt:
     in_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    internal_dir: ../results/06QTL-REPLICATION/internal/ 
-    fugita_dir:  ../results/06QTL-REPLICATION/fugita/
-    beta_dir: ../results/06QTL-REPLICATION/beta_cor/
+    internal_dir: ../results/06QTL-REPLICATION/internal/
+    jang_pi1_dir: ../results/19DEV-SPECIFICITY/pi1_jang/
+    jang_beta_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
     out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/replication_plt.pdf
     log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/replication_plt.log
 
@@ -1067,7 +1080,17 @@ plotting:
     out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/fusion_weights.tar.gz
     log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_weights.log
 
+  smr_ctwas_venn:
+    smr_tbl_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+    ctwas_in_dir: ../results/12CTWAS/
+    weights_dir: ../results/12CTWAS/weights
+    gene_lookup_file: ../resources/sheets/gene_lookup_hg38.tsv
+    out_file_scz: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/venn_scz.png
+    out_file_grid: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/venn_grid_bpd_mdd_adhd_ocd.png
+    genes_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/venn_{gwas}_genes.tsv
+    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/smr_ctwas_venn.log
 
+# Data sharing
 data_sharing:
   extract_fq:
     out_r1: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
