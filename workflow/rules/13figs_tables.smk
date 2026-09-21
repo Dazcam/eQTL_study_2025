@@ -2,7 +2,7 @@ configfile: '../config/config.yaml'
 
 rule all:
     input:
-#        config['plotting']['eqtl_tbl']['out_file'],
+        config['plotting']['eqtl_tbl']['out_file'],
 #        config['plotting']['smr_tbl']['out_file'],
 #        config['plotting']['eqtl_boxplots_py']['output'],
 #        config['plotting']['eqtl_qc_plt']['out_file'],
@@ -13,17 +13,38 @@ rule all:
 #        config['plotting']['data_nominal']['out_file'],
 #        config['plotting']['data_mk_eqtl_tar']['out_file']
 #        config['plotting']['data_weights']['out_file']
-        "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
+#        "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
+#       config['plotting']['smr_ctwas_venn']['out_file_grid']
 
 rule eqtl_tbl:
     output: config['plotting']['eqtl_tbl']['out_file']
     params: in_dir = config['plotting']['eqtl_tbl']['in_dir'],
             allele_file = config['plotting']['eqtl_tbl']['allele_file'],
-            peak_dir = config['plotting']['eqtl_tbl']['peak_dir']    
+            peak_dir = config['plotting']['eqtl_tbl']['peak_dir'],
+            cell_types = config['cell_types'],
+            exp_pc_map = config['exp_pc_map']
     singularity: config["containers"]["r_eqtl"]
     resources: time="2:00:00"
     log:  config['plotting']['eqtl_tbl']['log']
     script: "../scripts/manuscript_eQTL_table.R"
+
+rule diff_exp_tbl:
+    input:
+        nb      = config["plotting"]["diff_exp_tbl"]["nb"],
+        pt_h5ad = expand(
+            "../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad",
+            trajectory=config["trajectories"]
+        )
+    output:  html = config["plotting"]["diff_exp_tbl"]["html_out"],
+             xlsx = config["plotting"]["diff_exp_tbl"]["xlsx_out"]
+    conda:     config["scanpy"]["env"]
+    resources: threads = 8, mem_mb = 80000, time = "1:00:00"
+    params:    nb_out = config["plotting"]["diff_exp_tbl"]["nb_out"]
+    message: "Computing L1/L2/pseudotime bin differential expression tables"
+    log:     config["plotting"]["diff_exp_tbl"]["log"]
+    shell:
+        "papermill {input.nb} {params.nb_out} --execution-timeout -1 --request-save-on-cell-execute -p plate extra >> {log} 2>&1 && "
+        "jupyter nbconvert --to html {params.nb_out} --output {output.html} >> {log} 2>&1"
 
 rule smr_tbl:
     output: config['plotting']['smr_tbl']['out_file']
@@ -52,12 +73,23 @@ rule ldsr_plt:
     log:  config['plotting']['ldsr_plt']['log']
     script: "../scripts/manuscript_plot_ldsr.R"
 
+#rule replication_plt:
+#    output: config['plotting']['rep_plt']['out_file']
+#    params: in_dir = config['plotting']['rep_plt']['in_dir'],
+#            internal_dir = config['plotting']['rep_plt']['internal_dir'],
+#            fugita_dir = config['plotting']['rep_plt']['fugita_dir'],
+#            beta_dir = config['plotting']['rep_plt']['beta_dir']
+#    singularity: config["containers"]["r_eqtl"]
+#    resources: time="1:00:00"
+#    log:  config['plotting']['rep_plt']['log']
+#    script: "../scripts/manuscript_plot_replication.R"
+
 rule replication_plt:
+    input:  beta_file = config['plotting']['rep_plt']['jang_beta_file']
     output: config['plotting']['rep_plt']['out_file']
     params: in_dir = config['plotting']['rep_plt']['in_dir'],
             internal_dir = config['plotting']['rep_plt']['internal_dir'],
-            fugita_dir = config['plotting']['rep_plt']['fugita_dir'],
-            beta_dir = config['plotting']['rep_plt']['beta_dir']
+            jang_pi1_dir = config['plotting']['rep_plt']['jang_pi1_dir']
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['plotting']['rep_plt']['log']
@@ -142,6 +174,13 @@ rule final_genotypes:
            bcftools index --tbi {output} 2>> {log}
            """
 
+rule compare_smr_ctwas:
+    output: plot_grid = config['plotting']['smr_ctwas_venn']['out_file_grid']
+    singularity: config["containers"]["r_eqtl"]
+    resources: time="3:30:00"
+    log: config['plotting']['smr_ctwas_venn']['log']
+    script: "../scripts/manuscript_plot_compare_smr_ctwas.R"
+
 #rule manuscript_tables_report:
 #    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
 #    input:  ctwas_multi = expand(../results/12CTWAS/multi/ctwas_multi_{gwas}_ctwas.rds, gwas = config['gwas']),
@@ -165,6 +204,23 @@ rule final_genotypes:
 #            lookup_dir = '{params.lookup_dir}'))" > {log} 2>&1
 #        """
 
+rule eqtl_boxplots_py:
+    input:  pairs_csv = config['plotting']['eqtl_boxplots_py']['pairs_csv'],
+           geno = config['geno_post_impute']['exclude_SNPs']['output'],
+    output: config['plotting']['eqtl_boxplots_py']['output']
+    params: exp_dir = config['plotting']['eqtl_boxplots_py']['exp_dir'],
+            out_dir = config['plotting']['eqtl_boxplots_py']['out_dir'],
+    envmodules: "BCFtools"
+    conda:  config["scanpy"]["env"]
+    resources: threads = 4, mem_mb = 20000
+    log:    config['plotting']['eqtl_boxplots_py']['log']
+    shell:  """
+            python3 scripts/manuscript_eqtl_plot.py --pairs_file {input.pairs_csv} \
+              --genotype_file {input.geno} \
+              --expression_dir {params.exp_dir} \
+              --output_dir {params.out_dir} >> {log} 2>&1
+            """
+
 #rule eqtl_boxplots:
 #    output: config['plotting']['eqtl_boxplots']['output'] 
 #    params: exp_dir = config['plotting']['eqtl_boxplots']['exp_dir'],
@@ -174,23 +230,6 @@ rule final_genotypes:
 #            snp_id = config['plotting']['eqtl_boxplots']['snp_id']
 #    singularity: config["containers"]["r_eqtl"]
 #    resources: threads = 4, mem_mb = 20000
-#    envmodules: "plink/2.0"
+#    envmodules: "PLINK"
 #    log:  config['plotting']['eqtl_boxplots']['log']
 #    script: "../scripts/plot_eQTL_boxplots.R"
-
-#rule eqtl_boxplots_py:
-#    input:  pairs_csv = config['plotting']['eqtl_boxplots_py']['pairs_csv'],
-#            geno = config['geno_post_impute']['exclude_SNPs']['output'],
-#    output: config['plotting']['eqtl_boxplots_py']['output']
-#    params: exp_dir = config['plotting']['eqtl_boxplots_py']['exp_dir'],
-#            out_dir = config['plotting']['eqtl_boxplots_py']['out_dir'],
-##    envmodules: "bcftools"
-#    conda:  config["scanpy"]["env"]
-#    resources: threads = 4, mem_mb = 20000
-#    log:    config['plotting']['eqtl_boxplots_py']['log']
-#    shell:  """
-#            python3 scripts/eqtl_plot.py --pairs_file {input.pairs_csv} \
-#              --genotype_file {input.geno} \
-#              --expression_dir {params.exp_dir} \
-#              --output_dir {params.out_dir} >> {log} 2>&1
-#            """
