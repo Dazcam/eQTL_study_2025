@@ -36,6 +36,8 @@ rule all:
 #       config["dev_specificity"]["run_ld_clump"]["sentinel"],
 #       config["dev_specificity"]["parse_ld_clump"]["out_file"]
 #       config["dev_specificity"]["ocr_enrich"]["out_file"] 
+#       config["dev_specificity"]["chip_enrich"]["out_file"]
+#       config["dev_specificity"]["glm_enrich"]["out_file"]
 #        config["dev_specificity"]["eqtl_effects"]["out_file"]
 #       config["dev_specificity"]["beta_correlation"]["out_file"]   
 #       jang_pi1_inputs, 
@@ -119,7 +121,8 @@ rule classify_eqtl_specificity:
 rule heterogeneity_test:
     input:  eqtl_universe  = rules.extract_eqtl_universe.output[0],
             classification = rules.classify_eqtl_specificity.output[0],
-            pvar_file      = config["dev_specificity"]["beta_correlation"]["pvar_file"]
+            pvar_file      = config["dev_specificity"]["beta_correlation"]["pvar_file"],
+            gene_lookup    = config["dev_specificity"]["report"]["gene_lookup"]
     output: config["dev_specificity"]["heterogeneity_test"]["out_file"]
     params: fdr_thresh  = config["dev_specificity"]["heterogeneity_test"]["fdr_thresh"]
     singularity: config["containers"]["r_eqtl"]
@@ -230,6 +233,37 @@ rule ocr_enrich:
     log:    config["dev_specificity"]["ocr_enrich"]["log"]
     script: "../scripts/devspec_ocr_enrichment.R"
 
+rule chip_enrich:
+    input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+            heterogeneity_test = rules.heterogeneity_test.output[0],
+            independent_snps = rules.parse_ld_clump.output[0],
+            snp_lookups      = get_snp_lookup_files(),
+            nott_peaks       = config["setup"]["parse_nott_peaks"]["out_file"]
+    output: config["dev_specificity"]["chip_enrich"]["out_file"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 16000, time = "01:00:00"
+    threads: 4
+    message: "Test fetal-specific/shared/heterogeneous eQTL enrichment in Nott et al. 2019 union ChIP-seq peaks (hg38)"
+    benchmark: "reports/benchmarks/dev_specificity.chip_enrich.txt"
+    log:    config["dev_specificity"]["chip_enrich"]["log"]
+    script: "../scripts/devspec_chip_enrichment.R"
+
+rule glm_enrich:
+    input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+            independent_snps = rules.parse_ld_clump.output[0],
+            snp_lookups      = get_snp_lookup_files(),
+            li_s6            = config["dev_specificity"]["ocr_enrich"]["li_s6"],
+            li_s7            = config["dev_specificity"]["ocr_enrich"]["li_s7"]
+    output: config["dev_specificity"]["glm_enrich"]["out_file"]
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 2, mem_mb = 8000, time = "00:20:00"
+    threads: 2
+    message: "GLM comparison: is fetal_specific more concentrated than shared in Li et al. 2023 adult cortical OCRs?"
+    benchmark: "reports/benchmarks/dev_specificity.glm_enrich.txt"
+    log:    config["dev_specificity"]["glm_enrich"]["log"]
+    script: "../scripts/devspec_glm_enrichment.R"
+
+
 rule eqtl_effect_sizes:
     input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"],
             nom_files     = get_nom_files(),
@@ -281,6 +315,7 @@ rule pi1_enrich_jang:
 rule smr_dev_spec_overlap:
     input:  smr_files      = get_smr_files(),
             classification = rules.classify_eqtl_specificity.output[0],
+            heterogeneity_test = rules.heterogeneity_test.output[0],
             gene_lookup    = config["dev_specificity"]["report"]["gene_lookup"]
     output: config["dev_specificity"]["smr_overlap"]["out_file"]
     params: cell_types = DEVSPEC_CELL_TYPES,

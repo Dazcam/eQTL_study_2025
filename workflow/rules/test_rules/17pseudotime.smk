@@ -43,6 +43,27 @@ rule all:
 #       expand(config["pseudotime"]["palantair"]["h5ad"], trajectory = config['trajectories']),
 #       expand(config["pseudotime"]["pseudobulk"]["sentinel"], trajectory = config['trajectories']),
 
+rule pseudotime_palantir_all:
+    input:
+        h5ad = config["pseudotime"]["palantir_all"]["input_h5ad"]
+    output:
+        h5ad = config["pseudotime"]["palantir_all"]["output_h5ad"]
+    params:
+        exclude_types = config["pseudotime"]["palantir_all"]["exclude_types"],
+        root_gene     = config["pseudotime"]["palantir_all"]["root_gene"],
+        terminals     = config["pseudotime"]["palantir_all"]["terminals"],
+        marker_genes  = config["pseudotime"]["palantir_all"]["marker_genes"],
+        n_neighbors   = config["pseudotime"]["palantir_all"]["n_neighbors"],
+        n_pcs         = config["pseudotime"]["palantir_all"]["n_pcs"],
+        n_dcs         = config["pseudotime"]["palantir_all"]["n_dcs"],
+        num_waypoints = config["pseudotime"]["palantir_all"]["num_waypoints"]
+    conda:    config["pseudotime"]["env"]
+    resources: threads = 8, mem_mb = 200000, time = "02:00:00"
+    threads:  8
+    log:      config["pseudotime"]["palantir_all"]["log"]
+    message:  "Running Palantir on full filtered atlas for fate probability estimation"
+    script:   config["pseudotime"]["palantir_all"]["script"]
+
 rule subset_trajectory:
     input:  h5ad   = config["pseudotime"]["subset"]["input_h5ad"]
     output: h5ad   = config["pseudotime"]["subset"]["h5ad"]
@@ -139,6 +160,76 @@ rule pseudotime_tensorqtl_nom:
                --mode cis_nominal >> {log} 2>&1
             """
 
+rule pseudotime_extract_dosages:
+    input:
+        dosage    = config["pseudotime"]["dynamic_eqtl"]["dosage_file"],
+        dosage_idx= config["pseudotime"]["dynamic_eqtl"]["dosage_index"],
+        pvar      = config["pseudotime"]["extract_dosages"]["pvar_file"],
+        cell_type_perm = lambda wildcards: expand(
+            config["tensorQTL"]["tensorqtl_perm"]["output"],
+            cell_type   = wildcards.trajectory.split("-to-")[1],
+            norm_method = "quantile",
+            geno_pc     = 4,
+            exp_pc      = config["pseudotime"]["cell_type_exp_pc_map"][wildcards.trajectory]
+        )
+    output:
+        dosage_sub = config["pseudotime"]["extract_dosages"]["output"]
+    envmodules: "HTSlib/1.21-GCC-13.3.0"
+    resources:  threads = 1, mem_mb = 32000, time = "1:00:00"
+    log:        config["pseudotime"]["extract_dosages"]["log"]
+    message:    "Extracting genotype dosages for trajectory: {wildcards.trajectory}"
+    shell:
+        """
+        # Extract lead eSNP rsIDs from cell type perm file
+        zcat {input.cell_type_perm} | \
+            awk -F'\t' 'NR>1 && $NF+0<0.05 {{print $7}}' \
+            > {output.dosage_sub}.snps.tmp
+
+        # Get CHROM POS for lead SNPs from pvar
+        grep -v '^##' {input.pvar} | \
+            awk -F'\t' 'NR==FNR{{snps[$1]=1; next}} FNR>1 && ($3 in snps){{print $1"\t"$2}}' \
+            {output.dosage_sub}.snps.tmp - \
+            > {output.dosage_sub}.pos.tmp
+
+        # Extract dosages in single pass
+        zcat {input.dosage} | \
+            awk -F'\t' 'NR==FNR{{pos[$1"\t"$2]=1; next}} FNR==1 || ($1"\t"$2 in pos)' \
+            {output.dosage_sub}.pos.tmp - \
+            > {output.dosage_sub} 2>> {log}
+
+        # Clean up temp files
+        rm {output.dosage_sub}.snps.tmp {output.dosage_sub}.pos.tmp
+        """
+
+
+rule pseudotime_dynamic_eqtl:
+    input:
+        perm = expand(
+            config["pseudotime"]["tensorqtl_perm"]["output"],
+            trajectory = "{trajectory}",
+            quantile_n = 6,
+            bin        = range(1, 7),
+            exp_pc     = 30
+        ),
+        pseudobulk  = config["pseudotime"]["pseudobulk"]["sentinel"],
+        dosage_sub  = config["pseudotime"]["extract_dosages"]["output"],
+        pvar        = config["pseudotime"]["extract_dosages"]["pvar_file"]
+    output:
+        candidates_tsv = config["pseudotime"]["dynamic_eqtl"]["candidates_tsv"]
+    params:
+        perm_dir           = lambda wildcards: f"../results/17PSEUDOTIME/{wildcards.trajectory}/tensorqtl/perm",
+        pseudobulk_dir     = lambda wildcards: f"../results/17PSEUDOTIME/{wildcards.trajectory}/pseudobulk",
+        cov_dir            = lambda wildcards: f"../results/17PSEUDOTIME/{wildcards.trajectory}/tensorqtl/prep_input",
+        results_rds        = lambda wildcards: f"../results/17PSEUDOTIME/{wildcards.trajectory}/dynamic_eqtl/dynamic_eqtl_results.rds",
+        results_tsv        = lambda wildcards: f"../results/17PSEUDOTIME/{wildcards.trajectory}/dynamic_eqtl/dynamic_eqtl_significant.tsv",
+        cell_type_perm_dir = "../results/05TENSORQTL/tensorqtl_perm"
+    singularity: config["containers"]["r_eqtl"]
+    resources:   threads = 1, mem_mb = 10000, time = "10:00"
+    threads:     8
+    log:         config["pseudotime"]["dynamic_eqtl"]["log"]
+    message:     "Running dynamic eQTL LMM for trajectory: {wildcards.trajectory}"
+    script:      config["pseudotime"]["dynamic_eqtl"]["script"]
+
 rule pseudotime_export_smr_twas_inputs:
     input:
         parquet_sentinel = lambda w: (
@@ -190,6 +281,61 @@ rule pseudotime_export_smr_twas_inputs:
         cov_dest = f"../results/05TENSORQTL/prep_input/{pt_group}_quantile_genPC_4_expPC_{pc}_split_covariates.txt"
         shutil.copy(input.cov, cov_dest)
 
+#rule pseudotime_export_smr_twas_inputs:
+#    input:
+#        parquet_sentinel = lambda w: (
+#            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/"
+#            "Q4_bin{bin}_genPC4_expPC{pc}/Q4_bin{bin}_nom.cis_qtl_pairs.1.parquet"
+#        ).format(trajectory=w.trajectory, bin=w.bin,
+#                  pc=config["pseudotime"]["cell_type_exp_pc_map"][w.trajectory]),
+#        perm = lambda w: (
+#            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/"
+#            "Q4_bin{bin}_genPC4_expPC{pc}/Q4_bin{bin}_perm.cis_qtl.txt.gz"
+#        ).format(trajectory=w.trajectory, bin=w.bin,
+#                  pc=config["pseudotime"]["cell_type_exp_pc_map"][w.trajectory]),
+#        bed = "../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q4_bin{bin}_quantile.bed",
+#        cov = lambda w: (
+#            "../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/"
+#            "Q4_bin{bin}_quantile_genPC4_expPC{pc}_split_covariates.txt"
+#        ).format(trajectory=w.trajectory, bin=w.bin,
+#                  pc=config["pseudotime"]["cell_type_exp_pc_map"][w.trajectory])
+#    output:
+#        touch("../results/05TENSORQTL/prep_input/.pt_export_{trajectory}_Q4_bin{bin}.done")
+#    log:
+#        "../results/00LOG/17PSEUDOTIME/{trajectory}/export_smr_twas_Q4_bin{bin}.log"
+#    benchmark:
+#        "reports/benchmarks/17pseudotime.export_smr_twas_inputs_{trajectory}_Q4_bin{bin}.txt"
+#    wildcard_constraints:
+#        trajectory = "|".join(config["trajectories"]),
+#        bin = "[1-4]"
+#    message: "Exporting {wildcards.trajectory} Q4 bin {wildcards.bin} inputs for SMR/TWAS/SuSiE"
+#    run:
+#        import glob, os, shutil
+
+#        pc = config["pseudotime"]["cell_type_exp_pc_map"][wildcards.trajectory]
+#        pt_group = f"{wildcards.trajectory}-Q4-Bin{wildcards.bin}"
+
+#        # Nominal parquets
+#        src_dir = os.path.dirname(input.parquet_sentinel)
+#        dest_dir = f"../results/05TENSORQTL/tensorqtl_nom/{pt_group}_quantile_genPC_4_expPC_{pc}"
+#        os.makedirs(dest_dir, exist_ok=True)
+#        for src in glob.glob(os.path.join(src_dir, "Q4_bin*_nom.cis_qtl_pairs.*.parquet")):
+#            chrom_part = os.path.basename(src).split("cis_qtl_pairs.")[1]
+#            shutil.copy(src, os.path.join(dest_dir, f"{pt_group}_quantile_nom.cis_qtl_pairs.{chrom_part}"))
+
+#        # Permutation output (single file — needed by SuSiE's get_sig_eGenes/run_susie)
+#        perm_dest_dir = f"../results/05TENSORQTL/tensorqtl_perm/{pt_group}_quantile_genPC_4_expPC_{pc}"
+#        os.makedirs(perm_dest_dir, exist_ok=True)
+#        shutil.copy(input.perm, os.path.join(perm_dest_dir, f"{pt_group}_quantile_perm.cis_qtl.txt.gz"))
+
+#        # Expression bed
+#        bed_dest = f"../results/05TENSORQTL/prep_input/{pt_group}_quantile.bed"
+#        shutil.copy(input.bed, bed_dest)
+
+#        # Split covariates
+#        cov_dest = f"../results/05TENSORQTL/prep_input/{pt_group}_quantile_genPC_4_expPC_{pc}_split_covariates.txt"
+#        shutil.copy(input.cov, cov_dest)
+
 rule pseudotime_report:
     input:  perm           = get_pseudotime_tensorqtl(),
             rmd_script     = config["pseudotime"]["report"]["rmd_script"]
@@ -210,3 +356,29 @@ rule pseudotime_report:
                 cell_type_perm_dir = '{params.cell_type_perm_dir}'
             ))" > {log} 2>&1
         """
+
+#rule pseudotime_report:
+#    input:  perm           = get_pseudotime_tensorqtl(),
+#            dynamic        = expand(
+#                                config["pseudotime"]["dynamic_eqtl"]["candidates_tsv"],
+#                                trajectory = config["trajectories"]
+#                             ),
+#            rmd_script     = config["pseudotime"]["report"]["rmd_script"]
+#    output: config["pseudotime"]["report"]["html"]
+#    params: in_dir              = config["pseudotime"]["report"]["in_dir"],
+#            cell_type_perm_dir  = config["pseudotime"]["report"]["cell_type_perm_dir"],
+#            output_file         = config["pseudotime"]["report"]["output_file"]
+#    singularity: config["containers"]["r_eqtl"]
+#    resources: threads = 1, mem_mb = 8000, time = "1:00:00"
+#    log:    config["pseudotime"]["report"]["log"]
+#    message: "Generating pseudotime eQTL report"
+#    shell:
+#        """
+#        Rscript -e "rmarkdown::render('{input.rmd_script}', \
+#            output_file = '{params.output_file}', \
+#            params = list(
+#                in_dir             = '{params.in_dir}',
+#                cell_type_perm_dir = '{params.cell_type_perm_dir}'
+#            ))" > {log} 2>&1
+#        """
+

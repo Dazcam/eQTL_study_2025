@@ -7,7 +7,7 @@ rule convert_raw:
     resources: threads = 1, mem_mb = 50000, time = "0-1:00:00"
     params:  prefix_in = config["geno_pre_impute"]["convert_raw"]["prefix_in"],
              prefix_out = config["geno_pre_impute"]["convert_raw"]["prefix_out"]
-    envmodules: 'plink/1.9'
+    envmodules: 'PLINK'
     message: "Converting raw genotypes to plink format"
     benchmark: "reports/benchmarks/geno_pre_impute.convert_raw.benchmark.txt"
     log:     config["geno_pre_impute"]["convert_raw"]["log"]
@@ -22,7 +22,7 @@ rule add_sex_to_fam:
     output: config["geno_pre_impute"]["add_sex_to_fam"]["output"]
     params: prefix_in = config["geno_pre_impute"]["convert_raw"]["prefix_out"],
             prefix_out = config["geno_pre_impute"]["add_sex_to_fam"]["prefix_out"]
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "Standardise fam col 1 and col2 and add sex annotations to fam"
     benchmark: "reports/benchmarks/geno_pre_impute.add_sex_to_fam.benchmark.txt"
     log:    config["geno_pre_impute"]["add_sex_to_fam"]["log"]
@@ -46,7 +46,7 @@ rule rm_dup_sample:
     params: prefix_in = config["geno_pre_impute"]["add_sex_to_fam"]["prefix_out"],
             prefix_out = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"],
             remove_file = config["geno_pre_impute"]["rm_dup_sample"]["remove_file"]
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "Remove duplicate sample: 14493"
     benchmark: "reports/benchmarks/geno_pre_impute.rm_dup_sample.benchmark.txt"
     log:    config["geno_pre_impute"]["rm_dup_sample"]["log"]
@@ -65,7 +65,7 @@ rule check_het:
     output: config["geno_pre_impute"]["check_het"]["output"]
     params: prefix = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"],
             report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "Check for sample autosomal heterozygosity, add a rule to rm samples if needed"
     benchmark: "reports/benchmarks/geno_pre_impute.check_het.benchmark.txt"
     log: config["geno_pre_impute"]["check_het"]["log"] 
@@ -80,7 +80,7 @@ rule make_kgp3_pgen:
     input:   config["geno_pre_impute"]["make_kgp3_pgen"]["input"]
     output:  config["geno_pre_impute"]["make_kgp3_pgen"]["output"]
     resources: threads = 1, mem_mb = 50000, time = "0-1:00:00"
-    envmodules: "plink/2.0"
+    envmodules: "PLINK"
     params:  workdir = config["geno_pre_impute"]["make_kgp3_pgen"]["workdir"]
     message: "Create kgp3 pgen file"
     benchmark: "reports/benchmarks/geno_pre_impute.make_kgp3_pgen.benchmark.txt"
@@ -133,7 +133,7 @@ rule cat_genotypes:
     # Note here that input vcfs are aligned to hg38 despite what their name says
     input: rules.genotype_qc2hrc.output
     output: config["geno_pre_impute"]["cat_genotypes"]["output"]  
-    envmodules: "bcftools/1.16.0"
+    envmodules: "BCFtools"
     params: config["geno_pre_impute"]["cat_genotypes"]["in_dir"]
     message: "Cat chr specific genotypes into a single file"
     benchmark: "reports/benchmarks/geno_pre_impute.cat_genotypes.benchmark.txt"
@@ -151,7 +151,7 @@ rule rm_maf_ambig:
     params: prefix_in = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_in"],
             prefix_out = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_out"],
             ambig_snp_lst = config["geno_pre_impute"]["rm_maf_ambig"]["ambig_snp_lst"]
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "Rm strand ambiguous SNPs with MAF > 0.4"
     benchmark: "reports/benchmarks/geno_pre_impute.rm_maf_ambig.benchmark.txt"
     log:    config["geno_pre_impute"]["rm_maf_ambig"]["log"]
@@ -178,7 +178,7 @@ rule rm_rare_snps:
     params: prefix_in = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_out"],
             prefix_out = config["geno_pre_impute"]["rm_rare_snps"]["prefix_out"],
             report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "Rm rare SNPs with MAF < 0.01"
     benchmark: "reports/benchmarks/geno_pre_impute.rm_rm_rare_snps.benchmark.txt"
     log:    config["geno_pre_impute"]["rm_rare_snps"]["log"]    
@@ -198,7 +198,7 @@ rule split_chrs:
             outdir = config["geno_pre_impute"]["split_chrs"]["outdir"]
     benchmark: "reports/benchmarks/geno_pre_impute.split_chrs.benchmark.txt"
     message: "Split chrs for TOPMED imputation"
-    envmodules: "plink/1.9", "compiler/gnu/7/3.0", "bcftools/1.16.0"
+    envmodules: "plink/1.9", "compiler/gnu/7/3.0", "bcftools/1.16.0" # Need to fix this for FALCON
     log: config["geno_pre_impute"]["split_chrs"]["log"]
     shell:
         """
@@ -261,7 +261,7 @@ rule geno_pre_report:
     params: in_dir = config["geno_pre_impute"]["geno_pre_report"]["in_dir"],
             bmark_dir = config["geno_pre_impute"]["geno_pre_report"]["bmark_dir"],
             output_file = config["geno_pre_impute"]["geno_pre_report"]["out_file"]
-    singularity: config["containers"]["R"]
+    singularity: config["containers"]["r_eqtl"]
     message: "Generate genotyping pre-imputation report"
     benchmark: "reports/benchmarks/geno_pre_impute.geno_pre_report.benchmark.txt"
     log: config["geno_pre_impute"]["geno_pre_report"]["log"]
