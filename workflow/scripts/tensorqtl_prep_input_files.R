@@ -32,7 +32,9 @@ message("\n\nPrepping input files for tensorQTL input ...")
 library(edgeR)
 library(tidyverse)
 library(limma)  # For quantile normalization
-library(sva)    # For ComBat
+
+# Load functions
+source("functions.R")
 
 # Input and output paths
 cov_file <- snakemake@input[["cov_file"]]
@@ -47,7 +49,7 @@ cell_type <- snakemake@wildcards[["cell_type"]]
 norm_method <- snakemake@params[["norm_method"]] 
 batch_var <- snakemake@params[["batch_var"]]
 
-# For testing
+# For testing locally
 # cov_file <- "../results/04GENOTYPES-POST/covariates/pca.eigenvec"
 # sex_file <- "reports/02SCANPY/02_metadata_per_sample.tsv"
 # gene_lookup <- "../resources/sheets/gene_lookup_hg38.tsv"
@@ -166,64 +168,7 @@ message('\nDimensions of normalised counts: ',
 
 # Branch for different normalization methods and filters
 message('\nApplying normalization method: ', norm_method, ' ...\n')
-if (norm_method == "bryois") {
-  # Bryois: Filter genes with mean CPM < 1; PMID:35915177
-  mean_cpm <- rowMeans(normalised_cnts)
-  low_expr_genes <- mean_cpm < 1
-  if (sum(low_expr_genes) > 0) {
-    message('Removed ', sum(low_expr_genes), ' genes with mean CPM < 1 for ', cell_type)
-    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
-  }
-  print(normalised_cnts[1:5, 1:5])
-} else if (norm_method == "fujita") {
-  # Fujita: log2(CPM +1), filter genes with log2 CPM < 2.0 in all samples; PMID:38514782
-  normalised_cnts <- log2(normalised_cnts + 1)  # Add 1 to avoid log(0)
-  low_expr_genes <- rowSums(normalised_cnts >= 2.0) == 0  # Genes with log2 CPM < 2.0 in all samples
-  if (sum(low_expr_genes) > 0) {
-    message('Removed ', sum(low_expr_genes), ' genes with log2 CPM < 2.0 in all samples for ', cell_type)
-    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
-  }
-  print(normalised_cnts[1:5, 1:5])
-} else if (norm_method == "quantile") {
-  # Quantile: Fujita steps + quantile normalization
-  normalised_cnts <- log2(normalised_cnts + 1)
-  low_expr_genes <- rowSums(normalised_cnts >= 2.0) == 0
-  if (sum(low_expr_genes) > 0) {
-    message('Removed ', sum(low_expr_genes), ' genes with log2 CPM < 2.0 for ', cell_type)
-    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
-  }
-  normalised_cnts <- normalizeQuantiles(normalised_cnts)
-  print(normalised_cnts[1:5, 1:5])
-  
-} else if (norm_method == "combat") {
-  # ComBat: Quantile steps + batch correction (not tested)
-  normalised_cnts <- log2(normalised_cnts + 1)
-  low_expr_genes <- rowSums(normalised_cnts >= 2.0) == 0
-  if (sum(low_expr_genes) > 0) {
-    message('Removed ', sum(low_expr_genes), ' genes with log2 CPM < 2.0 for ', cell_type)
-    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
-  }
-  normalised_cnts <- normalizeQuantiles(normalised_cnts)
-  
-  batch <- cov_tbl[[batch_var]][match(available_samples, cov_tbl$sample)]
-  if (any(is.na(batch))) stop("NA in batch variable; check cov_tbl")
-  normalised_cnts <- ComBat(dat = normalised_cnts, batch = batch, mod = NULL, par.prior = TRUE)
-  print(normalised_cnts[1:5, 1:5])
-  
-} else if (norm_method == "xue") {
-  # Xue Option #11: QC (≥90% zeros), log1p, z-score (STD); PMID:36823676
-  zero_prop <- rowMeans(normalised_cnts == 0)
-  low_expr_genes <- zero_prop >= 0.9
-  if (sum(low_expr_genes) > 0) {
-    message('Removed ', sum(low_expr_genes), ' genes with >=90% zeros for ', cell_type)
-    normalised_cnts <- normalised_cnts[!low_expr_genes, , drop = FALSE]
-  }
-  normalised_cnts <- log(normalised_cnts + 1)  # log1p
-  normalised_cnts <- t(scale(t(normalised_cnts)))  # Z-score per gene (mean 0, SD 1)
-  print(normalised_cnts[1:5, 1:5])
-} else {
-  stop("Unknown norm_method: ", norm_method)
-}
+normalised_cnts <- normalise_counts(normalised_cnts, norm_method, cell_type)
 
 message('\nDimensions after method-specific filtering: ',
         paste0(dim(normalised_cnts)[1], ' x ', dim(normalised_cnts)[2]))

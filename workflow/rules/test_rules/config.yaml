@@ -1,0 +1,31 @@
+# -----------  JOBS  --------------
+
+jobs:
+  run_jobs:
+    bulk_file: ../resources/public_datasets/wen_2024/devBrain_eQTL_EUR_nominal_50HCP_FDR_0.05.txt.gz
+    output: ../results/12JOBS/jobs_with_se_p.tsv.gz
+    sc_dir: ../results/10SMR/smr_input/
+    out_dir: ../results/12JOBS/
+    log: ../results/00LOG/12JOBS/run_jobs.log
+
+  merge_jobs: 
+    nom_p: ../results/12JOBS/mrgd/{cell_type}_nom.cis_qtl_pairs_jobs_mrg.tsv
+    fdr: ../results/12JOBS/mrgd/{cell_type}_nom.cis_qtl_pairs_jobs_mrg_fdr.tsv
+    jobs_dir: ../results/12JOBS/
+    log: ../results/00LOG/12JOBS/smr_input/merge_jobs_{cell_type}.log
+
+  create_query:
+    query: ../results/12JOBS/smr_input/{cell_type}/{cell_type}_query.tsv
+    gene_lst: ../results/12JOBS/smr_input/{cell_type}/{cell_type}_gene_list.tsv
+    log: ../results/00LOG/12JOBS/create_query_{cell_type}.log
+
+  create_besd:
+    besd: ../results/12JOBS/smr_input/{cell_type}/{cell_type}.besd
+    prefix: ../results/12JOBS/smr_input/{cell_type}/{cell_type}
+    log: ../results/00LOG/12JOBS/create_besd_{cell_type}.log
+
+  smr:
+    smr: ../results/12JOBS/smr/{cell_type}/{cell_type}_{gwas}.smr
+    smr_prefix: ../results/12JOBS/smr/{cell_type}/{cell_type}_{gwas}
+    log: ../results/00LOG/12JOBS/smr_{cell_type}_{gwas}.log 
+

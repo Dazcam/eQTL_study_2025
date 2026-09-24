@@ -1,6 +1,10 @@
 configfile: "../config/config.yaml"
 localrules: prep_susie_gene_meta
 
+rule all:
+    input: 
+        config["susie"]["lbf_comparison"]["overall"]        
+
 rule get_sig_eGenes:
     input:  lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
                 geno_pc=config['tensorQTL']['geno_pcs']:
@@ -167,3 +171,13 @@ rule susie_report:
                           gene_meta_dir = '{params.gene_meta_dir}', \
                           gene_lookup = '{params.gene_lookup}'))" > {log} 2>&1
         """
+
+rule susie_lbf_comparison:
+    input:  susie_files = expand(rules.sort_susie.output, cell_type = config["cell_types"])
+    output: overall = config["susie"]["lbf_comparison"]["overall"]
+    params: lbf_thresh = config["susie"]["lbf_comparison"]["lbf_thresh"]
+    singularity: config["containers"]["R"]
+    message: "Compare SuSiE credible set retention with vs without an LBF filter"
+    benchmark: "reports/benchmarks/08susie.lbf_comparison.txt"
+    log:    config["susie"]["lbf_comparison"]["log"]
+    script: "../scripts/susie_lbf_filter_comparison.R"

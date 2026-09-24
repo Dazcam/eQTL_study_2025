@@ -2,7 +2,7 @@ configfile: '../config/config.yaml'
 
 rule all:
     input:
-        config['plotting']['eqtl_tbl']['out_file'],
+#        config['plotting']['eqtl_tbl']['out_file'],
 #        config['plotting']['smr_tbl']['out_file'],
 #        config['plotting']['eqtl_boxplots_py']['output'],
 #        config['plotting']['eqtl_qc_plt']['out_file'],
@@ -15,6 +15,8 @@ rule all:
 #        config['plotting']['data_weights']['out_file']
 #        "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
 #       config['plotting']['smr_ctwas_venn']['out_file_grid']
+       config["plotting"]["diff_exp_tbl"]["html_out"],
+       config["plotting"]["diff_exp_tbl"]["xlsx_out"] 
 
 rule eqtl_tbl:
     output: config['plotting']['eqtl_tbl']['out_file']
@@ -26,7 +28,7 @@ rule eqtl_tbl:
     singularity: config["containers"]["r_eqtl"]
     resources: time="2:00:00"
     log:  config['plotting']['eqtl_tbl']['log']
-    script: "../scripts/manuscript_eQTL_table.R"
+    script: "../scripts/manuscript_table_smr.R"
 
 rule diff_exp_tbl:
     input:
@@ -38,13 +40,15 @@ rule diff_exp_tbl:
     output:  html = config["plotting"]["diff_exp_tbl"]["html_out"],
              xlsx = config["plotting"]["diff_exp_tbl"]["xlsx_out"]
     conda:     config["scanpy"]["env"]
-    resources: threads = 8, mem_mb = 80000, time = "1:00:00"
+    resources: threads = 16, mem_mb = 360000, time = "2:00:00"
     params:    nb_out = config["plotting"]["diff_exp_tbl"]["nb_out"]
     message: "Computing L1/L2/pseudotime bin differential expression tables"
     log:     config["plotting"]["diff_exp_tbl"]["log"]
     shell:
-        "papermill {input.nb} {params.nb_out} --execution-timeout -1 --request-save-on-cell-execute -p plate extra >> {log} 2>&1 && "
-        "jupyter nbconvert --to html {params.nb_out} --output {output.html} >> {log} 2>&1"
+        "papermill {input.nb} {params.nb_out} -p plate extra >> {log} 2>&1 && "
+        "jupyter nbconvert --to html {params.nb_out} "
+        "--output-dir=$(dirname {output.html}) "
+        "--output=$(basename {output.html}) >> {log} 2>&1"
 
 rule smr_tbl:
     output: config['plotting']['smr_tbl']['out_file']
@@ -53,7 +57,7 @@ rule smr_tbl:
     singularity: config["containers"]["r_eqtl"]
     resources: time="2:00:00",threads = 10, mem_mb = 80000
     log:  config['plotting']['smr_tbl']['log']
-    script: "../scripts/manuscript_smr_table.R"
+    script: "../scripts/manuscript_table_smr.R"
 
 
 rule eqtl_qc_plt:

@@ -6,7 +6,7 @@ rule impute_check:
             vcf = config['geno_post_impute']['impute_check']['vcf']
     params: dir = config['geno_post_impute']['impute_check']['in_dir'],
             pwd = config['geno_post_impute']['impute_check']['pwd']
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     message: "Evaluate imputation quality for each chromosome"
     benchmark: "reports/benchmarks/geno_post_impute.impute_check_{chr}.txt"
     log: config['geno_post_impute']['impute_check']['log']
@@ -76,7 +76,7 @@ rule add_rsID:
     input:  vcf = rules.impute_check.output.vcf,
             dbsnp = rules.dwnld_dbsnp_ref.output
     output: config['geno_post_impute']['add_rsID']['output']
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     message: "Add dbSNP rsIDs to each imputed chr-specific VCF file"
     benchmark: "reports/benchmarks/geno_post_impute.add_rsID_{chr}.txt"
     log:    config['geno_post_impute']['add_rsID']['log']
@@ -88,7 +88,7 @@ rule add_rsID:
 rule vcf_cat:
     input:  expand(rules.add_rsID.output, chr=CHROMOSOMES)
     output: config['geno_post_impute']['vcf_cat']['output']
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     message: "Cat imputed chr-specific VCF files into single file"
     benchmark: "reports/benchmarks/geno_post_impute.vcf_cat.txt"
     log:    config['geno_post_impute']['vcf_cat']['log']
@@ -101,7 +101,7 @@ rule vcf_cat:
 rule filter_tags:
     input:  rules.vcf_cat.output
     output: config['geno_post_impute']['filter_tags']['output']
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     message: "Compute HWE and filt concated VCF; Keep SNPs passing MAF, R^2 and HWE threshs"
     benchmark: "reports/benchmarks/geno_post_impute.filter_tags.txt"
     params: hwe = config['geno_post_impute']['filter_tags']['hwe'],
@@ -138,7 +138,7 @@ rule exclude_SNPs:
     input:  vcf = rules.filter_tags.output,
             list = rules.check_VCF.output.list
     output: config['geno_post_impute']['exclude_SNPs']['output']
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     message: "Exclude SNPs IDed in CheckVCF"
     benchmark: "reports/benchmarks/geno_post_impute.exclude_SNPs.txt"
     log:    config['geno_post_impute']['exclude_SNPs']['log']
@@ -149,7 +149,7 @@ rule exclude_SNPs:
 rule idx_vcf:
     input:  rules.exclude_SNPs.output
     output: config['geno_post_impute']['idx_vcf']['output']
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     log:    config['geno_post_impute']['idx_vcf']['log']
     shell:  """
             tabix -p vcf {input} > {log} 2>&1
@@ -162,7 +162,7 @@ rule create_combined_log:
             check_vcf_log = rules.check_VCF.output.log_out,
             exclude_snps = rules.exclude_SNPs.output
     output: combined_log = config['geno_post_impute']['create_combined_log']['output']
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     message: "Summarise logs from previous rules"
     benchmark: "reports/benchmarks/geno_post_impute.create_combined_log.txt"
     shell:
@@ -215,7 +215,7 @@ rule get_sample_list:
     input:  rules.idx_vcf.output
     output: config['geno_post_impute']['get_sample_list']['output']
     params: config['geno_post_impute']['exclude_SNPs']['output']  
-    envmodules: "bcftools"
+    envmodules: "BCFtools"
     message: "Extract final sample list"
     benchmark: "reports/benchmarks/geno_post_impute.get_sample_list.txt"
     shell:  "bcftools query -l {params} > {output}"
@@ -226,7 +226,7 @@ rule vcf_to_plink:
             idx = rules.idx_vcf.output
     output: config['geno_post_impute']['vcf_to_plink']['output']
     params: config['geno_post_impute']['vcf_to_plink']['params'] 
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "Convert genotypes VCF to plink format"
     benchmark: "reports/benchmarks/geno_post_impute.vcf_to_plink.txt"
     log:    config['geno_post_impute']['vcf_to_plink']['log']
@@ -237,7 +237,7 @@ rule get_ld_pruned_snps:
     output: config['geno_post_impute']['get_ld_pruned_snps']['output']
     params: input_prefix = config['geno_post_impute']['vcf_to_plink']['params'],
             output_prefix = config['geno_post_impute']['get_ld_pruned_snps']['params']
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "LD prune SNPs before running PCA on genotypes"
     benchmark: "reports/benchmarks/geno_post_impute.get_ld_pruned_snps.txt"
     log:    config['geno_post_impute']['get_ld_pruned_snps']['log']
@@ -255,7 +255,7 @@ rule prune_genotypes:
             output_prefix = config['geno_post_impute']['prune_genotypes']['params']
     message: "Create genotypes plink-format file containing only pruned SNPs"
     benchmark: "reports/benchmarks/geno_post_impute.prune_genotypes.txt"   
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     log:    config['geno_post_impute']['prune_genotypes']['log']
     shell:  """
             plink --bfile {params.input_prefix} \
@@ -270,7 +270,7 @@ rule calc_genotype_pcs:
     params: input_prefix = config['geno_post_impute']['prune_genotypes']['params'],
             output_prefix = config['geno_post_impute']['calc_genotype_pcs']['params'],
             pcs = config['geno_post_impute']['calc_genotype_pcs']['pcs']
-    envmodules: "plink/1.9"
+    envmodules: "PLINK"
     message: "Run PCA on pruned genotypes to get genotype-specific PC covariates"
     benchmark: "reports/benchmarks/geno_post_impute.calc_genotype_pcs.txt"
     log:    config['geno_post_impute']['calc_genotype_pcs']['log']

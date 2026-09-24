@@ -11,7 +11,8 @@ rule all:
 #        config["setup"]["liftover"]["output"],
 #        config["setup"]["get_fugita_data"]["output"],
 #        config["setup"]["get_jang_singlebrain"]["output"]
-        config["setup"]["get_obrien_supp"]["output"]
+#        config["setup"]["get_obrien_supp"]["output"]
+        config["setup"]["liftover_nott_hg38"]["output"]
 
 rule get_containers:
     output:  config["setup"]["get_containers"]["output"],
@@ -76,6 +77,29 @@ rule get_jang_singlebrain:
              zenodo_get 10.5281/zenodo.14908182 -o {params.outdir} > {log} 2>&1
              touch {output}
              """
+
+rule parse_nott_peaks:
+    input:  xlsx = config["setup"]["parse_nott_peaks"]["xlsx_file"]
+    output: config["setup"]["parse_nott_peaks"]["out_file"]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Parse Nott et al. 2019 Table S5 (8 sheets) into a combined hg19 BED"
+    benchmark: "reports/benchmarks/nott_2019.parse_nott_peaks.txt"
+    log:    config["setup"]["parse_nott_peaks"]["log"]
+    script: "../scripts/setup_parse_nott_peaks.R"
+
+rule liftover_nott_peaks:
+    # Liftover Nott et al. 2019 peaks from hg19 to hg38
+    input: sentinel = config["setup"]["liftover"]["output"],
+           bed   = rules.parse_nott_peaks.output,
+           chain = config["setup"]["liftover_nott_hg38"]["chain"]
+    output:  config["setup"]["liftover_nott_hg38"]["output"]
+    singularity: config["containers"]["ubuntu"]
+    params: config["setup"]["liftover_nott_hg38"]["unlifted"]
+    benchmark: "reports/benchmarks/setup.liftover_nott_hg38.txt"
+    message: "Lifting over Nott et al. 2019 peaks from hg19 to hg38"
+    log: config["setup"]["liftover_nott_hg38"]["log"]
+    shell: "../resources/liftover/liftOver {input.bed} {input.chain} {output} {params} 2> {log}"
+
 
 #rule get_obrien_data:
 #    output: all_qtl = config["setup"]["get_obrien_data"]["all_qtl"],
