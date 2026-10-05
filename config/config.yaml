@@ -211,6 +211,18 @@ setup:
     token: ../config/passwords/synapse.txt
     log: ../results/00LOG/00SETUP/get_fugita_data.log
 
+
+  parse_nott_peaks:
+    xlsx_file: ../resources/public_datasets/nott_2019/nott_2019_table_s5.xlsx
+    out_file:  ../resources/public_datasets/nott_2019/nott_peaks_hg19.bed
+    log:       ../results/00LOG/00SETUP/nott_parse_peaks.log
+
+  liftover_nott_hg38:
+    chain:     ../resources/liftover/hg19ToHg38.over.chain.gz
+    output:    ../resources/public_datasets/nott_2019/nott_peaks_hg38.bed
+    unlifted:  ../resources/public_datasets/nott_2019/nott_peaks_hg38.unlifted.bed
+    log:       ../results/00LOG/00SETUP/nott_liftover.log
+
   get_jang_singlebrain:
     output: ../resources/public_datasets/Jang_2026/.setup_get_jang_singlebrain.done
     outdir: ../resources/public_datasets/Jang_2026/
@@ -479,7 +491,7 @@ geno_post_impute:
     bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/04GENOTYPES-POST/geno_post_report.log
 
-# ------------  TENSORQTL  ----------------
+# ------------  TENSORQTL (pipeline 5)  ----------------
 
 tensorQTL:
   tool: tensorqtl
@@ -504,7 +516,6 @@ tensorQTL:
     pseudoblk_dir: ../results/02SCANPY/pseudobulk/
     out_dir: ../results/05TENSORQTL/prep_input/
     report_dir: reports/05TENSORQTL/
-    batch_var: "PCW"  # For ComBat; set to your batch column (e.g., "PCW", "sample")
     log: ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
 
   zip_pblk_cnts:
@@ -539,18 +550,6 @@ tensorQTL:
     prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log   
 
-  tensorqtl_trans:
-    output: ../results/05TENSORQTL/tensorqtl_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}.trans_qtl_pairs.txt.gz
-    prefix_out: ../results/05TENSORQTL/tensorqtl_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}
-    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_trans.log
-
-  get_perm_ld_proxies:
-    output: ../results/05TENSORQTL/proxies/{cell_type}/tensorqtl_perm_proxies.tsv    
-    proxy_dir: ../results/05TENSORQTL/proxies/{cell_type}/    
-    ldlink_token: ../config/ldlink_token.txt
-    log: ../results/00LOG/05TENSORQTL/get_perm_ld_proxies_{cell_type}.log
-
   tensorqtl_report:
     rmd_script: scripts/tensorQTL_report.Rmd
     output: reports/05TENSORQTL/tensorqtl_report.html
@@ -558,21 +557,6 @@ tensorQTL:
     bmark_dir: ../reports/benchmarks/
     output_file: ../reports/05TENSORQTL/tensorqtl_report.html
     log: ../results/00LOG/05TENSORQTL/tensorqtl_report.log
-
-# Note: split this into 2 scripts
-# ../scripts/tensorqtl_get_perm_ld_proxies.R uses LDlink R to download proxy SNPs first
-# Still to updtae trans script, we may drop this analysis anyway
-#  post_trans:
-#    output: ../results/05TENSORQTL/post_trans/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_post_trans.tsv 
-#    proxy_dir: ../results/05TENSORQTL/proxies/{cell_type}/
-#    ldlink_token: ../config/ldlink_token.txt
-#    log: ../results/00LOG/05TENSORQTL/post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
-
-  tensorqtl_tss_plt: ../results/figs/tss_density_plot_combined.png
-  tensorqtl_tss_tbl: ../results/tables/tensorqtl_summary_table.tsv
-
-  tensorqtl_tss: ../results/00LOG/04TENSORQTL/tss.log   
-
 
 # --------  QTL REPLICATION  ----------
 
@@ -992,9 +976,62 @@ ctwas:
     output_file: ../reports/12CTWAS/12ctwas_report.html
     log: ../results/00LOG/12CTWAS/ctwas_report.log 
 
-# ---------  Tables & Plotting  ------------
+# ---------  Tables (pipeline 13)  ------------
+tables:
+  eqtl_tbl:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    peak_dir: ../resources/public_datasets/ziffra_2021/
+    out_file: ../results/13MANUSCRIPT_TABLES/eQTL_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/table_eqtl.log
 
+  diff_exp_tbl:
+    nb: scripts/manuscript_table_diff_exp.ipynb
+    nb_out: ../results/13MANUSCRIPT_TABLES/diff_exp_tbl_pm.ipynb
+    html_out: ../results/13MANUSCRIPT_TABLES/diff_exp_tbl.html
+    xlsx_out: ../results/13MANUSCRIPT_TABLES/diff_exp_genes_all_clusters.xlsx
+    pseudotime_dir: ../results/17PSEUDOTIME/
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/table_diff_exp.log
+
+  smr_sig_tbl:
+    # ST 7
+    in_dir:    ../results/10SMR/smr/
+    out_file:  ../results/13MANUSCRIPT_TABLES/{gwas}_smr.tsv
+    xlsx_out:  ../results/13MANUSCRIPT_TABLES/supplementary_table_7.xlsx
+    log:       ../results/00LOG/13MANUSCRIPT_TABLES/smr_sig_tbl.log
+
+  susie_diag_tbl:
+    # ST 9
+    out_file: ../results/13MANUSCRIPT_TABLES/supplementary_table_9.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/susie_diag_tbl.log
+
+  smr_tbl:
+    smr_dir: ../results/13MANUSCRIPT_TABLES/
+    eqtl_nom_dir: ../results/10SMR/smr_input/
+    out_file: ../results/13MANUSCRIPT_TABLES/all_smr_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/all_smr_tbl.log
+
+  smr_ctwas_venn_tbl:
+    smr_tbl_dir: ../results/13MANUSCRIPT_TABLES/
+    ctwas_in_dir: ../results/12CTWAS/
+    weights_dir:  ../results/12CTWAS/weights
+    genes_out:    ../results/13MANUSCRIPT_TABLES/venn_{gwas}_genes.tsv
+    log:          ../results/00LOG/13MANUSCRIPT_TABLES/smr_ctwas_venn_tbl.log
+
+  ctwas_sig_tbl:
+    in_dir: ../results/12CTWAS/
+    weights_dir: ../results/12CTWAS/weights
+    correction_out: ../results/13MANUSCRIPT_TABLES/ctwas_correction_factors.tsv
+    sig_out: ../results/13MANUSCRIPT_TABLES/ctwas_sig_genes.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/ctwas_sig_tbl.log
+
+  subcluster_specific_tbl:
+    out_file: ../results/13MANUSCRIPT_TABLES/subcluster_specific_eqtl_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/subcluster_specific_tbl.log
+
+# ---------  Plots (pipeline 14)  ------------
 plotting:
+  # NOTE: old rule and script rm to 
   eqtl_boxplots:
     exp_dir: ../results/05TENSORQTL/prep_input/
     pval_dir: ../results/10SMR/smr_input/
@@ -1004,106 +1041,154 @@ plotting:
     output: reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds
     log: ../results/00LOG/11PLOTTING/eqtl_boxplots_r.log
 
-  eqtl_tbl:
-    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-    peak_dir: ../resources/public_datasets/ziffra_2021/
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/eQTL_tbl.xlsx
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/eqtl_tbl.log
-
-  diff_exp_tbl:
-    nb: scripts/manuscript_diff_exp_tbl.ipynb
-    nb_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_tbl_pm.ipynb
-    html_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_tbl.html
-    xlsx_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_genes_L1_L2_pseudotime.xlsx
-    pseudotime_dir: ../results/17PSEUDOTIME/
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/diff_exp_tbl.log
-
-  smr_tbl:
-    smr_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/
-    eqtl_nom_dir: ../results/10SMR/smr_input/
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/all_smr_tbl.xlsx
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/all_smr_tbl.log
-
   eqtl_qc_plt:
+    # Fig 2
     in_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    ziffra_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/eqtl_qc_plt.pdf
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/eqtl_qc_plt.log
+    ziffra_dir: ../results/13MANUSCRIPT_TABLES/  # cross-pipeline: reads a tables-pipeline output
+    out_file: ../results/14MANUSCRIPT_PLOTS/eqtl_qc_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/eqtl_qc_plt.log
 
-  ldsr_plt:
-    in_dir: ../results/09SLDSR/strat_bl_v12/
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/ldsr_plt.pdf
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/ldsr_plt.log
+  eqtl_boxplots_py:
+    # Prep script for eQTL plots - feeds Fig 3
+    pairs_csv: ../resources/sheets/pairs.csv
+    exp_dir: ../results/05TENSORQTL/prep_input/
+    out_dir: reports/14MANUSCRIPT_PLOTS/eqtl_boxplots/
+    output: reports/14MANUSCRIPT_PLOTS/eqtl_boxplots/plot_qtl.done
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/eqtl_boxplots_py.log
 
   rep_plt:
+    # Fig 3
     in_dir: ../results/05TENSORQTL/tensorqtl_perm/
     internal_dir: ../results/06QTL-REPLICATION/internal/
     jang_pi1_dir: ../results/19DEV-SPECIFICITY/pi1_jang/
     jang_beta_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/replication_plt.pdf
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/replication_plt.log
+    out_file: ../results/14MANUSCRIPT_PLOTS/replication_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/replication_plt.log
 
-  supp_plt:
-    geno_dir: ../results/04GENOTYPES/covariates/ 
-    expr_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/expression_PC_plt.pdf
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/supplementary_plt.log
+  fig4_plt:
+    pseudotime_dir: ../results/17PSEUDOTIME/
+    out_file: ../results/14MANUSCRIPT_PLOTS/figure4.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/fig4_plt.log
 
-  eqtl_boxplots_py:
-    pairs_csv: ../resources/sheets/pairs.csv
-    exp_dir: ../results/05TENSORQTL/prep_input/
-    out_dir: reports/13MANUSCRIPT_PLOTS_TABLES/eqtl_boxplots/
-    output: reports/13MANUSCRIPT_PLOTS_TABLES/eqtl_boxplots/plot_qtl.done
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/eqtl_boxplots_py.log
-
-  data_perm:
-    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/NPC-2_cis_eQTL_perm.tsv.gz
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_perm.log
-
-  data_nominal:
-    in_dir: ../results/10SMR/smr_input/
-    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/NPC-2_cis_eQTL_nominal.tsv.gz
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_nominal.log
-
-  data_mk_eqtl_tar:
-    out_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/nbray_2026_dev_brain_eqtl.tar.gz    
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_mk_eqtl_tar.log
- 
-  data_weights:
-    out_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/ 
-    file_name: fusion_weights.tar.gz
-    out_file: ../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/fusion_weights.tar.gz
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/data_weights.log
+  ldsr_plt:
+    # Fig 5
+    in_dir: ../results/09SLDSR/strat_bl_v12/
+    out_file: ../results/14MANUSCRIPT_PLOTS/ldsr_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/ldsr_plt.log
 
   smr_ctwas_venn:
-    smr_tbl_dir: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+    # Fig 6 and Supp Fig X
+    smr_tbl_dir: ../results/13MANUSCRIPT_TABLES/  # cross-pipeline: reads a tables-pipeline output
     ctwas_in_dir: ../results/12CTWAS/
     weights_dir: ../results/12CTWAS/weights
     gene_lookup_file: ../resources/sheets/gene_lookup_hg38.tsv
-    out_file_scz: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/venn_scz.png
-    out_file_grid: ../results/13MANUSCRIPT_PLOTS_TABLES/plots/venn_grid_bpd_mdd_adhd_ocd.png
-    genes_out: ../results/13MANUSCRIPT_PLOTS_TABLES/tables/venn_{gwas}_genes.tsv
-    log: ../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/smr_ctwas_venn.log
+    out_file_scz: ../results/14MANUSCRIPT_PLOTS/venn_scz.png
+    out_file_grid: ../results/14MANUSCRIPT_PLOTS/venn_grid_bpd_mdd_adhd_ocd.png
+    genes_out: ../results/14MANUSCRIPT_PLOTS/venn_{gwas}_genes.tsv
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/smr_ctwas_venn.log
 
-# Data sharing
+  supp_plt:
+    # Supp Fig 1
+    geno_dir: ../results/04GENOTYPES/covariates/
+    expr_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    out_file: ../results/14MANUSCRIPT_PLOTS/expression_PC_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/supplementary_plt.log
+
+  family_heatmaps_plt:
+    # SF 3-6
+    glu_a: ../results/14MANUSCRIPT_PLOTS/family_heatmap_Glu-A.tiff
+    glu_b: ../results/14MANUSCRIPT_PLOTS/family_heatmap_Glu-B.tiff
+    gaba: ../results/14MANUSCRIPT_PLOTS/family_heatmap_GABA.tiff
+    npc: ../results/14MANUSCRIPT_PLOTS/family_heatmap_NPC.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/family_heatmaps_plt.log
+
+  effect_size_heatmaps_plt:
+    # SF 7-8
+    fetal_vs_fetal: ../results/14MANUSCRIPT_PLOTS/effect_size_heatmap_fetal_vs_fetal.tiff
+    fetal_vs_jang: ../results/14MANUSCRIPT_PLOTS/effect_size_heatmap_fetal_vs_jang.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/effect_size_heatmaps_plt.log
+
+  tss_density_plt:
+    # SF9 
+    pseudotime_dir: ../results/17PSEUDOTIME/
+    out_file: ../results/14MANUSCRIPT_PLOTS/tss_density_combined.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/tss_density_plt.log
+
+  bulk_egene_overlaps_plt:
+    # SF 10
+    out_file: ../results/14MANUSCRIPT_PLOTS/bulk_egene_overlaps.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/bulk_egene_overlaps_plt.log
+
+  snrna_qc_plt:
+    # Supp Fig X -- reviewer request (line 473): snRNA-seq QC summaries
+    in_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    out_file_sample: ../results/14MANUSCRIPT_PLOTS/snrna_qc_per_sample.pdf
+    out_file_celltype: ../results/14MANUSCRIPT_PLOTS/snrna_qc_per_celltype.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/snrna_qc_plt.log
+
+# ---------  Data Sharing (pipeline 15)  ------------
 data_sharing:
   extract_fq:
-    out_r1: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
-    out_r2: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_R2.fastq.gz
-    log_r1: ../results/00LOG/14DATA_SHARING/{plate}/cat_fqs_{sample}_R1.log
-    log_r2: ../results/00LOG/14DATA_SHARING/{plate}/cat_fqs_{sample}_R2.log
-    outdir: ../results/14DATA_SHARING/MRGD_fqs/
+    out_r1: ../results/15DATA_SHARING/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
+    out_r2: ../results/15DATA_SHARING/MRGD_fqs/{plate}/{sample}_R2.fastq.gz
+    log_r1: ../results/00LOG/15DATA_SHARING/{plate}/cat_fqs_{sample}_R1.log
+    log_r2: ../results/00LOG/15DATA_SHARING/{plate}/cat_fqs_{sample}_R2.log
+    outdir: ../results/15DATA_SHARING/MRGD_fqs/
 
   extract_cell_meta:
     input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
     output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
     log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
 
+  data_perm:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    out_file: ../results/15DATA_SHARING/NPC-2_cis_eQTL_perm.tsv.gz   # sentinel path -- dirname() gives the shared output dir; script writes one file per cell type there
+    log: ../results/00LOG/15DATA_SHARING/data_perm.log
+
+  data_nominal:
+    in_dir: ../results/10SMR/smr_input/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    out_file: ../results/15DATA_SHARING/NPC-2_cis_eQTL_nominal.tsv.gz
+    log: ../results/00LOG/15DATA_SHARING/data_nominal.log
+
+  data_mk_eqtl_tar:
+    out_dir: ../results/15DATA_SHARING/
+    out_file: ../results/15DATA_SHARING/nbray_2026_dev_brain_eqtl.tar.gz
+    log: ../results/00LOG/15DATA_SHARING/data_mk_eqtl_tar.log
+
+  data_weights:
+    out_dir: ../results/15DATA_SHARING/
+    file_name: fusion_weights.tar.gz
+    out_file: ../results/15DATA_SHARING/fusion_weights.tar.gz
+    log: ../results/00LOG/15DATA_SHARING/data_weights.log
+
+  data_susie:
+    # {cell_type} here is the manuscript label (Glu-A, Glu-B, NPC-to-Glu-B-Bin1, ...)
+    out_file: ../results/15DATA_SHARING/{cell_type}.susie.cred.hp.tsv.gz
+    log: ../results/00LOG/15DATA_SHARING/data_susie_{cell_type}.log
+
+  data_susie_mk_tar:
+    out_file: ../results/15DATA_SHARING/eqtl_atlas_susie_credible_sets.tar
+    top_dir: susie_credible_sets   # directory name inside the tarball
+    log: ../results/00LOG/15DATA_SHARING/data_susie_mk_tar.log
+
+  data_final_scanpy_obj:
+    l1_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad                          # TODO: scanpy_dir + 'adata_clusters_v3.h5ad'
+    # {l1_pop} is the PIPELINE name (Glu-UL, Glu-DL, ...), not the manuscript label
+    l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # TODO: subcluster_dir + ...
+    l2_populations: [Glu-UL, Glu-DL, NPC, GABA]
+    l1_without_l2: [MG, Endo-Peri, OPC]                             # script asserts these are exactly the L1 pops with no L2
+    pt_h5ad: ../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad
+    pt_trajectories: [NPC-to-Glu-DL, NPC-to-Glu-UL]                 # pipeline names
+    pt_n_bins: 4
+    l1_cluster_col: leiden_harmony_0.2
+    keep_obs: [sample]                                              # extend with any other per-cell columns you want to share
+    keep_obsm: [X_umap, X_pca_harmony]
+    x_from_counts: true                                             # X = raw counts (layers['counts']) instead of scaled values
+    out_h5ad: ../results/15DATA_SHARING/eqtl_atlas_snRNAseq.h5ad
+    out_mapping: ../results/15DATA_SHARING/eqtl_atlas_cell_annotations.tsv.gz
+    log: ../results/00LOG/15DATA_SHARING/final_scanpy_obj.log
 
 # --- review
 review:
@@ -1485,6 +1570,15 @@ dev_specificity:
     out_file: ../results/19DEV-SPECIFICITY/ocr_enrich/fetal_specific_ocr_enrichment.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/ocr_enrich.log
 
+  chip_enrich:
+    nott_peaks: ../resources/public_datasets/nott_2019/nott_peaks_hg38.bed
+    out_file:   ../results/19DEV-SPECIFICITY/chip_enrich/nott_chip_enrichment.rds
+    log:        ../results/00LOG/19DEV-SPECIFICITY/chip_enrich.log  
+
+  glm_enrich:
+    out_file:  ../results/19DEV-SPECIFICITY/glm_enrich/fetal_specific_vs_shared_li.rds
+    log:       ../results/00LOG/19DEV-SPECIFICITY/glm_enrich.log
+
   eqtl_effects:
     nom_dir: ../results/10SMR/smr_input/
     out_file: ../results/19DEV-SPECIFICITY/eqtl_effects/eqtl_effect_sizes.rds
@@ -1497,6 +1591,10 @@ dev_specificity:
     thousandG_frq: ../results/10SMR/smr_input/1000G.EUR.hg38.frq
     out_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/beta_correlation.log
+
+  eqtl_effect_replication:
+    out_file: ../results/19DEV-SPECIFICITY/eqtl_effect_replication/eqtl_effect_replication.rds
+    log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effect_replication.log
 
   pi1_enrich_jang:
     public_all: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_full_assoc.tsv.gz

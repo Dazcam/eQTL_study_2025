@@ -1,6 +1,21 @@
 #--------------------------------------------------------------------------------------
 #
-#    Split covariates for tensorQTL tensorQTL
+#    Split covariates for tensorQTL
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  05TENSORQTL | Rule: split_covariates
+#            Upstream:   prep_tensorQTL_input (base covariate matrix)
+#            Downstream: tensorqtl_nom, tensorqtl_perm, tensorqtl_independent
+#
+# Purpose:   Subset the base covariate matrix to PCW, sex, the first {geno_pc}
+#            genotype PCs and the first {exp_pc} expression PCs, so tensorQTL
+#            can be run across a grid of PC thresholds.
+#
+# Inputs:    {cell_type}_{norm_method}_base_covariates.txt (covariates x samples)
+#
+# Outputs:   Covariate matrix for one cell_type / norm_method / geno_pc / exp_pc
+#            combination; rows: PCW, Sex, genPC1..n, expPC1..n
 #
 #--------------------------------------------------------------------------------------
 
@@ -38,9 +53,8 @@ tibble(
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("============================\n")
-    
-  
-# Pull out genotype and expression PC covarite combinations  
+
+# Pull out genotype and expression PC covariate combinations  
 cov_tbl <- read_tsv(cov_input, show_col_types = FALSE) |>
   rename(covariate = `...1`)
 message("Input covariate matrix for ", cell_type, ":\n")

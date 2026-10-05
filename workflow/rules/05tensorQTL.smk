@@ -1,17 +1,11 @@
 configfile: "../config/config.yaml"
 
-#rule all:
-#    input:
-#        expand(
-#            [
-#                config["tensorQTL"]["tensorqtl_nom"]["output"]
-#            ],
-#            cell_type=config["cell_types"],
-#            ref_cell_type=config["cell_types_bryois"],
-#            geno_pc=config["tensorQTL"]["geno_pcs"],
-#            exp_pc=config["tensorQTL"]["exp_pcs"],
-#            norm_method=config["tensorQTL"]["norm_methods"]
-#        )
+TQTL_WILDCARDS = dict(
+    cell_type   = config["cell_types"],
+    geno_pc     = config["tensorQTL"]["geno_pcs"],
+    exp_pc      = config["tensorQTL"]["exp_pcs"],
+    norm_method = config["tensorQTL"]["norm_methods"],
+)
 
 rule prep_tensorQTL_input:
     input:  cov_file = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
@@ -128,46 +122,10 @@ rule tensorqtl_independent:
               --cis_output {input.cis_perm} >> {log} 2>&1
             """
 
-#rule tensorqtl_trans:
-#    input:  genotypes = rules.convert_genotypes.output,
-#            counts = rules.zip_pblk_cnts.output,
-#            covariates = rules.split_covariates.output
-#    output: config["tensorQTL"]["tensorqtl_trans"]["output"]
-#    params: prefix_in = config["tensorQTL"]["tensorqtl_trans"]["prefix_in"],
-#            prefix_out = config["tensorQTL"]["tensorqtl_trans"]["prefix_out"],
-#            window = config["tensorQTL"]["window"]
-#    singularity: config["containers"]["tensorqtl"]
-#    resources: threads = 10, mem_mb = 100000, time="5:00:00"
-#    message: "Run tensorQTL trans for norm: {wildcards.norm_method}"
-#    benchmark: "reports/benchmarks/05tensorQTL.trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
-#    log:    config["tensorQTL"]["tensorqtl_trans"]["log"]
-#    shell:
-#            """
-#            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
-#              --covariates {input.covariates} \
-#              --mode trans \
-#              --output_text \
-#              --window {params.window} >> {log} 2>&1
-#            """
-
-#rule post_trans:
-#    input:  perm = rules.tensorqtl_perm.output,
-#            trans = rules.tensorqtl_trans.output
-#    output: config["tensorQTL"]["post_trans"]["output"] 
-#    params: proxy_dir = config["tensorQTL"]["post_trans"]["proxy_dir"],
-#            ldlink_token = config["tensorQTL"]["post_trans"]["ldlink_token"]
-#    singularity: config["containers"]["r_eqtl"]
-#    message: "Run post-trans eQTL analysis and get LD proxies for perm eQTL"
-#    benchmark: "reports/benchmarks/05tensorQTL.post_trans_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
-#    log:    config["tensorQTL"]["post_trans"]["log"]
-#    script:  "../scripts/post_tensorqtl_trans_analysis.R"
-
 rule tensorqtl_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
-    input:  perm  = expand(rules.tensorqtl_perm.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
-            indep = expand(rules.tensorqtl_independent.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]), 
-#            trans = expand(rules.tensorqtl_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
-#            post_trans = expand(rules.post_trans.output, cell_type=config["cell_types"],geno_pc=config["tensorQTL"]["geno_pcs"],exp_pc=config["tensorQTL"]["exp_pcs"],norm_method=config["tensorQTL"]["norm_methods"]),
+    input:  perm  = expand(rules.tensorqtl_perm.output, expand(rules.tensorqtl_perm.output, **TQTL_WILDCARDS), 
+            indep = expand(rules.tensorqtl_independent.output, **TQTL_WILDCARDS),
             rmd_script = config["tensorQTL"]["tensorqtl_report"]["rmd_script"]
     output: config["tensorQTL"]["tensorqtl_report"]["output"]
     params: in_dir = config["tensorQTL"]["tensorqtl_report"]["in_dir"],
@@ -184,36 +142,3 @@ rule tensorqtl_report:
             params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
 
-#rule tensorqtl_tss_and_sumstats:
-#    input:  expand(config["output_files"]["tensorqtl_perm_log"], cell_type = config['cell_types'])
-#    output: config["output_files"]["tensorqtl_tss_plt"],
-#            config["output_files"]["tensorqtl_tss_tbl"]
-#    singularity: config["containers"]["R"]
-#    params: root_dir = config["root_dir"],
-#            cell_types = config["cell_types"]
-#    log:    config["log_files"]["tensorqtl_tss"]    
-#    script: "scripts/tensorqtl_tss_and_sumstats.R"
-
-#rule plot_qtl:
-#    input:  genotypes = config["input_files"]["genotypes"],
-#            pairs_file = config["plot_qtl"]["pairs_file"]
-#    output: config["plot_qtl"]["out_file"]
-#    singularity: config["containers"]["tensorqtl"]
-#    params: expression_dir = config["plot_qtl"]["expression_dir"],
-#            output_dir = config["plot_qtl"]["out_dir"]
-#    log:    config["plot_qtl"]["log"]
-#    shell:
-#            """
-#            python3 scripts/eqtl_plot.py \
-#               --pairs_file {input.pairs_file} \
-#               --genotype_file {input.genotypes} \
-#               --expression_dir {params.expression_dir} \
-#               --output_dir {params.output_dir} >> {log}
-#             """
-
-
-
-## ----  Notes for running this pipeline  ----
-# Run 1. L1 sensitivity analysis: Run L1 cell types only up until tensorqtl_perm (all norm factors, exp_pcs, geno_pcs)
-# Run 2. L2 sensitivity analysis: Run L2 cell types only up until tensorqtl_perm (norm_factors:, all exp_pcs, geno_pcs) 
-# Run 3. Independent, trans analyses:  
