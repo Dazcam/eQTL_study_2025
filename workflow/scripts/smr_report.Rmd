@@ -50,7 +50,8 @@ bmark_dir <- params$bmark_dir
 6. `create_besd`: Create besd file for SMR
 7. `format_gwas`: Convert GWAS into .ma format for SMR
 8. `smr`: Run SMR
-9. `smr_report`: Generate SMR report
+9. `smr_sig_tbl`: Generate per-GWAS significant SMR+HEIDI tables for the tables pipeline (manuscript_table_smr_sig.R) - runs independently of this report; the two compute the same SMR+HEIDI significance filter separately rather than one depending on the other, since this report renders earlier in the pipeline (as part of 10smr.smk) than the tables pipeline does
+10. `smr_report`: Generate SMR report
 
 ***
 
@@ -200,7 +201,12 @@ gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv' # Relative to 
 if (file.exists(gene_lookup_file)) {
   
   gene_lookup_hg38_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
-    select(ensembl_gene_id, external_gene_name)
+    select(ensembl_gene_id, external_gene_name) |>
+    # gene_lookup_hg38.tsv has >1 row for some gene IDs; without this the
+    # left_join below fans out and duplicates significant rows (same fix
+    # applied in manuscript_table_smr_sig.R, which independently computes
+    # this same table in the tables pipeline - see note below)
+    distinct(ensembl_gene_id, .keep_all = TRUE)
   
 } else {
   
@@ -219,6 +225,20 @@ if (file.exists(gene_lookup_file)) {
   write_tsv(gene_lookup_hg38_tbl, gene_lookup_file)
   
 }
+
+# NOTE: this report computes SMR+HEIDI significance itself (get_heidi(),
+# above) rather than reading manuscript_table_smr_sig.R's {gwas}_smr.tsv
+# output. That's deliberate, not duplication left over by accident: this
+# report is rendered as part of the SMR pipeline (10smr.smk), which runs
+# BEFORE the tables pipeline where smr_sig_tbl lives - so it cannot depend
+# on smr_sig_tbl's output without inverting that ordering. Each disorder tab
+# below computes sig_tbl itself but no longer WRITES it to tbl_dir (that
+# file is now generated independently, once, by manuscript_table_smr_sig.R).
+
+# Accumulates each disorder's unique significant gene count (across all cell
+# types) as its tab runs below - displayed as a single table in the GWAS
+# Summary tab at the end of the Results section.
+gwas_gene_counts <- list()
 ```
 
 ***
@@ -244,8 +264,6 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
 ```{r smr_heidi_symbol_scz, echo=FALSE, warnings=FALSE}
-gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv'
-
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
@@ -260,12 +278,18 @@ final_tbl <- sig_tbl |>
          SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
          `NSNP HEIDI` = nsnp_HEIDI)
 
-dir.create(tbl_dir)
-write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
+# Unique gene count (across all cell types) for this GWAS - feeds the
+# GWAS Summary tab at the end of the Results section
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
+
+# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R),
+# which computes this same table independently and writes it to
+# {tbl_dir}/{disorder}_smr.tsv - not written here any more.
+# dir.create(tbl_dir)
+# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
-
 
 ***
 
@@ -313,11 +337,13 @@ final_tbl <- sig_tbl |>
          SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
          `NSNP HEIDI` = nsnp_HEIDI)
 
-write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
+
+# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
+# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
-
 
 ***
 
@@ -365,11 +391,13 @@ final_tbl <- sig_tbl |>
          SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
          `NSNP HEIDI` = nsnp_HEIDI)
 
-write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
+
+# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
+# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
-
 
 ***
 
@@ -412,17 +440,21 @@ sig_tbl <- all_sig_results |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
   distinct() 
 
-# No sig resulst for ADHD
-# final_tbl <- sig_tbl |>
-#   select(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
-#          SNP = topSNP, A1, A2, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
-#          `NSNP HEIDI` = nsnp_HEIDI)
-# 
+# No sig results for ADHD, but final_tbl is still computed (rename() on a
+# 0-row tibble is harmless) so gwas_gene_counts below works the same way for
+# every disorder rather than needing an ADHD-specific branch.
+final_tbl <- sig_tbl |>
+  rename(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
+         SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
+         `NSNP HEIDI` = nsnp_HEIDI)
+
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
+
+# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
 # write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
-
 
 ***
 
@@ -470,11 +502,13 @@ final_tbl <- sig_tbl |>
          SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
          `NSNP HEIDI` = nsnp_HEIDI)
 
-write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
+
+# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
+# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
 
 datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
 ```
-
 
 ***
 
@@ -483,6 +517,23 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 ```{r logs_ocd, echo=FALSE}
 log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
 datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+```
+
+***
+
+#### GWAS Summary
+
+***
+
+Number of unique significant genes (SMR+HEIDI sig., deduplicated across all
+cell types) per GWAS.
+
+```{r gwas_gene_summary, echo=FALSE}
+gwas_summary_tbl <- tibble(
+  GWAS = names(gwas_gene_counts),
+  `Unique Gene Count` = unlist(gwas_gene_counts)
+)
+datatable(as.data.frame(gwas_summary_tbl), caption = 'Unique significant genes per GWAS')
 ```
 
 ***
