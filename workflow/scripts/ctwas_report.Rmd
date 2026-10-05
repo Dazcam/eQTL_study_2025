@@ -188,7 +188,7 @@ for (g in gwas) {
            pval_bf = pval * bf_factor) |>
     mutate(pval_bf = pmin(pval_bf, 1)) |>
     arrange(pval_bf) |>
-   # filter(pval_bf < 0.05) |>
+    filter(pval_bf < 0.05) |>
    # arrange(fdr) |>
    # distinct(gene, .keep_all = TRUE) |>
     mutate(across(c(pval, pval_bf, susie_pip), ~ signif(.x, 2)),
@@ -196,7 +196,7 @@ for (g in gwas) {
     dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
   
   if (nrow(finemap_res) == 0) {
-    cat("**No genes with SuSiE PIP > 0.8 in credible sets**\n\n")
+    cat("**No genes with SuSiE PIP > 0.8 (in credible set) and BF-corrected P < 0.05**\n\n")
 } else {
   finemap_tbl <- finemap_res |>
     mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
@@ -205,7 +205,7 @@ for (g in gwas) {
   gt() |>
   tab_header(
     title = md(paste0("**", toupper(g), "**")),
-    subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set): **", nrow(finemap_res), "**"))
+    subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set, BF-corrected P < 0.05): **", nrow(finemap_res), "**"))
   ) |>
   cols_label(
     cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
@@ -227,7 +227,7 @@ for (g in gwas) {
   )
   print(finemap_tbl)
   
-  results_single_lst[[paste(g, ct, sep = "_")]] <- finemap_res
+  results_single_lst[[paste(g, ct, sep = "_")]] <- finemap_res |> mutate(gwas = toupper(g))
   
   }
     
@@ -242,6 +242,105 @@ for (g in gwas) {
 #   file = file.path(tbl_dir, "ctwas_single_tbl.xlsx"),
 #   overwrite = TRUE
 #   )
+```
+
+***
+
+### Summary {.tabset}
+
+***
+
+```{r ctwas_summary_prep, echo = FALSE, message = FALSE, warning = FALSE}
+if (length(results_single_lst) > 0) {
+  all_sig_results <- bind_rows(results_single_lst)
+} else {
+  all_sig_results <- tibble(
+    cell_type = character(), symbol = character(), gene = character(),
+    z = numeric(), pval = numeric(), pval_bf = numeric(), susie_pip = numeric(),
+    cs = character(), gene_biotype = character(), chr = character(), gwas = character()
+  )
+}
+```
+
+#### By cell type
+
+***
+
+```{r ctwas_summary_by_cell_type, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+base_ct_gwas <- expand_grid(cell_type = cell_types, gwas = toupper(gwas))
+
+counts_ct_gwas <- all_sig_results |>
+  dplyr::count(cell_type, gwas, name = "n")
+
+by_cell_type <- base_ct_gwas |>
+  dplyr::left_join(counts_ct_gwas, by = c("cell_type", "gwas")) |>
+  dplyr::mutate(n = tidyr::replace_na(n, 0)) |>
+  tidyr::pivot_wider(names_from = gwas, values_from = n, values_fill = 0) |>
+  dplyr::mutate(Total = rowSums(dplyr::across(dplyr::all_of(toupper(gwas))))) |>
+  dplyr::left_join(per_cell_counts, by = "cell_type") |>
+  dplyr::mutate(n_sig_genes = tidyr::replace_na(n_sig_genes, 0)) |>
+  dplyr::rename(`Tested (BF factor)` = n_sig_genes) |>
+  dplyr::relocate(cell_type, `Tested (BF factor)`) |>
+  dplyr::arrange(dplyr::desc(Total))
+
+by_cell_type |>
+  gt() |>
+  tab_header(
+    title = "Table 2. cTWAS significant genes per cell type",
+    subtitle = "PIP > 0.8, in a credible set, BF-corrected P < 0.05"
+  ) |>
+  cols_label(cell_type = "Cell type") |>
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
+  ) |>
+  opt_table_font(
+    font = list(default_fonts())
+  ) |>
+  tab_source_note(
+    source_note = md(
+      "Disorder columns count significant gene results for that cell type; a gene significant in more 
+      than one disorder is counted once per disorder column, so **Total** here is a count of significant results, 
+      not distinct genes."
+    )
+  )
+```
+
+***
+
+#### By disorder
+
+***
+
+```{r ctwas_summary_by_disorder, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+by_disorder <- all_sig_results |>
+  dplyr::group_by(gwas) |>
+  dplyr::summarise(`Distinct significant genes` = dplyr::n_distinct(gene), .groups = "drop") |>
+  dplyr::right_join(tibble(gwas = toupper(gwas)), by = "gwas") |>
+  dplyr::mutate(`Distinct significant genes` = tidyr::replace_na(`Distinct significant genes`, 0)) |>
+  dplyr::rename(Disorder = gwas) |>
+  dplyr::arrange(dplyr::desc(`Distinct significant genes`))
+
+by_disorder |>
+  gt() |>
+  tab_header(
+    title = "Table 3. cTWAS significant genes per disorder",
+    subtitle = "PIP > 0.8, in a credible set, BF-corrected P < 0.05, deduplicated across cell types"
+  ) |>
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
+  ) |>
+  opt_table_font(
+    font = list(default_fonts())
+  ) |>
+  tab_source_note(
+    source_note = md(
+      "A gene significant in more than one cell type for the same disorder is counted once here."
+    )
+  )
 ```
 
 ***
