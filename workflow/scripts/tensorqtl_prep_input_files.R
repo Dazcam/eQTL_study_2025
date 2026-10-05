@@ -28,8 +28,6 @@
 #
 #--------------------------------------------------------------------------------------
 
-## Info  ------------------------------------------------------------------------------
-
 ## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
@@ -45,7 +43,6 @@ if (exists("snakemake")) {
 message("\n\nPrepping input files for tensorQTL input ...")
 
 ##  Load Packages, functions and variables  -------------------------------------------
-# Install and load required libraries
 library(edgeR)
 library(tidyverse)
 library(limma)  # For quantile normalization (functions.R)
@@ -64,26 +61,14 @@ report_dir <- snakemake@params[["report_dir"]]
 cell_type <- snakemake@wildcards[["cell_type"]]
 norm_method <- snakemake@params[["norm_method"]] 
 
-# For testing locally
-# cov_file <- "../results/04GENOTYPES-POST/covariates/pca.eigenvec"
-# sex_file <- "reports/02SCANPY/02_metadata_per_sample.tsv"
-# gene_lookup <- "../resources/sheets/gene_lookup_hg38.tsv"
-# cell_type <- "RG"
-# cov_out <- paste0("../05TENSORQTL/prep_input/", cell_type, "_base_covariates.txt")
-# exp_out <- paste0("../05TENSORQTL/prep_input/", cell_type, "_tmm.bed")
-# pseudoblk_dir <- "../results/03SCANPY/pseudobulk/"
-# out_dir <- "../results/05TENSORQTL/prep_input/"
-# report_dir <- "../workflow/reports/05TENSORQTL/"
-# norm_method <- c('fujita')
-
 # Make a tibble showing what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("cov_file", "sex_file", "gene_lookup", "cov_out", "exp_out", 
-               "pseudoblk_dir", "report_dir", "out_dir", "cell_type", "norm_method", "batch_var"),
+               "pseudoblk_dir", "report_dir", "cell_type", "norm_method", "batch_var"),
   value    = c(cov_file, sex_file, gene_lookup, cov_out, exp_out, 
-               pseudoblk_dir, report_dir, out_dir, cell_type, norm_method, batch_var)) |> 
+               pseudoblk_dir, report_dir, cell_type, norm_method, batch_var)) |> 
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")

@@ -1,0 +1,166 @@
+configfile: '../config/config.yaml'
+
+#---  Need to handle cell type name changes for V2
+def relabel_cell_type(x):
+    return x.replace("Glu-UL", "Glu-A").replace("Glu-DL", "Glu-B").replace("-Q4-", "-")
+
+# manuscript label -> pipeline label (used by any rule that needs to go from the
+# manuscript/figshare cell type name back to the name used on disk everywhere upstream)
+CT_NEW2OLD = {relabel_cell_type(ct): ct for ct in config["cell_types"]}
+assert len(CT_NEW2OLD) == len(config["cell_types"]), "Relabelling produced duplicate cell type names"
+assert not any(k for k in CT_NEW2OLD if any(s in k for s in ("UL", "DL", "Q4"))), "Old names remain"
+
+susie_data_files = expand(config['data_sharing']['data_susie']['out_file'],
+                          cell_type = list(CT_NEW2OLD))
+
+
+
+# ----
+
+
+rule all:
+    input:
+#        config['data_sharing']['data_mk_eqtl_tar']['out_file'],
+#        config['data_sharing']['data_susie_mk_tar']['out_file'],
+        config['data_sharing']['final_scanpy_obj']['out_h5ad'],
+        config['data_sharing']['final_scanpy_obj']['out_mapping'],
+
+rule data_perm:
+    output: config['data_sharing']['data_perm']['out_file']
+    params: in_dir           = config['data_sharing']['data_perm']['in_dir'],
+            allele_file      = config['data_sharing']['data_perm']['allele_file'],
+            cell_types       = config['cell_types'],
+            exp_pc_map       = config['exp_pc_map'],
+            norm_method      = config['tensorQTL']['norm_methods'][0],
+            genPC            = config['tensorQTL']['geno_pcs'],
+            gene_lookup_file = config['dev_specificity']['report']['gene_lookup']
+    singularity: config["containers"]["r_eqtl"]
+    resources: time="1:00:00"
+    log:  config['data_sharing']['data_perm']['log']
+    script: "../scripts/data_sharing_eQTL_perm.R"
+
+rule data_nominal:
+    output: config['data_sharing']['data_nominal']['out_file']
+    params: in_dir           = config['data_sharing']['data_nominal']['in_dir'],
+            allele_file      = config['data_sharing']['data_nominal']['allele_file'],
+            cell_types       = config['cell_types'],
+            gene_lookup_file = config['dev_specificity']['report']['gene_lookup']
+    singularity: config["containers"]["r_eqtl"]
+    resources: time="4:00:00", threads = 10, mem_mb = 80000
+    log:  config['data_sharing']['data_nominal']['log']
+    script: "../scripts/data_sharing_eQTL_nominal.R"
+
+rule mk_eqtl_tar:
+    input:  perm = config['data_sharing']['data_perm']['out_file'],
+            nom = config['data_sharing']['data_nominal']['out_file']
+    output: config['data_sharing']['data_mk_eqtl_tar']['out_file']
+    params: out_dir    = config['data_sharing']['data_mk_eqtl_tar']['out_dir'],
+            cell_types  = list(CT_NEW2OLD)     # manuscript labels: Glu-A, Glu-B, NPC-to-Glu-B-Bin1, ...
+    envmodules: "pigz"
+    resources: time="5:00:00", threads = 8, mem_mb = 16000
+    log:  config['data_sharing']['data_mk_eqtl_tar']['log']
+    shell: """
+           scripts/data_sharing_mk_eqtl_tar.sh \
+           {params.out_dir} \
+           {threads} \
+           "{params.cell_types}" \
+           >> {log} 2>&1
+           """
+
+rule data_weights:
+    output: config['data_sharing']['data_weights']['out_file']
+    params: out_dir = config['data_sharing']['data_weights']['out_dir'],
+            file_name = config['data_sharing']['data_weights']['file_name'],
+            cell_types = config['cell_types']
+    envmodules: "pigz"
+    resources: time="3:00:00", threads = 10, mem_mb = 80000
+    log:  config['data_sharing']['data_weights']['log']
+    shell:
+           """
+           scripts/data_sharing_twas_weights.sh \
+             {params.out_dir} \
+             {params.file_name} \
+             "{params.cell_types}" \
+             {threads} \
+            >> {log} 2>&1
+           """
+
+rule final_genotypes:
+    input: vcf = "../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz",
+           samples = "../resources/sheets/final_134_sample_ids.txt"
+    output: "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
+    envmodules: "BCFtools"
+    resources: time="30:00"
+    log: "../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/final_genotypes.log"
+    shell: """
+           bcftools view \
+             --samples-file {input.samples} \
+             --output-type z \
+             --output {output} \
+             {input.vcf} 2>> {log}
+           bcftools index --tbi {output} 2>> {log}
+           """
+
+rule data_susie:
+    # {cell_type} is the manuscript label; the input uses the pipeline label
+    input:  
+        susie = lambda wc: config["susie"]["sort_susie"]["output"].replace(
+                        "{cell_type}", CT_NEW2OLD[wc.cell_type]),
+        gene_lookup = config['dev_specificity']['report']['gene_lookup']
+    output: tsv = config['data_sharing']['data_susie']['out_file']
+    params: cell_type_old = lambda wc: CT_NEW2OLD[wc.cell_type]
+    singularity: config["containers"]["r_eqtl"]
+    resources: time="0:20:00", threads=2, mem_mb=16000
+    log:    config['data_sharing']['data_susie']['log']
+    script: "../scripts/data_sharing_susie_cred_sets.R"
+
+rule data_susie_mk_tar:
+    input:  susie_data_files
+    output: config['data_sharing']['data_susie_mk_tar']['out_file']
+    params: in_dir  = lambda wc, input: os.path.dirname(input[0]),
+            top_dir = config['data_sharing']['data_susie_mk_tar']['top_dir'],
+            n_files = lambda wc, input: len(input)
+    resources: time="0:30:00", threads=1, mem_mb=4000
+    log:    config['data_sharing']['data_susie_mk_tar']['log']
+    shell:  """
+            set -euo pipefail
+            echo "Creating {output} from {params.n_files} files" > {log}
+            printf '%s\\n' {input} | xargs -n1 basename > {output}.filelist
+            tar --create --file {output} \\
+                --directory {params.in_dir} \\
+                --transform 's,^,{params.top_dir}/,' \\
+                --files-from {output}.filelist \\
+                >> {log} 2>&1
+            rm {output}.filelist
+            tar --list --file {output} | wc -l >> {log}
+            echo "Done" >> {log}
+            """
+
+rule final_scanpy_obj:
+    # L1 object + the four L2 subclustering objects + the two pseudotime trajectory objects
+    input:
+        l1 = config['data_sharing']['final_scanpy_obj']['l1_h5ad'],
+        l2 = expand(config['data_sharing']['final_scanpy_obj']['l2_h5ad'],
+                    l1_pop = config['data_sharing']['final_scanpy_obj']['l2_populations']),
+        pt = expand(config['data_sharing']['final_scanpy_obj']['pt_h5ad'],
+                    trajectory = config['data_sharing']['final_scanpy_obj']['pt_trajectories'])
+    output:
+        h5ad    = config['data_sharing']['final_scanpy_obj']['out_h5ad'],
+        mapping = config['data_sharing']['final_scanpy_obj']['out_mapping']
+    params:
+        l1_cluster_col        = config['data_sharing']['final_scanpy_obj']['l1_cluster_col'],
+        l2_populations        = config['data_sharing']['final_scanpy_obj']['l2_populations'],   # same order as input.l2
+        l1_without_l2         = config['data_sharing']['final_scanpy_obj']['l1_without_l2'],
+        pt_trajectories       = config['data_sharing']['final_scanpy_obj']['pt_trajectories'],  # same order as input.pt
+        pt_n_bins             = config['data_sharing']['final_scanpy_obj']['pt_n_bins'],
+        keep_obs              = config['data_sharing']['final_scanpy_obj']['keep_obs'],
+        keep_obsm             = config['data_sharing']['final_scanpy_obj']['keep_obsm'],
+        x_from_counts         = config['data_sharing']['final_scanpy_obj']['x_from_counts'],
+        manuscript_cell_types = list(CT_NEW2OLD)
+    conda: config["scanpy"]["env"]
+    resources: time="1:00:00", mem_mb=64000
+    log: config['data_sharing']['final_scanpy_obj']['log']
+    script: "../scripts/data_sharing_final_scanpy_obj.py"
+
+
+
