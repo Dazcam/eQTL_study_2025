@@ -1,15 +1,32 @@
 #--------------------------------------------------------------------------------------
 #
-#    Prep input files for tensorQTL
+#    Prepare expression and covariate inputs for tensorQTL
 #
 #--------------------------------------------------------------------------------------
-
-# Harmonises the pseudobulk and covariate data for each cell type for TensorQTL 
-# - TMM normalises pseudobulk data
-# - Applies various additional normalisation options for eQTL sensitivity testing
-# - Runs PCA to calculate expression PCs to add as covariates
-# - Standardises gene IDs to Ensembl encoding
-# - Output: normalised pseudobulk GeX counts & combined covariate file per cell-type
+#
+# Pipeline:  05TENSORQTL | Rule: prep_tensorQTL_input
+#            Upstream:   03SCANPY pseudobulk counts; 04 genotype PCs
+#            Downstream: zip_pblk_cnts (expression BED), split_covariates (covariates)
+#
+# Purpose:   For one cell type x normalisation method:
+#            - TMM-normalise pseudobulk counts, then apply method-specific
+#              normalisation/filtering (normalise_counts() in functions.R)
+#            - Calculate the top 50 expression PCs
+#            - Merge with genotype PCs, sex and PCW into a single covariate matrix
+#            - Harmonise gene IDs to Ensembl and anchor each gene at its TSS
+#
+# Inputs:    cov_file      Genotype PCs (plink .eigenvec, 10 PCs)
+#            sex_file      Per-sample metadata (sex_code, PCW)
+#            gene_lookup   BioMart gene annotation (hg38)
+#            pseudoblk_dir {cell_type}_pseudobulk.csv (via params)
+#
+# Outputs:   cov_out       {cell_type}_{norm_method}_base_covariates.txt
+#                          Covariates x samples; all genPCs and 50 expPCs
+#            exp_out       {cell_type}_{norm_method}.bed
+#                          TSS-anchored expression BED, autosomes only
+#            report_rds    gene_exp_matrix_report_{cell_type}_{norm_method}.rds
+#
+#--------------------------------------------------------------------------------------
 
 ## Info  ------------------------------------------------------------------------------
 
@@ -31,7 +48,7 @@ message("\n\nPrepping input files for tensorQTL input ...")
 # Install and load required libraries
 library(edgeR)
 library(tidyverse)
-library(limma)  # For quantile normalization
+library(limma)  # For quantile normalization (functions.R)
 
 # Load functions
 source("functions.R")
@@ -44,10 +61,8 @@ cov_out <- snakemake@output[["cov_out"]]
 exp_out <- snakemake@output[["exp_out"]]
 pseudoblk_dir <- snakemake@params[["pseudoblk_dir"]]
 report_dir <- snakemake@params[["report_dir"]]
-out_dir <- snakemake@params[["out_dir"]]
 cell_type <- snakemake@wildcards[["cell_type"]]
 norm_method <- snakemake@params[["norm_method"]] 
-batch_var <- snakemake@params[["batch_var"]]
 
 # For testing locally
 # cov_file <- "../results/04GENOTYPES-POST/covariates/pca.eigenvec"
@@ -60,7 +75,6 @@ batch_var <- snakemake@params[["batch_var"]]
 # out_dir <- "../results/05TENSORQTL/prep_input/"
 # report_dir <- "../workflow/reports/05TENSORQTL/"
 # norm_method <- c('fujita')
-# batch_var <- c('quantile')
 
 # Make a tibble showing what each variable is set to
 message("\nVariables")
@@ -114,7 +128,7 @@ meta_data %>%
   knitr::kable(format = "simple", align = "c") %>%
   print()
 
-message("\nNAs in cov table:", meta_data |> anyNA())
+message("\nNAs in cov table:", cov_tbl |> anyNA())
 message("Sample in mrgd covariate tbl: ", nrow(cov_tbl))
 
 message("\n============================\n")
@@ -160,7 +174,7 @@ pseudblk_cnts <- pseudblk_cnts[, match(available_samples, colnames(pseudblk_cnts
 # Create a DGEList object
 message('\nTMM normalising counts ... \n')
 dge <- DGEList(counts = pseudblk_cnts)
-dge <- calcNormFactors(dge, method = "TMM") # Do we need two normalisation factors here?
+dge <- calcNormFactors(dge, method = "TMM")
 normalised_cnts <- edgeR::cpm(dge, normalized.lib.sizes = TRUE)
 print(normalised_cnts[1:5, 1:5])
 message('\nDimensions of normalised counts: ', 
@@ -181,7 +195,7 @@ exp_pc_scores <- as.data.frame(pca$x[, 1:50]) |>
   rename_with(~ paste0("exp", .), .cols = starts_with("PC"))
 
 # Variance explained by expression PCs
-exp_var_explained <- summary(pca)$importance[2, 1:50]  # Proportion of variance
+exp_var_explained <- summary(pca)$importance[2, 1:50] 
 report_tibble$exp_var_explained <- list(exp_var_explained)
 
 # Combine exp pcs with genotype covariates
@@ -200,12 +214,12 @@ report_tibble$cor_matrix <- list(cor_matrix)
 cov_matrix <- t(as.matrix(cov_full_tbl[, -1]))  # Exclude 'id' column, transpose
 colnames(cov_matrix) <- cov_full_tbl$id         # Set sample IDs as column names
 rownames(cov_matrix) <- colnames(cov_full_tbl)[-1]  # Set covariate names as row names
-cov_matrix[1:5, 1:5]
+print(cov_matrix[1:5, 1:5])
 
 # Write to file without column name for the index
 message('\nWriting ', cell_type, ' covariate matrix for ', norm_method, ' ...')
 write.table(cov_matrix, 
-            file = paste0(out_dir, cell_type, "_", norm_method, "_base_covariates.txt"), 
+            file = cov_out, 
             sep = "\t", 
             quote = FALSE, 
             col.names = NA,    # Write sample IDs as column names
@@ -227,7 +241,7 @@ pseudblk_ensembl_cnts <- normalised_cnts |>
   drop_na() |>
   mutate(
     TSS = if_else(strand == 1, start_position, end_position),  # Determine TSS based on strand
-    cis_start = TSS,  # Prevent negative coordinates
+    cis_start = TSS,
     cis_end = TSS + 1 
   ) |>
   distinct(genes, .keep_all = TRUE) |> # Keep first occurrence dirty for now
@@ -243,10 +257,10 @@ message('Counts tbl dimensions after first merge on gene id (Genes x [Samples + 
         paste0(dim(pseudblk_cnts)[1], ' x ', dim(pseudblk_cnts)[2]))
 report_tibble$initial_dims <- paste0(dim(pseudblk_cnts)[1], "x", dim(pseudblk_cnts)[2])
 
-# Handle NAs and duplicates: scope here to try to retain more genes
+# Handle NAs and duplicates: 
 pseudblk_cnts_nas <- pseudblk_cnts |>
   dplyr::filter(if_any(everything(), is.na)) 
-message('Counts tbl gene ID NAs (note some : ', dim(pseudblk_cnts_nas)[1])
+message('Counts tbl gene ID NAs: ', dim(pseudblk_cnts_nas)[1])
 report_tibble$NAs <- dim(pseudblk_cnts_nas)[1]
 
 pseudblk_cnts_symbol_dups <- pseudblk_cnts |>
@@ -275,7 +289,7 @@ pseudblk_cnts <- pseudblk_cnts |>
   drop_na() |>
   mutate(
     TSS = if_else(strand == 1, start_position, end_position),  # Determine TSS based on strand
-    cis_start = TSS,  # Prevent negative coordinates
+    cis_start = TSS,
     cis_end = TSS + 1 
   ) |>
   distinct(ensembl_gene_id, .keep_all = TRUE) |> # Keep first occurrence dirty for now
@@ -285,7 +299,7 @@ pseudblk_cnts <- pseudblk_cnts |>
   arrange(Chr, as.numeric(start), as.numeric(end)) |>
   dplyr::filter(Chr %in% seq(1,22,1)) |>
   dplyr::rename('#Chr' = Chr) |> # Required or tabix chokes at tensorQTL step
-  write_tsv(paste0(out_dir, cell_type, '_', norm_method, '.bed'))
+  write_tsv(exp_out)
 
 message('Final counts tbl dims: ', paste0(dim(pseudblk_cnts)[1], ' x ', dim(pseudblk_cnts)[2]), '\n')
 report_tibble$final_dims <- paste0(dim(pseudblk_cnts)[1], 'x', dim(pseudblk_cnts)[2])
