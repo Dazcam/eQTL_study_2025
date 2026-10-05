@@ -39,38 +39,13 @@ out_file <- snakemake@output[[1]]
 norm_method <- 'quantile'
 genPC <- 4
 
-cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
-                "MG", "OPC", "Endo-Peri",
-                "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                "GABA-0", "GABA-1", "GABA-2",
-                "NPC-0", "NPC-1", "NPC-2")
-
-expPC_map <- c(
-  "Glu-UL"     = 50,
-  "Glu-DL"     = 40,
-  "GABA"       = 30,
-  "NPC"        = 30,
-  "MG"         = 30,
-  "OPC"        = 30,
-  "Endo-Peri"  = 30,
-  "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,
-  "Glu-UL-2"     = 40,
-  "Glu-DL-0"     = 40,
-  "Glu-DL-1"     = 40,
-  "Glu-DL-2"     = 30,
-  "GABA-0"       = 30,
-  "GABA-1"       = 40,
-  "GABA-2"       = 40,
-  "NPC-0"        = 50,
-  "NPC-1"        = 30,
-  "NPC-2"        = 20
-)
+expPC_map <- unlist(snakemake@params[["exp_pc_map"]])
+cell_types <- names(expPC_map)
 
 gene_lookup_file <- '../resources/sheets/gene_lookup_hg38.tsv'
 gene_lookup_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
-  select(ensembl_gene_id, external_gene_name)
+  select(ensembl_gene_id, external_gene_name) |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
 
 # ----- 1. Load ATAC-seq Peaks (Ziffra 2021) -----
 message("Loading Ziffra peak data...")
@@ -87,7 +62,8 @@ master_peaks_gr <- makeGRangesFromDataFrame(peak_coords, keep.extra.columns = TR
 message("Loading pvar file...")
 pvar <- read_tsv(allele_file, comment = "#", 
                  col_names = c("CHROM", "POS", "ID", "REF", "ALT", "INFO")) %>%
-  dplyr::select(CHROM, POS, ID, REF, ALT)
+  dplyr::select(CHROM, POS, ID, REF, ALT) %>%
+  distinct(ID, .keep_all = TRUE)
 
 # ----- 3. Iterate through Cell Types and Build Table -----
 final_excel_list <- list()
@@ -115,9 +91,15 @@ for (cell_type in names(expPC_map)) {
   
   # Cross-reference with pvar for REF/ALT and Coordinates
   message('Adding alleles ...')
+  n_before <- nrow(eqtl_tbl)
   eqtl_enriched <- eqtl_tbl %>%
     inner_join(pvar, by = c("SNP" = "ID"))
   
+  if (nrow(eqtl_enriched) != n_before) {
+    warning(cell_type, ": row count changed after pvar join (", n_before, " -> ", nrow(eqtl_enriched), "), check for duplicate SNP IDs")
+  }  
+
+
   message('Adding chr prefix to eQTL tbl ...')
   eqtl_enriched <- eqtl_enriched %>%
     mutate(CHROM = ifelse(!str_detect(CHROM, "chr"), paste0("chr", CHROM), CHROM)) %>% 
@@ -146,6 +128,7 @@ for (cell_type in names(expPC_map)) {
   
   # Add cell type label, gene symbol and reorder columns
   message('Mungingfi tbl ...')
+  n_before <- nrow(eqtl_tbl)
   eqtl_enriched <- eqtl_enriched %>%
     mutate(cell_type = !!cell_type) %>%
     inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
@@ -153,7 +136,11 @@ for (cell_type in names(expPC_map)) {
     dplyr::select(cell_type, ensembl_id, symbol = external_gene_name, CHROM, 
                   SNP, POS, REF, ALT,  AF = af, slope, slope_se, pval_nominal, 
                   pval_beta, qval, In_Peak)
-  
+   
+  if (nrow(eqtl_enriched) != n_before) {
+    warning(cell_type, ": row count changed after gene lookup join (", n_before, " -> ", nrow(eqtl_enriched), "), check for duplicate Gene IDs")
+  }
+ 
   message('Any NAs in final tbl?', anyNA(eqtl_enriched))
   
   final_excel_list[[cell_type]] <- eqtl_enriched
