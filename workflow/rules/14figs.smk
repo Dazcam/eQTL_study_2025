@@ -24,10 +24,12 @@ rule all:
 #       config['plotting']['effect_size_heatmaps_plt']['fetal_vs_fetal'],
 #       config['plotting']['effect_size_heatmaps_plt']['fetal_vs_jang'],
 #       config['plotting']['fig4_plt']['out_file'],
-#       config['plotting']['tss_density_plt']['out_file']
-       config['plotting']['snrna_qc_plt']['out_file_sample'],
-       config['plotting']['snrna_qc_plt']['out_file_celltype'],
+       config['plotting']['tss_density_plt']['out_file']
+#       config['plotting']['snrna_qc_plt']['out_file_sample'],
+#       config['plotting']['snrna_qc_plt']['out_file_celltype'],
 
+
+# F1 is the infographic
 
 rule eqtl_qc_plt:
     # Fig 2
@@ -73,7 +75,7 @@ rule replication_plt:
 rule fig4_plt:
     # Fig 4 -- full figure: A/B (pseudotime UMAP + features) + C/D (overlap barplots)
     input:  glu_a_h5ad = config['pseudotime']['palantair']['h5ad'].format(trajectory="NPC-to-Glu-UL"),
-            glu_b_h5ad = config['pseudotime']['palantair']['h5ad'].format(trajectory="NPC-to-Glu-DL")
+#            glu_b_h5ad = config['pseudotime']['palantair']['h5ad'].format(trajectory="NPC-to-Glu-DL")
     output: config['plotting']['fig4_plt']['out_file']
     params: perm_dir       = config['dev_specificity']['extract_universe']['qtl_dir'],
             pseudotime_dir = config['plotting']['fig4_plt']['pseudotime_dir'],
@@ -88,6 +90,7 @@ rule ldsr_plt:
     # Fig 5
     output: config['plotting']['ldsr_plt']['out_file']
     params: in_dir = config['plotting']['ldsr_plt']['in_dir'],
+            cell_types = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['plotting']['ldsr_plt']['log']
@@ -102,7 +105,7 @@ rule compare_smr_ctwas:
     script: "../scripts/manuscript_plot_compare_smr_ctwas.R"
 
 rule supplementary_plt:
-    # Supp Fig 1
+    # Supp Fig 2 & 12
     output: config['plotting']['supp_plt']['out_file']
     params: geno_dir = config['plotting']['supp_plt']['geno_dir'],
             expr_dir = config['plotting']['supp_plt']['expr_dir'],
@@ -155,7 +158,8 @@ rule bulk_egene_overlaps_plt:
             overlap             = config['replication_bulk']['overlap_obrien']['out_file']
     output: config['plotting']['bulk_egene_overlaps_plt']['out_file']
     params: egenes_per_celltype = config['replication_bulk']['extract_unique_egenes']['out_file'],
-            overlap             = config['replication_bulk']['overlap_obrien']['out_file']
+            overlap             = config['replication_bulk']['overlap_obrien']['out_file'],
+            cell_types          = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources:   time="0:30:00"
     log:         config['plotting']['bulk_egene_overlaps_plt']['log']
@@ -171,38 +175,3 @@ rule snrna_qc_plt:
     log:    config['plotting']['snrna_qc_plt']['log']
     script: "../scripts/manuscript_plot_snrna_qc.py"
 
-#rule manuscript_tables_report:
-#    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
-#    input:  ctwas_multi = expand(../results/12CTWAS/multi/ctwas_multi_{gwas}_ctwas.rds, gwas = config['gwas']),
-#            
-#            rmd_script = "scripts/ctwas_report.Rmd"
-#    output: "reports/12CTWAS/12ctwas_report.html"
-#    params: in_dir = "../../results/12CTWAS/multi/",
-#            bmark_dir = "../reports/benchmarks/",
-#            lookup_dir = "../../resources/sheets/",
-#            output_file = "../reports/12CTWAS/12ctwas_report.html"
-#    singularity: config["containers"]["r_eqtl"] # Need to add ctwas to r_eqtl conatiner to print locus plot
-#    message: "Generate cTWAS report"
-#    benchmark: "reports/benchmarks/12ctwas.ctwas_report.benchmark.txt"
-#    log:     "../results/00LOG/12CTWAS/ctwas_report.log"
-#    shell:
-#        """
-#        Rscript -e "rmarkdown::render('{input.rmd_script}', \
-#            output_file = '{params.output_file}', \
-#            params = list(in_dir = '{params.in_dir}', \
-#            bmark_dir = '{params.bmark_dir}', \
-#            lookup_dir = '{params.lookup_dir}'))" > {log} 2>&1
-#        """
-
-#rule eqtl_boxplots:
-#    output: config['plotting']['eqtl_boxplots']['output'] 
-#    params: exp_dir = config['plotting']['eqtl_boxplots']['exp_dir'],
-#            pval_dir = config['plotting']['eqtl_boxplots']['pval_dir'],
-#            geno_prefix = config['plotting']['eqtl_boxplots']['geno_prefix'],
-#            gene_id = config['plotting']['eqtl_boxplots']['gene_id'],
-#            snp_id = config['plotting']['eqtl_boxplots']['snp_id']
-#    singularity: config["containers"]["r_eqtl"]
-#    resources: threads = 4, mem_mb = 20000
-#    envmodules: "PLINK"
-#    log:  config['plotting']['eqtl_boxplots']['log']
-#    script: "../scripts/plot_eQTL_boxplots.R"
