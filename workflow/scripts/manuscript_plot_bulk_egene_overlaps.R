@@ -3,11 +3,28 @@
 #    Generate bulk eGene overlap supplementary figure for manuscript
 #
 #--------------------------------------------------------------------------------------
-
-# A: eGenes overlapping O'Brien 2018 gene-level bulk eQTL
-# B: eGenes overlapping O'Brien 2018 transcript-level bulk eQTL
-
-## Info  ------------------------------------------------------------------------------
+#
+# Pipeline:  14MANUSCRIPT_PLOTS | Rule: bulk_egene_overlaps_plt
+#            Upstream:   extract_unique_egenes (per-cell-type eGenes and their
+#                        overlap with O'Brien 2018 bulk eQTL)
+#            Downstream: None (supplementary figure)
+#
+# Purpose:   Per cell type, total eGenes (dark bar) and the number also significant
+#            in O'Brien 2018 bulk fetal brain eQTL (light bar), grouped in three
+#            blocks: L1, L2, pseudotime bins.
+#            A: gene-level bulk eQTL overlap
+#            B: transcript-level bulk eQTL overlap
+#            - Keeps only cell types in config['cell_types']
+#            - Relabels cell types (Glu-UL -> Glu-A, Glu-DL -> Glu-B, drop "-Q4-")
+#
+# Inputs:    egenes_per_celltype  One row per (cell_type, eGene), with level
+#            overlap              One row per unique eGene: in_gene_bulk,
+#                                 in_transcript_bulk
+#            cell_types           config['cell_types'] (pipeline labels)
+#
+# Outputs:   out_file             Two-panel figure (TIFF, 600 dpi, LZW)
+#
+#--------------------------------------------------------------------------------------
 
 ## Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -23,36 +40,48 @@ if (exists("snakemake")) {
 
 message("\n\nGenerating bulk eGene overlap plot for the manuscript ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(cowplot)
 
-# --- Set variables
+# Input and output paths
 egenes_per_celltype_file <- snakemake@params[["egenes_per_celltype"]]
 overlap_file             <- snakemake@params[["overlap"]]
+cell_types               <- unlist(snakemake@params[["cell_types"]])
 out_file                 <- snakemake@output[[1]]
 
 # egenes_per_celltype_file <- "../results/.../egenes_per_celltype.tsv"
 # overlap_file             <- "../results/.../overlap.tsv"
-# out_file                 <- "../results/13MANUSCRIPT_PLOTS_TABLES/bulk_egene_overlaps.tiff"
+# cell_types               <- c("Glu-UL", "Glu-DL", "NPC", ...)   # config['cell_types']
+# out_file                 <- "../results/14MANUSCRIPT_PLOTS/bulk_egene_overlaps.tiff"
 
-# --- Custom colour palette -- identical to the LDSR report's (new Glu-A/Glu-B
-# names), so cell types read the same colour across every manuscript figure.
+# Make a tibble showing what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("egenes_per_celltype_file", "overlap_file", "cell_types", "out_file"),
+  value    = c(egenes_per_celltype_file, overlap_file,
+               paste(cell_types, collapse = ", "), out_file)) |>
+  knitr::kable(format = "simple", align = "l") |>
+  print()
+message("============================\n")
+
+# Custom colour palette: identical to the LDSR figure so cell types share colours
+# across every manuscript figure
 custom_palette <- c(
-  'Glu-A' = '#4363d8',
-  'Glu-B' = '#00B6EB',
-  'NPC' = '#FF5959',
-  'GABA' = '#3CBB75FF',
-  'Endo-Peri' = '#B200ED',
-  'MG' = '#F58231',
-  'OPC' = '#FDE725FF',
+  'Glu-A'               = '#4363d8',
+  'Glu-B'               = '#00B6EB',
+  'NPC'                 = '#FF5959',
+  'GABA'                = '#3CBB75FF',
+  'Endo-Peri'           = '#B200ED',
+  'MG'                  = '#F58231',
+  'OPC'                 = '#FDE725FF',
   'Trajectory-to-Glu-A' = '#E91E8C',
   'Trajectory-to-Glu-B' = '#2F4F4F'
 )
 
-# --- Relabel cell type names for plotting: Glu-UL -> Glu-A, Glu-DL -> Glu-B,
-# and drop "-Q4-" from pseudotime trajectory bin names, e.g.
-# "NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1"
+# Relabel helper: Glu-UL -> Glu-A, Glu-DL -> Glu-B, strip "-Q4-" from bin names,
+# e.g. "NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1"
 relabel_cell_type <- function(x) {
   x <- str_replace(x, "Glu-UL", "Glu-A")
   x <- str_replace(x, "Glu-DL", "Glu-B")
@@ -60,29 +89,49 @@ relabel_cell_type <- function(x) {
   x
 }
 
-# --- Dependency-free lighten (base R col2rgb/rgb) -- avoids requiring the
-# colorspace package just for this one plot.
+# Dependency-free lighten (base R), avoids needing colorspace for one plot
 lighten_colour <- function(hex, amount = 0.55) {
-  rgb_mat <- col2rgb(hex)
+  rgb_mat   <- col2rgb(hex)
   rgb_light <- rgb_mat + (255 - rgb_mat) * amount
   rgb(rgb_light[1, ], rgb_light[2, ], rgb_light[3, ], maxColorValue = 255)
 }
 
-# --- Read and join
-# egenes_per_celltype: one row per (cell_type, eGene) -- which cell type(s)
-# each eGene was significant in.
-# overlap: one row per unique eGene ACROSS all cell types -- whether it's
-# gene-/transcript-bulk significant, no cell_type column at all.
+## Read, filter and join  ---------------------------------------------------------------
+# egenes_per_celltype: one row per (cell_type, eGene)
+# overlap: one row per unique eGene across all cell types (no cell_type column)
 egenes_per_celltype <- read_tsv(egenes_per_celltype_file, show_col_types = FALSE)
 overlap             <- read_tsv(overlap_file, show_col_types = FALSE)
+
+# Keep only config cell types (pipeline labels, so filter before relabelling)
+file_cell_types <- unique(egenes_per_celltype$cell_type)
+message("Cell types in eGene file: ", paste(sort(file_cell_types), collapse = ", "))
+
+not_in_config <- setdiff(file_cell_types, cell_types)
+if (length(not_in_config) > 0) {
+  message("Dropping cell types not in config['cell_types']: ",
+          paste(not_in_config, collapse = ", "))
+}
+not_in_file <- setdiff(cell_types, file_cell_types)
+if (length(not_in_file) > 0) {
+  message("WARNING: config cell types absent from the eGene file: ",
+          paste(not_in_file, collapse = ", "))
+}
+
+egenes_per_celltype <- egenes_per_celltype |>
+  filter(cell_type %in% cell_types)
+
+if (nrow(egenes_per_celltype) == 0) {
+  stop("No rows left after filtering to config['cell_types']. ",
+       "Check the cell_types param is passed and that names match the eGene file.")
+}
 
 joined <- egenes_per_celltype |>
   left_join(overlap, by = "phenotype_id")
 
 n_unmatched <- sum(is.na(joined$in_gene_bulk))
 if (n_unmatched > 0) {
-  warning(n_unmatched, " (cell_type, phenotype_id) rows had no matching overlap record -- ",
-          "check egenes_per_celltype and overlap came from the same extract_unique_egenes run.")
+  message("WARNING: ", n_unmatched, " (cell_type, phenotype_id) rows had no matching overlap ",
+          "record. Check both files came from the same extract_unique_egenes run.")
 }
 
 celltype_overlap <- joined |>
@@ -95,28 +144,30 @@ celltype_overlap <- joined |>
   ) |>
   mutate(cell_type = relabel_cell_type(cell_type))
 
-# --- Family / trajectory detection (new Glu-A/Glu-B names). Trajectory check
-# BEFORE the family cascade, since "NPC-to-Glu-A-Q4-Bin1" contains "Glu-A" as
-# a substring and would otherwise be mis-classified.
+message("\neGene counts per cell type:")
+celltype_overlap |> knitr::kable(format = "simple", align = "l") |> print()
+
+## Colour groups and x-axis order  ------------------------------------------------------
+# Trajectory check comes first, since "NPC-to-Glu-A-Bin1" contains "Glu-A" and "NPC"
 celltype_overlap <- celltype_overlap |>
   mutate(
     is_trajectory = str_detect(cell_type, "-to-"),
     main_type = case_when(
       is_trajectory & str_detect(cell_type, "to-Glu-A") ~ "Trajectory-to-Glu-A",
       is_trajectory & str_detect(cell_type, "to-Glu-B") ~ "Trajectory-to-Glu-B",
-      str_detect(cell_type, "Glu-A") ~ "Glu-A",
-      str_detect(cell_type, "Glu-B") ~ "Glu-B",
-      str_detect(cell_type, "GABA") ~ "GABA",
-      str_detect(cell_type, "NPC") ~ "NPC",
-      str_detect(cell_type, "OPC") ~ "OPC",
-      str_detect(cell_type, "MG") ~ "MG",
+      str_detect(cell_type, "Glu-A")     ~ "Glu-A",
+      str_detect(cell_type, "Glu-B")     ~ "Glu-B",
+      str_detect(cell_type, "GABA")      ~ "GABA",
+      str_detect(cell_type, "NPC")       ~ "NPC",
+      str_detect(cell_type, "OPC")       ~ "OPC",
+      str_detect(cell_type, "MG")        ~ "MG",
       str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
       TRUE ~ cell_type
     )
   )
 
-# --- x-axis order: 3 LEVEL blocks (L1, L2, pseudotime), family order within
-# each block (not family-interleaved across the whole axis).
+# Three level blocks (L1, L2, pseudotime), family order within each block.
+# Entries not present after the config filter are dropped below.
 l1_order <- c("Glu-A", "Glu-B", "GABA", "NPC", "Endo-Peri", "MG", "OPC")
 l2_order <- c("Glu-A-0", "Glu-A-1", "Glu-A-2",
               "Glu-B-0", "Glu-B-1", "Glu-B-2",
@@ -128,46 +179,47 @@ pt_order <- c(sort(grep("^NPC-to-Glu-A", celltype_overlap$cell_type, value = TRU
 cell_order <- c(l1_order, l2_order, pt_order)
 cell_order <- cell_order[cell_order %in% celltype_overlap$cell_type]
 
+unordered <- setdiff(celltype_overlap$cell_type, cell_order)
+if (length(unordered) > 0) {
+  stop("Cell types not covered by the x-axis ordering: ", paste(unordered, collapse = ", "))
+}
+
 celltype_overlap <- celltype_overlap |>
   mutate(cell_type = factor(cell_type, levels = cell_order))
 
-# x position: sequential within a block, with a gap ONLY at the 2 block
-# boundaries (L1->L2, L2->pseudotime) -- not at every family transition.
-# block_gap sets how many x-units wide that boundary gap is (bar spacing
-# within a block is always 1 unit, regardless of this value).
+# x position: 1 unit between bars, plus block_gap units at the two level
+# boundaries (L1 -> L2, L2 -> pseudotime) only
 block_gap <- 1
 block_order <- celltype_overlap |>
-  arrange(cell_type) |>
   distinct(cell_type, level) |>
   mutate(level = factor(level, levels = c("L1", "L2", "pseudotime"))) |>
   arrange(level, cell_type) |>
   mutate(
     block_change = level != lag(level, default = first(level)),
-    x_pos = row_number() + cumsum(block_change) * block_gap
+    x_pos        = row_number() + cumsum(block_change) * block_gap
   )
 
 celltype_overlap <- celltype_overlap |>
-  left_join(block_order |> select(cell_type, x_pos), by = "cell_type")
+  left_join(block_order |> dplyr::select(cell_type, x_pos), by = "cell_type")
 
-# --- Base theme -- broadly matches the LDSR figure's base_theme (same
-# base_size, text sizes, grid/legend/strip treatment), no plot titles.
+## Plots  -------------------------------------------------------------------------------
+# Broadly matches the LDSR figure's base_theme; no plot titles
 base_theme <- theme_minimal(base_size = 12) +
   theme(
-    axis.text.y = element_text(size = 10),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y        = element_text(size = 10),
+    axis.text.x        = element_text(angle = 45, hjust = 1, size = 10),
     panel.grid.major.x = element_blank(),
-    panel.grid.minor = element_blank(),
-    strip.text = element_text(face = "bold"),
-    legend.position = "none",
-    plot.title = element_blank(),
-    plot.margin = margin(t = 18, r = 6, b = 6, l = 6)
+    panel.grid.minor   = element_blank(),
+    strip.text         = element_text(face = "bold"),
+    legend.position    = "none",
+    plot.title         = element_blank(),
+    plot.margin        = margin(t = 18, r = 6, b = 6, l = 6)
   )
 
-# Two SOLID bar layers, dark drawn first, light drawn second on top (light
-# bar is shorter, so it renders as the bottom portion of the same bar) --
-# both with black outlines. No plot titles.
 bar_width <- 0.9
 
+# Two solid bar layers: total eGenes (dark) drawn first, bulk overlap (light,
+# shorter) drawn on top, so it reads as the lower portion of one bar
 plot_overlap_bar <- function(dat, overlap_col) {
   dat <- dat |> rename(overlap_n = all_of(overlap_col))
   light_fill <- lighten_colour(custom_palette[as.character(dat$main_type)], amount = 0.55)
@@ -184,41 +236,37 @@ plot_overlap_bar <- function(dat, overlap_col) {
     labs(x = NULL, y = "eGenes")
 }
 
-# --- Plot A: gene-level overlap
-plot_A <- plot_overlap_bar(celltype_overlap, "n_gene_bulk_overlap")
+plot_A <- plot_overlap_bar(celltype_overlap, "n_gene_bulk_overlap")         # gene-level
+plot_B <- plot_overlap_bar(celltype_overlap, "n_transcript_bulk_overlap")   # transcript-level
 
-# --- Plot B: transcript-level overlap
-plot_B <- plot_overlap_bar(celltype_overlap, "n_transcript_bulk_overlap")
-
-# --- Combine into final figure -- single column, A above B. Labels sit in
-# the top margin reserved by plot.margin above, so they no longer overlap
-# the bars; a white border is added around the whole figure.
+# Single column, A above B; labels sit in the top margin reserved by plot.margin
 final_plot <- plot_grid(
   plot_A, plot_B,
-  labels = c("A", "B"),
+  labels     = c("A", "B"),
   label_size = 20,
-  label_x = 0,
-  label_y = 1,
-  hjust = -0.3,
-  vjust = 1.1,
-  ncol = 1,
-  align = "v"
+  label_x    = 0,
+  label_y    = 1,
+  hjust      = -0.3,
+  vjust      = 1.1,
+  ncol       = 1,
+  align      = "v"
 ) +
   theme(plot.margin = margin(t = 10, r = 10, b = 10, l = 10))
 
-# High-res TIFF
+## Save  --------------------------------------------------------------------------------
+message("\nWriting: ", out_file)
 ggsave(
-  filename = out_file,
-  plot = final_plot,
-  width = 8,
-  height = 10,
-  units = "in",
-  dpi = 600,
-  device = "tiff",
+  filename    = out_file,
+  plot        = final_plot,
+  width       = 8,
+  height      = 10,
+  units       = "in",
+  dpi         = 600,
+  device      = "tiff",
   compression = "lzw"
 )
 
-message("Export complete.")
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
