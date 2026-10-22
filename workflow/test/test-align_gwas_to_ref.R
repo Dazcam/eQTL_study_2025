@@ -6,7 +6,11 @@
 #--------------------------------------------------------------------------------------
 
 library(testthat)
-suppressMessages(library(tidyverse))
+suppressMessages({
+  library(dplyr)
+  library(tibble)
+  library(stringr)
+})
 
 # Reference .bim alleles (A1 = ALT, A2 = REF)
 ref_bim <- tribble(
