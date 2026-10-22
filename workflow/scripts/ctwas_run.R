@@ -1,31 +1,51 @@
 #--------------------------------------------------------------------------------------
 #
-#    Causal TWAS
+#    Causal TWAS - Run cTWAS
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  12CTWAS | Rule: run_ctwas (one job per cell type x GWAS)
+#            Upstream:   07PREP-GWAS sumstats; copy_fusion_weights (11TWAS FUSION
+#                        weights); create_ld_matrices
+#            Downstream: ctwas_report; 13MANUSCRIPT_TABLES ctwas_sig_tbl,
+#                        smr_ctwas_venn_tbl
+#
+# Purpose:   For one cell type x GWAS:
+#            - Skip known-failing combinations, writing a flagged placeholder .rds
+#            - Clean the GWAS (non-rsIDs, duplicates, alt contigs) and align its
+#              alleles to the reference .bim (see ctwas_functions.R)
+#            - Build the SNP / LD maps from the LD matrices
+#            - Preprocess the FUSION lasso weights (reused if already processed)
+#            - Optionally QC the weights gene by gene
+#            - Run ctwas_sumstats() and save the results
+#
+# Inputs:    gwas         {gwas}_hg38.tsv (needs alleles, so not LDSR-munged)
+#            weights_dir  FUSION .wgt.RDat files for the cell type
+#            ld_dir       LD matrices (.RDS) and SNP info (.Rvar) per LD region
+#            bim_file     1000G EUR hg38 .bim used for allele alignment
+#
+# Outputs:   output       ctwas_{cell_type}_{gwas}_ctwas.rds (cTWAS results)
+#            Also written to dirname(output):
+#            processed_weights/processed_weights_{cell_type}_{gwas}.rds
+#            cor_matrix_{gwas}_{cell_type}/  (correlation matrices)
+#            ctwas_weight_qc_{cell_type}_{gwas}.tsv  (only when QC runs)
 #
 #--------------------------------------------------------------------------------------
 
-## Info  ------------------------------------------------------------------------------
-
-#  Input
-#  - GWAS sumstats per trait
-#  - TWAS weights per cell type
-#  - LD reference file (1000G hg38)
-
-##  Load Packages, functions and variables  -------------------------------------------
-## Set up logging for smk  ------------------------------------------------------------
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
-    if (exists("snakemake") & length(snakemake@log) != 0) {
-      log <- file(snakemake@log[1][[1]], open = "wt")
+    if (exists("snakemake") && length(snakemake@log) != 0) {
+      log <- file(snakemake@log[[1]], open = "wt")
       sink(log, append = TRUE)
       sink(log, append = TRUE, type = "message")
     }
   }
+  log_smk()
 }
-log_smk()
 message('\n\nRunning causal TWAS ...')
 
-# Load packages
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(ctwas)
 
@@ -45,6 +65,16 @@ out_dir <- dirname(output)
 processed_weights_dir <- file.path(out_dir, 'processed_weights/')
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
 threads <- snakemake@threads
+
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+print(data.frame(
+  variable = c("gwas", "weights_dir", "ld_dir", "bim_file", "cell_type", "gwas_trait",
+               "output", "processed_weights_dir", "cor_dir", "threads"),
+  value    = c(gwas, weights_dir, ld_dir, bim_file, cell_type, gwas_trait,
+               output, processed_weights_dir, cor_dir, threads)), right = FALSE, row.names = FALSE)
+message("============================\n")
 
 ## Skip known-failing cell_type / gwas combinations  ----------------------------------
 # These combinations reliably fail (chiefly OOM during LD computation in
@@ -67,12 +97,12 @@ skip_pairs <- tibble::tribble(
 this_pair <- dplyr::filter(skip_pairs, cell_type == !!cell_type, gwas == !!gwas_trait)
 
 if (nrow(this_pair) > 0) {
-
+  
   message("=== SKIPPING known-failing combination ===")
   message("cell_type: ", cell_type)
   message("gwas: ", gwas_trait)
   message("Reason: ", this_pair$reason[1])
-
+  
   placeholder <- list(
     status = "skipped",
     cell_type = cell_type,
@@ -82,25 +112,16 @@ if (nrow(this_pair) > 0) {
     finemap_res = NULL,
     z_gene = NULL
   )
-
+  
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   write_rds(placeholder, output)
-
+  
   message("Placeholder output written to: ", output)
   message("=== Skip complete, exiting cleanly ===")
   quit(save = "no", status = 0)
 }
 
-# Read in data
-message("\nLoading data ...\n")
-message("GWAS loaded from: ", gwas)
-message("weights_dir loaded from: ", weights_dir)
-message("Bim file loaded from: ", bim_file)
-message("cell_type: ", cell_type)
-message("Output will be saved to: ", output)
-message("Processed weights will be save to: ", processed_weights_dir)
-message("Correlation matrices will be saved to: ", cor_dir)
-
+## Load and prepare GWAS  ---------------------------------------------------------------
 # Prep GWAS
 # Note: Need to harmonise alleles in GWAS, Ref and prediction weights
 # cTWAS says: A1 is the alternate allele, and A2 is the reference allele
@@ -118,19 +139,11 @@ gwas_tbl <- clean_gwas_for_ctwas(gwas_tbl)
 
 z_snp <- align_gwas_to_ref(gwas_tbl, snp_tbl)
 
-# Region info: included with package
-# local - ctwas_0.1.38
-#region_file <- system.file("extdata/ldetect", "EUR.b38.bed", package = "ctwas")
-#region_info <- read_tsv(region_file)
-
-# remote - ctwas_0.5.34
+## LD regions and SNP / LD maps  -------------------------------------------------------
+# Region info: included with package as of v0.5.34
 message('\nLoading region info from extdata ...')
 region_file <- system.file("extdata/ldetect", "EUR.b38.ldetect.regions.RDS", package = "ctwas")
 region_info <- readRDS(region_file)
-
-# Load ref SNP info (for mapping) - think this is pnly used when not using LD matrices
-#ref_snp_info <- data.table::fread(ref_snp_info_file, sep = "\t")
-#class(ref_snp_info) <- "data.frame"
 
 # Create metadata table for LD files (one row per region)
 region_metatable <- make_ld_metatable(region_info, ld_dir, prefix = "1000G_EUR_Phase3_hg38")
@@ -141,15 +154,9 @@ res <- create_snp_LD_map(region_metatable)
 snp_map <- res$snp_map
 LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas() later
 
-# Optional: Harmonize GWAS first (add after reading z_snp)
-# message('Preprocessing GWAS for cTWAS ...')
-# z_snp <- preprocess_z_snp(z_snp, snp_map, 
-#                           drop_multiallelic = TRUE, 
-#                           drop_strand_ambig = TRUE)  # Converts to chr:pos_ref_alt
-
-# FUSION weights
+## FUSION weights  ---------------------------------------------------------------------
 message('Preprocessing FUSION weights for cTWAS ...')
-  
+
 message("\nFirst check if cTWAS processed weight file already exists ... ")
 weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', 
                          cell_type, '_', gwas_trait, '.rds')
@@ -181,31 +188,32 @@ if (file.exists(weights_file)) {
 }
 
 
+## Optional weight QC  ------------------------------------------------------------------
 if (cell_type %in%  c("InN-0", "InN-1") &
     gwas_trait %in% c("adhd", "ocd", "ptsd")) {
   
   message("=== Running full gene-by-gene QC before cTWAS ===")
   qc_tbl <- qc_ctwas_weights(weights, z_snp)
-
+  
   message("\n=== QC Summary ===")
   print(qc_tbl %>% count(status, reason), n = Inf)
-
+  
   failed_genes <- qc_tbl %>% filter(status == "FAIL") %>% pull(gene)
   passed_genes <- qc_tbl %>% filter(status == "PASS") %>% pull(gene)
-
+  
   message("\nDropping ", length(failed_genes), " genes failing QC.")
   message("Keeping ", length(passed_genes), " genes.")
-
+  
   weights_clean <- weights[passed_genes]
-
+  
   # Save QC table for audit
   qc_file <- file.path(out_dir, paste0("ctwas_weight_qc_", cell_type, "_", gwas_trait, ".tsv"))
   readr::write_tsv(qc_tbl, qc_file)
   message("QC report saved to: ", qc_file)
-
+  
   # Replace weights with cleaned version
   weights <- weights_clean
-
+  
   message("=== QC complete. Proceeding to run cTWAS with cleaned weight set ===")
   
 }
@@ -215,8 +223,7 @@ dir.create(processed_weights_dir)
 write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
 
 
-### ----------------------------------------------------------
-# Then run ctwas (example for full analysis)
+## Run cTWAS  --------------------------------------------------------------------------
 message('Run cTWAS ...')
 ctwas_res <- ctwas_sumstats(z_snp, 
                             weights, 
