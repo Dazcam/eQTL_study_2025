@@ -98,15 +98,13 @@ align_gwas_to_ref <- function(gwas_tbl, snp_tbl) {
       TRUE                       ~ Z
     ),
 
-    A1 = case_when(
-      allele_status == "flipped" ~ A2,
-      TRUE                       ~ A1
-    ),
-    A2 = case_when(
-      allele_status == "flipped" ~ A1,
-      TRUE                       ~ A2
-    )
-  )
+    # Swap alleles via new columns: mutate() evaluates in order, so assigning A1
+    # first and then A2 = A1 would copy the already-swapped A1 into A2
+    A1_new = if_else(allele_status == "flipped", A2, A1),
+    A2_new = if_else(allele_status == "flipped", A1, A2)
+  ) |>
+    dplyr::select(-A1, -A2) |>
+    dplyr::rename(A1 = A1_new, A2 = A2_new)
 
   # Report allele flips
   message("\n=== GWAS allele alignment summary ===")
@@ -128,7 +126,7 @@ align_gwas_to_ref <- function(gwas_tbl, snp_tbl) {
     message("No missing values in GWAS data ...")
   }
 
-  message("Final number of SNPs in GWAS: ", nrow(z_snp) - 1)
+  message("Final number of SNPs in GWAS: ", nrow(z_snp))
 
   z_snp
 }
