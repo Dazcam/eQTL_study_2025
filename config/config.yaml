@@ -962,10 +962,6 @@ ctwas:
     weights_dir: ../results/12CTWAS/weights/{cell_type}/
     log: ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
 
-  run_ctwas_multi:
-    output: ../results/12CTWAS/multi/ctwas_multi_{cell_type}_{gwas}_ctwas.rds
-    log: ../results/00LOG/12CTWAS/ctwas_run_multi_{cell_type}_{gwas}.log
-
   ctwas_report:
     rmd_script: scripts/ctwas_report.Rmd
     output: reports/12CTWAS/12ctwas_report.html

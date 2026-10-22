@@ -2,12 +2,6 @@ configfile: '../config/config.yaml'
 
 localrules: ctwas_report
 
-#rule all:
-#    input:
-#        config["ctwas"]["ctwas_report"]["output"]
-#expand(config["ctwas"]["run_ctwas"]["output"], cell_type = config['cell_types'], gwas = config['gwas'])
-
-
 rule create_ld_matrices:
     output: config["ctwas"]["create_ld_matrices"]["output"]
     params: ld_ref_dir = config["ctwas"]["create_ld_matrices"]["ld_ref_dir"],
@@ -50,38 +44,17 @@ rule run_ctwas:
     output: config["ctwas"]["run_ctwas"]["output"]
     params: ld_dir = config["ctwas"]["run_ctwas"]["ld_dir"],
             weights_dir = config["ctwas"]["run_ctwas"]["weights_dir"]
-#    resources: threads = 16, mem_mb = 380000, time="1-0:00:00"
-#    resources: threads = 1, mem_mb = 5000, time="30:00"
     resources: threads = 6, mem_mb = 96000, time="1-0:00:00" 
-#    resources: threads = 6, mem_mb = 148000, time="1-0:00:00"  # InN-0 / adhd
     singularity: config["containers"]["twas"]
     message:  "Running cTWAS"
     benchmark: "reports/benchmarks/12ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt"
     log:    config["ctwas"]["run_ctwas"]["log"]
     script: "../scripts/ctwas_run.R"
 
-#rule run_ctwas_multi:
-#    input:  ld_mat = rules.create_ld_matrices.output,
-#            gwas = config["ctwas"]["run_ctwas"]["gwas"],
-#            weights = config["ctwas"]["run_ctwas"]["weights"],
-#            bim_file = config["ctwas"]["run_ctwas"]["bim_file"]
-#    output: config["ctwas"]["run_ctwas_multi"]["output"]
-#    params: ld_dir = config["ctwas"]["run_ctwas"]["ld_dir"],
-#            weights_dir = config["ctwas"]["run_ctwas"]["weights_dir"],
-#            cell_types = config["cell_types"]
-#    resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
-#    resources: threads = 6, mem_mb = 96000, time="1-0:00:00"
-#    singularity: config["containers"]["twas"]
-#    message:  "Running multi-group cTWAS"
-#    benchmark: "reports/benchmarks/12ctwas.run_ctwas_multi_{gwas}.benchmark.txt"
-#    log:    config["ctwas"]["run_ctwas_multi"]["log"]
-#    script: "../scripts/ctwas_run_multi.R"
-
 rule ctwas_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  
             ctwas_res = expand(rules.run_ctwas.output, cell_type = config['cell_types'], gwas = config['gwas']),
-#            ctwas_multi = expand(rules.run_ctwas_multi.output, gwas = config['gwas']),
             rmd_script = config["ctwas"]["ctwas_report"]["rmd_script"]
     output: config["ctwas"]["ctwas_report"]["output"]
     params: in_dir = config["ctwas"]["ctwas_report"]["in_dir"],
