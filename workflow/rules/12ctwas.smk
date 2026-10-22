@@ -43,7 +43,8 @@ rule run_ctwas:
             bim_file = config["ctwas"]["run_ctwas"]["bim_file"]
     output: config["ctwas"]["run_ctwas"]["output"]
     params: ld_dir = config["ctwas"]["run_ctwas"]["ld_dir"],
-            weights_dir = config["ctwas"]["run_ctwas"]["weights_dir"]
+            weights_dir = config["ctwas"]["run_ctwas"]["weights_dir"],
+            run_weight_qc = config["ctwas"]["run_ctwas"]["run_weight_qc"]
     resources: threads = 6, mem_mb = 96000, time="1-0:00:00" 
     threads: 6
     singularity: config["containers"]["twas"]

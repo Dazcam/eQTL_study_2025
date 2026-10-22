@@ -937,7 +937,7 @@ smr:
     in_dir: ../../results/10SMR/smr # Rel to Rmd script
     log: ../results/00LOG/10SMR/smr_report.log  
 
-# ---------  CTWAS  ----------
+# ---------  CTWAS (Pipeline 12)  ----------
 
 ctwas:
   create_ld_matrices:
@@ -960,6 +960,7 @@ ctwas:
     output: ../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
     ld_dir: ../results/12CTWAS/ld_mats/  
     weights_dir: ../results/12CTWAS/weights/{cell_type}/
+    run_weight_qc: false
     log: ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
 
   ctwas_report:

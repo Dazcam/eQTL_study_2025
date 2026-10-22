@@ -16,13 +16,14 @@
 #              alleles to the reference .bim (see ctwas_functions.R)
 #            - Build the SNP / LD maps from the LD matrices
 #            - Preprocess the FUSION lasso weights (reused if already processed)
-#            - Optionally QC the weights gene by gene
+#            - Optionally QC the weights gene by gene (run_weight_qc in config)
 #            - Run ctwas_sumstats() and save the results
 #
 # Inputs:    gwas         {gwas}_hg38.tsv (needs alleles, so not LDSR-munged)
 #            weights_dir  FUSION .wgt.RDat files for the cell type
 #            ld_dir       LD matrices (.RDS) and SNP info (.Rvar) per LD region
 #            bim_file     1000G EUR hg38 .bim used for allele alignment
+#            run_weight_qc  TRUE/FALSE: gene-by-gene weight QC before cTWAS
 #
 # Outputs:   output       ctwas_{cell_type}_{gwas}_ctwas.rds (cTWAS results)
 #            Also written to dirname(output):
@@ -65,15 +66,17 @@ out_dir <- dirname(output)
 processed_weights_dir <- file.path(out_dir, 'processed_weights/')
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
 threads <- snakemake@threads
+run_weight_qc <- isTRUE(snakemake@params[['run_weight_qc']])
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 print(data.frame(
   variable = c("gwas", "weights_dir", "ld_dir", "bim_file", "cell_type", "gwas_trait",
-               "output", "processed_weights_dir", "cor_dir", "threads"),
+               "output", "processed_weights_dir", "cor_dir", "threads", "run_weight_qc"),
   value    = c(gwas, weights_dir, ld_dir, bim_file, cell_type, gwas_trait,
-               output, processed_weights_dir, cor_dir, threads)), right = FALSE, row.names = FALSE)
+               output, processed_weights_dir, cor_dir, threads, run_weight_qc)),
+           right = FALSE, row.names = FALSE)
 message("============================\n")
 
 ## Skip known-failing cell_type / gwas combinations  ----------------------------------
@@ -188,8 +191,9 @@ if (file.exists(weights_file)) {
 
 
 ## Optional weight QC  ------------------------------------------------------------------
-if (cell_type %in%  c("InN-0", "InN-1") &
-    gwas_trait %in% c("adhd", "ocd", "ptsd")) {
+# Used to identify the failing cell type / GWAS combinations now in skip_pairs.
+# Off by default; switch on with run_ctwas: run_weight_qc: true in the config.
+if (run_weight_qc) {
 
   message("=== Running full gene-by-gene QC before cTWAS ===")
   qc_tbl <- qc_ctwas_weights(weights, z_snp)
