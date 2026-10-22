@@ -70,7 +70,7 @@ updated_region_info <- convert_geno_to_LD_matrix(region_info, genotype_files, va
                                                  outputdir = out_dir, outname = out_name)
 
 # Create file for smk
-file.create(paste0(out_dir, "create_ctwas_ld_matrices.done"))
+file.create(snakemake@output[[1]])
 
 message("Done.")
 

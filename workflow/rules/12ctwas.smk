@@ -45,6 +45,7 @@ rule run_ctwas:
     params: ld_dir = config["ctwas"]["run_ctwas"]["ld_dir"],
             weights_dir = config["ctwas"]["run_ctwas"]["weights_dir"]
     resources: threads = 6, mem_mb = 96000, time="1-0:00:00" 
+    threads: 6
     singularity: config["containers"]["twas"]
     message:  "Running cTWAS"
     benchmark: "reports/benchmarks/12ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt"

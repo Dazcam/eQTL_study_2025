@@ -89,7 +89,7 @@ skip_pairs <- tibble::tribble(
   "GABA-2",                   "bpd",   "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
   "Glu-UL-2",                 "adhd",  "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
   "GABA-2",                   "adhd",  "OOM: cannot allocate vector (~2 Tb) computing LD on chr7",
-  "NPC",		      "adhd",  "Job terminated with no error message after chr17-19 LD step (likely OOM-killed by scheduler before R could report)",	
+  "NPC",		      "adhd",  "Job terminated with no error message after chr17-19 LD step (likely OOM-killed by scheduler before R could report)",
   "NPC-to-Glu-DL-Q4-Bin1",    "adhd",  "Job terminated with no error message after chr17-19 LD step (likely OOM-killed by scheduler before R could report)",
   "NPC-to-Glu-UL-Q4-Bin2",    "adhd",  "Job terminated with no error message after chr17-19 LD step (likely OOM-killed by scheduler before R could report)"
 )
@@ -97,12 +97,12 @@ skip_pairs <- tibble::tribble(
 this_pair <- dplyr::filter(skip_pairs, cell_type == !!cell_type, gwas == !!gwas_trait)
 
 if (nrow(this_pair) > 0) {
-  
+
   message("=== SKIPPING known-failing combination ===")
   message("cell_type: ", cell_type)
   message("gwas: ", gwas_trait)
   message("Reason: ", this_pair$reason[1])
-  
+
   placeholder <- list(
     status = "skipped",
     cell_type = cell_type,
@@ -112,10 +112,10 @@ if (nrow(this_pair) > 0) {
     finemap_res = NULL,
     z_gene = NULL
   )
-  
+
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   write_rds(placeholder, output)
-  
+
   message("Placeholder output written to: ", output)
   message("=== Skip complete, exiting cleanly ===")
   quit(save = "no", status = 0)
@@ -129,10 +129,9 @@ if (nrow(this_pair) > 0) {
 # In most GWAS, REF is A1 so will check and likely flip SNPs
 # Note we need to use ../results/07PREP-GWAS/scz_hg38.tsv not LDSR munged sumsats as we need the alleles
 message('\nLoading GWAS ...')
-gwas_tbl <- read_tsv(gwas) 
-gwas_n <- as.numeric(names(sort(table(gwas_tbl$N), decreasing = TRUE)[1]))
-message('GWAS N is set to: ', gwas_n)
-snp_tbl <- read_tsv(bim_file, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
+gwas_tbl <- read_tsv(gwas, show_col_types = FALSE)
+snp_tbl <- read_tsv(bim_file, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'),
+                   show_col_types = FALSE)
 
 ## GWAS checks  -----------------------------------------------------------------------
 gwas_tbl <- clean_gwas_for_ctwas(gwas_tbl)
@@ -158,15 +157,15 @@ LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas()
 message('Preprocessing FUSION weights for cTWAS ...')
 
 message("\nFirst check if cTWAS processed weight file already exists ... ")
-weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_', 
+weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_',
                          cell_type, '_', gwas_trait, '.rds')
 
 if (file.exists(weights_file)) {
   message("Yes! Loading processed weight file ...")
   weights <- read_rds(weights_file)
-  
+
 } else {
-  
+
   message("No! Generating cTWAS ready weights ...")
   weights <- preprocess_weights(weights_dir,
                                 region_info,
@@ -174,7 +173,7 @@ if (file.exists(weights_file)) {
                                 snp_map = snp_map, # Need
                                 LD_map = LD_map, # Need
                                 type = "expression",
-                                context = cell_type,                         
+                                context = cell_type,
                                 weight_format = "FUSION",
                                 fusion_method = "lasso", # Run Lasso for now
                                 fusion_genome_version = "b38",
@@ -184,59 +183,59 @@ if (file.exists(weights_file)) {
                                 scale_predictdb_weights = FALSE,
                                 load_predictdb_LD = FALSE,
                                 ncore = threads)
-  
+
 }
 
 
 ## Optional weight QC  ------------------------------------------------------------------
 if (cell_type %in%  c("InN-0", "InN-1") &
     gwas_trait %in% c("adhd", "ocd", "ptsd")) {
-  
+
   message("=== Running full gene-by-gene QC before cTWAS ===")
   qc_tbl <- qc_ctwas_weights(weights, z_snp)
-  
+
   message("\n=== QC Summary ===")
-  print(qc_tbl %>% count(status, reason), n = Inf)
-  
-  failed_genes <- qc_tbl %>% filter(status == "FAIL") %>% pull(gene)
-  passed_genes <- qc_tbl %>% filter(status == "PASS") %>% pull(gene)
-  
+  print(qc_tbl |> count(status, reason), n = Inf)
+
+  failed_genes <- qc_tbl |> filter(status == "FAIL") |> pull(gene)
+  passed_genes <- qc_tbl |> filter(status == "PASS") |> pull(gene)
+
   message("\nDropping ", length(failed_genes), " genes failing QC.")
   message("Keeping ", length(passed_genes), " genes.")
-  
+
   weights_clean <- weights[passed_genes]
-  
+
   # Save QC table for audit
   qc_file <- file.path(out_dir, paste0("ctwas_weight_qc_", cell_type, "_", gwas_trait, ".tsv"))
   readr::write_tsv(qc_tbl, qc_file)
   message("QC report saved to: ", qc_file)
-  
+
   # Replace weights with cleaned version
   weights <- weights_clean
-  
+
   message("=== QC complete. Proceeding to run cTWAS with cleaned weight set ===")
-  
+
 }
 
 message('Writing cTWAS weights for plotting later ...')
-dir.create(processed_weights_dir)
+dir.create(processed_weights_dir, recursive = TRUE, showWarnings = FALSE)
 write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
 
 
 ## Run cTWAS  --------------------------------------------------------------------------
 message('Run cTWAS ...')
-ctwas_res <- ctwas_sumstats(z_snp, 
-                            weights, 
-                            region_info, 
-                            LD_map, 
-                            snp_map, 
+ctwas_res <- ctwas_sumstats(z_snp,
+                            weights,
+                            region_info,
+                            LD_map,
+                            snp_map,
                             thin = 1,
                             maxSNP = 20000,
-                            min_group_size = 100, 
-                            group_prior_var_structure = "shared_all", 
+                            min_group_size = 100,
+                            group_prior_var_structure = "shared_all",
                             min_nonSNP_PIP = 0.5,
-                            min_abs_corr = 0.1, 
-                            ncore = threads, 
+                            min_abs_corr = 0.1,
+                            ncore = threads,
                             ncore_LD = threads,
                             save_cor = TRUE,
                             cor_dir = cor_dir,
