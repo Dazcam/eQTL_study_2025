@@ -14,7 +14,8 @@
 #            - qc_ctwas_weights()      Gene-by-gene weight QC; used to identify the
 #                                      failing cell type / GWAS combinations
 #
-# Notes:     Requires tidyverse to be loaded by the calling script.
+# Notes:     Requires dplyr, tibble and stringr to be loaded by the calling script
+#            (ctwas_run.R loads them via tidyverse).
 #
 #--------------------------------------------------------------------------------------
 
@@ -76,8 +77,11 @@ clean_gwas_for_ctwas <- function(gwas_tbl) {
 
 ## GWAS allele alignment  ---------------------------------------------------------------
 # Joins the reference .bim alleles onto the GWAS, classifies each SNP as aligned /
-# flipped / mismatched, flips Z (and alleles) for flipped SNPs, and returns the
-# cTWAS z_snp table (id, A1, A2, z) with incomplete rows removed.
+# flipped / not_in_ref / mismatched, and flips Z (and alleles) for flipped SNPs.
+# Removes, and reports counts for:
+#   - SNPs not in the reference or with different alleles (only aligned / flipped kept)
+#   - strand-ambiguous SNPs (A/T, C/G), whose orientation can't be checked from alleles
+# Returns the cTWAS z_snp table (id, A1, A2, z) with incomplete rows removed.
 align_gwas_to_ref <- function(gwas_tbl, snp_tbl) {
 
   message("\nAppending bim ref allele info to GWAS for alignment check...\n")
@@ -88,10 +92,14 @@ align_gwas_to_ref <- function(gwas_tbl, snp_tbl) {
     mutate(
     # classify allele relationships
     allele_status = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ "aligned",
-      A1 == A2.ref & A2 == A1.ref ~ "flipped",
-      TRUE                       ~ "mismatched"
+      is.na(A1.ref) | is.na(A2.ref) ~ "not_in_ref",
+      A1 == A1.ref & A2 == A2.ref   ~ "aligned",
+      A1 == A2.ref & A2 == A1.ref   ~ "flipped",
+      TRUE                          ~ "mismatched"
     ),
+
+    # A/T and C/G SNPs look identical on either strand
+    strand_ambiguous = paste0(A1, A2) %in% c("AT", "TA", "CG", "GC"),
 
     Z = case_when(
       allele_status == "flipped" ~ -Z,
@@ -106,14 +114,23 @@ align_gwas_to_ref <- function(gwas_tbl, snp_tbl) {
     dplyr::select(-A1, -A2) |>
     dplyr::rename(A1 = A1_new, A2 = A2_new)
 
-  # Report allele flips
+  # Report allele status
   message("\n=== GWAS allele alignment summary ===")
   mrg_tbl |>
-    count(allele_status) |>
+    count(allele_status, strand_ambiguous) |>
     mutate(percent = round(100 * n / sum(n), 1)) |>
     arrange(desc(n)) |>
     print(n = Inf)
   message("========================================\n")
+
+  # Keep only SNPs that align to the reference and aren't strand-ambiguous
+  n_not_ref    <- sum(mrg_tbl$allele_status %in% c("not_in_ref", "mismatched"))
+  n_ambiguous  <- sum(mrg_tbl$allele_status %in% c("aligned", "flipped") & mrg_tbl$strand_ambiguous)
+  message("Removing ", n_not_ref, " SNPs not in the reference or with different alleles ...")
+  message("Removing ", n_ambiguous, " strand-ambiguous SNPs (A/T, C/G) ...")
+
+  mrg_tbl <- mrg_tbl |>
+    filter(allele_status %in% c("aligned", "flipped"), !strand_ambiguous)
 
   z_snp <- mrg_tbl |>
     select(id = SNP, A1, A2, z = Z) |>
