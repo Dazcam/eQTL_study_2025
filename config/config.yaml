@@ -941,35 +941,41 @@ smr:
 
 ctwas:
   create_ld_matrices:
-    output: ../results/12CTWAS/ld_mats/create_ctwas_ld_matrices.done
+    script:     ../scripts/ctwas_create_ld_matrices.R
+    output:     ../results/12CTWAS/ld_mats/create_ctwas_ld_matrices.done
     ld_ref_dir: ../resources/ldsr/ldsr_hg38_refs/plink_files/
-    out_dir: ../results/12CTWAS/ld_mats/
-    log:  ../results/00LOG/12CTWAS/create_ld_matrices.log
+    out_dir:    ../results/12CTWAS/ld_mats/
+    bmrk:       reports/benchmarks/12ctwas.create_ctwas_ld_matrices.benchmark.txt
+    log:        ../results/00LOG/12CTWAS/create_ld_matrices.log
  
   copy_fusion_weights:
-    input: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
-    output: "../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done"
-    src_dir: ../results/11TWAS/weights/{cell_type}
+    input:    ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
+    output:   ../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done
+    src_dir:  ../results/11TWAS/weights/{cell_type}
     dest_dir: ../results/12CTWAS/weights/{cell_type}
-    log: ../results/00LOG/12CTWAS/copy_weights_{cell_type}.log 
+    bmrk:     reports/benchmarks/12ctwas.copy_weights_{cell_type}.benchmark.txt
+    log:      ../results/00LOG/12CTWAS/copy_weights_{cell_type}.log 
 
   run_ctwas:
-    gwas: ../results/07PREP-GWAS/{gwas}_hg38.tsv
-    bim_file: ../results/10SMR/smr_input/1000G.EUR.hg38.bim
-    output: ../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
-    weights_dir: ../results/12CTWAS/weights/{cell_type}/
+    script:        ../scripts/ctwas_run.R
+    gwas:          ../results/07PREP-GWAS/{gwas}_hg38.tsv
+    bim_file:      ../results/10SMR/smr_input/1000G.EUR.hg38.bim
+    output:        ../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
+    weights_dir:   ../results/12CTWAS/weights/{cell_type}/
     run_weight_qc: false
-    log: ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
+    bmrk:          reports/benchmarks/12ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt
+    log:           ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
 
   ctwas_report:
-    rmd_script: scripts/ctwas_report.Rmd
-    output: reports/12CTWAS/12ctwas_report.html
-    in_dir: ../../results/12CTWAS/
-    bmark_dir: ../reports/benchmarks/
-    lookup_dir: ../../resources/sheets/
-    tbl_dir: ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+    rmd_script:  scripts/ctwas_report.Rmd
+    output:      reports/12CTWAS/12ctwas_report.html
+    in_dir:      ../../results/12CTWAS/
+    bmark_dir:   ../reports/benchmarks/
+    lookup_dir:  ../../resources/sheets/
+    tbl_dir:     ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/
     output_file: ../reports/12CTWAS/12ctwas_report.html
-    log: ../results/00LOG/12CTWAS/ctwas_report.log 
+    bmrk:        reports/benchmarks/12ctwas.ctwas_report.benchmark.txt
+    log:         ../results/00LOG/12CTWAS/ctwas_report.log 
 
 # ---------  Tables (pipeline 13)  ------------
 tables:

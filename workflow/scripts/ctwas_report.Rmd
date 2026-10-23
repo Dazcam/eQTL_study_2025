@@ -1,21 +1,21 @@
 ---
-  title: "cTWAS report"
+title: "cTWAS report"
 author: "Darren Cameron"
 date: "`r Sys.Date()`"
 output:
   html_document:
-  df_print: paged
+    df_print: paged
 params:
   in_dir: null
-bmark_dir: null
-lookup_dir: null
-cell_types: null
-gwas: null
+  bmark_dir: null
+  lookup_dir: null
+  cell_types: null
+  gwas: null
 ---
-  
-  ***
-  
-  ```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+
+***
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(gt)
 library(tidyverse)
 library(cowplot)
@@ -26,50 +26,50 @@ cell_types <- strsplit(params$cell_types, ",")[[1]]   # config['cell_types']
 gwas <- strsplit(params$gwas, ",")[[1]]               # names of config['gwas']
 gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position,
-                gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
+         gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
 
 results_single_lst <- list()
 ```
 
 ***
-  
-  ## cTWAS pipeline steps {.tabset}
-  
-  ***
-  
-  We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to integrate our sc-eQTL data with neuropsychiatric GWAS data to identify putative candidate genes associated with these conditions. The citation for cTWAS is [Zhao et al. (2025), DOI: 10.1038/s41588-023-01648-9](https://www.nature.com/articles/s41588-023-01648-9).
+
+## cTWAS pipeline steps {.tabset}
 
 ***
-  
-  1. `create_ld_matrices`: Create (1000G hg38 build) LD matrices and variant info files for cTWAS
+
+We used [cTWAS](https://xinhe-lab.github.io/multigroup_ctwas/index.html) to integrate our sc-eQTL data with neuropsychiatric GWAS data to identify putative candidate genes associated with these conditions. The citation for cTWAS is [Zhao et al. (2025), DOI: 10.1038/s41588-023-01648-9](https://www.nature.com/articles/s41588-023-01648-9).
+
+***
+
+1. `create_ld_matrices`: Create (1000G hg38 build) LD matrices and variant info files for cTWAS
 2. `copy_fusion_weights`: Copy genuine FUSION weight files (cTWAS chokes if any empty files are in weight dir)
 3. `run_ctwas`: Run cTWAS on sc-eQTL and GWAS data
 4. `ctwas_report`: Generate cTWAS report
 
 ***
-  
-  ### Correction
-  
-  ```{r, get_gene_lists_for correction, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+
+### Correction
+
+```{r, get_gene_lists_for correction, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 weights_root <- file.path(in_dir, "weights")
 
 fusion_tbl <- map_dfr(cell_types, function(ct) {
-  
+
   ct_dir <- file.path(weights_root, ct)
-  
+
   if (!dir.exists(ct_dir)) {
     return(tibble())
   }
-  
+
   files <- list.files(
     ct_dir,
     pattern = "\\.wgt\\.RDat$",
     full.names = TRUE
   )
-  
+
   # Keep only non-empty RDat files (hsq_p < 0.01 passed)
   files <- files[file.info(files)$size > 0]
-  
+
   tibble(
     cell_type = ct,
     gene_id = basename(files) |>
@@ -129,103 +129,103 @@ final_table |>
 ### Single (Fine_mapped only) {.tabset}
 
 ***
-  
-  
-  ```{r ctwas_fine_mapping_tbl_single, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+
+
+```{r ctwas_fine_mapping_tbl_single, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 for (g in gwas) {
-  
+
   cat("#### ", toupper(g), " \n\n")
-  
+
   for (ct in cell_types) {
-    
-    cat("##### ", ct, " \n\n")
-    
-    file <- paste0(in_dir, "output/ctwas_", ct, "_", g, "_ctwas.rds")
-    
-    if (!file.exists(file)) {
-      cat("**File does not exist:** ", basename(file), "\n\n")
-      next
+
+  cat("##### ", ct, " \n\n")
+
+  file <- paste0(in_dir, "output/ctwas_", ct, "_", g, "_ctwas.rds")
+
+  if (!file.exists(file)) {
+    cat("**File does not exist:** ", basename(file), "\n\n")
+    next
     }
-    
-    ctw_res  <- read_rds(file)
-    
-    if (!is.null(ctw_res$status) && ctw_res$status == "skipped") {
-      cat("**Skipped:** ", ctw_res$reason, "\n\n")
-      next
-    }
-    
-    if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
-      
-      cat("**No finemapped genes (no credible sets identified)**\n\n")
-      next
-    }
-    
-    bf_factor <- per_cell_counts |>
-      dplyr::filter(cell_type == ct) |>
-      dplyr::pull(n_sig_genes)
-    
-    finemap_res <- as_tibble(ctw_res$finemap_res) |>
-      dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
-      separate(id, into = c('gene', 'id'), sep = "\\|") |>
-      separate(id, into = c('cell_type', 'id'), sep = "_") |>
-      left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
-      mutate(pval = 2 * pnorm(-abs(z)),
-             pval_bf = pval * bf_factor) |>
-      mutate(pval_bf = pmin(pval_bf, 1)) |>
-      arrange(pval_bf) |>
-      filter(pval_bf < 0.05) |>
-      mutate(across(c(pval, pval_bf, susie_pip), ~ signif(.x, 2)),
-             z = round(z, 2)) |>
-      dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
-    
-    if (nrow(finemap_res) == 0) {
-      cat("**No genes with SuSiE PIP > 0.8 (in credible set) and BF-corrected P < 0.05**\n\n")
-    } else {
-      finemap_tbl <- finemap_res |>
-        mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
-        mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
-        mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
-        gt() |>
-        tab_header(
-          title = md(paste0("**", toupper(g), "**")),
-          subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set, BF-corrected P < 0.05): **", nrow(finemap_res), "**"))
-        ) |>
-        cols_label(
-          cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
-          pval = "P", pval_bf = "BF(P)", susie_pip = "PIP", cs = "CS",
-          gene_biotype = "Type", chr = "Chr"
-        ) |>
-        tab_options(
-          table.font.names = "Arial",
-          table.font.size = 12,
-          data_row.padding = px(3)
-        ) |>
-        opt_table_font(
-          font = list(default_fonts())
-        ) |>
-        tab_source_note(
-          source_note = md(
-            "See table in correction factor tab for the number of genes tested per cell type. This number was used as the BF correction factor in the single cTWAS analyses."
-          )
-        )
-      print(finemap_tbl)
-      
-      results_single_lst[[paste(g, ct, sep = "_")]] <- finemap_res |> mutate(gwas = toupper(g))
-      
-    }
-    
+
+  ctw_res  <- read_rds(file)
+
+  if (!is.null(ctw_res$status) && ctw_res$status == "skipped") {
+    cat("**Skipped:** ", ctw_res$reason, "\n\n")
+    next
   }
-  
+
+  if (is.null(ctw_res$finemap_res) || nrow(ctw_res$finemap_res) == 0) {
+
+    cat("**No finemapped genes (no credible sets identified)**\n\n")
+    next
+  }
+
+  bf_factor <- per_cell_counts |>
+    dplyr::filter(cell_type == ct) |>
+    dplyr::pull(n_sig_genes)
+
+  finemap_res <- as_tibble(ctw_res$finemap_res) |>
+    dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
+    separate(id, into = c('gene', 'id'), sep = "\\|") |>
+    separate(id, into = c('cell_type', 'id'), sep = "_") |>
+    left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
+    mutate(pval = 2 * pnorm(-abs(z)),
+           pval_bf = pval * bf_factor) |>
+    mutate(pval_bf = pmin(pval_bf, 1)) |>
+    arrange(pval_bf) |>
+    filter(pval_bf < 0.05) |>
+    mutate(across(c(pval, pval_bf, susie_pip), ~ signif(.x, 2)),
+           z = round(z, 2)) |>
+    dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
+
+  if (nrow(finemap_res) == 0) {
+    cat("**No genes with SuSiE PIP > 0.8 (in credible set) and BF-corrected P < 0.05**\n\n")
+} else {
+  finemap_tbl <- finemap_res |>
+    mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
+    mutate(across(everything(), ~ str_replace_all(., "\U00D7", "x"))) |>
+    mutate(gene_biotype = str_remove(gene_biotype, "^transcribed_unprocessed_"))  |>
+  gt() |>
+  tab_header(
+    title = md(paste0("**", toupper(g), "**")),
+    subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set, BF-corrected P < 0.05): **", nrow(finemap_res), "**"))
+  ) |>
+  cols_label(
+    cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
+    pval = "P", pval_bf = "BF(P)", susie_pip = "PIP", cs = "CS",
+    gene_biotype = "Type", chr = "Chr"
+  ) |>
+  tab_options(
+    table.font.names = "Arial",
+    table.font.size = 12,
+    data_row.padding = px(3)
+  ) |>
+  opt_table_font(
+    font = list(default_fonts())
+  ) |>
+  tab_source_note(
+    source_note = md(
+      "See table in correction factor tab for the number of genes tested per cell type. This number was used as the BF correction factor in the single cTWAS analyses."
+    )
+  )
+  print(finemap_tbl)
+
+  results_single_lst[[paste(g, ct, sep = "_")]] <- finemap_res |> mutate(gwas = toupper(g))
+
+  }
+
+  }
+
 }
 ```
 
 ***
-  
-  ### Summary {.tabset}
-  
-  ***
-  
-  ```{r ctwas_summary_prep, echo = FALSE, message = FALSE, warning = FALSE}
+
+### Summary {.tabset}
+
+***
+
+```{r ctwas_summary_prep, echo = FALSE, message = FALSE, warning = FALSE}
 if (length(results_single_lst) > 0) {
   all_sig_results <- bind_rows(results_single_lst)
 } else {
@@ -240,8 +240,8 @@ if (length(results_single_lst) > 0) {
 #### By cell type
 
 ***
-  
-  ```{r ctwas_summary_by_cell_type, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+
+```{r ctwas_summary_by_cell_type, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 base_ct_gwas <- expand_grid(cell_type = cell_types, gwas = toupper(gwas))
 
 counts_ct_gwas <- all_sig_results |>
@@ -283,12 +283,12 @@ by_cell_type |>
 ```
 
 ***
-  
-  #### By disorder
-  
-  ***
-  
-  ```{r ctwas_summary_by_disorder, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
+
+#### By disorder
+
+***
+
+```{r ctwas_summary_by_disorder, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
 by_disorder <- all_sig_results |>
   dplyr::group_by(gwas) |>
   dplyr::summarise(`Distinct significant genes` = dplyr::n_distinct(gene), .groups = "drop") |>
@@ -319,14 +319,14 @@ by_disorder |>
 ```
 
 ***
-  
-  ### Benchmarking {.tabset}
-  
-  ***
-  
-  #### Table
-  
-  ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files for the pipeline
 files <- list.files(bmark_dir, pattern = "12ctwas.*\\.txt", full.names = TRUE)
 
@@ -334,15 +334,15 @@ benchmarks <- map_dfr(files, function(f) {
   df <- read.table(f, header = TRUE, sep = "\t")
   fname <- basename(f)
   parts <- strsplit(fname, "\\.")[[1]]
-  
+
   # this field holds the benchmark name, e.g. "run_ctwas_Glu-UL_scz",
   # "copy_weights_NPC", "create_ctwas_ld_matrices", "ctwas_report"
   rule_full <- parts[2]
-  
+
   # strip the wildcards → leaves only the rule
   rule <- str_extract(rule_full, "^(create_ctwas_ld_matrices|copy_weights|run_ctwas|ctwas_report)")
   rule <- if_else(is.na(rule), rule_full, rule)
-  
+
   tibble(
     file = f,
     rule = rule,
@@ -405,14 +405,14 @@ summary |>
 ```
 
 ***
-  
-  #### Plot
-  
-  ***
-  
-  ```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+
+#### Plot
+
+***
+
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
 runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
-                                   y = mean_runtime_min)) +
+                                 y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
   geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
                     ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
@@ -430,7 +430,7 @@ runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
   )
 
 mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
-                               y = mean_ram_gb)) +
+                                y = mean_ram_gb)) +
   geom_col(fill = "darkorange") +
   geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
                     ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
