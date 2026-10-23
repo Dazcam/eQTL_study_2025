@@ -6,7 +6,7 @@ rule create_ld_matrices:
     output: config["ctwas"]["create_ld_matrices"]["output"]
     params: ld_ref_dir = config["ctwas"]["create_ld_matrices"]["ld_ref_dir"],
             out_dir    = config["ctwas"]["create_ld_matrices"]["out_dir"]
-    resources: threads = 5, mem_mb = 20000, time="3-0:00:00"
+    resources: threads = 1, mem_mb = 10000, time="5:30:00"
     singularity: config["containers"]["twas"]
     message:  "Creating LD matrices and variant info files for causal TWAS"
     benchmark: "reports/benchmarks/12ctwas.create_ctwas_ld_matrices.benchmark.txt"    
@@ -45,7 +45,7 @@ rule run_ctwas:
     params: ld_dir        = config["ctwas"]["create_ld_matrices"]["out_dir"]
             weights_dir   = config["ctwas"]["run_ctwas"]["weights_dir"],
             run_weight_qc = config["ctwas"]["run_ctwas"]["run_weight_qc"]
-    resources: threads = 6, mem_mb = 96000, time="1-0:00:00" 
+    resources: threads = 6, mem_mb = 96000, time="1:00:00" # mem_mb can vary 
     threads: 6
     singularity: config["containers"]["twas"]
     message:  "Running cTWAS"
@@ -66,7 +66,7 @@ rule ctwas_report:
             cell_types  = ",".join(config["cell_types"]),
             gwas        = ",".join(config["gwas"].keys())
             output_file = config["ctwas"]["ctwas_report"]["output_file"]
-    singularity: config["containers"]["r_eqtl"] # Need to add ctwas to r_eqtl conatiner to print locus plot
+    singularity: config["containers"]["r_eqtl"]
     message: "Generate cTWAS report"
     benchmark: "reports/benchmarks/12ctwas.ctwas_report.benchmark.txt"
     log:     config["ctwas"]["ctwas_report"]["log"]
