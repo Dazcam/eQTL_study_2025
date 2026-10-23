@@ -10,6 +10,8 @@ params:
   bmark_dir: null
   lookup_dir: null
   tbl_dir: null
+  cell_types: null
+  gwas: null
 ---
 
 ***
@@ -23,8 +25,8 @@ in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 lookup_dir <- params$lookup_dir
 tbl_dir <- params$tbl_dir
-
-gwas <- c("scz", "bpd", "mdd", "adhd", "ocd")
+cell_types <- strsplit(params$cell_types, ",")[[1]]   # config['cell_types']
+gwas <- strsplit(params$gwas, ",")[[1]]               # names of config['gwas']
 gene_lookup <- read_tsv(paste0(lookup_dir, "gene_lookup_hg38.tsv")) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position, 
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
@@ -56,17 +58,7 @@ TODO:
 ### Correction
 
 ```{r, get_gene_lists_for correction, echo = FALSE, message = FALSE, warning = FALSE, results='asis'}
-cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
-                    "MG", "OPC", "Endo-Peri",
-                    "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                    "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                    "GABA-0", "GABA-1", "GABA-2",
-                    "NPC-0", "NPC-1", "NPC-2", "NPC-to-Glu-DL-Q4-Bin1",
-                "NPC-to-Glu-DL-Q4-Bin2","NPC-to-Glu-DL-Q4-Bin3","NPC-to-Glu-DL-Q4-Bin4",
-                "NPC-to-Glu-UL-Q4-Bin1","NPC-to-Glu-UL-Q4-Bin2","NPC-to-Glu-UL-Q4-Bin3",
-                "NPC-to-Glu-UL-Q4-Bin4")
-
-weights_root <- "../../results/12CTWAS/weights"
+weights_root <- file.path(in_dir, "weights")
 
 fusion_tbl <- map_dfr(cell_types, function(ct) {
 
