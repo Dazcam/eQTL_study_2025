@@ -1,40 +1,4 @@
 configfile: "../config/config.yaml"
-#localrules: prep_exp_data
-
-rule all:
-    input: 
-        "reports/11TWAS/11twas_weights_report.html"        
-
-#def weights_input_function(wildcards):
-#    """
-#    Return the list of all .wgt.RDat files needed for a given cell_type
-#    by reading the cell-type-specific permanent coordinate file.
-#    """
-#    import pandas as pd
-#    
-#    coord_file = config["twas"]["prep_exp_data"]["coord"].format(cell_type=wildcards.cell_type)
-
-#    df = pd.read_csv(coord_file, sep=r'\s+', header=0)
-#    # Your file has header: chr start end gene_id
-#    genes = df["gene_id"].tolist()
-
-#    return expand(
-#        "../results/11TWAS/weights/{cell_type}/{gene}.wgt.RDat",
-#        cell_type=wildcards.cell_type,
-#        gene=genes
-#    )
-
-#def pos_input_function(wildcards):
-#    """
-#    Return list of successfully computed .wgt.RDat files for a given cell_type.
-#    Only includes genes that actually produced a weight file (some may be empty).
-#    """
-#    import glob, os
-#    weight_dir = f"../results/11TWAS/weights/{wildcards.cell_type}"
-#    rdats = glob.glob(f"{weight_dir}/*.wgt.RDat")
-#    # Filter out zero-byte files (genes that were skipped)
-#    rdats = [f for f in rdats if os.path.getsize(f) > 0]
-#    return rdats
 
 rule get_gemma:
    output:  config["twas"]["get_gemma"]["output"] 
@@ -197,48 +161,6 @@ rule make_pos_file:
     benchmark: "reports/benchmarks/11twas.make_pos_file_{cell_type}.benchmark.txt"
     log:      config["twas"]["make_pos_file"]["log"]
     script:   "../scripts/twas_make_fusion_pos_file.py"
-
-
-# Not got base TWAS running yet, using CTWAS anyway
-
-#rule clean_sumstats:
-#    # FUSION wants LDSR munge_sumstats.py format, but can't handle blank rows so need to omit these first
-#    input:    "../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz"
-#    output:   "../results/11TWAS/gwas/{gwas}_hg38_ldsr_ready.sumstats.tsv"
-#    message: "Removing blank rows from sumstats file"
-#    benchmark: "reports/benchmarks/11twas.clean_sumstats_{gwas}.benchmark.txt"
-#    log:    "../results/00LOG/11TWAS/clean_sumstats_{gwas}.log"
-#    shell:    """
-#              zcat {input} | awk 'NR==1 || (NF >= 5 && $1 ~ /^rs/)' > {output} 2>&1 | tee {log}
-#              """
-
-#rule run_twas:
-#    input:  pos = "../results/11TWAS/weights/{cell_type}/{cell_type}.pos",
-#            sumstats = "../results/11TWAS/gwas/{gwas}_hg38_ldsr_ready.sumstats.tsv"
-#    output: "../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.chr{chr}.twas"
-#    params: ref_ld = "../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.",
-#            weights_dir = "../results/11TWAS/weights/{cell_type}/"
-#    resources: threads = 5, mem_mb = 20000, time="5:00:00"
-#    singularity: config["containers"]["twas"]
-#    log:    "../results/00LOG/11TWAS/run_twas_{cell_type}_{gwas}_chr{chr}.log"
-#    benchmark: "reports/benchmarks/11twas.run_twas_{cell_type}_{gwas}_chr{chr}.benchmark.txt"
-#    shell:  """
-#            Rscript ../resources/fusion/FUSION.assoc_test.R \
-#              --sumstats {input.sumstats} \
-#              --weights {input.pos} \
-#              --weights_dir {params.weights_dir} \
-#              --ref_ld_chr {params.ref_ld} \
-#              --chr {wildcards.chr} \
-#              --out {output} > {log} 2>&1
-#            """
-
-#rule merge_twas:
-#    input:  expand("../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.chr{chr}.twas", cell_type = config['cell_types'], gwas = config['gwas'], chr=range(1, 23))
-#    output: "../results/11TWAS/associations/{cell_type}/{cell_type}.{gwas}.twas"
-#    shell:  """
-#            head -n 1 {input[0]} > {output}
-#            for f in {input}; do tail -n +2 "$f"; done >> {output}
-#            """
 
 rule twas_weights_report:
     input:  pos = expand(rules.make_pos_file.output, cell_type = config['cell_types']),
