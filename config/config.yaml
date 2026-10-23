@@ -949,16 +949,14 @@ ctwas:
   copy_fusion_weights:
     input: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
     output: "../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done"
-    scr_dir: ../results/11TWAS/weights/{cell_type}
+    src_dir: ../results/11TWAS/weights/{cell_type}
     dest_dir: ../results/12CTWAS/weights/{cell_type}
     log: ../results/00LOG/12CTWAS/copy_weights_{cell_type}.log 
 
   run_ctwas:
     gwas: ../results/07PREP-GWAS/{gwas}_hg38.tsv
-    weights: ../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done
     bim_file: ../results/10SMR/smr_input/1000G.EUR.hg38.bim
     output: ../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
-    ld_dir: ../results/12CTWAS/ld_mats/  
     weights_dir: ../results/12CTWAS/weights/{cell_type}/
     run_weight_qc: false
     log: ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log

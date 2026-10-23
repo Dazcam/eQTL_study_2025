@@ -23,7 +23,7 @@ rule copy_fusion_weights:
     """
     input:   config["ctwas"]["copy_fusion_weights"]["input"]
     output:  touch(config["ctwas"]["copy_fusion_weights"]["output"])
-    params:  src_dir = config["ctwas"]["copy_fusion_weights"]["scr_dir"],
+    params:  src_dir = config["ctwas"]["copy_fusion_weights"]["src_dir"],
              dest_dir  = config["ctwas"]["copy_fusion_weights"]["dest_dir"]
     message: "Copying genuine FUSION weights for {wildcards.cell_type} (listed in .pos) to {params.dest_dir}"
     log:     config["ctwas"]["copy_fusion_weights"]["log"]
@@ -39,10 +39,10 @@ rule copy_fusion_weights:
 rule run_ctwas:
     input:  ld_mat = rules.create_ld_matrices.output,
             gwas = config["ctwas"]["run_ctwas"]["gwas"],
-            weights = config["ctwas"]["run_ctwas"]["weights"],
+            weights = rules.copy_fusion_weights.output
             bim_file = config["ctwas"]["run_ctwas"]["bim_file"]
     output: config["ctwas"]["run_ctwas"]["output"]
-    params: ld_dir = config["ctwas"]["run_ctwas"]["ld_dir"],
+    params: ld_dir = config["ctwas"]["create_ld_matrices"]["out_dir"]
             weights_dir = config["ctwas"]["run_ctwas"]["weights_dir"],
             run_weight_qc = config["ctwas"]["run_ctwas"]["run_weight_qc"]
     resources: threads = 6, mem_mb = 96000, time="1-0:00:00" 
