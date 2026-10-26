@@ -749,7 +749,7 @@ susie:
      overall: "../results/08SUSIE/lbf_comparison/lbf_comparison_overall.tsv"
      log:     "logs/08susie.lbf_comparison.log"
 
-# ------------  SLDSR  ----------------
+# ------------  SLDSR (Pipeline 9)  ----------------
 sldsr:  
   get_hg38_refs:
     baseline: ../resources/ldsr/ldsr_hg38_refs/baseline_v1.2/baseline.{chr}.l2.ldscore.gz
@@ -802,7 +802,7 @@ sldsr:
     in_dir: ../../results/09SLDSR/strat_bl_v12/
     log: ../results/00LOG/09SLDSR/ldsr_report.log
 
-# ---------  TWAS  ----------
+# ---------  TWAS Weights (Pipeline 11)  ----------
 
 twas:
   get_gemma:
@@ -867,7 +867,7 @@ twas:
     out_file: ../reports/11TWAS/11twas_weights_report.html
     log: ../results/00LOG/11TWAS/twas_weights_report.log   
 
-# ---------  SMR  ----------
+# ---------  SMR (Pipeline 10)  ----------
 
 smr:
   get_smr_binary:

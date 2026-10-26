@@ -21,7 +21,7 @@ jobs:
 
       - name: Install R package dependencies
         run: |
-          install.packages(c("testthat", "BiocManager", "dplyr", "tibble", "stringr"))
+          install.packages(c("testthat", "BiocManager", "dplyr", "tibble", "stringr", "tidyr"))
           BiocManager::install("limma", update = FALSE, ask = FALSE)
         shell: Rscript {0}
 

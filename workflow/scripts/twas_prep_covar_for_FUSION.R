@@ -34,11 +34,7 @@ covar <- read_tsv(covar_in,
 # Transpose the data
 # Pivot the data so sample IDs become rows and covariates become columns
 message('Transposing covariate file ...')
-covar_t <- covar %>%
-  pivot_longer(cols = -covariate, names_to = "IID", values_to = "value") %>%
-  pivot_wider(names_from = covariate, values_from = value) %>%
-  mutate(FID = 0) %>%
-  select(FID, IID, everything())
+covar_t <- to_plink_pheno(covar, id_col = "covariate")
 
 # Write the corrected file
 message('Writing transposed covariate file ...')

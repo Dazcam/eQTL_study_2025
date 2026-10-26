@@ -36,6 +36,8 @@ message('\n\nCreating plink ready expression data and gene coordinate file for F
 library(tidyverse)
 library(biomaRt)
 
+source(file.path(snakemake@scriptdir, "twas_functions.R"))
+
 # Input and output paths
 expr_in <- snakemake@input[[1]]
 expr_out <- snakemake@output[['exp']]
@@ -72,10 +74,7 @@ sample_cols <- setdiff(colnames(expr_tbl), coord_cols)
 message('Converting expression data to PLINK format ...')
 expr_plink_tbl <- expr_tbl %>%
   dplyr::select(TargetID, all_of(sample_cols)) %>%
-  pivot_longer(cols = all_of(sample_cols), names_to = "IID", values_to = "value") %>%
-  pivot_wider(names_from = TargetID, values_from = value) %>%
-  mutate(FID = 0) %>%
-  dplyr::select(FID, IID, everything())
+  to_plink_pheno(id_col = "TargetID")
 
 # Save PLINK phenotype file
 message('Saving PLINK phenotype file ...')
