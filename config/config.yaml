@@ -887,23 +887,9 @@ twas:
     input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     bed: ../results/11TWAS/fusion_input/genotypes_hg38.bed
     bim: ../results/11TWAS/fusion_input/genotypes_hg38.bim
-    fam: ../results/11TWAS/fusion_input/genotypes_hg38.fam 
+    fam: ../results/11TWAS/fusion_input/genotypes_hg38.fam
     prefix: ../results/11TWAS/fusion_input/genotypes_hg38
     log: ../results/00LOG/11TWAS/convert_vcf.log
-
-#  restrict_geno_to_ldref:
-#    bed: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bed 
-#    bim: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bim
-#    fam: ../results/11TWAS/fusion_input/genotypes_hg38_filt.fam
-#    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
-#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
-#    prefix_out: ../results/11TWAS/fusion_input/genotypes_hg38_filt
-#    log: ../results/00LOG/11TWAS/restrict_geno_to_ldref.log
-
-
-#  prepare_gene_inputs:
-#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
-#    prefix_out: ../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis
 
   get_ldref_snplist:
     input: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
@@ -915,34 +901,28 @@ twas:
     log: ../results/00LOG/11TWAS/prepare_covar_{cell_type}.log
 
   compute_weights:
-    output: ../results/11TWAS/weights/{cell_type}/all_weights_done.txt
+    output: "../results/11TWAS/weights/{cell_type}/all_weights_done.txt"
     outdir: ../results/11TWAS/weights/{cell_type}
+    log: ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
     tmp_dir: ../results/11TWAS/fusion_input
     fusion_script: ../resources/fusion/FUSION.compute_weights.R
     gcta: ../resources/fusion/gcta_nr_robust
-    plink: /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink
-    cis_window: 500000
+    plink: /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink  # PLINK v1.9 binary (needed for FUSION --lasso) 
     hsq_p: 0.01
     crossval: 5
     models: top1,lasso,enet
-    covar: ../results/05TENSORQTL/prep_input/{cell_type}_quantile_genPC_4_expPC_40_split_covariates.txt
-    log: ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
 
   make_pos_file:
     output: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
     log: ../results/00LOG/11TWAS/make_pos_file_{cell_type}.log
 
-#  aggregate_weights:
-#    output: ../results/11TWAS/weights/{cell_type}/summary.txt
-#    log: ../results/00LOG/11TWAS/aggregate_{cell_type}.log
-  
   twas_weights_report:
     script: scripts/twas_weights_summary.Rmd
     output: reports/11TWAS/11twas_weights_report.html
     log_dir: ../../results/00LOG/11TWAS/
     bmark_dir: ../reports/benchmarks/
     out_file: ../reports/11TWAS/11twas_weights_report.html
-    log: ../results/00LOG/11TWAS/twas_weights_report.log   
+    log: ../results/00LOG/11TWAS/twas_weights_report.log
 
 # ---------  CTWAS (Pipeline 12)  ----------
 
