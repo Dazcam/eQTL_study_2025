@@ -50,7 +50,7 @@ source(file.path(snakemake@scriptdir, "twas_functions.R"))
 expr_in <- snakemake@input[[1]]
 expr_out <- snakemake@output[["exp"]]
 coord_out <- snakemake@output[["coord"]]
-run_test <- as.logical(snakemake@params[["run_test"]]) # Option to run on 50 genes for testing
+run_test <- isTRUE(snakemake@params[["run_test"]]) # Option to run on 50 genes for testing
 
 # Print what each variable is set to
 message("\nVariables")
@@ -64,17 +64,13 @@ message("============================\n")
 
 ##  Read expression data  -------------------------------------------------------------
 message("Reading expression file ...")
-expr_tbl <- read_tsv(expr_in, col_types = cols())
+expr_tbl <- read_tsv(expr_in, show_col_types = FALSE)
 
 if (run_test) {
   message("Running with only a subset of genes for testing ...")
-  message("Genes before: ", nrow(expr_tbl) - 1)
-
-  meta_row <- expr_tbl[1, ]
-  data_rows <- expr_tbl[-1, ]
-  expr_tbl <- rbind(meta_row, data_rows[sample(nrow(data_rows), 50), ])
-
-  message("Genes after: ", nrow(expr_tbl) - 1)
+  message("Genes before: ", nrow(expr_tbl))
+  expr_tbl <- dplyr::slice_sample(expr_tbl, n = 50)
+  message("Genes after: ", nrow(expr_tbl))
 }
 
 ##  Convert to PLINK format  ----------------------------------------------------------
@@ -82,8 +78,8 @@ coord_cols <- c("#Chr", "start", "end", "TargetID")
 sample_cols <- setdiff(colnames(expr_tbl), coord_cols)
 
 message("Converting expression data to PLINK format ...")
-expr_plink_tbl <- expr_tbl %>%
-  dplyr::select(TargetID, all_of(sample_cols)) %>%
+expr_plink_tbl <- expr_tbl |>
+  dplyr::select(TargetID, all_of(sample_cols)) |>
   to_plink_pheno(id_col = "TargetID")
 
 message("Saving PLINK phenotype file ...")
@@ -96,35 +92,32 @@ mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "www.ensemb
 message("Getting coordinates for genes ...")
 gene_ids <- expr_tbl$TargetID
 gene_coord <- getBM(
-  attributes = c("chromosome_name", "start_position", "end_position", "ensembl_gene_id", "strand"),
+  attributes = c("chromosome_name", "start_position", "end_position", "ensembl_gene_id"),
   filters = "ensembl_gene_id",
   values = gene_ids,
   mart = mart
-) %>%
-  as_tibble() %>%
-  rename(
+) |>
+  as_tibble() |>
+  dplyr::rename(
     chr = chromosome_name,
     start = start_position,
     end = end_position,
     gene_id = ensembl_gene_id
-  ) %>%
-  mutate(chr = str_remove(chr, "^chr"),
-         TSS = if_else(strand == 1, start, end),
-         cis_start = TSS,
-         cis_end = TSS + 1) %>%
+  ) |>
+  mutate(chr = str_remove(chr, "^chr")) |>
   dplyr::select(chr, start, end, gene_id)
 
 # Check for unmatched genes
 missing_genes <- setdiff(gene_ids, gene_coord$gene_id)
 if (length(missing_genes) > 0) {
-  warning(str_glue("{length(missing_genes)} genes not found in BioMart: {str_c(head(missing_genes, 5), collapse = ', ')}..."))
+  message(str_glue("{length(missing_genes)} genes not found in BioMart: {str_c(head(missing_genes, 5), collapse = ', ')}..."))
 }
 
 ##  Save gene coordinates  ------------------------------------------------------------
 message("Saving gene coordinate file ...")
 write_tsv(gene_coord, coord_out)
 
-message(str_glue("Generated {expr_out} with {nrow(expression)} samples and {length(sample_cols)} genes\n"))
+message(str_glue("Generated {expr_out} with {nrow(expr_plink_tbl)} samples and {length(gene_ids)} genes\n"))
 message(str_glue("Generated {coord_out} with {nrow(gene_coord)} genes\n"))
 message("Done.")
 

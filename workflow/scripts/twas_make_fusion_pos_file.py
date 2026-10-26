@@ -19,7 +19,7 @@
 #
 # Outputs:   output_pos  FUSION .pos file: PANEL, WGT, ID, CHR, P0, P1, N
 #
-# Notes:     sample_size (N) is fixed at 133.
+# Notes:     sample_size (N) is fixed at 134.
 #            Empty .wgt.RDat files (genes with no cis SNPs or a failed FUSION
 #            run) are skipped.
 #
@@ -45,7 +45,7 @@ cell_type  = snakemake.wildcards.cell_type
 coord_file = snakemake.params.coord_file
 weight_dir = os.path.dirname(snakemake.input[0])
 output_pos = snakemake.output[0]
-sample_size = 133
+sample_size = 134
 
 variables = {
     "cell_type":   cell_type,
@@ -96,9 +96,6 @@ coords['CHR'] = coords['CHR'].astype(str).str.replace('^chr', '', regex=True)  #
 coords['P0']  = pd.to_numeric(coords['P0'], errors='coerce')
 coords['P1']  = pd.to_numeric(coords['P1'], errors='coerce')
 coords['ID']  = coords['ID'].astype(str)
-
-# Add 'chr' prefix option
-#coords['CHR'] = 'chr' + coords['CHR']
 
 ##  Write .pos file  ------------------------------------------------------------------
 written = 0
