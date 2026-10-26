@@ -1,91 +1,99 @@
 #--------------------------------------------------------------------------------------
 #
-#    Munge expression and gene coord files for FUSION 
+#    Prepare expression and gene coordinate files for FUSION
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  11TWAS | Rule: prep_exp_data (one job per cell type)
+#            Upstream:   05TENSORQTL prep_input (quantile-normalised expression bed)
+#            Downstream: compute_weights, make_pos_file
+#
+# Purpose:   - Transpose the tensorQTL expression bed to PLINK phenotype format
+#              (FID, IID, one column per gene) for FUSION.compute_weights.R
+#            - Get gene coordinates from Ensembl BioMart for every gene in the
+#              expression file
+#
+# Inputs:    expr_in    Quantile-normalised expression bed: #Chr, start, end, TargetID,
+#                       then one column per sample. Same input as tensorQTL. Not
+#                       covariate-corrected; covariates go to FUSION via --covar
+#
+# Outputs:   expr_out   PLINK-format expression file: FID, IID, ~18K Ensembl IDs
+#            coord_out  Gene coordinate file: chr, start, end, gene_id
+#
+# Notes:     run_test = TRUE keeps a random subset of 50 genes for testing.
+#            Coordinates come from the current Ensembl release (www.ensembl.org).
 #
 #--------------------------------------------------------------------------------------
 
-# Creates plink ready expr data and gene coordinate file for FUSION weight calculation
-
-# - Input:
-# - Quantile normalised gene expression file cols: (#Chr, start, end, TargetID, 100+ sample IDs)
-#   - Same input as used for TensorQTL: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
-#   - Note: due to eQTL sensitivity analyses input file is not corrected for covariates
-#   - Input cols are: c("#Chr", "start", "end", "TargetID") followed by 100+ sample ID cols
-# - Output:
-#   - Expression file in plink format cols: (FID, IID, ~18K ENSEMBL IDs)
-#     - ../results/11TWAS/fusion_input/{cell_type}_plink.txt
-#   - Gene coordinate file for every gene expressed in cell type (chr, start, end, gene_id)
-#     - ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
-
-# Option to run with subset of genes for testing (L35-37)
-
-## Set up logging for smk  ------------------------------------------------------------
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
-    if (exists("snakemake") & length(snakemake@log) != 0) {
-      log <- file(snakemake@log[1][[1]], open = "wt")
+    if (exists("snakemake") && length(snakemake@log) != 0) {
+      log <- file(snakemake@log[[1]], open = "wt")
       sink(log, append = TRUE)
       sink(log, append = TRUE, type = "message")
     }
   }
+  log_smk()
 }
-log_smk()
-message('\n\nCreating plink ready expression data and gene coordinate file for FUSION weight calculation ...')
 
-# Load required libraries
+message("\n\nCreating PLINK-ready expression data and gene coordinate file for FUSION ...")
+
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(biomaRt)
 
+# Load functions
 source(file.path(snakemake@scriptdir, "twas_functions.R"))
 
 # Input and output paths
 expr_in <- snakemake@input[[1]]
-expr_out <- snakemake@output[['exp']]
-coord_out <- snakemake@output[['coord']]
-run_test <- as.logical(snakemake@params[['run_test']]) # Option to run on 50 genes for testing
+expr_out <- snakemake@output[["exp"]]
+coord_out <- snakemake@output[["coord"]]
+run_test <- as.logical(snakemake@params[["run_test"]]) # Option to run on 50 genes for testing
 
-# Read in data
-message("\nVariables are ...\n")
-message("GeX file input: ", expr_in)
-message("GeX file output: ", expr_out)
-message("Gene coords file output: ", coord_out)
-message("Restrict to 50 genes for testing: ", run_test)
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("expr_in", "expr_out", "coord_out", "run_test"),
+  value    = c(expr_in, expr_out, coord_out, run_test)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# Read expression file
-message('Reading expression file ...')
-expr_tbl <- read_tsv(expr_in, col_types=cols())
+##  Read expression data  -------------------------------------------------------------
+message("Reading expression file ...")
+expr_tbl <- read_tsv(expr_in, col_types = cols())
 
 if (run_test) {
-  message('Running with only a subset of genes for testing ...')
-  message('Genes before: ', nrow(expr_tbl) - 1)
-  
+  message("Running with only a subset of genes for testing ...")
+  message("Genes before: ", nrow(expr_tbl) - 1)
+
   meta_row <- expr_tbl[1, ]
   data_rows <- expr_tbl[-1, ]
   expr_tbl <- rbind(meta_row, data_rows[sample(nrow(data_rows), 50), ])
-  
-  message('Genes after: ', nrow(expr_tbl) - 1)
+
+  message("Genes after: ", nrow(expr_tbl) - 1)
 }
 
-# Extract sample IDs and expression data
+##  Convert to PLINK format  ----------------------------------------------------------
 coord_cols <- c("#Chr", "start", "end", "TargetID")
 sample_cols <- setdiff(colnames(expr_tbl), coord_cols)
 
-# Convert expression data to PLINK format
-message('Converting expression data to PLINK format ...')
+message("Converting expression data to PLINK format ...")
 expr_plink_tbl <- expr_tbl %>%
   dplyr::select(TargetID, all_of(sample_cols)) %>%
   to_plink_pheno(id_col = "TargetID")
 
-# Save PLINK phenotype file
-message('Saving PLINK phenotype file ...')
+message("Saving PLINK phenotype file ...")
 write_tsv(expr_plink_tbl, expr_out)
 
-# Connect to Ensembl BioMart
-message('Setting BiomaRT mart ...')
+##  Get gene coordinates from BioMart  ------------------------------------------------
+message("Setting BioMart mart ...")
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "www.ensembl.org")
 
-# Query gene coordinates
-message('Get coords for genes ...')
+message("Getting coordinates for genes ...")
 gene_ids <- expr_tbl$TargetID
 gene_coord <- getBM(
   attributes = c("chromosome_name", "start_position", "end_position", "ensembl_gene_id", "strand"),
@@ -112,8 +120,8 @@ if (length(missing_genes) > 0) {
   warning(str_glue("{length(missing_genes)} genes not found in BioMart: {str_c(head(missing_genes, 5), collapse = ', ')}..."))
 }
 
-# Save gene coordinate file
-message('Saving gene coordinate file ...')
+##  Save gene coordinates  ------------------------------------------------------------
+message("Saving gene coordinate file ...")
 write_tsv(gene_coord, coord_out)
 
 message(str_glue("Generated {expr_out} with {nrow(expression)} samples and {length(sample_cols)} genes\n"))
