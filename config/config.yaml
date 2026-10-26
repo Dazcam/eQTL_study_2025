@@ -233,7 +233,7 @@ setup:
     web_link: https://media.springernature.com/original/springer-static/esm/art%3A10.1186%2Fs13059-018-1567-1/MediaObjects/13059_2018_1567_MOESM1_ESM.xlsx
     log: ../results/00LOG/00SETUP/get_obrien_supp.log
 
-# -------------  PARSE  ----------------
+# -------------  PARSE (Pipeline 1) ----------------
 
 parse:
   get_refs:
@@ -269,7 +269,7 @@ parse:
     sublib_list: "../config/sublib_lst_{plate}.txt"
     log: "../results/00LOG/01PARSE/{plate}/run_parse_combine.log"    
 
-# ------------  SCANPY  ----------------
+# ------------  SCANPY (Pipeline 2) ----------------
 
 scanpy:
   qc:
@@ -337,7 +337,7 @@ scanpy:
 
   env: "../envs/eqtl_study.yml"
 
-# ------------  GENOTYPES PRE_IMPUTATION  ----------------
+# ------------  GENOTYPES PRE_IMPUTATION (Pipeline 3) ----------------
 
 geno_pre_impute:
   convert_raw:
@@ -418,7 +418,7 @@ geno_pre_impute:
     log: ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
 
 
-# ------------  GENOTYPES POST-IMPUTATION  ----------------
+# ------------  GENOTYPES POST-IMPUTATION (Pipeline 4)  ----------------
     
 geno_post_impute:
   impute_check:
@@ -558,7 +558,7 @@ tensorQTL:
     output_file: ../reports/05TENSORQTL/tensorqtl_report.html
     log: ../results/00LOG/05TENSORQTL/tensorqtl_report.log
 
-# --------  QTL REPLICATION  ----------
+# --------  QTL REPLICATION (Pipeline 6)  ----------
 
 qtl_rep:
   dwnld_obrien:
@@ -656,7 +656,7 @@ qtl_rep:
     pi1: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_results_tbl.rds
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_internal.log
 
-# ------------  PREP GWAS  ----------------
+# ------------  PREP GWAS (Pipeline 7) ----------------
 
 prep_gwas:
   get_gwas_sumstats:
@@ -695,8 +695,7 @@ prep_gwas:
     prefix: ../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready
     log: ../results/00LOG/07PREP-GWAS/munge_sumstats_{gwas}.log
 
-
-# ------------  SUSIE  ----------------
+# ------------  SUSIE (Pipeline 8)  ----------------
 
 susie:
   get_sig_eGenes:
@@ -802,71 +801,6 @@ sldsr:
     in_dir: ../../results/09SLDSR/strat_bl_v12/
     log: ../results/00LOG/09SLDSR/ldsr_report.log
 
-# ---------  TWAS Weights (Pipeline 11)  ----------
-
-twas:
-  get_gemma:
-    output: ../resources/gemma/gemma
-
-  prep_exp_data:
-    input: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
-    exp: ../results/11TWAS/fusion_input/{cell_type}_plink.txt
-    coord: ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
-    log: ../results/00LOG/11TWAS/prep_exp_data_{cell_type}.log
-
-  convert_vcf:
-    input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
-    bed: ../results/11TWAS/fusion_input/genotypes_hg38.bed
-    bim: ../results/11TWAS/fusion_input/genotypes_hg38.bim
-    fam: ../results/11TWAS/fusion_input/genotypes_hg38.fam 
-    prefix: ../results/11TWAS/fusion_input/genotypes_hg38
-    log: ../results/00LOG/11TWAS/convert_vcf.log
-
-#  restrict_geno_to_ldref:
-#    bed: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bed 
-#    bim: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bim
-#    fam: ../results/11TWAS/fusion_input/genotypes_hg38_filt.fam
-#    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
-#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
-#    prefix_out: ../results/11TWAS/fusion_input/genotypes_hg38_filt
-#    log: ../results/00LOG/11TWAS/restrict_geno_to_ldref.log
-
-
-#  prepare_gene_inputs:
-#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
-#    prefix_out: ../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis
-
-  get_ldref_snplist:
-    input: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
-    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
-    log: ../results/00LOG/11TWAS/get_ldref_snplist.log
-
-  prepare_covar:
-    output: ../results/11TWAS/fusion_input/{cell_type}_covariates.txt
-    log: ../results/00LOG/11TWAS/prepare_covar_{cell_type}.log
-
-  compute_weights:
-    covar: ../results/05TENSORQTL/prep_input/{cell_type}_quantile_genPC_4_expPC_40_split_covariates.txt
-    output: "../results/11TWAS/weights/{cell_type}/all_weights_done.txt"
-    outdir: ../results/11TWAS/weights/{cell_type}
-    log: ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
-
-  make_pos_file:
-    output: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
-    log: ../results/00LOG/11TWAS/make_pos_file_{cell_type}.log
-
-#  aggregate_weights:
-#    output: ../results/11TWAS/weights/{cell_type}/summary.txt
-#    log: ../results/00LOG/11TWAS/aggregate_{cell_type}.log
-  
-  twas_weights_report:
-    script: scripts/twas_weights_summary.Rmd
-    output: reports/11TWAS/11twas_weights_report.html
-    log_dir: ../../results/00LOG/11TWAS/
-    bmark_dir: ../reports/benchmarks/
-    out_file: ../reports/11TWAS/11twas_weights_report.html
-    log: ../results/00LOG/11TWAS/twas_weights_report.log   
-
 # ---------  SMR (Pipeline 10)  ----------
 
 smr:
@@ -936,6 +870,79 @@ smr:
     html: reports/10SMR/10smr_report.html
     in_dir: ../../results/10SMR/smr # Rel to Rmd script
     log: ../results/00LOG/10SMR/smr_report.log  
+
+# ---------  TWAS Weights (Pipeline 11)  ----------
+
+twas:
+  get_gemma:
+    output: ../resources/gemma/gemma
+
+  prep_exp_data:
+    input: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
+    exp: ../results/11TWAS/fusion_input/{cell_type}_plink.txt
+    coord: ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
+    log: ../results/00LOG/11TWAS/prep_exp_data_{cell_type}.log
+
+  convert_vcf:
+    input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    bed: ../results/11TWAS/fusion_input/genotypes_hg38.bed
+    bim: ../results/11TWAS/fusion_input/genotypes_hg38.bim
+    fam: ../results/11TWAS/fusion_input/genotypes_hg38.fam 
+    prefix: ../results/11TWAS/fusion_input/genotypes_hg38
+    log: ../results/00LOG/11TWAS/convert_vcf.log
+
+#  restrict_geno_to_ldref:
+#    bed: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bed 
+#    bim: ../results/11TWAS/fusion_input/genotypes_hg38_filt.bim
+#    fam: ../results/11TWAS/fusion_input/genotypes_hg38_filt.fam
+#    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
+#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
+#    prefix_out: ../results/11TWAS/fusion_input/genotypes_hg38_filt
+#    log: ../results/00LOG/11TWAS/restrict_geno_to_ldref.log
+
+
+#  prepare_gene_inputs:
+#    prefix_in: ../results/11TWAS/fusion_input/genotypes_hg38
+#    prefix_out: ../results/11TWAS/fusion_input/{cell_type}/{gene_id}_cis
+
+  get_ldref_snplist:
+    input: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
+    log: ../results/00LOG/11TWAS/get_ldref_snplist.log
+
+  prepare_covar:
+    output: ../results/11TWAS/fusion_input/{cell_type}_covariates.txt
+    log: ../results/00LOG/11TWAS/prepare_covar_{cell_type}.log
+
+  compute_weights:
+    output: ../results/11TWAS/weights/{cell_type}/all_weights_done.txt
+    outdir: ../results/11TWAS/weights/{cell_type}
+    tmp_dir: ../results/11TWAS/fusion_input
+    fusion_script: ../resources/fusion/FUSION.compute_weights.R
+    gcta: ../resources/fusion/gcta_nr_robust
+    plink: /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink
+    cis_window: 500000
+    hsq_p: 0.01
+    crossval: 5
+    models: top1,lasso,enet
+    covar: ../results/05TENSORQTL/prep_input/{cell_type}_quantile_genPC_4_expPC_40_split_covariates.txt
+    log: ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
+
+  make_pos_file:
+    output: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
+    log: ../results/00LOG/11TWAS/make_pos_file_{cell_type}.log
+
+#  aggregate_weights:
+#    output: ../results/11TWAS/weights/{cell_type}/summary.txt
+#    log: ../results/00LOG/11TWAS/aggregate_{cell_type}.log
+  
+  twas_weights_report:
+    script: scripts/twas_weights_summary.Rmd
+    output: reports/11TWAS/11twas_weights_report.html
+    log_dir: ../../results/00LOG/11TWAS/
+    bmark_dir: ../reports/benchmarks/
+    out_file: ../reports/11TWAS/11twas_weights_report.html
+    log: ../results/00LOG/11TWAS/twas_weights_report.log   
 
 # ---------  CTWAS (Pipeline 12)  ----------
 

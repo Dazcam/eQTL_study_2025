@@ -73,7 +73,15 @@ rule compute_weights:
             gemma = config["twas"]["get_gemma"]["output"]
     output: touch(config["twas"]["compute_weights"]["output"])
     params: prefix_in = config["twas"]["convert_vcf"]["prefix"],
-            outdir = config["twas"]["compute_weights"]["outdir"]
+            outdir = config["twas"]["compute_weights"]["outdir"],
+            tmp_dir = config["twas"]["compute_weights"]["tmp_dir"],
+            fusion_script = config["twas"]["compute_weights"]["fusion_script"],
+            gcta = config["twas"]["compute_weights"]["gcta"],
+            plink = config["twas"]["compute_weights"]["plink"],
+            cis_window = config["tensorQTL"]["window"],
+            hsq_p = config["twas"]["compute_weights"]["hsq_p"],
+            crossval = config["twas"]["compute_weights"]["crossval"],
+            models = config["twas"]["compute_weights"]["models"]
     singularity: config["containers"]["twas"]
     message: "Running FUSION weights for ALL genes in {wildcards.cell_type}"
     benchmark: "reports/benchmarks/11twas.compute_all_weights_{cell_type}.benchmark.txt"
@@ -95,11 +103,11 @@ rule compute_weights:
         while read CHR START END GENE; do
             echo "Processing $GENE" >> {log}
 
-            WORKDIR="../results/11TWAS/fusion_input/{wildcards.cell_type}/${{GENE}}"
+            WORKDIR="{params.tmp_dir}/{wildcards.cell_type}/${{GENE}}"
             mkdir -p $WORKDIR
 
-            CIS_START=$((START - 500000))
-            CIS_END=$((END + 500000))
+            CIS_START=$((START - {params.cis_window}))
+            CIS_END=$((END + {params.cis_window}))
             [ $CIS_START -lt 0 ] && CIS_START=0
 
             # Extract cis SNPs
@@ -123,18 +131,18 @@ rule compute_weights:
             # Run FUSION if SNPs exist
             OUTPREFIX="$OUTDIR/${{GENE}}"
             if [ -s "$WORKDIR/cis.bed" ]; then
-                Rscript ../resources/fusion/FUSION.compute_weights.R \
+                Rscript {params.fusion_script} \
                     --bfile $WORKDIR/cis \
                     --pheno $WORKDIR/pheno.txt \
                     --covar $COVAR \
-                    --hsq_p 0.01 \
-                    --crossval 5 \
+                    --hsq_p {params.hsq_p} \
+                    --crossval {params.crossval} \
                     --tmp $OUTPREFIX.tmp \
                     --PATH_gemma $GEMMA \
-                    --PATH_gcta ../resources/fusion/gcta_nr_robust \
-                    --PATH_plink /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink \
+                    --PATH_gcta {params.gcta} \
+                    --PATH_plink {params.plink} \
                     --verbose 2 \
-                    --models top1,lasso,enet \
+                    --models {params.models} \
                     --out $OUTPREFIX >> {log} 2>&1 || true
             fi
 
@@ -153,10 +161,11 @@ rule compute_weights:
         """
 
 rule make_pos_file:
-    input:  rules.compute_weights.output
+    input:  weights = rules.compute_weights.output,
+            coord = rules.prep_exp_data.output.coord,
+            expr = rules.prep_exp_data.output.exp
     output: config["twas"]["make_pos_file"]["output"]
-    params: coord_file = config["twas"]["prep_exp_data"]["coord"],
-            cis_window = config["tensorQTL"]["window"]
+    params: cis_window = config["tensorQTL"]["window"]
     message:  "Generate FUSION .pos file for {wildcards.cell_type}"
     benchmark: "reports/benchmarks/11twas.make_pos_file_{cell_type}.benchmark.txt"
     log:      config["twas"]["make_pos_file"]["log"]
@@ -180,4 +189,3 @@ rule twas_weights_report:
             output_file = '{params.output_file}', \
             params = list(cell_types = c({params.cell_types}), log_dir = '{params.log_dir}'))" > {log} 2>&1
         """
-
