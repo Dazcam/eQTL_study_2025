@@ -494,69 +494,69 @@ geno_post_impute:
 # ------------  TENSORQTL (pipeline 5)  ----------------
 
 tensorQTL:
-  tool: tensorqtl
-  num_chunks: 100
-  perm_min: 1000
-  perm_max: 10000
+  tool:         tensorqtl
+  num_chunks:   100
+  perm_min:     1000
+  perm_max:     10000
   plink_prefix: ../results/04GENOTYPES/TOPMED/filtered/chrALL_final.filt
-  out_prefix: ../results/04TENSORQTL/chrALL_final.filt
-  window: 500000
-  geno_pcs: 4
-#  exp_pcs: [40]
+  out_prefix:   ../results/04TENSORQTL/chrALL_final.filt
+  window:       500000
+  geno_pcs:     4
+#  exp_pcs:     [40]
   norm_methods: ["quantile"]
-  exp_pcs: [10,20,30,40,50]
+  exp_pcs:      [10,20,30,40,50]
 #  norm_methods: ["bryois", "fujita", "quantile", "xue"]
 
   prep_tensorQTL_input:
-    cov_file: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
-    sex_file: reports/02SCANPY/02_metadata_per_sample.tsv
-    gene_lookup: ../resources/sheets/gene_lookup_hg38.tsv
-    exp_out: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed
-    cov_out: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_base_covariates.txt
+    cov_file:      ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    sex_file:      reports/02SCANPY/02_metadata_per_sample.tsv
+    gene_lookup:   ../resources/sheets/gene_lookup_hg38.tsv
+    exp_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed
+    cov_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_base_covariates.txt
     pseudoblk_dir: ../results/02SCANPY/pseudobulk/
-    out_dir: ../results/05TENSORQTL/prep_input/
-    report_dir: reports/05TENSORQTL/
-    log: ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
+    out_dir:       ../results/05TENSORQTL/prep_input/
+    report_dir:    reports/05TENSORQTL/
+    log:           ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
 
   zip_pblk_cnts:
-    output: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed.gz
-    log: ../results/00LOG/05TENSORQTL/zip_pblk_cnts_{cell_type}_{norm_method}.log
+    output:        ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed.gz
+    log:           ../results/00LOG/05TENSORQTL/zip_pblk_cnts_{cell_type}_{norm_method}.log
 
   convert_genotypes:
-    input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
-    output: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen
-    prefix_out: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    log: ../results/00LOG/05TENSORQTL/convert_genotypes.log
+    input:         ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    output:        ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen
+    prefix_out:    ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:           ../results/00LOG/05TENSORQTL/convert_genotypes.log
 
   split_covariates:
     output: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt
-    log: ../results/00LOG/05TENSORQTL/split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
+    log:    ../results/00LOG/05TENSORQTL/split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
 
   tensorqtl_nom:
-    output: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet
+    output:     ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet
     prefix_out: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom
-    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.log
+    prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.log
 
   tensorqtl_perm:
-    output: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz
+    output:     ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz
     prefix_out: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm
-    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
+    prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
 
   tensorqtl_independent:
-    output: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent.cis_independent_qtl.txt.gz
+    output:     ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent.cis_independent_qtl.txt.gz
     prefix_out: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent
-    prefix_in: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    log: ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log   
+    prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log   
 
   tensorqtl_report:
-    rmd_script: scripts/tensorQTL_report.Rmd
-    output: reports/05TENSORQTL/tensorqtl_report.html
-    in_dir: ../../results/05TENSORQTL/tensorqtl_perm/
-    bmark_dir: ../reports/benchmarks/
+    rmd_script:  scripts/tensorQTL_report.Rmd
+    output:      reports/05TENSORQTL/tensorqtl_report.html
+    in_dir:      ../../results/05TENSORQTL/tensorqtl_perm/
+    bmark_dir:   ../reports/benchmarks/
     output_file: ../reports/05TENSORQTL/tensorqtl_report.html
-    log: ../results/00LOG/05TENSORQTL/tensorqtl_report.log
+    log:         ../results/00LOG/05TENSORQTL/tensorqtl_report.log
 
 # --------  QTL REPLICATION (Pipeline 6)  ----------
 
@@ -805,71 +805,52 @@ sldsr:
 
 smr:
   get_smr_binary:
-    smr: ../resources/smr/smr
+    smr:    ../resources/smr/smr
     prefix: ../resources/smr
 
   cat_tensorqtl_nom_snps:
     cat_snps: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
-    summary: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
-#    dir: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_quantile_genPC_4_expPC_40/ # Need to fix this
-    log: ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
+    summary:  ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
+    log:      ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
 
   create_query:
     r_script: scripts/smr_create_query.R
-    query: ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
+    query:    ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
     gene_lst: ../results/10SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
-    log: ../results/00LOG/10SMR/create_query_{cell_type}.log
+    log:      ../results/00LOG/10SMR/create_query_{cell_type}.log
 
   create_besd:
-    besd: ../results/10SMR/smr_input/{cell_type}/{cell_type}.besd
+    besd:   ../results/10SMR/smr_input/{cell_type}/{cell_type}.besd
     prefix: ../results/10SMR/smr_input/{cell_type}/{cell_type}
-    log: ../results/00LOG/10SMR/create_besd_{cell_type}.log
+    log:    ../results/00LOG/10SMR/create_besd_{cell_type}.log
 
   cat_refs:
-    frq_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
-    bed_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bed
-    bim_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
-    fam_in: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.1.fam
+    frq_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
+    bed_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bed
+    bim_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    fam_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.1.fam
     cat_frq: ../results/10SMR/smr_input/1000G.EUR.hg38.frq
     cat_bed: ../results/10SMR/smr_input/1000G.EUR.hg38.bed
     cat_bim: ../results/10SMR/smr_input/1000G.EUR.hg38.bim
     cat_fam: ../results/10SMR/smr_input/1000G.EUR.hg38.fam
-    log: ../results/00LOG/10SMR/cat_refs.log
-
-  generate_topmed_freq:
-    bed: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bed
-    bim: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bim
-    fam: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.fam
-    out: ../results/10SMR/smr_input/chrALL_final.filt.frq
-    prefix_in: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt
-    prefix_out: ../results/10SMR/smr_input/chrALL_final.filt   
+    log:     ../results/00LOG/10SMR/cat_refs.log
 
   format_gwas:
-    gwas: ../results/07PREP-GWAS/{gwas}_hg38.tsv
-    ma: ../results/10SMR/smr_input/gwas/{gwas}_hg38.ma
+    gwas:   ../results/07PREP-GWAS/{gwas}_hg38.tsv
+    ma:     ../results/10SMR/smr_input/gwas/{gwas}_hg38.ma
     prefix: ../results/10SMR/smr_input/gwas/{gwas}_hg38
-    log: ../results/00LOG/10SMR/format_gwas_{gwas}.log
+    log:    ../results/00LOG/10SMR/format_gwas_{gwas}.log
 
   smr:
     geno_prefix: ../results/10SMR/smr_input/1000G.EUR.hg38
-    smr: ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr
-    smr_prefix: ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}
-    log: ../results/00LOG/10SMR/smr_{cell_type}_{gwas}.log 
+    smr:         ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr
+    smr_prefix:  ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}
+    log:         ../results/00LOG/10SMR/smr_{cell_type}_{gwas}.log 
   
-  prep_gene_lists:
-    ensembl: ../results/10SMR/plot/{cell_type}/{cell_type}_ensembl_genes.tsv
-    symbol: ../results/10SMR/plot/{cell_type}/{cell_type}_symbol_genes.tsv
-    log: ../results/00LOG/10SMR/prep_gene_lists_{cell_type}.log
-
-  smr_plot:
-    output: ../results/10SMR/plot/{cell_type}/{cell_type}_{gwas}_{smr_gene}_smr.txt
-    out_prefix: ../results/10SMR/plot/{cell_type}/{cell_type}_{gwas}_{smr_gene}_smr 
-    log: ../results/00LOG/10SMR/smr_plot_{cell_type}_{gwas}_{smr_gene}.log 
-   
   smr_report:
-    html: reports/10SMR/10smr_report.html
+    html:   reports/10SMR/10smr_report.html
     in_dir: ../../results/10SMR/smr # Rel to Rmd script
-    log: ../results/00LOG/10SMR/smr_report.log  
+    log:    ../results/00LOG/10SMR/smr_report.log  
 
 # ---------  TWAS Weights (Pipeline 11)  ----------
 
@@ -879,50 +860,48 @@ twas:
 
   prep_exp_data:
     input: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
-    exp: ../results/11TWAS/fusion_input/{cell_type}_plink.txt
+    exp:   ../results/11TWAS/fusion_input/{cell_type}_plink.txt
     coord: ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
-    log: ../results/00LOG/11TWAS/prep_exp_data_{cell_type}.log
+    log:   ../results/00LOG/11TWAS/prep_exp_data_{cell_type}.log
 
   convert_vcf:
-    input: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
-    bed: ../results/11TWAS/fusion_input/genotypes_hg38.bed
-    bim: ../results/11TWAS/fusion_input/genotypes_hg38.bim
-    fam: ../results/11TWAS/fusion_input/genotypes_hg38.fam
+    input:  ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    bed:    ../results/11TWAS/fusion_input/genotypes_hg38.bed
+    bim:    ../results/11TWAS/fusion_input/genotypes_hg38.bim
+    fam:    ../results/11TWAS/fusion_input/genotypes_hg38.fam
     prefix: ../results/11TWAS/fusion_input/genotypes_hg38
-    log: ../results/00LOG/11TWAS/convert_vcf.log
+    log:    ../results/00LOG/11TWAS/convert_vcf.log
 
   get_ldref_snplist:
-    input: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    input:   ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
     snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
-    log: ../results/00LOG/11TWAS/get_ldref_snplist.log
+    log:     ../results/00LOG/11TWAS/get_ldref_snplist.log
 
   prepare_covar:
     output: ../results/11TWAS/fusion_input/{cell_type}_covariates.txt
-    log: ../results/00LOG/11TWAS/prepare_covar_{cell_type}.log
+    log:    ../results/00LOG/11TWAS/prepare_covar_{cell_type}.log
 
   compute_weights:
-    output: "../results/11TWAS/weights/{cell_type}/all_weights_done.txt"
-    outdir: ../results/11TWAS/weights/{cell_type}
-    log: ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
-    tmp_dir: ../results/11TWAS/fusion_input
+    output:        ../results/11TWAS/weights/{cell_type}/all_weights_done.txt
+    outdir:        ../results/11TWAS/weights/{cell_type}
+    log:           ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
+    tmp_dir:       ../results/11TWAS/fusion_input
     fusion_script: ../resources/fusion/FUSION.compute_weights.R
-    gcta: ../resources/fusion/gcta_nr_robust
-    plink: /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink  # PLINK v1.9 binary (needed for FUSION --lasso) 
-    hsq_p: 0.01
-    crossval: 5
-    models: top1,lasso,enet
+    gcta:          ../resources/fusion/gcta_nr_robust
+    plink:         /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink  # PLINK v1.9 binary (needed for FUSION --lasso) 
+    hsq_p:         0.01
+    crossval:      5
+    models:        top1,lasso,enet
 
   make_pos_file:
     output: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
-    log: ../results/00LOG/11TWAS/make_pos_file_{cell_type}.log
+    log:    ../results/00LOG/11TWAS/make_pos_file_{cell_type}.log
 
   twas_weights_report:
-    script: scripts/twas_weights_summary.Rmd
-    output: reports/11TWAS/11twas_weights_report.html
-    log_dir: ../../results/00LOG/11TWAS/
-    bmark_dir: ../reports/benchmarks/
-    out_file: ../reports/11TWAS/11twas_weights_report.html
-    log: ../results/00LOG/11TWAS/twas_weights_report.log
+    script:    scripts/twas_weights_summary.Rmd
+    output:    reports/11TWAS/11twas_weights_report.html
+    bmark_dir: reports/benchmarks
+    log:       ../results/00LOG/11TWAS/twas_weights_report.log
 
 # ---------  CTWAS (Pipeline 12)  ----------
 

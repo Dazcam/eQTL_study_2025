@@ -25,6 +25,9 @@ message('\n\nMunge eQTL, snp and gene level data for SMR input ...')
 # Load packages
 library(tidyverse)
 
+# Load functions
+source(file.path(snakemake@scriptdir, "smr_functions.R"))
+
 # Input and output paths
 eqtl_in <- snakemake@input[['eqtl']]
 snps_in <- snakemake@input[['snps']]
@@ -51,8 +54,7 @@ genes_tbl <- read_tsv(genes_in) |>
          Probe_bp = phenotype_pos, 
          Gene = gene_id) |>
   select(Probe_Chr, Probe_bp, Gene, Orientation)
-frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i")) |>
-  select(SNP, A1.ref = A1, A2.ref = A2, MAF)
+frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i"))
 
 # Filter for significant eQTLs (qval < threshold)
 message('Extracting eQTL cols ...')
@@ -77,31 +79,8 @@ snp_mrg_tbl <- eqtl_filt_tbl |>
 
 # Align eQTL alleles and frequencies to 1000G reference
 message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
-snp_mrg_tbl <- snp_mrg_tbl %>%
-  left_join(frq_tbl, by = "SNP") %>%
-  mutate(
-    allele_status = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ "aligned",
-      A1 == A2.ref & A2 == A1.ref ~ "flipped",
-      TRUE ~ "mismatch_or_missing"
-    ),
-    Freq = case_when(
-      allele_status == "aligned" ~ MAF,
-      allele_status == "flipped" ~ 1 - MAF,
-      TRUE ~ Freq
-    )
-  ) %>%
-  select(-A1.ref, -A2.ref, -MAF)
-
-# Report allele flips
-message("\n=== eQTL frequency alignment summary ===")
-snp_mrg_tbl %>%
-  count(allele_status) %>%
-  mutate(percent = round(100 * n / sum(n), 1)) %>%
-  arrange(desc(n)) %>%
-  print(n = Inf)
-
-message("========================================\n")
+snp_mrg_tbl <- align_freq_to_ref(snp_mrg_tbl, frq_tbl, by = "SNP", freq_col = "Freq",
+                                 keep_unmatched = TRUE, label = "eQTL")
 
 # Merge with gene meta data
 message('Merging Gene data ...')

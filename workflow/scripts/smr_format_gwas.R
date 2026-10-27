@@ -21,6 +21,10 @@ message("\n\nMunge GWAS for SMR input ...")
 # Load packages
 library(tidyverse)
 
+# Load functions
+source(file.path(snakemake@scriptdir, "gwas_functions.R"))
+source(file.path(snakemake@scriptdir, "smr_functions.R"))
+
 # Input and output paths
 gwas_in <- snakemake@input[["gwas"]]
 frq_in <- snakemake@input[["frq"]]
@@ -65,85 +69,16 @@ frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROB
 
 
 ## GWAS checks  -----------------------------------------------------------------------
-# non-rsIDs
-non_rsids <- gwas_tbl %>%
-  filter(!str_starts(SNP, "rs")) %>%
-  distinct(SNP) %>%
-  nrow()
-if (non_rsids > 0) {
-  message(str_glue("Found {non_rsids} non-rsID SNPs. Removing them ..."))
-  gwas_tbl <- gwas_tbl %>% filter(str_starts(SNP, "rs"))
-} else {
-  message("No non-rsID SNPs found.")
-}
-
-# duplicate rsIDs
-duplicate_rsids <- gwas_tbl %>%
-  group_by(SNP) %>%
-  filter(n() > 1) %>%
-  distinct(SNP) %>%
-  nrow()
-if (duplicate_rsids > 0) {
-  message(str_glue("Found {duplicate_rsids} duplicate rsIDs. Keeping first occurrence ..."))
-  gwas_tbl <- gwas_tbl %>% distinct(SNP, .keep_all = TRUE)
-} else {
-  message("No duplicate rsIDs found.")
-}
-
-# Alt Chrs 
-message("Checking GWAS chromosomes ...\n")
-gwas_tbl |> 
-  group_by(CHR) |> 
-  count() |> 
-  print(n = Inf)
-
-alt_chroms <- gwas_tbl %>%
-  filter(str_ends(CHR, "alt")) %>%
-  distinct(CHR) %>%
-  pull(CHR)
-
-if (length(alt_chroms) > 0) {
-  message("\nChromosomes ending with 'alt' found: ", paste(alt_chroms, collapse = ", "))
-  message("\nCount of SNPs with 'alt' chromosomes: ", 
-          nrow(gwas_tbl %>% filter(str_ends(CHR, "alt"))))
-  message("Removing SNPs with 'alt' chromosomes ... ")
-  gwas_tbl <- gwas_tbl %>% filter(!str_ends(CHR, "alt"))
-} else {
-  message("No chromosomes ending with 'alt' found.")
-}
+gwas_tbl <- clean_gwas(gwas_tbl)
 
 # Join GWAS with reference frequencies by CHR and SNP
-message("\nAppending freq info to GWAS ...\n")
-mrg_tbl <- gwas_tbl %>%
-  left_join(frq_tbl, by = c("CHR", "SNP"), suffix = c("", ".ref"))
-
 # New strategy: 
 # - no allele filpping - 80% are flipped
 # - prioritise GWAS allele order over reference despite 80% mismatch
 # - But flip MAF if necessary
-mrg_tbl <- mrg_tbl %>%
-  mutate(
-    allele_status = case_when(
-      A1 == A1.ref & A2 == A2.ref ~ "aligned",
-      A1 == A2.ref & A2 == A1.ref ~ "flipped",
-      TRUE ~ "mismatched"
-    ),
-    freq = case_when(
-      allele_status == "aligned" ~ MAF,
-      allele_status == "flipped" ~ 1 - MAF,
-      TRUE ~ NA_real_
-    )
-    # b remains unchanged
-  )
-
-# Report allele flips
-message("\n=== GWAS frequency alignment summary ===")
-mrg_tbl %>%
-  count(allele_status) %>%
-  mutate(percent = round(100 * n / sum(n), 1)) %>%
-  arrange(desc(n)) %>%
-  print(n = Inf)
-message("========================================\n")
+message("\nAppending freq info to GWAS ...\n")
+mrg_tbl <- align_freq_to_ref(gwas_tbl, frq_tbl, by = c("CHR", "SNP"), freq_col = "freq",
+                             label = "GWAS")
 
 # Filter out SNPs with missing freq
 message("Filtering SNPs with missing or mismatched frequencies ...\n")

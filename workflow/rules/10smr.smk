@@ -1,11 +1,5 @@
 configfile: "../config/config.yaml"
 
-#rule all:
-#    input:
-#        '../results/10SMR/beta_cor/smr_beta_correlation_single.done'
-#        "reports/10SMR/10smr_report.html"
-#        expand("../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr", cell_type=config["cell_types"], gwas=config["gwas"])
-     
 
 rule get_smr_binary:
    output: config["smr"]["get_smr_binary"]["smr"]
@@ -20,9 +14,7 @@ rule get_smr_binary:
       rm -rf smr-1.4.0-linux-x86_64.zip smr-1.4.0-linux-x86_64
       """
 
-# Cat ref files; just tracking frq as prefix of other only required in smr rule
 rule cat_refs:
-    # This rule uses the LDSR hg38 1000G frq files, but smr throws an allele frq error
     input:  frq = expand(config["smr"]["cat_refs"]["frq_in"], chr = range(1, 23)),
             bed = expand(config["smr"]["cat_refs"]["bed_in"], chr = range(1, 23)),
             bim = expand(config["smr"]["cat_refs"]["bim_in"], chr = range(1, 23)),
@@ -69,25 +61,6 @@ rule cat_tensorqtl_nom_snps:
           --summary_out {output.summary}  >> {log} 2>&1
         """
 
-#rule cat_tensorqtl_nom_snps:
-#    input: lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
-#                geno_pc=config['tensorQTL']['geno_pcs']:
-#                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/{w.cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet"
-#    output: cat_snps = config["smr"]["cat_tensorqtl_nom_snps"]["cat_snps"],
-#            summary = config["smr"]["cat_tensorqtl_nom_snps"]["summary"]
-#    params: config["smr"]["cat_tensorqtl_nom_snps"]["dir"]
-#    message: "Cat TensorQTL parquet files into single file for SMR"
-#    benchmark: "reports/benchmarks/10smr.cat_tensorqtl_nom_snps_{cell_type}.txt"
-#    log: config["smr"]["cat_tensorqtl_nom_snps"]["log"]
-#    shell:
-#        """
-#        python scripts/smr_cat_tensorqtl_nom_snps.py \
-#          --nom_dir {params} \
-#          --cell_type {wildcards.cell_type} \
-#          --concat_out {output.cat_snps} \
-#          --summary_out {output.summary}  >> {log} 2>&1
-#        """
-
 rule create_query:
     input:  eqtl = rules.cat_tensorqtl_nom_snps.output.cat_snps,
 #            eqtl = config["output_files"]["tensorqtl_perm_output"], # All probes failed HEIDI when using perm
@@ -120,23 +93,6 @@ rule create_besd:
         {input.smr} --qfile {input.query} --add-n 134 --make-besd --out {params} > {log} 2>&1
         """
 
-# Generate frq files from my samples; fails smr due to allele freq discrepancies
-#rule generate_topmed_freq:
-#    input:  bed = config["smr"]["generate_topmed_freq"]["bed"],
-#            bim = config["smr"]["generate_topmed_freq"]["bim"],
-#            fam = config["smr"]["generate_topmed_freq"]["fam"]
-#    output: config["smr"]["generate_topmed_freq"]["out"]
-#    params: prefix_in = config["smr"]["generate_topmed_freq"]["prefix_in"],
-#            prefix_out = config["smr"]["generate_topmed_freq"]["prefix_out"]
-#    envmodules: "plink/1.9"  
-#    shell:
-#        """
-#        plink --bfile {params.prefix_in} \
-#              --freq \
-#              --out {params.prefix_out}
-#        """
-
-# Rule to format GWAS data; my script my be causing the error
 rule format_gwas:
     input:  gwas = config["smr"]["format_gwas"]["gwas"],
             frq  = rules.cat_refs.output.frq,
@@ -171,61 +127,9 @@ rule smr:
                 --peqtl-smr 5e-8 >> {log} 2>&1 
             """
 
-rule beta_correlation_single:
-    # Testing: may need to add code to handle specific gwas / cell types
-    output: '../results/10SMR/beta_cor/smr_beta_correlation_single.done'
-    params: in_dir = '../results/10SMR/smr',
-            fugita_dir = '../resources/public_datasets/fugita_2024/'
-    singularity: config["containers"]["r_eqtl"]
-    resources: threads = 6, mem_mb = 96000, time="1-0:00:00"
-    message: "Generating data for SMR eQTL beta correlation analysis for replication (single N pairs)"
-    benchmark: "reports/benchmarks/06smr.beta_correlation_single.txt"
-    log:    "../results/00LOG/10SMR/beta_correlation_single.log"
-    script: "../scripts/smr_beta_correlation_single.R"
-
-# These rules can be used to generate code for smr plots
-# Note that smr_plot doesn't produce output for snp / gene pairs
-# If using these rules need to get code to handel this
-#rule prep_gene_lists:
-#    input: rules.create_query.output.gene_lst
-#    output: ensembl = config['smr']['prep_gene_lists']['ensembl'],
-#            symbol = config['smr']['prep_gene_lists']['symbol']
-#    singularity: config["containers"]["R"]
-#    message: "Creating the gene lists file for SMR plotting"
-#    benchmark: "reports/benchmarks/10smr.prep_gene_lists_{cell_type}.txt"
-#    log: config["smr"]["prep_gene_lists"]["log"]
-#    script: "../scripts/prep_gene_lists_for_smr_plts.R"
-
-#rule smr_plot:
-#    input:  gwas = rules.format_gwas.output,
-#            gene_list = rules.prep_gene_lists.output.ensembl,
-#            bin = rules.get_smr_binary.output,
-#    output: config["smr"]["smr_plot"]["output"]
-#    params: geno_prefix = config["smr"]["smr"]["geno_prefix"],
-#            besd_prefix = config["smr"]["create_besd"]["prefix"],
-#            out_prefix = config["smr"]["smr_plot"]["out_prefix"],
-#            smr_gene = config['smr_gene'],
-#            window =  config['smr_window']
-#    resources: threads = 4, mem_mb = 20000
-#    envmodules: "compiler/gnu/5/5.0"
-#    message: "Generate data for SMR plotting"
-#    benchmark: "reports/benchmarks/10smr.smr_plot_{cell_type}_{gwas}_{smr_gene}.txt"
-#    log:    config["smr"]["smr_plot"]["log"]
-#    shell:  """
-#            {input.bin} --bfile {params.geno_prefix} \
-#              --gwas-summary {input.gwas} \
-#              --beqtl-summary {params.besd_prefix} \
-#              --out {params.out_prefix} \
-#              --plot \
-#              --probe {params.smr_gene} \
-#              --probe-wind {params.window} \
-#              --gene-list {input.gene_list} >> {log} 2>&1
-#            """ 
-
 rule smr_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  smr_files = expand(rules.smr.output, cell_type = config["cell_types"], gwas = config["gwas"]),
-#            plt_files = expand(rules.smr_plot.output, cell_type = config["cell_types"], gwas = config["gwas"], smr_gene = config['smr_gene']),
             rmd_script = "scripts/smr_report.Rmd"
     output: config["smr"]["smr_report"]["html"]
     params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
