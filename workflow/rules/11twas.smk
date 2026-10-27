@@ -172,19 +172,37 @@ rule make_pos_file:
 
 rule twas_weights_report:
     input:  pos = expand(rules.make_pos_file.output, cell_type = config['cell_types']),
-            rmd_script = config["twas"]["twas_weights_report"]["script"]
+            coord = expand(rules.prep_exp_data.output.coord, cell_type = config['cell_types']),
+            rmd_script = config["twas"]["twas_weights_report"]["script"],
+            functions = "scripts/twas_functions.R"
     output: config["twas"]["twas_weights_report"]["output"]
-    params: cell_types = ','.join(['\'{}\''.format(x) for x in config["cell_types"]]),
-            log_dir = config["twas"]["twas_weights_report"]["log_dir"],
+    params: cell_types = ",".join(config["cell_types"]),
+            weights_dir = lambda w: config["twas"]["compute_weights"]["outdir"],
+            pos_file = lambda w: config["twas"]["make_pos_file"]["output"],
+            coord_file = lambda w: config["twas"]["prep_exp_data"]["coord"],
+            weights_log = lambda w: config["twas"]["compute_weights"]["log"],
             bmark_dir = config["twas"]["twas_weights_report"]["bmark_dir"],
-            output_file = config["twas"]["twas_weights_report"]["out_file"]
+            cis_window = config["tensorQTL"]["window"],
+            hsq_p = config["twas"]["compute_weights"]["hsq_p"],
+            crossval = config["twas"]["compute_weights"]["crossval"],
+            models = config["twas"]["compute_weights"]["models"]
     singularity: config["containers"]["r_eqtl"]
-    message:  "Generate TWAS weights report data for report"
+    message:  "Generate TWAS weights report"
     benchmark: "reports/benchmarks/11twas.twas_weights_report.benchmark.txt"
     log: config["twas"]["twas_weights_report"]["log"]
     shell:
         """
-        Rscript -e "rmarkdown::render('{input.rmd_script}', \
-            output_file = '{params.output_file}', \
-            params = list(cell_types = c({params.cell_types}), log_dir = '{params.log_dir}'))" > {log} 2>&1
+        Rscript -e "wd <- getwd(); rmarkdown::render('{input.rmd_script}', \
+            output_file = file.path(wd, '{output}'), \
+            knit_root_dir = wd, \
+            params = list(cell_types = '{params.cell_types}', \
+                          weights_dir = '{params.weights_dir}', \
+                          pos_file = '{params.pos_file}', \
+                          coord_file = '{params.coord_file}', \
+                          weights_log = '{params.weights_log}', \
+                          bmark_dir = '{params.bmark_dir}', \
+                          cis_window = '{params.cis_window}', \
+                          hsq_p = '{params.hsq_p}', \
+                          crossval = '{params.crossval}', \
+                          models = '{params.models}'))" > {log} 2>&1
         """
