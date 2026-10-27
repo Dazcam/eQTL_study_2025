@@ -11,8 +11,8 @@ configfile: '../config/config.yaml'
 #include: 'rules/07prep_gwas.smk'
 #include: 'rules/08susie.smk'
 #include: 'rules/09sldsr.smk'
-#include: 'rules/10smr.smk'
-include: 'rules/11twas.smk'
+include: 'rules/10smr.smk'
+#include: 'rules/11twas.smk'
 #include: 'rules/11plotting.smk'
 #include: 'rules/12ctwas.smk'
 
@@ -25,8 +25,8 @@ rule all:
 #        config["tensorQTL"]["tensorqtl_report"]["output"]
 #        config["susie"]["susie_report"]["html"],
 #        config["sldsr"]["ldsr_report"]["html"],
-#        config["smr"]["smr_report"]["html"],
-         config["twas"]["twas_weights_report"]["output"],
+        config["smr"]["smr_report"]["html"],
+#         config["twas"]["twas_weights_report"]["output"],
 #         config["ctwas"]["ctwas_report"]["output"]
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
 #        config["scanpy"]["subclustering"]["output"],

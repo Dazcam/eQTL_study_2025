@@ -147,6 +147,8 @@ annot_types:
  
 p_smr: 0.05
 p_heidi: 0.01
+peqtl_smr: 5.0e-8      
+smr_n_samples: 134    
 smr_window: 500
 smr_gene: 'ENSG00000214435' # is 'AS3MT'
 

@@ -17,6 +17,8 @@
 #
 # Inputs:    --nom_dir      tensorQTL nominal output directory for the cell type
 #            --cell_type    cell type name (used in the parquet file names)
+#            --norm_method  tensorQTL normalisation method (used in the parquet file
+#                           names; config tensorQTL: norm_methods[0])
 #
 # Outputs:   --concat_out   {cell_type}_nom.cis_qtl_pairs.tsv
 #            --summary_out  {cell_type}_nom.cis_qtl_pairs_snp_summary.tsv: total SNPs,
@@ -40,11 +42,11 @@ log = logging.getLogger()
 sys.excepthook = lambda *exc: log.error("Uncaught exception", exc_info=exc)
 
 
-def concat_tensorqtl_nom_snps(nom_dir, cell_type, concat_out, summary_out):
+def concat_tensorqtl_nom_snps(nom_dir, cell_type, norm_method, concat_out, summary_out):
 
     ## Read and concatenate parquet files  --------------------------------------------
     # List Parquet files for chromosomes 1-22
-    parquet_files = sorted(glob.glob(os.path.join(nom_dir, f"{cell_type}_quantile_nom.cis_qtl_pairs.[1-9]*.parquet")))
+    parquet_files = sorted(glob.glob(os.path.join(nom_dir, f"{cell_type}_{norm_method}_nom.cis_qtl_pairs.[1-9]*.parquet")))
     log.info(f"Found {len(parquet_files)} Parquet files for {cell_type}")
 
     if not parquet_files:
@@ -97,6 +99,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Concatenate and summarize TensorQTL nominal output")
     parser.add_argument("--nom_dir", required=True, help="Directory with TensorQTL Parquet files")
     parser.add_argument("--cell_type", required=True, help="Cell type name")
+    parser.add_argument("--norm_method", required=True, help="tensorQTL normalisation method")
     parser.add_argument("--concat_out", required=True, help="Output concatenated TSV file")
     parser.add_argument("--summary_out", required=True, help="Output summary TSV file")
     args = parser.parse_args()
@@ -112,7 +115,8 @@ if __name__ == "__main__":
         log.info(f"{name:<{width}}  {value}")
     log.info("============================")
 
-    concat_tensorqtl_nom_snps(args.nom_dir, args.cell_type, args.concat_out, args.summary_out)
+    concat_tensorqtl_nom_snps(args.nom_dir, args.cell_type, args.norm_method,
+                              args.concat_out, args.summary_out)
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

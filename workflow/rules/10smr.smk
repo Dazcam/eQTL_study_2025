@@ -1,5 +1,12 @@
 configfile: "../config/config.yaml"
 
+def tensorqtl_nom_dir(w):
+    """tensorQTL nominal output directory for one cell type (first norm method)."""
+    norm_method = config['tensorQTL']['norm_methods'][0]
+    geno_pc = config['tensorQTL']['geno_pcs']
+    exp_pc = config['exp_pc_map'][w.cell_type]
+    return (f"../results/05TENSORQTL/tensorqtl_nom/"
+            f"{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/")
 
 rule get_smr_binary:
    output: config["smr"]["get_smr_binary"]["smr"]
@@ -41,14 +48,12 @@ rule cat_refs:
         """
 
 rule cat_tensorqtl_nom_snps:
-    input: lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
-                geno_pc=config['tensorQTL']['geno_pcs']:
-                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/{w.cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet"
+    input:  lambda w: tensorqtl_nom_dir(w) +
+                f"{w.cell_type}_{config['tensorQTL']['norm_methods'][0]}_nom.cis_qtl_pairs.4.parquet"
     output: cat_snps = config["smr"]["cat_tensorqtl_nom_snps"]["cat_snps"],
             summary = config["smr"]["cat_tensorqtl_nom_snps"]["summary"]
-    params: dir = lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
-                geno_pc=config['tensorQTL']['geno_pcs']:
-                f"../results/05TENSORQTL/tensorqtl_nom/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/"
+    params: dir = tensorqtl_nom_dir,
+            norm_method = config['tensorQTL']['norm_methods'][0]
     message: "Cat TensorQTL parquet files into single file for SMR"
     benchmark: "reports/benchmarks/10smr.cat_tensorqtl_nom_snps_{cell_type}.txt"
     log: config["smr"]["cat_tensorqtl_nom_snps"]["log"]
@@ -57,6 +62,7 @@ rule cat_tensorqtl_nom_snps:
         python scripts/smr_cat_tensorqtl_nom_snps.py \
           --nom_dir {params.dir} \
           --cell_type {wildcards.cell_type} \
+          --norm_method {params.norm_method} \
           --concat_out {output.cat_snps} \
           --summary_out {output.summary}  >> {log} 2>&1
         """
@@ -82,7 +88,8 @@ rule create_besd:
     input: query = config["smr"]["create_query"]["query"],
            smr = rules.get_smr_binary.output
     output: config["smr"]["create_besd"]["besd"]
-    params: config["smr"]["create_besd"]["prefix"]
+    params: prefix = config["smr"]["create_besd"]["prefix"],
+            n_samples = config["smr_n_samples"]
     resources: threads = 4, mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
     message: "Create besd file for SMR"
@@ -90,7 +97,7 @@ rule create_besd:
     log: config["smr"]["create_besd"]["log"]
     shell:
         """
-        {input.smr} --qfile {input.query} --add-n 134 --make-besd --out {params} > {log} 2>&1
+        {input.smr} --qfile {input.query} --add-n {params.n_samples} --make-besd --out {params.prefix} > {log} 2>&1
         """
 
 rule format_gwas:
@@ -113,7 +120,8 @@ rule smr:
     output: config["smr"]["smr"]["smr"]
     params: geno_prefix = config["smr"]["smr"]["geno_prefix"],
             besd_prefix = config["smr"]["create_besd"]["prefix"],
-            out_prefix = config["smr"]["smr"]["smr_prefix"]
+            out_prefix = config["smr"]["smr"]["smr_prefix"],
+            peqtl_smr = config["peqtl_smr"]
     resources: threads = 4, mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
     message: "Run SMR"
@@ -124,7 +132,7 @@ rule smr:
                 --gwas-summary {input.gwas} \
                 --beqtl-summary {params.besd_prefix} \
                 --out {params.out_prefix} \
-                --peqtl-smr 5e-8 >> {log} 2>&1 
+                --peqtl-smr {params.peqtl_smr} >> {log} 2>&1 
             """
 
 rule smr_report:
