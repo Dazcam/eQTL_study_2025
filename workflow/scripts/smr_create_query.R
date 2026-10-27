@@ -61,7 +61,6 @@ remove_mhc <- isTRUE(snakemake@params[['remove_mhc']])
 mhc_chr <- snakemake@params[['mhc_chr']]
 mhc_start <- snakemake@params[['mhc_start']]
 mhc_end <- snakemake@params[['mhc_end']]
-# fdr_thresh <- snakemake@params[['qval_thresh']] # Too stringent for SMR / HEIDI
 
 # Print what each variable is set to
 message("\nVariables")
@@ -77,28 +76,28 @@ message("============================\n")
 
 ## Load data  -------------------------------------------------------------------------
 message('Loading data ...')
-eqtl_tbl <- read_tsv(eqtl_in)
-snps_tbl <- read_tsv(snps_in, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'))
-genes_tbl <- read_tsv(genes_in) |>
-  rename(Probe_Chr = chromosome,
-         Orientation = strand,
-         Probe_bp = phenotype_pos, 
-         Gene = gene_id) |>
-  select(Probe_Chr, Probe_bp, Gene, Orientation)
+eqtl_tbl <- read_tsv(eqtl_in, show_col_types = FALSE)
+snps_tbl <- read_tsv(snps_in, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'),
+                     show_col_types = FALSE)
+genes_tbl <- read_tsv(genes_in, show_col_types = FALSE) |>
+  dplyr::rename(Probe_Chr = chromosome,
+                Orientation = strand,
+                Probe_bp = phenotype_pos,
+                Gene = gene_id) |>
+  dplyr::select(Probe_Chr, Probe_bp, Gene, Orientation)
 frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i"))
 
 ## Build query table  -----------------------------------------------------------------
-# Filter for significant eQTLs (qval < threshold)
+# All nominal pairs are kept: SMR applies its own eQTL threshold (--peqtl-smr), and
+# HEIDI needs several SNPs per gene
 message('Extracting eQTL cols ...')
-eqtl_filt_tbl <- eqtl_tbl  |>
-  #  filter(qval < fdr_thresh) %>% # Too stringent; HEIDI fails for all SNPs
-  #  filter(pval_nominal < 0.05) %>%  # Could use nominal p-value to include more SNPs
-  select(
+eqtl_filt_tbl <- eqtl_tbl |>
+  dplyr::select(
     SNP = variant_id,
     Gene = phenotype_id,
     b = slope,
     se = slope_se,
-    p = pval_nominal, # nominal or qval?
+    p = pval_nominal,
     Freq = af
   )
 
@@ -115,14 +114,14 @@ if (remove_mhc) {
   message('xMHC genes kept (remove_mhc: FALSE)')
 }
 
-# Merge with SNP position data from 100G hg38 .bim file
+# Merge with SNP position and alleles from the 1000G hg38 .bim file
 message('Merging SNP data ...')
 snp_mrg_tbl <- eqtl_filt_tbl |>
   left_join(snps_tbl, by = "SNP") |>
-  select(SNP, Chr, BP, A1, A2, Freq, Gene, b, se, p) |>
+  dplyr::select(SNP, Chr, BP, A1, A2, Freq, Gene, b, se, p) |>
   mutate(Chr = str_replace(Chr, '^chr', ''))
 
-# Align eQTL alleles and frequencies to 1000G reference
+# Set Freq to the 1000G frequency of A1
 message('Adjusting allele frequencies so Freq reflects frequency of current A1 (effect allele) ...')
 snp_mrg_tbl <- align_freq_to_ref(snp_mrg_tbl, frq_tbl, by = "SNP", freq_col = "Freq",
                                  keep_unmatched = TRUE, label = "eQTL")
@@ -132,40 +131,40 @@ message('Merging Gene data ...')
 smr_tbl <- snp_mrg_tbl |>
   left_join(genes_tbl, by = "Gene") |>
   mutate(Probe = Gene) |>
-  select(SNP, Chr, BP, A1, A2, Freq, Probe, Probe_Chr,
-           Probe_bp, Gene, Orientation, b, se, p)
+  dplyr::select(SNP, Chr, BP, A1, A2, Freq, Probe, Probe_Chr,
+                Probe_bp, Gene, Orientation, b, se, p)
 
 ## Checks  ----------------------------------------------------------------------------
 message('Running NA checks ...')
 if (anyNA(smr_tbl)) {
-  incomplete_n <- smr_tbl %>% filter(if_any(everything(), is.na)) %>% nrow()
-  
+  incomplete_n <- smr_tbl |> dplyr::filter(if_any(everything(), is.na)) |> nrow()
+
   message("\n=== Rows with missing values (n = ", incomplete_n, ") ===")
-  
-  smr_tbl %>% 
-    summarise(across(everything(), ~ sum(is.na(.)))) %>%
-    pivot_longer(everything(), names_to = "column", values_to = "n_NA") %>%
-    arrange(desc(n_NA)) %>%
-    mutate(n_NA = scales::comma(n_NA)) %>%
-    print(n = Inf)                     # ← this is the magic line
-  
+
+  smr_tbl |>
+    summarise(across(everything(), ~ sum(is.na(.)))) |>
+    pivot_longer(everything(), names_to = "column", values_to = "n_NA") |>
+    arrange(desc(n_NA)) |>
+    mutate(n_NA = scales::comma(n_NA)) |>
+    print(n = Inf)
+
   message("======================================================\n")
-  
+
   message("Dropping rows with any NA ...")
-  smr_tbl <- smr_tbl %>% drop_na()
+  smr_tbl <- smr_tbl |> drop_na()
 } else {
   message("No missing values in the final table.\n")
 }
-message('Do SNP and Gene Chr annotations match? ', 
+message('Do SNP and Gene Chr annotations match? ',
         sum(smr_tbl$Chr == smr_tbl$Probe_Chr) == nrow(smr_tbl))
 
 ## Write outputs  ---------------------------------------------------------------------
 message('Writing files ...')
 write_tsv(smr_tbl, query_out)
-genes_tbl <- smr_tbl |>
-  select(Gene) |>
+gene_lst_tbl <- smr_tbl |>
+  dplyr::select(Gene) |>
   distinct()
-write_tsv(genes_tbl, genes_out)
+write_tsv(gene_lst_tbl, genes_out)
 message('Done.')
 
 #--------------------------------------------------------------------------------------

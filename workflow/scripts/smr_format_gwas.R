@@ -21,7 +21,7 @@
 # Outputs:   ma           {gwas}_hg38.ma
 #
 # Notes:     SMR checks alleles across the GWAS, eQTL and LD reference itself, so the
-#            GWAS allele order is kept. 
+#            GWAS allele order is kept.
 #
 #--------------------------------------------------------------------------------------
 
@@ -64,46 +64,34 @@ message("============================\n")
 ## Load data  -------------------------------------------------------------------------
 message("Loading data ...\n")
 
-gwas_tbl <- read_tsv(gwas_in, guess_max = 100000, col_types = cols(.default = "c"))
+gwas_tbl <- read_tsv(gwas_in, col_types = cols(.default = "c"))
 
-# Determine effect column
-if ("BETA" %in% names(gwas_tbl)) {
-  gwas_tbl <- gwas_tbl %>%
-    mutate(
-      BP   = as.integer(BP),
-      PVAL = as.numeric(PVAL),
-      SE   = as.numeric(SE),
-      N    = as.integer(N),
-      BETA = as.numeric(BETA)
-    )
-} else if ("OR" %in% names(gwas_tbl)) {
-  gwas_tbl <- gwas_tbl %>%
-    mutate(
-      BP   = as.integer(BP),
-      PVAL = as.numeric(PVAL),
-      SE   = as.numeric(SE),
-      N    = as.integer(N),
-      OR   = as.numeric(OR),
-      BETA = log(OR)
-    )
-} else {
+# Effect size: BETA if present, otherwise log(OR)
+if (!any(c("BETA", "OR") %in% names(gwas_tbl))) {
   stop("Neither BETA nor OR column found in GWAS file: ", gwas_in)
 }
 
-gwas_tbl <- gwas_tbl %>%
-  rename(b = BETA, se = SE, p = PVAL) %>%
-  select(SNP, CHR, BP, A1, A2, b, se, p, N)
+gwas_tbl <- gwas_tbl |>
+  mutate(
+    BP   = as.integer(BP),
+    PVAL = as.numeric(PVAL),
+    SE   = as.numeric(SE),
+    N    = as.integer(N),
+    BETA = if ("BETA" %in% names(gwas_tbl)) as.numeric(BETA) else log(as.numeric(OR))
+  )
 
-frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i")) 
+gwas_tbl <- gwas_tbl |>
+  dplyr::rename(b = BETA, se = SE, p = PVAL) |>
+  dplyr::select(SNP, CHR, BP, A1, A2, b, se, p, N)
+
+frq_tbl <- read_table(frq_in, col_types = cols(.default = "c", MAF = "d", NCHROBS = "i"))
 
 ## GWAS checks  -----------------------------------------------------------------------
 gwas_tbl <- clean_gwas(gwas_tbl)
 
 # Join GWAS with reference frequencies by CHR and SNP
-# New strategy: 
-# - no allele filpping - 80% are flipped
-# - prioritise GWAS allele order over reference despite 80% mismatch
-# - But flip MAF if necessary
+# GWAS alleles and b are kept as they are (most GWAS list the 1000G A2 first); only
+# the frequency is set so that it refers to the GWAS A1
 message("\nAppending freq info to GWAS ...\n")
 mrg_tbl <- align_freq_to_ref(gwas_tbl, frq_tbl, by = c("CHR", "SNP"), freq_col = "freq",
                              label = "GWAS")
@@ -111,16 +99,13 @@ mrg_tbl <- align_freq_to_ref(gwas_tbl, frq_tbl, by = c("CHR", "SNP"), freq_col =
 ## Write outputs  ---------------------------------------------------------------------
 # Filter out SNPs with missing freq
 message("Filtering SNPs with missing or mismatched frequencies ...\n")
-result <- mrg_tbl %>%
-  filter(!is.na(freq)) %>%
-  select(SNP, A1, A2, freq, b, se, p, N)
+result <- mrg_tbl |>
+  dplyr::filter(!is.na(freq)) |>
+  dplyr::select(SNP, A1, A2, freq, b, se, p, N)
 
-# Write output
-message(str_glue("Writing GWAS in .ma format to {gwas_out} ...\n"))
+message(str_glue("Writing GWAS in .ma format to {gwas_out} ..."))
 write_tsv(result, gwas_out, na = "NA")
-
-message(str_glue("Formatted GWAS data written to {gwas_out}"))
-message("Done.\n")
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
