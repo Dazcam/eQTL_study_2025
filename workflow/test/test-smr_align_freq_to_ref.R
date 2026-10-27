@@ -74,3 +74,4 @@ test_that("the log reports the status counts under the label", {
                    "=== GWAS frequency alignment summary ===")
   ))
 })
+

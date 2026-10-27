@@ -26,6 +26,7 @@ message('\n\nMunge eQTL, snp and gene level data for SMR input ...')
 library(tidyverse)
 
 # Load functions
+source(file.path(snakemake@scriptdir, "functions.R"))
 source(file.path(snakemake@scriptdir, "smr_functions.R"))
 
 # Input and output paths
@@ -33,8 +34,13 @@ eqtl_in <- snakemake@input[['eqtl']]
 snps_in <- snakemake@input[['snps']]
 genes_in <- snakemake@input[['genes']]
 frq_in <- snakemake@input[['frq']]
+lookup_in <- snakemake@input[['gene_lookup']]
 query_out <- snakemake@output[['query']]
 genes_out <- snakemake@output[['gene_lst']]
+remove_mhc <- isTRUE(snakemake@params[['remove_mhc']])
+mhc_chr <- snakemake@params[['mhc_chr']]
+mhc_start <- snakemake@params[['mhc_start']]
+mhc_end <- snakemake@params[['mhc_end']]
 # fdr_thresh <- snakemake@params[['qval_thresh']] # Too stringent for SMR / HEIDI
 
 # Read in data
@@ -69,6 +75,19 @@ eqtl_filt_tbl <- eqtl_tbl  |>
     p = pval_nominal, # nominal or qval?
     Freq = af
   )
+
+# Optionally drop extended MHC genes (config: smr: create_query: remove_mhc)
+if (remove_mhc) {
+  message('Removing xMHC genes (chr', mhc_chr, ':', mhc_start, '-', mhc_end, ') ...')
+  lookup_tbl <- read_tsv(lookup_in, show_col_types = FALSE)
+  mhc_genes <- get_mhc_genes(lookup_tbl, chr = mhc_chr, start = mhc_start, end = mhc_end)
+  removed <- intersect(unique(eqtl_filt_tbl$Gene), mhc_genes)
+  eqtl_filt_tbl <- eqtl_filt_tbl |> dplyr::filter(!Gene %in% mhc_genes)
+  message('Removed ', length(removed), ' xMHC genes: ',
+          paste(sort(removed), collapse = ', '))
+} else {
+  message('xMHC genes kept (remove_mhc: FALSE)')
+}
 
 # Merge with SNP position data from 100G hg38 .bim file
 message('Merging SNP data ...')

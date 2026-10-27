@@ -13,17 +13,20 @@
 # Purpose:   For one cell type x GWAS:
 #            - Skip known-failing combinations, writing a flagged placeholder .rds
 #            - Clean the GWAS (non-rsIDs, duplicates, alt contigs) and align its
-#              alleles to the reference .bim (see ctwas_functions.R)
+#              alleles to the reference .bim (see gwas_functions.R, ctwas_functions.R)
 #            - Build the SNP / LD maps from the LD matrices
 #            - Preprocess the FUSION lasso weights (reused if already processed)
 #            - Optionally QC the weights gene by gene (run_weight_qc in config)
+#            - Optionally drop extended MHC genes (remove_mhc in config)
 #            - Run ctwas_sumstats() and save the results
 #
 # Inputs:    gwas         {gwas}_hg38.tsv (needs alleles, so not LDSR-munged)
 #            weights_dir  FUSION .wgt.RDat files for the cell type
 #            ld_dir       LD matrices (.RDS) and SNP info (.Rvar) per LD region
 #            bim_file     1000G EUR hg38 .bim used for allele alignment
+#            gene_lookup  hg38 gene lookup (positions for the xMHC filter)
 #            run_weight_qc  TRUE/FALSE: gene-by-gene weight QC before cTWAS
+#            remove_mhc   TRUE/FALSE: drop xMHC gene weights before cTWAS
 #
 # Outputs:   output       ctwas_{cell_type}_{gwas}_ctwas.rds (cTWAS results)
 #            Also written to dirname(output):
@@ -51,6 +54,8 @@ library(tidyverse)
 library(ctwas)
 
 # Load functions
+source(file.path(snakemake@scriptdir, "functions.R"))
+source(file.path(snakemake@scriptdir, "gwas_functions.R"))
 source(file.path(snakemake@scriptdir, "ctwas_functions.R"))
 
 
@@ -59,6 +64,7 @@ gwas <- snakemake@input[['gwas']] # From 07prep_gwas.smk
 weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat files
 ld_dir <- snakemake@params[['ld_dir']]
 bim_file <- snakemake@input[['bim_file']]
+gene_lookup <- snakemake@input[['gene_lookup']]
 cell_type <- snakemake@wildcards[['cell_type']]
 gwas_trait <- snakemake@wildcards[['gwas']]
 output <- as.character(snakemake@output[[1]])
@@ -67,15 +73,21 @@ processed_weights_dir <- file.path(out_dir, 'processed_weights/')
 cor_dir <- file.path(out_dir, paste0("cor_matrix_", gwas_trait, '_', cell_type))
 threads <- snakemake@threads
 run_weight_qc <- isTRUE(snakemake@params[['run_weight_qc']])
+remove_mhc <- isTRUE(snakemake@params[['remove_mhc']])
+mhc_chr <- snakemake@params[['mhc_chr']]
+mhc_start <- snakemake@params[['mhc_start']]
+mhc_end <- snakemake@params[['mhc_end']]
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 print(data.frame(
-  variable = c("gwas", "weights_dir", "ld_dir", "bim_file", "cell_type", "gwas_trait",
-               "output", "processed_weights_dir", "cor_dir", "threads", "run_weight_qc"),
-  value    = c(gwas, weights_dir, ld_dir, bim_file, cell_type, gwas_trait,
-               output, processed_weights_dir, cor_dir, threads, run_weight_qc)),
+  variable = c("gwas", "weights_dir", "ld_dir", "bim_file", "gene_lookup", "cell_type",
+               "gwas_trait", "output", "processed_weights_dir", "cor_dir", "threads",
+               "run_weight_qc", "remove_mhc", "mhc_region"),
+  value    = c(gwas, weights_dir, ld_dir, bim_file, gene_lookup, cell_type,
+               gwas_trait, output, processed_weights_dir, cor_dir, threads,
+               run_weight_qc, remove_mhc, paste0("chr", mhc_chr, ":", mhc_start, "-", mhc_end))),
            right = FALSE, row.names = FALSE)
 message("============================\n")
 
@@ -137,7 +149,7 @@ snp_tbl <- read_tsv(bim_file, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'
                    show_col_types = FALSE)
 
 ## GWAS checks  -----------------------------------------------------------------------
-gwas_tbl <- clean_gwas_for_ctwas(gwas_tbl)
+gwas_tbl <- clean_gwas(gwas_tbl)
 
 z_snp <- align_gwas_to_ref(gwas_tbl, snp_tbl)
 
@@ -224,6 +236,24 @@ if (run_weight_qc) {
 message('Writing cTWAS weights for plotting later ...')
 dir.create(processed_weights_dir, recursive = TRUE, showWarnings = FALSE)
 write_rds(weights, paste0(processed_weights_dir, 'processed_weights_', cell_type, '_', gwas_trait, '.rds'))
+
+
+## Optional xMHC gene removal  ---------------------------------------------------------
+# Applied after the processed weights are written, so the cached weights file always
+# holds every gene and switching remove_mhc back off needs no cache rebuild.
+# Weight names are '<gene ID>|<context>'
+if (remove_mhc) {
+  message('Removing xMHC genes (chr', mhc_chr, ':', mhc_start, '-', mhc_end, ') ...')
+  mhc_genes <- get_mhc_genes(read_tsv(gene_lookup, show_col_types = FALSE),
+                             chr = mhc_chr, start = mhc_start, end = mhc_end)
+  weight_genes <- sub("\\|.*$", "", names(weights))
+  in_mhc <- weight_genes %in% mhc_genes
+  message('Removed ', sum(in_mhc), ' of ', length(weights), ' gene weights in the xMHC: ',
+          paste(sort(weight_genes[in_mhc]), collapse = ', '))
+  weights <- weights[!in_mhc]
+} else {
+  message('xMHC genes kept (remove_mhc: FALSE)')
+}
 
 
 ## Run cTWAS  --------------------------------------------------------------------------

@@ -37,14 +37,19 @@ rule copy_fusion_weights:
             """
 
 rule run_ctwas:
-    input:  ld_mat   = rules.create_ld_matrices.output,
-            gwas     = config["ctwas"]["run_ctwas"]["gwas"],
-            weights  = rules.copy_fusion_weights.output,
-            bim_file = config["ctwas"]["run_ctwas"]["bim_file"]
+    input:  ld_mat      = rules.create_ld_matrices.output,
+            gwas        = config["ctwas"]["run_ctwas"]["gwas"],
+            weights     = rules.copy_fusion_weights.output,
+            bim_file    = config["ctwas"]["run_ctwas"]["bim_file"],
+            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"]
     output: config["ctwas"]["run_ctwas"]["output"]
     params: ld_dir        = config["ctwas"]["create_ld_matrices"]["out_dir"],
             weights_dir   = config["ctwas"]["run_ctwas"]["weights_dir"],
-            run_weight_qc = config["ctwas"]["run_ctwas"]["run_weight_qc"]
+            run_weight_qc = config["ctwas"]["run_ctwas"]["run_weight_qc"],
+            remove_mhc    = config["ctwas"]["run_ctwas"]["remove_mhc"],
+            mhc_chr       = config["mhc_region"]["chr"],
+            mhc_start     = config["mhc_region"]["start"],
+            mhc_end       = config["mhc_region"]["end"]            
     resources: threads = 6, mem_mb = 96000, time="1:00:00" # mem_mb can vary 
     threads: 6
     singularity: config["containers"]["twas"]

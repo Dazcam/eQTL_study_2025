@@ -6,8 +6,8 @@
 #
 # Pipeline:  12CTWAS | Sourced by: ctwas_run.R
 #
-# Purpose:   Helper functions for preparing cTWAS inputs and checking weights:
-#            - clean_gwas_for_ctwas()  Drop non-rsIDs, duplicate rsIDs, alt contigs
+# Purpose:   Helper functions for preparing cTWAS inputs and checking weights
+#            (GWAS cleaning, clean_gwas(), is in gwas_functions.R):
 #            - align_gwas_to_ref()     Align GWAS alleles to the reference .bim and
 #                                      return the cTWAS z_snp table
 #            - make_ld_metatable()     LD matrix / SNP info file paths per LD region
@@ -18,62 +18,6 @@
 #            (ctwas_run.R loads them via tidyverse).
 #
 #--------------------------------------------------------------------------------------
-
-## GWAS cleaning  -----------------------------------------------------------------------
-# Removes non-rsID SNPs, duplicate rsIDs (keeps first) and SNPs on 'alt' contigs.
-# Returns the cleaned GWAS table.
-clean_gwas_for_ctwas <- function(gwas_tbl) {
-
-  # non-rsIDs
-  non_rsids <- gwas_tbl |>
-    filter(!str_starts(SNP, "rs")) |>
-    distinct(SNP) |>
-    nrow()
-  if (non_rsids > 0) {
-    message(str_glue("Found {non_rsids} non-rsID SNPs. Removing them ..."))
-    gwas_tbl <- gwas_tbl |> filter(str_starts(SNP, "rs"))
-  } else {
-    message("No non-rsID SNPs found.")
-  }
-
-  # duplicate rsIDs
-  duplicate_rsids <- gwas_tbl |>
-    group_by(SNP) |>
-    filter(n() > 1) |>
-    distinct(SNP) |>
-    nrow()
-  if (duplicate_rsids > 0) {
-    message(str_glue("Found {duplicate_rsids} duplicate rsIDs. Keeping first occurrence ..."))
-    gwas_tbl <- gwas_tbl |> distinct(SNP, .keep_all = TRUE)
-  } else {
-    message("No duplicate rsIDs found.")
-  }
-
-  # Alt Chrs
-  message("Checking GWAS chromosomes ...\n")
-  gwas_tbl |>
-    group_by(CHR) |>
-    count() |>
-    print(n = Inf)
-
-  alt_chroms <- gwas_tbl |>
-    filter(str_ends(CHR, "alt")) |>
-    distinct(CHR) |>
-    pull(CHR)
-
-  if (length(alt_chroms) > 0) {
-    message("\nChromosomes ending with 'alt' found: ", paste(alt_chroms, collapse = ", "))
-    message("\nCount of SNPs with 'alt' chromosomes: ",
-            nrow(gwas_tbl |> filter(str_ends(CHR, "alt"))))
-    message("Removing SNPs with 'alt' chromosomes ... ")
-    gwas_tbl <- gwas_tbl |> filter(!str_ends(CHR, "alt"))
-  } else {
-    message("No chromosomes ending with 'alt' found.")
-  }
-
-  gwas_tbl
-}
-
 
 ## GWAS allele alignment  ---------------------------------------------------------------
 # Joins the reference .bim alleles onto the GWAS, classifies each SNP as aligned /
@@ -277,3 +221,4 @@ qc_ctwas_weights <- function(weights, z_snp, ld_threshold = 0.9999) {
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
+
