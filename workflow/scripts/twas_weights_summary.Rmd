@@ -5,168 +5,441 @@ output: html_document
 params:
   cell_types: null
   weights_dir: null
+  pos_file: null
+  coord_file: null
+  weights_log: null
   bmark_dir: null
+  cis_window: null
+  hsq_p: null
+  crossval: null
+  models: null
 ---
+
+```{r set_up, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(gt)
+library(cowplot)
+
+source(file.path(dirname(knitr::current_input(dir = TRUE)), "twas_functions.R"))
+
+# Set variables from params
+# Path params are patterns containing {cell_type}, as in the config
+cell_types <- strsplit(params$cell_types, ",")[[1]]
+models <- strsplit(params$models, ",")[[1]]
+cis_window <- as.numeric(params$cis_window)
+hsq_p <- as.numeric(params$hsq_p)
+crossval <- as.numeric(params$crossval)
+
+ct_path <- function(pattern, ct) str_replace_all(pattern, fixed("{cell_type}"), ct)
+
+# Plot height scales with the number of cell types
+fig_h <- max(4, 0.3 * length(cell_types))
+
+show_tbl <- function(tbl, ...) {
+  kable(tbl, format = "html", ...) |>
+    kable_styling(bootstrap_options = c("striped", "condensed", "hover"), full_width = FALSE)
+}
+```
+
+```{r load_data}
+## Per-gene outcome for every gene in the coordinate file  ---------------------------
+gene_status <- map_dfr(cell_types, function(ct) {
+
+  coord_genes <- read_tsv(ct_path(params$coord_file, ct), show_col_types = FALSE) |>
+    pull(gene_id)
+
+  log_file <- ct_path(params$weights_log, ct)
+  log_status <- if (file.exists(log_file)) {
+    classify_weights_log(readLines(log_file)) |>
+      # A gene listed twice in the coordinate file is run twice; the last run wins
+      group_by(gene) |>
+      slice_tail(n = 1) |>
+      ungroup()
+  } else {
+    tibble(gene = character(), log_status = character())
+  }
+
+  pos_genes <- read_tsv(ct_path(params$pos_file, ct), show_col_types = FALSE) |>
+    pull(ID)
+
+  tibble(cell_type = ct, gene = coord_genes) |>
+    add_count(gene, name = "n_coord_rows") |>
+    distinct(cell_type, gene, .keep_all = TRUE) |>
+    left_join(log_status, by = "gene") |>
+    mutate(status = case_when(
+      gene %in% pos_genes                ~ "weights",
+      log_status == "hsq_skip"           ~ "hsq_skip",
+      log_status == "gcta_failed"        ~ "gcta_failed",
+      log_status == "no_fusion_output"   ~ "no_cis_snps",
+      log_status == "fusion_ran"         ~ "other_failure",
+      is.na(log_status)                  ~ "not_in_log"
+    ))
+})
+
+## Weight file summaries for genes in the .pos files  --------------------------------
+wgt_tbl <- map_dfr(cell_types, function(ct) {
+  pos <- read_tsv(ct_path(params$pos_file, ct), show_col_types = FALSE)
+  file.path(ct_path(params$weights_dir, ct), pos$WGT) |>
+    map_dfr(read_fusion_wgt, models = models) |>
+    mutate(cell_type = ct, .before = 1)
+})
+
+ct_levels <- rev(cell_types)  # first cell type at the top of horizontal plots
+```
+
+***
 
 ## TWAS weight computation pipeline steps {.tabset}
 
 ***
 
-We used [FUSION](http://gusevlab.org/projects/fusion/) to generate gene expression prediction weights. 
-The citation for FUSION is [Gusev et al. 2016 (DOI:10.1038/ng.3506)](https://www.nature.com/articles/ng.3506).
+We used [FUSION](http://gusevlab.org/projects/fusion/) to compute gene expression
+prediction weights for each cell type. The weights are used by cTWAS (pipeline
+12CTWAS). FUSION is described in
+[Gusev et al. 2016 (DOI:10.1038/ng.3506)](https://www.nature.com/articles/ng.3506).
 
-***
+**Pipeline rules**
 
-```{r set_up, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-library(tidyverse)
-library(knitr)
-library(kableExtra)
-library(stringr)
-library(DT)
-library(gt)
-library(cowplot)
+1. `get_gemma`: download the GEMMA 0.98.5 binary. GEMMA is only used by FUSION's
+   `bslmm` and `blup` models; it is kept so those models can be added.
+2. `prep_exp_data`: transpose the tensorQTL expression bed to PLINK phenotype format,
+   and get gene coordinates from Ensembl BioMart.
+3. `convert_vcf`: convert the filtered genotype VCF to PLINK binary format
+   (bed/bim/fam).
+4. `get_ldref_snplist`: list the SNP IDs in the 1000G EUR hg38 LD reference.
+5. `prepare_covar`: transpose the tensorQTL covariate file to PLINK covariate format.
+6. `compute_weights`: for each gene, extract the cis SNPs (gene start/end ± the cis
+   window, LD reference SNPs only) and run `FUSION.compute_weights.R`. Genes with no
+   cis SNPs, non-significant heritability or a FUSION failure get an empty
+   placeholder `.wgt.RDat` file.
+7. `make_pos_file`: list the genes with weights in a FUSION `.pos` file. 12CTWAS
+   `copy_fusion_weights` uses it to copy only genuine weights for cTWAS.
+8. `twas_weights_report`: this report.
 
-# Set variables from params
-cell_types <- params$cell_types
-weights_dir <- params$in_dir
-bmark_dir <- params$bmark_dir
+**Settings**
+
+```{r settings}
+tibble(
+  Setting = c("Cis window", "Heritability p-value threshold (<code>hsq_p</code>)",
+              "Cross-validation folds (<code>crossval</code>)",
+              "Models (<code>models</code>)", "Model used by cTWAS"),
+  Value = c(paste0("±", format(cis_window / 1000, big.mark = ","), " kb"),
+            as.character(hsq_p), as.character(crossval),
+            paste(models, collapse = ", "), "lasso")
+) |>
+  show_tbl(escape = FALSE)
 ```
 
+***
 
-1. `get_gemma`: Download the GEMMA binary executable (version 0.98.5) required for FUSION's genetic modeling (BSLMM and BLUP); 
-2. `prep_exp_data`: Process gene expression data into PLINK-compatible phenotype files and generates a gene coordinate TSV file for FUSION input. Serves as a foundational checkpoint for gene-specific extractions with outputs aggregated across all genes for the cell type.
-3. `convert_vcf`: Convert VCF genotype files to PLINK binary format 
-4. `restrict_geno_to_ldref`: Restricts the converted genotypes to SNPs present in the LD reference panel (e.g., `1000G.EUR.hg38`)
-5. `get_gene_info`: Checkpoint that dynamically splits the gene coordinate file into individual per-gene info files (one TSV per gene) stored in a cell-type-specific directory; enables parallel processing of genes by providing dynamic inputs to downstream rules. Data aggregation is handled in later rules
-6. `extract_cis_snps`: Rule that extracts cis-regulatory SNPs for each gene within a specific window. Creates empty stub files if no SNPs are found.
-7. `prepare_gene_pheno`: Extracts and formats expression data for a single gene from the full expression matrix into a FUSION-compatible phenotype file 
-8. `compute_weights`: Runs FUSION's `compute_weights.R` script to estimate predictive up to 5 models and generate TWAS weights (.wgt.RDat) for a specific gene. Handles low-heritability skips by creating stub files or log notes
-9. `aggregate_per_cell_type`: Aggregation rule triggered post-checkpoint via the `aggregate_input` function, which dynamically lists all per-gene weight files from the checkpoint-expanded gene IDs; outputs a summary `.txt` file per cell type listing processed genes, ensuring completion tracking before full pipeline aggregation.
-10. `aggregate_all`: Final aggregation rule that collects completion files from all cell types using expand over config-defined cell types; concatenates summaries into a single master `.txt` file, confirming all gene weights across all cell types are processed for downstream reporting.
-11. `twas_weights_report`: Creates twas weights report
-
-
-Settings:
-
-+ cis-window: $\pm$ 500kb (this is applied in `prep_exp_data` and `extract_cis_snps`; check this)
-+ Heritability p-val thresh: `--hsq_p 0.01`
-+ Models run: ` --models top1,lasso,enet` (cTWAS uses LASSO)
+### Gene funnel
 
 ***
 
-### Summary Table
+Outcome for every gene in each cell type's gene coordinate file. "No cis SNPs" is
+inferred: FUSION only runs when plink2 finds cis SNPs, so a gene with no FUSION
+output in the log is counted here. FUSION skips a gene when its cis-heritability is
+negative or its LRT p-value is above `r hsq_p`.
 
-***
+```{r funnel}
+n_tot_tbl <- wgt_tbl |>
+  group_by(cell_type) |>
+  summarise(N = if (min(n_tot) == max(n_tot)) as.character(min(n_tot))
+                else paste0(min(n_tot), "–", max(n_tot)))
 
-```{r summary_table, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-# Function to process one context
-process_context <- function(ct) {
-  ct_dir <- file.path(weights_dir, ct)
-  wgt_files <- list.files(ct_dir, pattern = "\\.wgt\\.RDat$", full.names = TRUE)
-  
-  process_file <- function(file) {
-    gene_id <- gsub("\\.wgt\\.RDat$", "", basename(file))
-    
-    # Try to load safely
-    env <- new.env()
-    load_success <- tryCatch({
-      load(file, envir = env)
-      TRUE
-    }, error = function(e) FALSE, warning = function(w) FALSE)
-    
-    if (!load_success) {
-      return(tibble(
-        context = ct,
-        gene = gene_id,
-        n_snps_lasso = NA_real_,
-        reason = "load_failed"
-      ))
-    }
-    
-    # Check if wgt.matrix exists and has content
-    if (!exists("wgt.matrix", envir = env)) {
-      return(tibble(
-        context = ct,
-        gene = gene_id,
-        n_snps_lasso = NA_real_,
-        reason = "no_wgt_matrix"
-      ))
-    }
-    
-    wgt_mat <- get("wgt.matrix", envir = env)
-    
-    # Check if lasso column exists and is not empty/all-zero
-    if (!"lasso" %in% colnames(wgt_mat) || all(wgt_mat[, "lasso"] == 0) || nrow(wgt_mat) == 0) {
-      return(tibble(
-        context = ct,
-        gene = gene_id,
-        n_snps_lasso = NA_real_,
-        reason = "stub_or_empty_lasso"
-      ))
-    }
-    
-    # Valid lasso model
-    lasso_wgts <- wgt_mat[, "lasso"]
-    n_snps <- sum(lasso_wgts != 0)
-    
-    return(tibble(
-      context = ct,
-      gene = gene_id,
-      n_snps_lasso = n_snps,
-      reason = "valid"
-    ))
-  }
-  
-  map_dfr(wgt_files, process_file)
+funnel <- gene_status |>
+  count(cell_type, status) |>
+  pivot_wider(names_from = status, values_from = n, values_fill = 0)
+
+# Make sure every outcome column exists, even if no gene has it
+for (col in c("no_cis_snps", "hsq_skip", "gcta_failed", "other_failure", "weights",
+              "not_in_log")) {
+  if (!col %in% colnames(funnel)) funnel[[col]] <- 0L
 }
 
-# Full table across all contexts
-full_table <- map_dfr(cell_types, process_context)
+nonzero_lasso <- wgt_tbl |>
+  group_by(cell_type) |>
+  summarise(lasso = sum(n_snps_lasso > 0, na.rm = TRUE))
 
-# Summary table
-summary_table <- full_table %>%
-  group_by(context) %>%
-  summarise(
-    total_genes = n(),
-    n_valid_lasso   = sum(reason == "valid"),
-    n_stub          = sum(reason %in% c("stub_or_empty_lasso", "no_wgt_matrix", "load_failed")),
-    n_NA_other      = sum(reason == "valid" & is.na(n_snps_lasso)),  # should be 0
-    mean_snps       = mean(n_snps_lasso[reason == "valid"], na.rm = TRUE),
-    median_snps     = median(n_snps_lasso[reason == "valid"], na.rm = TRUE),
-    min_snps        = min(n_snps_lasso[reason == "valid"], na.rm = TRUE),
-    max_snps        = max(n_snps_lasso[reason == "valid"], na.rm = TRUE),
-    pct_single_snp  = round(100 * sum(n_snps_lasso == 1 & reason == "valid", na.rm = TRUE) / n_valid_lasso, 1),
-    pct_multi_snp   = round(100 * sum(n_snps_lasso > 1 & reason == "valid", na.rm = TRUE) / n_valid_lasso, 1),
-    pct_stub        = round(100 * n_stub / total_genes, 1)
-  ) %>%
-  arrange(desc(total_genes))
+funnel <- funnel |>
+  left_join(n_tot_tbl, by = "cell_type") |>
+  left_join(nonzero_lasso, by = "cell_type") |>
+  mutate(genes = no_cis_snps + hsq_skip + gcta_failed + other_failure + weights + not_in_log,
+         lasso = replace_na(lasso, 0L),
+         pct_lasso = round(100 * lasso / genes, 1),
+         cell_type = factor(cell_type, levels = cell_types)) |>
+  arrange(cell_type) |>
+  select(cell_type, N, genes, no_cis_snps, hsq_skip, gcta_failed, other_failure,
+         not_in_log, weights, lasso, pct_lasso)
 
-print("Summary Table (with stub/empty file counts):")
-print(summary_table, n = Inf)
+funnel_names <- c("Cell type", "N", "Genes", "No cis SNPs", "h² not sig.",
+                  "GCTA failed", "Other failure", "Not in log", "With weights",
+                  "Non-zero lasso", "% genes with lasso")
+
+# Only show 'Not in log' if any gene is affected
+if (all(funnel$not_in_log == 0)) {
+  funnel_names <- funnel_names[-8]
+  funnel <- select(funnel, -not_in_log)
+}
+
+show_tbl(funnel, col.names = funnel_names, format.args = list(big.mark = ","))
+```
+
+```{r funnel_notes, results = "asis"}
+dup_genes <- gene_status |>
+  filter(n_coord_rows > 1) |>
+  count(cell_type, name = "n_dup")
+
+if (nrow(dup_genes) > 0) {
+  cat("\n**Note:** some genes appear more than once in the gene coordinate file and were",
+      "run more than once (the last run is kept):",
+      paste0(paste0(dup_genes$cell_type, " (", dup_genes$n_dup, ")", collapse = ", "), ".\n"))
+}
+
+if (any(gene_status$status == "other_failure")) {
+  cat("\n**Note:** 'Other failure' means FUSION wrote output for the gene but neither",
+      "produced weights nor gave a recognised skip message. Check the",
+      "`compute_weights` log for these genes.\n")
+}
 ```
 
 ***
 
-### NA genes
+### Heritability
 
 ***
 
-```{r NA genes, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-no_model_table <- full_table %>%
-  filter(reason != "valid") %>%
-  select(context, gene, reason) %>%
-  arrange(context, gene)
+Cis-heritability (h²) estimated by FUSION (GCTA REML) for genes with weights. These
+genes all passed the heritability filter (p < `r hsq_p`), so the distribution is
+shifted upwards compared with all expressed genes.
 
-print("Genes without valid LASSO model (stubs, empty, load issues):")
-print(no_model_table, n = Inf)
+```{r hsq_plot, fig.height = fig_h, fig.width = 8}
+wgt_tbl |>
+  mutate(cell_type = factor(cell_type, levels = ct_levels)) |>
+  ggplot(aes(x = hsq, y = cell_type)) +
+  geom_boxplot(outlier.size = 0.5, fill = "#8DA0CB") +
+  labs(x = "Cis-heritability (h²)", y = NULL) +
+  theme_bw()
+```
 
-# Optional: Summary of reasons
-reason_counts <- no_model_table %>%
-  count(context, reason, name = "count") %>%
-  pivot_wider(names_from = reason, values_from = count, values_fill = 0)
+```{r hsq_table}
+wgt_tbl |>
+  group_by(cell_type = factor(cell_type, levels = cell_types)) |>
+  summarise(genes = n(),
+            median_hsq = round(median(hsq), 3),
+            q1 = round(quantile(hsq, 0.25), 3),
+            q3 = round(quantile(hsq, 0.75), 3),
+            median_se = round(median(hsq_se), 3)) |>
+  show_tbl(col.names = c("Cell type", "Genes", "Median h²", "Q1", "Q3",
+                         "Median SE"),
+           format.args = list(big.mark = ","))
+```
 
-print("Breakdown of no-model reasons per context:")
-print(reason_counts)
+***
+
+### Prediction performance
+
+***
+
+Cross-validated prediction accuracy from FUSION's `r crossval`-fold cross-validation:
+adjusted R² between predicted and observed expression in held-out samples (can be
+slightly negative). cTWAS uses the lasso model and does not filter genes on
+prediction accuracy, so the last column shows how many lasso models would pass a
+conventional CV p < 0.05. The best model is the one with the smallest CV p-value.
+
+```{r r2_plot, fig.height = fig_h, fig.width = 8}
+wgt_tbl |>
+  filter(!is.na(rsq_lasso)) |>
+  mutate(cell_type = factor(cell_type, levels = ct_levels)) |>
+  ggplot(aes(x = rsq_lasso, y = cell_type)) +
+  geom_boxplot(outlier.size = 0.5, fill = "#66C2A5") +
+  labs(x = "Lasso cross-validated R²", y = NULL) +
+  theme_bw()
+```
+
+```{r r2_table}
+r2_tbl <- wgt_tbl |>
+  group_by(cell_type = factor(cell_type, levels = cell_types)) |>
+  summarise(
+    across(all_of(paste0("rsq_", models)), ~ round(median(.x, na.rm = TRUE), 3)),
+    pct_lasso_best = round(100 * mean(best_model == "lasso", na.rm = TRUE), 1),
+    pct_lasso_p05 = round(100 * mean(pval_lasso < 0.05, na.rm = TRUE), 1)
+  )
+
+show_tbl(r2_tbl,
+         col.names = c("Cell type", paste0("Median R² (", models, ")"),
+                       "% lasso best", "% lasso CV p < 0.05"))
+```
+
+***
+
+### Lasso model size
+
+***
+
+Number of SNPs with non-zero lasso weights, for genes with a non-zero lasso model.
+
+```{r size_table}
+wgt_tbl |>
+  filter(n_snps_lasso > 0) |>
+  group_by(cell_type = factor(cell_type, levels = cell_types)) |>
+  summarise(genes = n(),
+            median_snps = median(n_snps_lasso),
+            mean_snps = round(mean(n_snps_lasso), 1),
+            max_snps = max(n_snps_lasso),
+            pct_single = round(100 * mean(n_snps_lasso == 1), 1),
+            median_cis = median(n_snps_cis)) |>
+  show_tbl(col.names = c("Cell type", "Genes", "Median SNPs", "Mean SNPs", "Max SNPs",
+                         "% single-SNP", "Median cis SNPs tested"),
+           format.args = list(big.mark = ","))
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+```{r bmark_load}
+rule_names <- c("get_gemma", "prep_exp_data", "convert_vcf", "get_ldref_snplist",
+                "prepare_covar", "compute_weights", "make_pos_file", "twas_weights_report")
+
+bmark_files <- list.files(params$bmark_dir, pattern = "^11twas\\..*\\.benchmark\\.txt$")
+
+# File names are 11twas.<rule>[_<cell_type>].benchmark.txt; match the known rule
+# names so rule names containing '_' are kept whole
+benchmarks <- tibble(file = bmark_files) |>
+  mutate(stem = str_remove_all(file, "^11twas\\.|\\.benchmark\\.txt$"),
+         rule = map_chr(stem, function(s) {
+           hit <- rule_names[s == rule_names | str_starts(s, paste0(rule_names, "_"))]
+           if (length(hit) == 0) NA_character_ else hit[1]
+         }),
+         cell_type = if_else(stem == rule, NA_character_,
+                             str_remove(stem, paste0("^", rule, "_"))))
+
+unmatched <- filter(benchmarks, is.na(rule))$file
+
+benchmarks <- benchmarks |>
+  filter(!is.na(rule), is.na(cell_type) | cell_type %in% cell_types) |>
+  mutate(data = map(file, function(f) {
+    read_tsv(file.path(params$bmark_dir, f), show_col_types = FALSE,
+             col_types = cols(.default = col_character())) |>
+      transmute(runtime_sec = suppressWarnings(as.numeric(s)),
+                max_rss = suppressWarnings(as.numeric(max_rss)))
+  })) |>
+  unnest(data)
+
+# Summarise by rule
+summary <- benchmarks |>
+  group_by(rule = factor(rule, levels = rule_names)) |>
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec, na.rm = TRUE) / 60,
+    sd_runtime_min = sd(runtime_sec, na.rm = TRUE) / 60,
+    mean_ram_gb = mean(max_rss, na.rm = TRUE) / 1024,
+    sd_ram_gb = sd(max_rss, na.rm = TRUE) / 1024,
+    .groups = "drop"
+  ) |>
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb),
+    mean_ram_gb = if_else(is.nan(mean_ram_gb), NA_real_, mean_ram_gb),  # no RAM recorded
+    rule = as.character(rule)
+  ) |>
+  mutate(across(where(is.numeric), ~ round(., 3)))
+
+# Table
+summary |>
+  gt() |>
+  tab_header(
+    title = "Benchmarking",
+    subtitle = "Means and SD across jobs"
+  ) |>
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) |>
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) |>
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+```{r bmark_notes, results = "asis"}
+if (length(unmatched) > 0) {
+  cat("\n**Note:** benchmark files not matching a current rule name (not shown):",
+      paste0("`", unmatched, "`", collapse = ", "), "\n")
+}
+```
+
+***
+
+#### Plot
+
+***
+
+```{r runtime_plt, fig.dim = c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
+                                   y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean_runtime_min - sd_runtime_min,
+                    ymax = mean_runtime_min + sd_runtime_min),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    plot.title.position = "plot",
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
+                               y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = mean_ram_gb - sd_ram_gb,
+                    ymax = mean_ram_gb + sd_ram_gb),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    plot.title.position = "plot",
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
 ```
 
 ***
