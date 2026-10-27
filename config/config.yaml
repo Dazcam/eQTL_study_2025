@@ -159,9 +159,10 @@ gwas:
   adhd: https://figshare.com/ndownloader/files/40036684                 # PMID:36702997
   ocd: https://figshare.com/ndownloader/files/53357735                  # PMID:40360802
 
-#  adhd: https://figshare.com/ndownloader/articles/22564390/versions/1    # PMID:36702997 
-#  ptsd: https://figshare.com/ndownloader/articles/26349322/versions/3    # PMID:38637617
-#  ocd: https://figshare.com/ndownloader/articles/28707155/versions/4     # PMID:40360802  
+mhc_region:    
+  chr: "6"
+  start: 25000000
+  end: 34000000
 
 containers:
   genotype-qc2hrc: ../resources/containers/genotype-qc2hrc.sif
@@ -814,10 +815,11 @@ smr:
     log:      ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
 
   create_query:
-    r_script: scripts/smr_create_query.R
-    query:    ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
-    gene_lst: ../results/10SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
-    log:      ../results/00LOG/10SMR/create_query_{cell_type}.log
+    r_script:   scripts/smr_create_query.R
+    query:      ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
+    gene_lst:   ../results/10SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
+    remove_mhc: FALSE
+    log:        ../results/00LOG/10SMR/create_query_{cell_type}.log
 
   create_besd:
     besd:   ../results/10SMR/smr_input/{cell_type}/{cell_type}.besd
@@ -929,6 +931,7 @@ ctwas:
     output:        ../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
     weights_dir:   ../results/12CTWAS/weights/{cell_type}/
     run_weight_qc: false
+    remove_mhc:    FALSE
     bmrk:          reports/benchmarks/12ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt
     log:           ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
 
