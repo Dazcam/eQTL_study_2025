@@ -83,7 +83,8 @@ rule ldsr_ld_scores_hg38:
             snps = rules.lift_hapmap3_snps.output
     output: config["sldsr"]["ldsr_ld_scores_hg38"]["output"]
     params: bfile = strip_suffix(HG38_REFS["bim"], ".bim"),
-            ldscores = strip_suffix(config["sldsr"]["ldsr_ld_scores_hg38"]["output"], ".l2.ldscore.gz")
+            ldscores = strip_suffix(config["sldsr"]["ldsr_ld_scores_hg38"]["output"],
+                                    ".l2.ldscore.gz")
     benchmark: "reports/benchmarks/09sldsr.ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.benchmark.txt"
     message: "Generating LD scores on hg38 for {wildcards.cell_type}, {wildcards.annot_type}, chr {wildcards.chr}"
     log:    config["sldsr"]["ldsr_ld_scores_hg38"]["log"]
@@ -100,13 +101,16 @@ rule ldsr_ld_scores_hg38:
 
 rule ldsr_strat_hg38_bl_v12:
     input:  gwas = config["prep_gwas"]["munge_sumstats"]["output"],
-            ldsr = expand(rules.ldsr_ld_scores_hg38.output, chr=range(1, 23), allow_missing=True)
+            ldsr = expand(rules.ldsr_ld_scores_hg38.output, chr=range(1, 23),
+                          allow_missing=True)
     output: config["sldsr"]["ldsr_strat_hg38_bl_v12"]["output"]
     params: weights = strip_suffix(HG38_REFS["weights"], "{chr}.l2.ldscore.gz"),
             baseline = strip_suffix(HG38_REFS["baseline"], "{chr}.l2.ldscore.gz"),
             frq = strip_suffix(HG38_REFS["frq"], "{chr}.frq"),
-            ldscores = strip_suffix(config["sldsr"]["ldsr_ld_scores_hg38"]["output"], "{chr}.l2.ldscore.gz"),
-            out_prefix = strip_suffix(config["sldsr"]["ldsr_strat_hg38_bl_v12"]["output"], ".results")
+            ldscores = strip_suffix(config["sldsr"]["ldsr_ld_scores_hg38"]["output"],
+                                    "{chr}.l2.ldscore.gz"),
+            out_prefix = strip_suffix(config["sldsr"]["ldsr_strat_hg38_bl_v12"]["output"],
+                                      ".results")
     message: "Running stratified LDSR with {wildcards.cell_type} using hg38 refs, baseline 1.2, {wildcards.annot_type} and {wildcards.gwas} GWAS"
     benchmark: "reports/benchmarks/09sldsr.ldsr_strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.benchmark.txt"
     log:    config["sldsr"]["ldsr_strat_hg38_bl_v12"]["log"]
@@ -143,7 +147,14 @@ rule ldsr_report:
     output: config["sldsr"]["ldsr_report"]["html"]
     params: in_dir = config["sldsr"]["ldsr_report"]["in_dir"],
             output_file = config["sldsr"]["ldsr_report"]["output_file"],
-            bmark_dir = config["sldsr"]["ldsr_report"]["bmark_dir"]
+            bmark_dir = config["sldsr"]["ldsr_report"]["bmark_dir"],
+            cell_types = ",".join(config["cell_types"]),
+            gwas = ",".join(config["gwas"]),
+            annot_types = ",".join(config["annot_types"]),
+            ld_baseline = os.path.dirname(HG38_REFS["baseline"]),
+            ld_weights = os.path.dirname(HG38_REFS["weights"]),
+            ld_frq = os.path.dirname(HG38_REFS["frq"]),
+            ld_snps = config["sldsr"]["lift_hapmap3_snps"]["output"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SLDSR report"
     benchmark: "reports/benchmarks/09sldsr.ldsr_report.benchmark.txt"
@@ -152,6 +163,13 @@ rule ldsr_report:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(in_dir = c('{params.in_dir}'),
-            bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+            params = list(in_dir = '{params.in_dir}', \
+                          bmark_dir = '{params.bmark_dir}', \
+                          cell_types = '{params.cell_types}', \
+                          gwas = '{params.gwas}', \
+                          annot_types = '{params.annot_types}', \
+                          ld_baseline = '{params.ld_baseline}', \
+                          ld_weights = '{params.ld_weights}', \
+                          ld_frq = '{params.ld_frq}', \
+                          ld_snps = '{params.ld_snps}'))" > {log} 2>&1
         """

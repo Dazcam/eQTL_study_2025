@@ -2,12 +2,19 @@
 title: "SLDSR report"
 author: "Darren Cameron"
 date: "`r Sys.Date()`"
-output:   
+output:
   html_document:
     df_print: paged
 params:
   in_dir: null
   bmark_dir: null
+  cell_types: null
+  gwas: null
+  annot_types: null
+  ld_baseline: null
+  ld_weights: null
+  ld_frq: null
+  ld_snps: null
 ---
 
 ***
@@ -16,25 +23,65 @@ params:
 library(tidyverse)
 library(gt)
 library(cowplot)
-in_dir  <- params$in_dir
-bmark_dir <- params$bmark_dir
+in_dir      <- params$in_dir
+bmark_dir   <- params$bmark_dir
+cell_types  <- strsplit(params$cell_types, ",")[[1]]
+gwas        <- strsplit(params$gwas, ",")[[1]]
+annot_types <- strsplit(params$annot_types, ",")[[1]]
 ```
 
-## SLDSR pipeline steps 
+## S-LDSR pipeline steps {.tabset}
 
 ***
 
-1. `get_hg38_refs`: Download SLDSR hg38 reference files
-2. `get_hg19_refs`: Download SLDSR hg38 reference files
-3. `make_annot_maxCPP`: Make max CPP reference files from SuSiE output
-4. `lift_hapmap3_snps`: Lift Hapmap 3 reference SNPs to hg38
-5. `ldsr_ld_scores_hg38`: Generate LD score files for each cell type
-6. `ldsr_strat_hg38_bl_v12`: Run stratified LD score regression with baseline version 1.2
-7. `ldsr_report`: Summarise SLDSR score results per cell type
+S-LDSR annotations come from the SuSiE credible sets: maxCPP is
+the maximum posterior inclusion probability (PIP) of a SNP across eGenes.
+P-values are one-sided, from the annotation coefficient z-score (enrichment only).
+
+S-LDSR citation: Finucane HK *et al.* (2015). Partitioning heritability by functional annotation using
+genome-wide association summary statistics. *Nature Genetics* 47, 1228-1235.
+
+MaxCPP citation: Hormozdiari F *et al.* (2018). Leveraging molecular quantitative trait loci to
+understand the genetic architecture of diseases and complex traits.
+*Nature Genetics* 50, 1041-1047.
 
 ***
 
-## Results {.tabset}
+1. `get_hg38_refs`: Download LDSC hg38 reference files
+2. `get_hg19_refs`: Download LDSC hg19 reference files
+3. `make_annot`: Make maxCPP and CS95 annotation files from SuSiE credible sets
+4. `lift_hapmap3_snps`: Lift HapMap3 reference SNPs to hg38
+5. `ldsr_ld_scores_hg38`: Generate LD scores for each cell type and annotation
+6. `ldsr_strat_hg38_bl_v12`: Run stratified LD score regression with baseline v1.2
+7. `ldsr_strat_summary`: Collect the annotation results per annotation type
+8. `ldsr_report`: Summarise S-LDSR results per cell type
+
+***
+
+```{r settings, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(
+  Setting = c("Cell types", "GWAS", "Annotations", "Baseline LD scores",
+              "Regression weights", "Allele frequencies", "Regression SNPs"),
+  Value   = c(paste(cell_types, collapse = ", "), paste(toupper(gwas), collapse = ", "),
+              paste(annot_types, collapse = ", "), params$ld_baseline,
+              params$ld_weights, params$ld_frq, params$ld_snps)) |>
+  gt() |>
+  tab_header(title = "Pipeline settings") |>
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+***
 
 ### MaxCPP {.tabset}
 
@@ -46,7 +93,8 @@ bmark_dir <- params$bmark_dir
 
 ```{r, maxCPP_p_val_plot, echo = FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=10}
 # --- Read and prepare table
-ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv')) |>
+ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv'),
+           show_col_types = FALSE) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
   separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>
   mutate(disorder = toupper(str_extract(suffix, "scz|bpd|mdd|adhd|ocd"))) |>
@@ -189,8 +237,8 @@ ggplot(ldsr_tbl, aes(x = ldsr, y = cell_type, fill = main_type)) +
 
 ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
   geom_col(width = 0.7, colour = 'black') +
-  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error), 
-                    xmax = (Enrichment+Enrichment_std_error)), 
+  geom_errorbar(aes(xmin = (Enrichment-Enrichment_std_error),
+                    xmax = (Enrichment+Enrichment_std_error)),
                  width = .2) +
   facet_grid(cluster_level ~ disorder, scales = "free_y", space = "free_y") +
   scale_fill_manual(values = custom_palette, name = "Cell Type") +
@@ -222,9 +270,9 @@ ggplot(ldsr_tbl, aes(x = Enrichment, y = cell_type, fill = main_type)) +
 
 ***
 
-```{r, maxCPP_scz_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'SCZ') %>%
+```{r, maxCPP_scz_table, echo = FALSE, message=FALSE}
+ldsr_tbl |>
+  filter(disorder == 'SCZ') |>
   # Round numeric columns to avoid excessive precision
   mutate(
     Prop._SNPs = signif(Prop._SNPs, 3),
@@ -237,15 +285,15 @@ ldsr_tbl %>%
     Coefficient_std_error = signif(Coefficient_std_error, 3),
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level, -is_trajectory) %>%
+  ) |>
+  select(-main_type, -cluster_level, -is_trajectory) |>
   # Create the gt table
-  gt() %>%
+  gt() |>
   # Add table header and subtitle
   tab_header(
     title = "Table 7. Schizophrenia S-LDSC Results",
     subtitle = "Max CPP eQTL used as annotation"
-  ) %>%
+  ) |>
   # Rename columns for display
   cols_label(
     cell_type = "Cell Type",
@@ -260,18 +308,18 @@ ldsr_tbl %>%
     Coefficient_std_error = "Coefficient SE",
     `Coefficient_z-score` = "Coefficient z-score",
     ldsr = "LDSR"
-  ) %>%
+  ) |>
   # Format small values in scientific notation with 2 decimal places
   fmt_scientific(
     columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
     decimals = 2
-  ) %>%
+  ) |>
   # Format other numeric columns with 3 decimal places
   fmt_number(
     columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
     decimals = 3,
     use_seps = TRUE
-  ) %>%
+  ) |>
   # Customize table appearance
   tab_options(
     table.font.names = "Arial",
@@ -284,13 +332,13 @@ ldsr_tbl %>%
 
 ***
 
-##### BPD 
+##### BPD
 
 ***
 
-```{r, maxCPP_bpd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'BPD') %>%
+```{r, maxCPP_bpd_table, echo = FALSE, message=FALSE}
+ldsr_tbl |>
+  filter(disorder == 'BPD') |>
   # Round numeric columns to avoid excessive precision
   mutate(
     Prop._SNPs = signif(Prop._SNPs, 3),
@@ -303,15 +351,15 @@ ldsr_tbl %>%
     Coefficient_std_error = signif(Coefficient_std_error, 3),
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
-  ) %>%
-    select(-main_type, -cluster_level, -is_trajectory) %>%
+  ) |>
+  select(-main_type, -cluster_level, -is_trajectory) |>
   # Create the gt table
-  gt() %>%
+  gt() |>
   # Add table header and subtitle
   tab_header(
     title = "Table 8. Bipolar Disorder S-LDSC Results",
     subtitle = "Max CPP eQTL used as annotation"
-  ) %>%
+  ) |>
   # Rename columns for display
   cols_label(
     cell_type = "Cell Type",
@@ -326,18 +374,18 @@ ldsr_tbl %>%
     Coefficient_std_error = "Coefficient SE",
     `Coefficient_z-score` = "Coefficient z-score",
     ldsr = "LDSR"
-  ) %>%
+  ) |>
   # Format small values in scientific notation with 2 decimal places
   fmt_scientific(
     columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
     decimals = 2
-  ) %>%
+  ) |>
   # Format other numeric columns with 3 decimal places
   fmt_number(
     columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
     decimals = 3,
     use_seps = TRUE
-  ) %>%
+  ) |>
   # Customize table appearance
   tab_options(
     table.font.names = "Arial",
@@ -350,13 +398,13 @@ ldsr_tbl %>%
 
 ***
 
-##### MDD {.tabset}
+##### MDD
 
 ***
 
-```{r, maxCPP_mdd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'MDD') %>%
+```{r, maxCPP_mdd_table, echo = FALSE, message=FALSE}
+ldsr_tbl |>
+  filter(disorder == 'MDD') |>
   # Round numeric columns to avoid excessive precision
   mutate(
     Prop._SNPs = signif(Prop._SNPs, 3),
@@ -369,15 +417,15 @@ ldsr_tbl %>%
     Coefficient_std_error = signif(Coefficient_std_error, 3),
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
-  ) %>%
-    select(-main_type, -cluster_level, -is_trajectory) %>%
+  ) |>
+  select(-main_type, -cluster_level, -is_trajectory) |>
   # Create the gt table
-  gt() %>%
+  gt() |>
   # Add table header and subtitle
   tab_header(
     title = "Table 9. Major Depressive Disorder S-LDSC Results",
     subtitle = "Max CPP eQTL used as annotation"
-  ) %>%
+  ) |>
   # Rename columns for display
   cols_label(
     cell_type = "Cell Type",
@@ -392,18 +440,18 @@ ldsr_tbl %>%
     Coefficient_std_error = "Coefficient SE",
     `Coefficient_z-score` = "Coefficient z-score",
     ldsr = "LDSR"
-  ) %>%
+  ) |>
   # Format small values in scientific notation with 2 decimal places
   fmt_scientific(
     columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
     decimals = 2
-  ) %>%
+  ) |>
   # Format other numeric columns with 3 decimal places
   fmt_number(
     columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
     decimals = 3,
     use_seps = TRUE
-  ) %>%
+  ) |>
   # Customize table appearance
   tab_options(
     table.font.names = "Arial",
@@ -420,9 +468,9 @@ ldsr_tbl %>%
 
 ***
 
-```{r, maxCPP_adhd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'ADHD') %>%
+```{r, maxCPP_adhd_table, echo = FALSE, message=FALSE}
+ldsr_tbl |>
+  filter(disorder == 'ADHD') |>
   # Round numeric columns to avoid excessive precision
   mutate(
     Prop._SNPs = signif(Prop._SNPs, 3),
@@ -435,15 +483,15 @@ ldsr_tbl %>%
     Coefficient_std_error = signif(Coefficient_std_error, 3),
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level, -is_trajectory) %>%
+  ) |>
+  select(-main_type, -cluster_level, -is_trajectory) |>
   # Create the gt table
-  gt() %>%
+  gt() |>
   # Add table header and subtitle
   tab_header(
     title = "Table 10. ADHD S-LDSC Results",
     subtitle = "95% CS eQTL used as annotation"
-  ) %>%
+  ) |>
   # Rename columns for display
   cols_label(
     cell_type = "Cell Type",
@@ -458,18 +506,18 @@ ldsr_tbl %>%
     Coefficient_std_error = "Coefficient SE",
     `Coefficient_z-score` = "Coefficient z-score",
     ldsr = "LDSR"
-  ) %>%
+  ) |>
   # Format small values in scientific notation with 2 decimal places
   fmt_scientific(
     columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
     decimals = 2
-  ) %>%
+  ) |>
   # Format other numeric columns with 3 decimal places
   fmt_number(
     columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
     decimals = 3,
     use_seps = TRUE
-  ) %>%
+  ) |>
   # Customize table appearance
   tab_options(
     table.font.names = "Arial",
@@ -486,9 +534,9 @@ ldsr_tbl %>%
 
 ***
 
-```{r, maxCPP_ocd_table, sldsr_table, echo = FALSE, message=FALSE}
-ldsr_tbl %>%
-  filter(disorder == 'OCD') %>%
+```{r, maxCPP_ocd_table, echo = FALSE, message=FALSE}
+ldsr_tbl |>
+  filter(disorder == 'OCD') |>
   # Round numeric columns to avoid excessive precision
   mutate(
     Prop._SNPs = signif(Prop._SNPs, 3),
@@ -501,15 +549,15 @@ ldsr_tbl %>%
     Coefficient_std_error = signif(Coefficient_std_error, 3),
     `Coefficient_z-score` = signif(`Coefficient_z-score`, 3),
     ldsr = signif(ldsr, 3)
-  ) %>%
-  select(-main_type, -cluster_level, -is_trajectory) %>%
+  ) |>
+  select(-main_type, -cluster_level, -is_trajectory) |>
   # Create the gt table
-  gt() %>%
+  gt() |>
   # Add table header and subtitle
   tab_header(
     title = "Table 11. OCD S-LDSC Results",
     subtitle = "95% CS eQTL used as annotation"
-  ) %>%
+  ) |>
   # Rename columns for display
   cols_label(
     cell_type = "Cell Type",
@@ -524,18 +572,18 @@ ldsr_tbl %>%
     Coefficient_std_error = "Coefficient SE",
     `Coefficient_z-score` = "Coefficient z-score",
     ldsr = "LDSR"
-  ) %>%
+  ) |>
   # Format small values in scientific notation with 2 decimal places
   fmt_scientific(
     columns = c(Prop._SNPs, Prop._h2, Prop._h2_std_error, Coefficient, Coefficient_std_error),
     decimals = 2
-  ) %>%
+  ) |>
   # Format other numeric columns with 3 decimal places
   fmt_number(
     columns = c(Enrichment, Enrichment_std_error, Enrichment_p, `Coefficient_z-score`, ldsr),
     decimals = 3,
     use_seps = TRUE
-  ) %>%
+  ) |>
   # Customize table appearance
   tab_options(
     table.font.names = "Arial",
@@ -557,43 +605,49 @@ ldsr_tbl %>%
 ***
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
-# List all benchmark files for the pipeline
-files <- list.files(bmark_dir, pattern = "09sldsr.*\\.txt", full.names = TRUE)
+# Benchmark files: 09sldsr.<rule>[_<wildcards>].benchmark.txt
+files <- list.files(bmark_dir, pattern = "^09sldsr\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
-# Rule names as declared in the Snakefile (see `benchmark:` directives).
-# Matched by longest-prefix first, since several rule names share a common
-# prefix with another rule (e.g. get_hg38_refs / get_hg19_refs both start
-# with "get_hg", and ldsr_ld_scores_hg38 is itself a prefix of what
-# ldsr_strat_hg38_bl_v12's benchmark filename would also match) - a naive
-# "first token split on _" match, as used in the SMR benchmarking template,
-# would collapse distinct rules into one bucket here. lift_hapmap3_snps has
-# no benchmark: directive in the Snakefile, so it produces no file to match.
+# Rules with a benchmark: directive. Matched longest name first, as some rule
+# names share a prefix with each other or with another rule's wildcards.
 known_rules <- c(
-  "ldsr_strat_hg38_bl_v12",
-  "ldsr_ld_scores_hg38",
   "get_hg38_refs",
   "get_hg19_refs",
   "make_annot",
-  "sldsr_report"
+  "lift_hapmap3_snps",
+  "ldsr_ld_scores_hg38",
+  "ldsr_strat_hg38_bl_v12",
+  "ldsr_strat_summary",
+  "ldsr_report"
 )
 known_rules <- known_rules[order(-nchar(known_rules))]
 
 match_rule <- function(rule_full, known_rules) {
-  hit <- known_rules[str_starts(rule_full, known_rules)]
-  if (length(hit) > 0) hit[1] else rule_full
+  hit <- known_rules[rule_full == known_rules | str_starts(rule_full, paste0(known_rules, "_"))]
+  if (length(hit) > 0) hit[1] else NA_character_
+}
+
+# Keep only runs whose wildcards are in the current config, so old runs drop out.
+# Wildcard order matches each rule's benchmark: path; cell types contain no "_".
+is_current <- function(rule, wc) {
+  w <- str_split(wc, "_")[[1]]
+  switch(rule,
+    make_annot             = length(w) == 2 && w[1] %in% cell_types,
+    ldsr_ld_scores_hg38    = length(w) == 3 && w[1] %in% cell_types && w[2] %in% annot_types,
+    ldsr_strat_hg38_bl_v12 = length(w) == 3 && w[1] %in% cell_types && w[2] %in% annot_types &&
+                             w[3] %in% gwas,
+    ldsr_strat_summary     = length(w) == 1 && w[1] %in% annot_types,
+    wc == "")
 }
 
 benchmarks <- map_dfr(files, function(f) {
-  df <- read.table(f, header = TRUE, sep = "\t")
-  fname <- basename(f)
-  parts <- strsplit(fname, "\\.")[[1]]
-
-  # parts[2] holds things like:
-  # "get_hg38_refs", "make_annot_Glu-UL_1",
-  # "ldsr_ld_scores_hg38_Glu-UL_maxCPP_1", "ldsr_strat_hg38_bl_v12_Glu-UL_maxCPP_scz"
-  rule_full <- parts[2]
+  rule_full <- str_remove(basename(f), "^09sldsr\\.") |> str_remove("\\.benchmark\\.txt$")
   rule <- match_rule(rule_full, known_rules)
+  if (is.na(rule)) return(NULL)
+  wc <- str_remove(rule_full, paste0("^", rule, "_?"))
+  if (!is_current(rule, wc)) return(NULL)
 
+  df <- read.table(f, header = TRUE, sep = "\t")
   tibble(
     file = f,
     rule = rule,
@@ -604,8 +658,8 @@ benchmarks <- map_dfr(files, function(f) {
 })
 
 # Summarise by rule
-summary <- benchmarks %>%
-  group_by(rule) %>%
+summary <- benchmarks |>
+  group_by(rule) |>
   summarise(
     n = n(),
     mean_runtime_min = mean(runtime_sec) / 60,
@@ -613,21 +667,21 @@ summary <- benchmarks %>%
     mean_ram_gb = mean(max_rss) / 1024,
     sd_ram_gb = sd(max_rss) / 1024,
     .groups = "drop"
-  ) %>%
+  ) |>
   mutate(
     sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
     sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
-  ) %>%
-  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  ) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3))) |>
   arrange(rule)
 
 # Table
-summary %>%
-  gt() %>%
+summary |>
+  gt() |>
   tab_header(
     title = "Table 12. Benchmarking",
     subtitle = "Means and SD across replicates"
-  ) %>%
+  ) |>
   cols_label(
     rule = "Rule",
     n = "N",
@@ -635,11 +689,11 @@ summary %>%
     sd_runtime_min = "SD Runtime (min)",
     mean_ram_gb = "Mean RAM (GB)",
     sd_ram_gb = "SD RAM (GB)"
-  ) %>%
+  ) |>
   fmt_number(
     columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
     decimals = 2
-  ) %>%
+  ) |>
   tab_options(
     table.font.size = px(14),
     table.border.top.style = "none",
@@ -647,7 +701,7 @@ summary %>%
     table.border.bottom.width = px(2),
     table.border.bottom.color = "black",
     heading.align = "center"
-  ) %>%
+  ) |>
   tab_style(
     style = cell_text(weight = "bold"),
     locations = cells_column_labels(everything())
@@ -661,14 +715,14 @@ summary %>%
 ***
 
 ```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
-runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
                                  y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
   geom_errorbar(aes(ymin = pmax(mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min), 0),
                     ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "Runtime (minutes)", 
+  labs(x = "Rule", y = "Runtime (minutes)",
        title = "Mean runtime per rule") +
   theme_classic(base_size = 16) +
   theme(
@@ -679,14 +733,14 @@ runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
     panel.grid.minor = element_blank()
   )
 
-mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
                                 y = mean_ram_gb)) +
   geom_col(fill = "darkorange") +
   geom_errorbar(aes(ymin = pmax(mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb), 0),
                     ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "RAM (GB)", 
+  labs(x = "Rule", y = "RAM (GB)",
        title = "Mean RAM usage per rule") +
   theme_classic(base_size = 16) +
   theme(
