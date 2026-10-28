@@ -1,5 +1,10 @@
 localrules: prep_susie_gene_meta
 
+rule all:
+    input:
+        config["susie"]["susie_report"]["html"]
+
+
 def susie_exp_bed(w):
     norm_method = config['tensorQTL']['norm_methods'][0]
     return f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed"
@@ -76,9 +81,8 @@ rule run_susie:
             cs_out = config["susie"]["run_susie"]["cs_out"],
             snp_out = config["susie"]["run_susie"]["snp_out"]
     params: chunk = lambda w: f"{w.batch_index} {config['susie_batches']}",
-            out_prefix = lambda w: f"../results/08SUSIE/susie/{w.cell_type}/{w.cell_type}.{w.batch_index}_{config['susie_batches']}.susie",
             cis_window = config["susie_window"],
-            write_full = config["write_full_susie"]
+            fdr = config["eqtl_fdr"]
     singularity: config["containers"]["susie"]
     message: "Run SuSiE fine-mapping for {wildcards.cell_type}, batch {wildcards.batch_index}"
     benchmark: "reports/benchmarks/08susie.run_susie_{cell_type}_{batch_index}_{susie_batches}.benchmark.txt"
@@ -91,12 +95,14 @@ rule run_susie:
               --phenotype_meta {input.gene_meta} \
               --sample_meta {input.smpl_lst} \
               --phenotype_list {input.eqt_to_test} \
+              --fdr {params.fdr} \
               --covariates {input.covar} \
               --genotype_matrix {input.geno_mat} \
               --chunk '{params.chunk}' \
               --cisdistance {params.cis_window} \
-              --out_prefix '{params.out_prefix}' \
-              --write_full_susie {params.write_full} \
+              --out_cred_hp {output.cs_hp_out} \
+              --out_cred {output.cs_out} \
+              --out_snp {output.snp_out} \
               >> {log} 2>&1
             echo "Completed run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" >> {log}
             """
