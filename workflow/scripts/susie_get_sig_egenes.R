@@ -1,51 +1,70 @@
 #--------------------------------------------------------------------------------------
 #
-#    Extract sig. eGenes - Pass as a list to run_susie.R for each cell type
+#    Extract significant eGenes for SuSiE fine-mapping
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  08SUSIE | Rule: get_sig_eGenes (one job per cell type)
+#            Upstream:   05TENSORQTL (tensorQTL permutation output)
+#            Downstream: none at present (run_susie applies the same filter itself)
+#
+# Purpose:   - Read the tensorQTL permutation output for one cell type
+#            - Keep genes with qval < 0.05
+#            - Write one row per gene
+#
+# Inputs:    eqtl_in    tensorQTL permutation output (*_perm.cis_qtl.txt.gz)
+#
+# Outputs:   genes_out  TSV with a single phenotype_id column
 #
 #--------------------------------------------------------------------------------------
 
-## Load libraries and variables -------------------------------------------------------
-library(tidyverse)
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
-    if (exists("snakemake") & length(snakemake@log) != 0) {
-      log <- file(snakemake@log[1][[1]], open = "wt")
+    if (exists("snakemake") && length(snakemake@log) != 0) {
+      log <- file(snakemake@log[[1]], open = "wt")
       sink(log, append = TRUE)
       sink(log, append = TRUE, type = "message")
     }
   }
+  log_smk()
 }
-log_smk()
-message('\n\nExtracting table of sig. eGenes to use as input for run_susie.R ...')
-eqtl_file <- snakemake@input[[1]]
-out_file <- snakemake@output[[1]]
+
+message("\n\nExtracting table of sig. eGenes for SuSiE ...")
+
+##  Load packages, functions and variables  -------------------------------------------
+library(tidyverse)
+
+# Input and output paths
+eqtl_in   <- snakemake@input[[1]]
+genes_out <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[["cell_type"]]
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
-  variable = c("eqtl_file", "out_file", "cell_type"),
-  value    = c(eqtl_file, out_file, cell_type)
-) |> 
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+  variable = c("eqtl_in", "genes_out", "cell_type"),
+  value    = c(eqtl_in, genes_out, cell_type)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# Load eQTL results from tensorQTL output
+##  Extract eGenes  ---------------------------------------------------------------------
 message("Loading eQTL file ...")
-eqtl_data <- read_tsv(eqtl_file)
+eqtl_tbl <- read_tsv(eqtl_in, show_col_types = FALSE)
 
-# Extract unique genes with q-value < 0.05
-message("Extract genes @ FDR < 0.05 ...")
-sig_genes_tbl <- eqtl_data %>%
-  filter(qval < 0.05) %>%
-  distinct(phenotype_id) %>%
-  select(phenotype_id) %>%
-  write_tsv(out_file)
-message(nrow(sig_genes_tbl), " genes written to file ...")
-message("All done.")
+message("Extracting genes at FDR < 0.05 ...")
+sig_genes_tbl <- eqtl_tbl |>
+  dplyr::filter(qval < 0.05) |>
+  distinct(phenotype_id)
+
+if (nrow(sig_genes_tbl) == 0) stop("No genes at FDR < 0.05 for ", cell_type)
+
+write_tsv(sig_genes_tbl, genes_out)
+message(nrow(sig_genes_tbl), " genes written to file.")
+
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

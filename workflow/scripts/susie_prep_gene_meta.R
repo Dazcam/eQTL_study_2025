@@ -1,78 +1,93 @@
 #--------------------------------------------------------------------------------------
 #
-#    Create gene metadata file for run_susie.R
+#    Create gene metadata file for SuSiE fine-mapping
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  08SUSIE | Rule: prep_susie_gene_meta (one job per cell type; localrule,
+#            needs internet access for biomaRt)
+#            Upstream:   05TENSORQTL (prep_input expression bed)
+#            Downstream: run_susie, susie_report
+#
+# Purpose:   - Read all genes in the cell type's expression bed
+#            - Query Ensembl (biomaRt) for chromosome, gene start/end and strand
+#            - Set phenotype_pos to the TSS (start on + strand, end on - strand)
+#
+# Inputs:    gex_in    tensorQTL expression bed (TargetID column holds Ensembl IDs)
+#
+# Outputs:   meta_out  TSV: phenotype_id, group_id, gene_id, chromosome,
+#                      phenotype_pos, strand
+#
+# Notes:     useMart("ensembl") queries the current Ensembl release, so a rerun can
+#            give different positions. Genes Ensembl does not return are dropped.
 #
 #--------------------------------------------------------------------------------------
 
-## Set up logging for smk  ------------------------------------------------------------
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
-    if (exists("snakemake") & length(snakemake@log) != 0) {
-      log <- file(snakemake@log[1][[1]], open = "wt")
+    if (exists("snakemake") && length(snakemake@log) != 0) {
+      log <- file(snakemake@log[[1]], open = "wt")
       sink(log, append = TRUE)
       sink(log, append = TRUE, type = "message")
     }
   }
+  log_smk()
 }
-log_smk()
-message('\n\nCreating the gene metadata file for all genes in GeX bed file  ...')
 
-## Load libraries and variables -------------------------------------------------------
+message("\n\nCreating the gene metadata file for all genes in the expression bed ...")
+
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(biomaRt)
 
-gex_file <- snakemake@input[[1]]
-out_file <- snakemake@output[[1]]
+# Input and output paths
+gex_in    <- snakemake@input[[1]]
+meta_out  <- snakemake@output[[1]]
 cell_type <- snakemake@wildcards[["cell_type"]]
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
-  variable = c("gex_file", "out_file", "cell_type"),
-  value    = c(gex_file, out_file, cell_type)
-) |> 
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+  variable = c("gex_in", "meta_out", "cell_type"),
+  value    = c(gex_in, meta_out, cell_type)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# Load gex results from cell-specific pseudobulk file
-message("Loading gene expression file ...\n")
-gex_data <- read_tsv(gex_file)
+##  Get gene IDs  -----------------------------------------------------------------------
+message("Loading gene expression file ...")
+gex_tbl <- read_tsv(gex_in, show_col_types = FALSE)
 
-message("\nPulling out Ensembl IDs ...")
-sig_genes <- gex_data %>%
-  pull(TargetID)
+gene_ids <- gex_tbl |> pull(TargetID)
 
-# Connect to Ensembl (hg38) using biomaRt
-message("Use biomaRt to get TSS and for ", length(sig_genes), " genes ...")
+##  Query Ensembl for TSS  --------------------------------------------------------------
+message("Using biomaRt to get TSS for ", length(gene_ids), " genes ...")
 mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 
-# Fetch TSS information for significant genes
 tss_tbl <- getBM(
   attributes = c("ensembl_gene_id", "chromosome_name", "start_position", "end_position", "strand"),
   filters = "ensembl_gene_id",
-  values = sig_genes,
-  mart = mart
-) %>%
-  as_tibble() %>%
+  values = gene_ids,
+  mart = mart) |>
+  as_tibble() |>
   dplyr::mutate(
-    phenotype_id = ensembl_gene_id,
-    group_id = ensembl_gene_id,
-    gene_id = ensembl_gene_id,
-    chromosome = chromosome_name,
-    phenotype_pos = if_else(strand == 1, start_position, end_position),
-    strand = strand
-  ) %>%
+    phenotype_id  = ensembl_gene_id,
+    group_id      = ensembl_gene_id,
+    gene_id       = ensembl_gene_id,
+    chromosome    = chromosome_name,
+    phenotype_pos = if_else(strand == 1, start_position, end_position)) |>
   distinct()
-message(nrow(tss_tbl), " distinct genes remain after running BiomaRt ...")
+message(nrow(tss_tbl), " distinct genes returned by biomaRt.")
 
-# Save the annotated cis-windows
-message("Writing tsv file ...")
-tss_tbl %>%
-  dplyr::select(phenotype_id, group_id, gene_id, chromosome, phenotype_pos, strand) %>%
-  write_tsv(out_file)
+##  Write output  -----------------------------------------------------------------------
+message("Writing gene metadata file ...")
+tss_tbl |>
+  dplyr::select(phenotype_id, group_id, gene_id, chromosome, phenotype_pos, strand) |>
+  write_tsv(meta_out)
 
-message("All done.")
+message("Done.")
+
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
