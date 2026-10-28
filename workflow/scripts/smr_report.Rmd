@@ -7,37 +7,42 @@ output:
     df_print: paged
 params:
   cell_types: null
+  gwas: null
   in_dir: null
-  tbl_dir: null
+  log_dir: null
+  gene_lookup: null
+  bmark_dir: null
   p_smr: null
   p_heidi: null
-  bmark_dir: null
+  peqtl_smr: null
+  smr_n_samples: null
 ---
 
 ## SMR pipeline steps {.tabset}
 
 ***
 
-We used the the Yang Lab binary for [SMR](https://yanglab.westlake.edu.cn/software/smr/#Overview).The citation for SMR is [Nature Genetics, 48:481-487](https://www.nature.com/articles/ng.3538).
+We used the Yang Lab binary for [SMR](https://yanglab.westlake.edu.cn/software/smr/#Overview). The citation for SMR is [Nature Genetics, 48:481-487](https://www.nature.com/articles/ng.3538).
 
 ***
 
 ```{r set_up, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
-library(knitr)
-library(kableExtra)
-library(stringr)
 library(DT)
 library(gt)
 library(cowplot)
 
-# Set variables from params
-cell_types <- params$cell_types
+# Set variables from params (paths are relative to workflow/)
+cell_types <- strsplit(params$cell_types, ",")[[1]]
+gwas_list <- strsplit(params$gwas, ",")[[1]]
 in_dir <- params$in_dir
-tbl_dir <- params$tbl_dir
+log_dir <- params$log_dir
+gene_lookup_file <- params$gene_lookup
+bmark_dir <- params$bmark_dir
 p_smr <- as.numeric(params$p_smr)
 p_heidi <- as.numeric(params$p_heidi)
-bmark_dir <- params$bmark_dir
+peqtl_smr <- as.numeric(params$peqtl_smr)
+smr_n_samples <- as.integer(params$smr_n_samples)
 ```
 
 ***
@@ -45,23 +50,30 @@ bmark_dir <- params$bmark_dir
 1. `get_smr_binary`: Download the SMR binary file
 2. `cat_refs`: Cat hg38 refs into a single file
 3. `cat_tensorqtl_nom_snps`: Cat TensorQTL parquet files into single file for SMR
-4. `get_snp_positions`: Get SNP positions from bim file
-5. `create_query`: Create query file for SMR
-6. `create_besd`: Create besd file for SMR
-7. `format_gwas`: Convert GWAS into .ma format for SMR
-8. `smr`: Run SMR
-9. `smr_sig_tbl`: Generate per-GWAS significant SMR+HEIDI tables for the tables pipeline (manuscript_table_smr_sig.R) - runs independently of this report; the two compute the same SMR+HEIDI significance filter separately rather than one depending on the other, since this report renders earlier in the pipeline (as part of 10smr.smk) than the tables pipeline does
-10. `smr_report`: Generate SMR report
+4. `create_query`: Create query file for SMR
+5. `create_besd`: Create besd file for SMR
+6. `format_gwas`: Convert GWAS into .ma format for SMR
+7. `smr`: Run SMR
+8. `smr_report`: Generate SMR report
 
 ***
 
-Settings in run smr:
+Settings:
 
-- `--peqtl-smr 5e-8`: To reduce multiple testing burden
+```{r settings, echo = FALSE}
+tibble(
+  Setting = c("SMR --peqtl-smr (eQTL p threshold, reduces multiple testing burden)",
+              "SMR --add-n (eQTL sample size)",
+              "SMR p threshold (before Bonferroni)",
+              "HEIDI p threshold"),
+  Value   = c(format(peqtl_smr), smr_n_samples, p_smr, p_heidi)
+) |>
+  knitr::kable()
+```
 
 Multiple testing correction:
 
-- Applying a BF correction SMR p 
+- Applying a BF correction SMR p
 - n_probes: `length(unique(smr$probeID))`, see probes_analysed row in SMR_logs table for n_probes value per cell type
 - SMR p thresh: `r p_smr`
 - HEIDI p thresh: `r p_heidi`
@@ -100,8 +112,7 @@ summarize_smr <- function(cell_type, in_dir, disorder) {
   }
 }
 
-# Function to read and summarize SMR results
-log_dir <- "../../results/00LOG/10SMR/"
+# Function to extract run summaries from the SMR logs
 extract_smr_log_params <- function(log_dir, cell_types, disorder) {
   # Initialize parameters to extract
   params <- c(
@@ -112,20 +123,20 @@ extract_smr_log_params <- function(log_dir, cell_types, disorder) {
     "SNPs Excluded for Frequency",
     "Probes Analyzed"
   )
-  
+
   # Initialize result data frame
   result <- data.frame(Parameter = params, stringsAsFactors = FALSE)
-  
+
   # Process each cell type
   for (cell_type in cell_types) {
     log_file <- file.path(log_dir, paste0("smr_", cell_type, "_", disorder, ".log"))
-    
+
     # Initialize default values
     values <- rep("Unknown", length(params))
-    
+
     if (file.exists(log_file)) {
       log_content <- read_lines(log_file)
-      
+
       # Extract parameters using regular expressions
       # GWAS SNPs Included
       gwas_snps <- str_extract(log_content, "GWAS summary data of (\\d+) SNPs to be included")
@@ -133,60 +144,60 @@ extract_smr_log_params <- function(log_dir, cell_types, disorder) {
       if (length(gwas_snps) > 0) {
         values[1] <- str_extract(gwas_snps[1], "\\d+")
       }
-      
+
       # eQTL SNPs Included
       eqtl_snps <- str_extract(log_content, "(\\d+) SNPs to be included from \\[.*\\.esi\\]")
       eqtl_snps <- eqtl_snps[!is.na(eqtl_snps)]
       if (length(eqtl_snps) > 0) {
         values[2] <- str_extract(eqtl_snps[1], "\\d+")
       }
-      
+
       # Individuals in LD Reference
       individuals <- str_extract(log_content, "(\\d+) individuals to be included from \\[.*\\.fam\\]")
       individuals <- individuals[!is.na(individuals)]
       if (length(individuals) > 0) {
         values[3] <- str_extract(individuals[1], "\\d+")
       }
-      
+
       # SNPs After Allele Check
       allele_check <- str_extract(log_content, "(\\d+) SNPs are included after allele checking")
       allele_check <- allele_check[!is.na(allele_check)]
       if (length(allele_check) > 0) {
         values[4] <- str_extract(allele_check[1], "\\d+")
       }
-      
+
       # SNPs Excluded for Frequency
       freq_excluded <- str_extract(log_content, "(\\d+) SNPs.*with allele frequency differences > 0.20")
       freq_excluded <- freq_excluded[!is.na(freq_excluded)]
       if (length(freq_excluded) > 0) {
         values[5] <- str_extract(freq_excluded[1], "\\d+")
       }
-      
+
       # Probes Analyzed
       probes <- str_extract(log_content, "SMR analysis \\(SMR and HEIDI tests\\) for (\\d+) probes")
       probes <- probes[!is.na(probes)]
       if (length(probes) > 0) {
         values[6] <- str_extract(probes[1], "\\d+")
       }
-      
+
     } else {
       message("Log file not found for cell type: ", cell_type)
     }
-    
+
     # Add values to result data frame
     result[[cell_type]] <- values
   }
-  
+
   return(result)
 }
 
 get_heidi <- function(cell_type, in_dir, disorder) {
   file_path <- file.path(in_dir, cell_type, paste0(cell_type, "_", disorder, ".smr"))
-  
+
   if (file.exists(file_path)) {
     smr <- suppressMessages(readr::read_tsv(file_path, show_col_types = FALSE))
     n_probes <- length(unique(smr$probeID))
-    
+
     smr %>%
       filter(p_SMR < (p_smr / n_probes), p_HEIDI > p_heidi & !is.na(p_HEIDI)) %>%
       mutate(Cell_Type = cell_type)
@@ -196,44 +207,10 @@ get_heidi <- function(cell_type, in_dir, disorder) {
   }
 }
 
-# Get gene lookup file
-gene_lookup_file <- '../../resources/sheets/gene_lookup_hg38.tsv' # Relative to Rmd file
-if (file.exists(gene_lookup_file)) {
-  
-  gene_lookup_hg38_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
-    select(ensembl_gene_id, external_gene_name) |>
-    # gene_lookup_hg38.tsv has >1 row for some gene IDs; without this the
-    # left_join below fans out and duplicates significant rows (same fix
-    # applied in manuscript_table_smr_sig.R, which independently computes
-    # this same table in the tables pipeline - see note below)
-    distinct(ensembl_gene_id, .keep_all = TRUE)
-  
-} else {
-  
-  library(biomaRt)
-  
-  ## Create lookup table 
-  mart <- useMart('ENSEMBL_MART_ENSEMBL')
-  mart <- useDataset('hsapiens_gene_ensembl', mart)
-  
-  gene_lookup_hg38_tbl <- getBM(
-    mart = mart,
-    attributes = c("ensembl_gene_id", "chromosome_name", "start_position", "end_position", 
-                   "hgnc_symbol", "external_gene_name", "strand", "gene_biotype"),
-    uniqueRows = TRUE)
-  
-  write_tsv(gene_lookup_hg38_tbl, gene_lookup_file)
-  
-}
-
-# NOTE: this report computes SMR+HEIDI significance itself (get_heidi(),
-# above) rather than reading manuscript_table_smr_sig.R's {gwas}_smr.tsv
-# output. That's deliberate, not duplication left over by accident: this
-# report is rendered as part of the SMR pipeline (10smr.smk), which runs
-# BEFORE the tables pipeline where smr_sig_tbl lives - so it cannot depend
-# on smr_sig_tbl's output without inverting that ordering. Each disorder tab
-# below computes sig_tbl itself but no longer WRITES it to tbl_dir (that
-# file is now generated independently, once, by manuscript_table_smr_sig.R).
+# Gene lookup (one row per gene ID; the lookup has >1 row for some IDs)
+gene_lookup_hg38_tbl <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
+  select(ensembl_gene_id, external_gene_name) |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
 
 # Accumulates each disorder's unique significant gene count (across all cell
 # types) as its tab runs below - displayed as a single table in the GWAS
@@ -263,7 +240,7 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_scz, echo=FALSE, warnings=FALSE}
+```{r smr_heidi_symbol_scz, echo=FALSE, warning=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
@@ -273,22 +250,10 @@ sig_tbl <- all_sig_results |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
    distinct()
 
-final_tbl <- sig_tbl |>
-  rename(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
-         SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
-         `NSNP HEIDI` = nsnp_HEIDI)
+# Unique gene count (across all cell types) for the GWAS Summary tab
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(sig_tbl$ensembl_id)
 
-# Unique gene count (across all cell types) for this GWAS - feeds the
-# GWAS Summary tab at the end of the Results section
-gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
-
-# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R),
-# which computes this same table independently and writes it to
-# {tbl_dir}/{disorder}_smr.tsv - not written here any more.
-# dir.create(tbl_dir)
-# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
-
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)')
 ```
 
 ***
@@ -297,7 +262,7 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 
 ```{r logs_scz, echo=FALSE}
 log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
-datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ```
 
 ***
@@ -322,7 +287,7 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_bpd, echo=FALSE, warnings=FALSE}
+```{r smr_heidi_symbol_bpd, echo=FALSE, warning=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
@@ -330,19 +295,12 @@ all_sig_results <- bind_rows(
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
-  distinct() 
+  distinct()
 
-final_tbl <- sig_tbl |>
-  rename(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
-         SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
-         `NSNP HEIDI` = nsnp_HEIDI)
+# Unique gene count (across all cell types) for the GWAS Summary tab
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(sig_tbl$ensembl_id)
 
-gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
-
-# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
-# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
-
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)')
 ```
 
 ***
@@ -351,7 +309,7 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 
 ```{r logs_bpd, echo=FALSE}
 log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
-datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ```
 
 ***
@@ -376,7 +334,7 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_mdd, echo=FALSE, warnings=FALSE}
+```{r smr_heidi_symbol_mdd, echo=FALSE, warning=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
@@ -384,19 +342,12 @@ all_sig_results <- bind_rows(
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
-  distinct() 
+  distinct()
 
-final_tbl <- sig_tbl |>
-  rename(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
-         SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
-         `NSNP HEIDI` = nsnp_HEIDI)
+# Unique gene count (across all cell types) for the GWAS Summary tab
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(sig_tbl$ensembl_id)
 
-gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
-
-# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
-# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
-
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)')
 ```
 
 ***
@@ -405,7 +356,7 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 
 ```{r logs_mdd, echo=FALSE}
 log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
-datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ```
 
 ***
@@ -430,7 +381,7 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_adhd, echo=FALSE, warnings=FALSE}
+```{r smr_heidi_symbol_adhd, echo=FALSE, warning=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
@@ -438,22 +389,12 @@ all_sig_results <- bind_rows(
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
-  distinct() 
+  distinct()
 
-# No sig results for ADHD, but final_tbl is still computed (rename() on a
-# 0-row tibble is harmless) so gwas_gene_counts below works the same way for
-# every disorder rather than needing an ADHD-specific branch.
-final_tbl <- sig_tbl |>
-  rename(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
-         SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
-         `NSNP HEIDI` = nsnp_HEIDI)
+# Unique gene count (across all cell types) for the GWAS Summary tab
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(sig_tbl$ensembl_id)
 
-gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
-
-# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
-# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
-
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)')
 ```
 
 ***
@@ -462,7 +403,7 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 
 ```{r logs_adhd, echo=FALSE}
 log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
-datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ```
 
 ***
@@ -487,7 +428,7 @@ datatable(as.data.frame(summary_data), caption = 'Summary of SMR and HEIDI Resul
 
 ##### SMR and HEIDI sig (abbr. w. symbols)
 
-```{r smr_heidi_symbol_ocd, echo=FALSE, warnings=FALSE}
+```{r smr_heidi_symbol_ocd, echo=FALSE, warning=FALSE}
 all_sig_results <- bind_rows(
   lapply(cell_types, function(ct) get_heidi(ct, in_dir, disorder))
 )
@@ -495,19 +436,12 @@ all_sig_results <- bind_rows(
 sig_tbl <- all_sig_results |>
   left_join(gene_lookup_hg38_tbl, by = join_by(probeID == ensembl_gene_id)) |>
   relocate(Cell_Type, ensembl_id = probeID, symbol = external_gene_name) |>
-  distinct() 
+  distinct()
 
-final_tbl <- sig_tbl |>
-  rename(Chr = topSNP_chr, Symbol = symbol, `Ensembl ID` = ensembl_id, `Cell Type` = Cell_Type,
-         SNP = topSNP, Beta = b_SMR, SE = se_SMR, `P (SMR)` = p_SMR, `P (HEIDI)` = p_HEIDI,
-         `NSNP HEIDI` = nsnp_HEIDI)
+# Unique gene count (across all cell types) for the GWAS Summary tab
+gwas_gene_counts[[toupper(disorder)]] <- n_distinct(sig_tbl$ensembl_id)
 
-gwas_gene_counts[[toupper(disorder)]] <- n_distinct(final_tbl$`Ensembl ID`)
-
-# Table generation moved to the tables pipeline (manuscript_table_smr_sig.R) - not written here any more.
-# write_tsv(final_tbl, paste0(tbl_dir, disorder, '_smr.tsv'))
-
-datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)') 
+datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results by Cell Type (abbr. with gene symbols)')
 ```
 
 ***
@@ -516,7 +450,7 @@ datatable(as.data.frame(sig_tbl), caption = 'Significant SMR and HEIDI results b
 
 ```{r logs_ocd, echo=FALSE}
 log_tbl <- extract_smr_log_params(log_dir, cell_types, disorder)
-datatable(as.data.frame(log_tbl), caption = 'SMR log file summary') 
+datatable(as.data.frame(log_tbl), caption = 'SMR log file summary')
 ```
 
 ***
@@ -538,29 +472,30 @@ datatable(as.data.frame(gwas_summary_tbl), caption = 'Unique significant genes p
 
 ***
 
-#### Benchmarking {.tabset}
+### Benchmarking {.tabset}
 
 ***
 
-##### Table
+#### Table
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
-# List all benchmark files for the pipeline
-#bmark_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/benchmarks/'
-files <- list.files(bmark_dir, pattern = "10smr.*\\.txt", full.names = TRUE)
+# Benchmark files: reports/benchmarks/10smr.<rule>[_<wildcards>].benchmark.txt
+# Rule names contain '_', so files are matched against the known rules (smr_report
+# before smr), and only current cell types / GWAS are kept (old runs drop out)
+smk_rules <- c("get_smr_binary", "cat_refs", "cat_tensorqtl_nom_snps", "create_query",
+               "create_besd", "format_gwas", "smr_report", "smr")
+valid_wildcards <- c("", cell_types, gwas_list,
+                     as.vector(outer(cell_types, gwas_list, paste, sep = "_")))
+
+files <- list.files(bmark_dir, pattern = "^10smr\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
 benchmarks <- map_dfr(files, function(f) {
+  stem <- str_remove(basename(f), "^10smr\\.") |> str_remove("\\.benchmark\\.txt$")
+  rule <- smk_rules[stem == smk_rules | startsWith(stem, paste0(smk_rules, "_"))][1]
+  if (is.na(rule)) return(NULL)
+  wildcards <- str_remove(stem, paste0("^", rule, "_?"))
+  if (!wildcards %in% valid_wildcards) return(NULL)
   df <- read.table(f, header = TRUE, sep = "\t")
-  fname <- basename(f)
-  parts <- strsplit(fname, "\\.")[[1]]
-
-  # this field holds things like:
-  # "prep_tensorQTL_input_Endo-Peri", "split_covariates_Endo-Peri_genPC_4_expPC_10",
-  # "perm_ExN-2_genPC_4_expPC_50", "nom_ExN-2_genPC_4_expPC_50", "convert_genotypes"
-  rule_full <- parts[2]
-
-  # strip everything after the first "_" → leaves only the base rule
-  rule <- str_split(rule_full, "_")[[1]][1]
 
   tibble(
     file = f,
@@ -624,19 +559,19 @@ summary %>%
 
 ***
 
-##### Plot
+#### Plot
 
 ***
 
 ```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
-runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
                                  y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
   geom_errorbar(aes(ymin = pmax(mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min), 0),
                     ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "Runtime (minutes)", 
+  labs(x = "Rule", y = "Runtime (minutes)",
        title = "Mean runtime per rule") +
   theme_classic(base_size = 16) +
   theme(
@@ -647,16 +582,14 @@ runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
     panel.grid.minor = element_blank()
   )
 
-
-
-mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
                                 y = mean_ram_gb)) +
   geom_col(fill = "darkorange") +
   geom_errorbar(aes(ymin = pmax(mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb), 0),
                     ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "RAM (GB)", 
+  labs(x = "Rule", y = "RAM (GB)",
        title = "Mean RAM usage per rule") +
   theme_classic(base_size = 16) +
   theme(
@@ -668,6 +601,4 @@ mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
   )
 
 plot_grid(runtime_plt, mem_plt)
-
-# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```

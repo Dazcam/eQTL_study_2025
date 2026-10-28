@@ -809,7 +809,7 @@ sldsr:
 smr:
   get_smr_binary:
     smr:    ../resources/smr/smr
-    prefix: ../resources/smr
+    log: ../results/00LOG/10SMR/get_smr_binary.log
 
   cat_tensorqtl_nom_snps:
     cat_snps: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
@@ -817,7 +817,6 @@ smr:
     log:      ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
 
   create_query:
-    r_script:   scripts/smr_create_query.R
     query:      ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
     gene_lst:   ../results/10SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
     remove_mhc: FALSE
@@ -842,7 +841,6 @@ smr:
   format_gwas:
     gwas:   ../results/07PREP-GWAS/{gwas}_hg38.tsv
     ma:     ../results/10SMR/smr_input/gwas/{gwas}_hg38.ma
-    prefix: ../results/10SMR/smr_input/gwas/{gwas}_hg38
     log:    ../results/00LOG/10SMR/format_gwas_{gwas}.log
 
   smr:
@@ -852,9 +850,11 @@ smr:
     log:         ../results/00LOG/10SMR/smr_{cell_type}_{gwas}.log 
   
   smr_report:
-    html:   reports/10SMR/10smr_report.html
-    in_dir: ../../results/10SMR/smr # Rel to Rmd script
-    log:    ../results/00LOG/10SMR/smr_report.log  
+    html:      reports/10SMR/10smr_report.html
+    in_dir:    ../results/10SMR/smr
+    log_dir:   ../results/00LOG/10SMR
+    bmark_dir: reports/benchmarks
+    log:       ../results/00LOG/10SMR/smr_report.log
 
 # ---------  TWAS Weights (Pipeline 11)  ----------
 
