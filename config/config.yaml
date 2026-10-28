@@ -768,7 +768,7 @@ sldsr:
     weights: ../resources/ldsr/ldsr_hg19_refs/weights/weights.hm3_noMHC.{chr}.l2.ldscore.gz
     frq: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.frq
     bim: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.bim
-    params: ../resources/ldsr_hg19_refs/
+    params: ../resources/ldsr/ldsr_hg19_refs/
     log: ../results/00LOG/09SLDSR/get_hg19_refs.log
 
   make_annot:

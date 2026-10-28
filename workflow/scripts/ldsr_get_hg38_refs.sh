@@ -1,68 +1,66 @@
 #!/bin/bash
+#--------------------------------------------------------------------------------------
+#
+#    Download LDSC hg38 reference files
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  09SLDSR | Rule: get_hg38_refs
+#            Upstream:   none (downloads from Zenodo)
+#            Downstream: make_annot, lift_hapmap3_snps, ldsr_ld_scores_hg38,
+#                        ldsr_strat_hg38_bl_v12
+#
+# Purpose:   - Download the GRCh38 LDSC reference bundle (Zenodo 7768714) and the
+#              HapMap3 no-MHC SNP list (Zenodo 10515792)
+#            - Unpack baseline_v1.2, plink_files and weights into the output dir
+#            - Remove the downloaded archives
+#
+# Usage:     ldsr_get_hg38_refs.sh [output_dir]
+#
+# Inputs:    output_dir  Directory for the reference files (default: LDSC_hg38)
+#
+# Outputs:   <output_dir>/baseline_v1.2/  baseline v1.2 LD scores per chr
+#            <output_dir>/plink_files/    1000G EUR hg38 plink and .frq files per chr
+#            <output_dir>/weights/        HapMap3 no-MHC regression weights per chr
+#            <output_dir>/hm3_no_MHC.list.txt
+#
+# Notes:     The SNP list is kept so the hg38 refs are complete on their own; the
+#            liftover rule currently uses the hg19 copy.
+#
+#--------------------------------------------------------------------------------------
 
-# Script to download and unpack LDSC hg38 reference files from Zenodo
-# Allows specifying output directory as a parameter (defaults to LDSC_hg38)
-# Moves all files to the parent directory and removes GRCh38 directory and GRCh38.tgz
+set -euo pipefail
 
-# Set output directory (default: LDSC_hg38 if no parameter provided)
 OUTPUT_DIR="${1:-LDSC_hg38}"
 
-# Create output directory
-mkdir -p "$OUTPUT_DIR"
-cd "$OUTPUT_DIR" || exit 1
+mkdir -p "${OUTPUT_DIR}"
+cd "${OUTPUT_DIR}"
 
-# Download files from Zenodo
+##  Download  -------------------------------------------------------------------------
 wget -O GRCh38.tgz "https://zenodo.org/records/7768714/files/GRCh38.tgz?download=1"
 wget -O hm3_no_MHC.list.txt "https://zenodo.org/records/10515792/files/hm3_no_MHC.list.txt?download=1"
 
-# Check if downloads were successful
-if [[ ! -f GRCh38.tgz || ! -f hm3_no_MHC.list.txt ]]; then
-  echo "Error: One or more downloads failed."
-  exit 1
-fi
+##  Extract  --------------------------------------------------------------------------
+tar -xvzf GRCh38.tgz || { echo "Error: Failed to extract GRCh38.tgz"; exit 1; }
 
-# Extract GRCh38.tgz
-tar -xvzf GRCh38.tgz
-if [[ $? -ne 0 ]]; then
-  echo "Error: Failed to extract GRCh38.tgz"
-  exit 1
-fi
-
-# Move into GRCh38 directory
-cd GRCh38 || exit 1
-
-# Extract nested tar.gz files
+cd GRCh38
 for file in baseline_v1.2.tgz plink_files.tgz weights.tgz; do
-  if [[ -f "$file" ]]; then
-    tar -xvzf "$file"
-    if [[ $? -ne 0 ]]; then
-      echo "Error: Failed to extract $file"
-      exit 1
-    fi
+  if [[ -f "${file}" ]]; then
+    tar -xvzf "${file}" || { echo "Error: Failed to extract ${file}"; exit 1; }
   else
-    echo "Warning: $file not found, skipping extraction"
+    echo "Warning: ${file} not found, skipping extraction"
   fi
 done
 
-# Move all files from GRCh38 to parent directory (OUTPUT_DIR)
-mv baseline_v1.2 plink_files weights ../
-if [[ $? -ne 0 ]]; then
-  echo "Error: Failed to move files to $OUTPUT_DIR"
-  exit 1
-fi
-
-# Move back to parent directory
+mv baseline_v1.2 plink_files weights ../ ||
+  { echo "Error: Failed to move files to ${OUTPUT_DIR}"; exit 1; }
 cd ..
 
-# Remove GRCh38 directory and GRCh38.tgz
+##  Tidy  -----------------------------------------------------------------------------
 rm -rf GRCh38 GRCh38.tgz
-if [[ $? -ne 0 ]]; then
-  echo "Error: Failed to remove GRCh38 directory or GRCh38.tgz"
-  exit 1
-fi
-
-# Clean up nested tar.gz files (if any remain)
 rm -f baseline_v1.2.tgz plink_files.tgz weights.tgz
 
 echo "Download and extraction complete. Files are in $(pwd)"
 
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
