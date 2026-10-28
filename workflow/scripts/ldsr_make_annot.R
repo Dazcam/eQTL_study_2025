@@ -47,29 +47,27 @@ input_bim  <- snakemake@input[["bim"]]
 out_maxcpp <- snakemake@output[["maxcpp"]]
 out_cs95   <- snakemake@output[["cs95"]]
 
+# Wildcards
+cell_type <- snakemake@wildcards[["cell_type"]]
+chr_num   <- snakemake@wildcards[["chr"]]
+
+# Genome build of the reference, for the log only
+build <- str_extract(basename(input_bim), "hg\\d+")
+
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("input_cs", "input_bim", "out_maxcpp", "out_cs95"),
-  value    = c(input_cs, input_bim, out_maxcpp, out_cs95)) |>
+  variable = c("input_cs", "input_bim", "out_maxcpp", "out_cs95",
+               "cell_type", "chr_num", "build"),
+  value    = c(input_cs, input_bim, out_maxcpp, out_cs95,
+               cell_type, chr_num, build)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
 
-##  Get cell type, build and chromosome  ----------------------------------------------
-cell_type <- input_cs |>
-  basename() |>
-  str_extract("^[^.]+")
-
-bim_info <- input_bim |>
-  basename() |>
-  str_match(".*(hg\\d+).*\\.(\\d+)\\.bim$") |>
-  as_tibble() |>
-  transmute(build = V2, chr = V3)
-
-message("Creating maxCPP and CS95 ", bim_info$build, " annot files for ",
-        cell_type, " on chr ", bim_info$chr, " ...")
+message("Creating maxCPP and CS95 ", build, " annot files for ",
+        cell_type, " on chr ", chr_num, " ...")
 
 ##  Read data  ------------------------------------------------------------------------
 susie_tbl <- read_tsv(input_cs, show_col_types = FALSE)
@@ -78,52 +76,44 @@ bim_file  <- read_tsv(input_bim, col_names = FALSE, show_col_types = FALSE)
 message(nrow(susie_tbl), " variants in credible sets before annotation calculation ...")
 
 ##  Compute annotations  --------------------------------------------------------------
-susie_tbl_chr <- susie_tbl |> dplyr::filter(chr == bim_info$chr)
+susie_tbl_chr <- susie_tbl |> dplyr::filter(chr == chr_num)
 
-# maxCPP: max PIP across eGenes per variant
+# maxCPP: max PIP across eGenes per position (one row per chr:pos, so the
+# join to the .bim can't duplicate rows at multi-allelic sites)
 susie_maxcpp <- susie_tbl_chr |>
-  group_by(variant_id) |>
-  mutate(maxCPP = max(pip)) |>
-  dplyr::select(chr, pos, maxCPP) |>
-  distinct()
+  summarise(maxCPP = max(pip), .by = c(chr, pos))
 
 # CS95: 1 if the variant is in any credible set
 susie_cs95 <- susie_tbl_chr |>
   distinct(chr, pos) |>
   mutate(CS95 = 1L)
 
-message(nrow(susie_maxcpp), " unique variants for maxCPP on chr ", bim_info$chr, " ...")
-message(nrow(susie_cs95), " unique variants for CS95 on chr ", bim_info$chr, " ...")
+message(nrow(susie_maxcpp), " unique variants for maxCPP on chr ", chr_num, " ...")
+message(nrow(susie_cs95), " unique variants for CS95 on chr ", chr_num, " ...")
 
 ##  Match annotations to .bim  --------------------------------------------------------
+# left_join() keeps .bim row order; variants not in a credible set get 0
 bim_ref <- bim_file |>
-  dplyr::select(CHR = X1, BP = X4, SNP = X2, CM = X3) |>
-  mutate(row_index = row_number())
+  dplyr::select(CHR = X1, BP = X4, SNP = X2, CM = X3)
 
-# Variants not in a credible set get 0
 bim_maxcpp <- bim_ref |>
   left_join(susie_maxcpp, by = c("CHR" = "chr", "BP" = "pos")) |>
-  mutate(maxCPP = replace(maxCPP, is.na(maxCPP), 0)) |>
-  arrange(row_index) |>
-  dplyr::select(CHR, BP, SNP, CM, maxCPP)
+  mutate(maxCPP = replace_na(maxCPP, 0))
 
 bim_cs95 <- bim_ref |>
   left_join(susie_cs95, by = c("CHR" = "chr", "BP" = "pos")) |>
-  mutate(CS95 = replace(CS95, is.na(CS95), 0L)) |>
-  arrange(row_index) |>
-  dplyr::select(CHR, BP, SNP, CM, CS95)
+  mutate(CS95 = replace_na(CS95, 0L))
 
+# ldsc --l2 needs the annotation rows to match the .bim exactly
 stopifnot(
   "maxCPP annotation does not contain the same SNPs as the .bim file" =
-    all.equal(bim_maxcpp$SNP, bim_ref$SNP, check.attributes = FALSE),
+    identical(bim_maxcpp$SNP, bim_ref$SNP),
   "CS95 annotation does not contain the same SNPs as the .bim file" =
-    all.equal(bim_cs95$SNP, bim_ref$SNP, check.attributes = FALSE)
+    identical(bim_cs95$SNP, bim_ref$SNP)
 )
 
-message(nrow(bim_maxcpp |> dplyr::filter(maxCPP > 0)), " variants with maxCPP > 0 on chr ",
-        bim_info$chr, " ...")
-message(nrow(bim_cs95 |> dplyr::filter(CS95 > 0)), " variants in any 95% CS on chr ",
-        bim_info$chr, " ...")
+message(sum(bim_maxcpp$maxCPP > 0), " variants with maxCPP > 0 on chr ", chr_num, " ...")
+message(sum(bim_cs95$CS95 > 0), " variants in any 95% CS on chr ", chr_num, " ...")
 
 ##  Write outputs  --------------------------------------------------------------------
 write.table(bim_maxcpp, gzfile(out_maxcpp), col.names = TRUE, row.names = FALSE,
