@@ -1,28 +1,33 @@
-configfile: "../config/config.yaml"
 localrules: prep_susie_gene_meta
 
-rule all:
-    input: 
-        config["susie"]["lbf_comparison"]["overall"]        
+def susie_exp_bed(w):
+    norm_method = config['tensorQTL']['norm_methods'][0]
+    return f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed"
 
-rule get_sig_eGenes:
-    input:  lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
-                geno_pc=config['tensorQTL']['geno_pcs']:
-                f"../results/05TENSORQTL/tensorqtl_perm/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/{w.cell_type}_{norm_method}_perm.cis_qtl.txt.gz"
-    output: config["susie"]["get_sig_eGenes"]["output"]
-    singularity: config["containers"]["R"]
-    message: "Pull out signifcant eGenes for {wildcards.cell_type} from TensorQTL perm output"
-    benchmark: "reports/benchmarks/08susie.get_sig_eGenes_{cell_type}.txt",
-    log: config["susie"]["get_sig_eGenes"]["log"]
-    script: "../scripts/susie_get_sig_egenes.R"
+
+def susie_covar(w):
+    norm_method = config['tensorQTL']['norm_methods'][0]
+    geno_pc = config['tensorQTL']['geno_pcs']
+    exp_pc = config['exp_pc_map'][w.cell_type]
+    return (f"../results/05TENSORQTL/prep_input/"
+            f"{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt")
+
+
+def susie_perm(w):
+    norm_method = config['tensorQTL']['norm_methods'][0]
+    geno_pc = config['tensorQTL']['geno_pcs']
+    exp_pc = config['exp_pc_map'][w.cell_type]
+    return (f"../results/05TENSORQTL/tensorqtl_perm/"
+            f"{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/"
+            f"{w.cell_type}_{norm_method}_perm.cis_qtl.txt.gz")
+
 
 rule prep_susie_gene_meta:
-    input:  lambda w, norm_method=config['tensorQTL']['norm_methods'][0]:
-                f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed"
+    input:  bed = susie_exp_bed
     output: config["susie"]["prep_susie_gene_meta"]["output"]
     singularity: config["containers"]["R"]
     message: "Create gene metadata file for {wildcards.cell_type} for SuSiE"
-    benchmark: "reports/benchmarks/08susie.prep_susie_gene_meta_{cell_type}.txt",
+    benchmark: "reports/benchmarks/08susie.prep_susie_gene_meta_{cell_type}.benchmark.txt"
     log:    config["susie"]["prep_susie_gene_meta"]["log"]
     script: "../scripts/susie_prep_gene_meta.R"
 
@@ -30,42 +35,32 @@ rule vcf_to_dosage:
     input:  config["susie"]["vcf_to_dosage"]["vcf"]
     output: dosage = config["susie"]["vcf_to_dosage"]["out_dosage"],
             idx = config["susie"]["vcf_to_dosage"]["out_idx"]
-    envmodules: "bcftools","htslib"
-    message: "Generate a allele dosage file from genotypes VCF for SuSiE"
-    benchmark: "reports/benchmarks/08susie.vcf_to_dosage.txt",
+    envmodules: "BCFtools/1.23-GCC-14.3.0", "HTSlib/1.23-GCC-14.3.0"
+    message: "Generate an allele dosage file from the genotype VCF for SuSiE"
+    benchmark: "reports/benchmarks/08susie.vcf_to_dosage.benchmark.txt"
     log:    config["susie"]["vcf_to_dosage"]["log"]
-    shell: """
-           # Extract sample IDs into a single tab-separated line
-           bcftools query -l {input} | paste -sd '\t' - > header_samples.tsv
+    shell:  """
+            set -euo pipefail
+            exec 2> {log}
 
-           # Create header with CHROM POS REF ALT followed by sample IDs
-           echo -e "CHROM\tPOS\tREF\tALT\t$(cat header_samples.tsv)" > header.tsv
-
-           # Extract dosage matrix, remove 'chr' prefix
-           bcftools query -f '%CHROM\t%POS\t%REF\t%ALT[\t%DS]\n' {input} | sed 's/^chr//' > dose_matrix.tsv
-
-           # Combine header and dosage matrix, compress, and index
-           cat header.tsv dose_matrix.tsv | bgzip > {output.dosage}
-           tabix -s1 -b2 -e2 -S1 {output.dosage}
-
-           # Clean up
-           rm header_samples.tsv header.tsv dose_matrix.tsv
-           """
+            # Header (CHROM POS REF ALT + sample IDs), then dosages with 'chr' removed
+            (
+              printf 'CHROM\tPOS\tREF\tALT'
+              bcftools query -l {input} | awk '{{printf "\t%s", $0}}'
+              printf '\n'
+              bcftools query -f '%CHROM\t%POS\t%REF\t%ALT[\t%DS]\n' {input} | sed 's/^chr//'
+            ) | bgzip > {output.dosage}
+            tabix -s1 -b2 -e2 -S1 {output.dosage}
+            """
 
 rule prep_susie_input:
-    input:
-        #sig_eGenes = lambda wc: f"../results/08SUSIE/susie_input/{wc.cell_type}_eGenes_fdr_0.05.tsv",
-        exp_bed = lambda w, norm_method=config['tensorQTL']['norm_methods'][0]:
-            f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed",
-        #genotypes = config["geno_post_impute"]["vcf_to_plink"]["output"],
-        covar = lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
-            geno_pc=config['tensorQTL']['geno_pcs']:
-            f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}_split_covariates.txt"
+    input:  exp_bed = susie_exp_bed,
+            covar = susie_covar
     output: exp_bed = config["susie"]["prep_susie_input"]["out_exp"],
             covar = config["susie"]["prep_susie_input"]["out_covar"],
             samp_lst = config["susie"]["prep_susie_input"]["out_samp_lst"]
-    message: "Extract genotype, expression, and covariate data for {wildcards.cell_type} for SuSiE fine-mapping"
-    benchmark: "reports/benchmarks/08susie.prep_susie_input_{cell_type}.txt",
+    message: "Prepare expression, covariate and sample files for {wildcards.cell_type} for SuSiE"
+    benchmark: "reports/benchmarks/08susie.prep_susie_input_{cell_type}.benchmark.txt"
     log:    config["susie"]["prep_susie_input"]["log"]
     script: "../scripts/susie_prep_input.py"
 
@@ -73,22 +68,20 @@ rule run_susie:
     input:  exp_mat = rules.prep_susie_input.output.exp_bed,
             gene_meta = rules.prep_susie_gene_meta.output,
             smpl_lst = rules.prep_susie_input.output.samp_lst,
-            eqt_to_test = lambda w, norm_method=config['tensorQTL']['norm_methods'][0],
-                geno_pc=config['tensorQTL']['geno_pcs']:
-                f"../results/05TENSORQTL/tensorqtl_perm/{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][w.cell_type]}/{w.cell_type}_{norm_method}_perm.cis_qtl.txt.gz",
+            eqt_to_test = susie_perm,
             covar = rules.prep_susie_input.output.covar,
-            geno_mat  = rules.vcf_to_dosage.output.dosage,
-            geno_idx   = rules.vcf_to_dosage.output.idx
+            geno_mat = rules.vcf_to_dosage.output.dosage,
+            geno_idx = rules.vcf_to_dosage.output.idx
     output: cs_hp_out = config["susie"]["run_susie"]["cs_hp_out"],
             cs_out = config["susie"]["run_susie"]["cs_out"],
             snp_out = config["susie"]["run_susie"]["snp_out"]
-    params: chunk = lambda wildcards: f"{wildcards.batch_index} {config['susie_batches']}",
-            out_prefix = lambda wildcards: f"../results/08SUSIE/susie/{wildcards.cell_type}/{wildcards.cell_type}.{wildcards.batch_index}_{config['susie_batches']}.susie",
+    params: chunk = lambda w: f"{w.batch_index} {config['susie_batches']}",
+            out_prefix = lambda w: f"../results/08SUSIE/susie/{w.cell_type}/{w.cell_type}.{w.batch_index}_{config['susie_batches']}.susie",
             cis_window = config["susie_window"],
             write_full = config["write_full_susie"]
     singularity: config["containers"]["susie"]
-    message: "Run SuSiE fine-mapping for {wildcards.cell_type}"
-    benchmark: "reports/benchmarks/08susie.run_susie_{cell_type}_{batch_index}_{susie_batches}.txt",    
+    message: "Run SuSiE fine-mapping for {wildcards.cell_type}, batch {wildcards.batch_index}"
+    benchmark: "reports/benchmarks/08susie.run_susie_{cell_type}_{batch_index}_{susie_batches}.benchmark.txt"
     log:    config["susie"]["run_susie"]["log"]
     shell:  """
             set -euo pipefail
@@ -108,43 +101,44 @@ rule run_susie:
             echo "Completed run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" >> {log}
             """
 
+def susie_batch_files(w):
+    return expand(rules.run_susie.output.cs_hp_out,
+                  cell_type = w.cell_type,
+                  batch_index = range(1, config["susie_batches"] + 1),
+                  susie_batches = config["susie_batches"])
+
+
 rule merge_susie:
-    input:
-        lambda wildcards: expand(
-            "../results/08SUSIE/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.{susie_suffix}",
-            cell_type=wildcards.cell_type,
-            batch_index=range(1, config["susie_batches"] + 1),
-            susie_batches=config["susie_batches"],
-            susie_suffix=wildcards.susie_suffix
-        )
-    envmodules: "HTSlib/1.21-GCC-13.3.0"
+    input:  susie_batch_files
     output: config["susie"]["merge_susie"]["output"]
-    message: "Merge SuSiE fine-mapping output into a single file for {wildcards.cell_type}"
-    benchmark: "reports/benchmarks/08susie.merge_susie_{cell_type}_{susie_suffix}.txt",
+    envmodules: "HTSlib/1.21-GCC-13.3.0"
+    message: "Merge SuSiE credible sets into a single file for {wildcards.cell_type}"
+    benchmark: "reports/benchmarks/08susie.merge_susie_{cell_type}.benchmark.txt"
     log:    config["susie"]["merge_susie"]["log"]
     shell:  """
             set -euo pipefail
-            echo "Merging SuSiE {wildcards.susie_suffix} for {wildcards.cell_type}" > {log}
+            echo "Merging SuSiE cred.hp.txt for {wildcards.cell_type}" > {log}
             awk 'NR==1 || FNR>1{{print}}' {input} | bgzip -c > {output}
-            echo "Completed merge of SuSiE {wildcards.susie_suffix} for {wildcards.cell_type}" >> {log}
+            echo "Completed merge of SuSiE cred.hp.txt for {wildcards.cell_type}" >> {log}
             """
 
 rule sort_susie:
-    input:  config["susie"]["merge_susie"]["output"].replace("{susie_suffix}", "cred.hp.txt")
+    input:  rules.merge_susie.output
     output: config["susie"]["sort_susie"]["output"]
-    log:    config["susie"]["sort_susie"]["log"]
-    message: "Sort SuSiE fine-mapping output for {wildcards.cell_type}"
-    benchmark: "reports/benchmarks/08susie.sort_susie_{cell_type}.txt",
     envmodules: "HTSlib/1.21-GCC-13.3.0"
-    shell:
-        """
-        set -euo pipefail
-        echo "Sorting SuSiE cred.hp.txt for {wildcards.cell_type}" > {log}
-        gunzip -c {input} > {wildcards.cell_type}_temp.txt
-        (head -n 1 {wildcards.cell_type}_temp.txt && tail -n +2 {wildcards.cell_type}_temp.txt | sort -k3 -k4n) | bgzip > {output}
-        rm {wildcards.cell_type}_temp.txt
-        echo "Completed sorting SuSiE cred.hp.txt for {wildcards.cell_type}" >> {log}
-        """
+    message: "Sort SuSiE credible sets by chromosome and position for {wildcards.cell_type}"
+    benchmark: "reports/benchmarks/08susie.sort_susie_{cell_type}.benchmark.txt"
+    log:    config["susie"]["sort_susie"]["log"]
+    shell:  """
+            set -euo pipefail
+            echo "Sorting SuSiE cred.hp.txt for {wildcards.cell_type}" > {log}
+            gunzip -c {input} | (
+              IFS= read -r header
+              printf '%s\n' "$header"
+              LC_ALL=C sort -t$'\t' -k3,3V -k4,4n
+            ) | bgzip > {output}
+            echo "Completed sorting SuSiE cred.hp.txt for {wildcards.cell_type}" >> {log}
+            """
 
 rule susie_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
@@ -160,24 +154,13 @@ rule susie_report:
             output_file = config["susie"]["susie_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SuSiE report"
-    benchmark: "reports/benchmarks/08susie.susie_report.txt"
-    log: config["susie"]["susie_report"]["log"]
-    shell:
-        """
-        Rscript -e "rmarkdown::render('{input.rmd_script}', \
-            output_file = '{params.output_file}', \
-            params = list(cell_types = c({params.cell_types}), \
-                          in_dir = '{params.in_dir}', \
-                          gene_meta_dir = '{params.gene_meta_dir}', \
-                          gene_lookup = '{params.gene_lookup}'))" > {log} 2>&1
-        """
-
-rule susie_lbf_comparison:
-    input:  susie_files = expand(rules.sort_susie.output, cell_type = config["cell_types"])
-    output: overall = config["susie"]["lbf_comparison"]["overall"]
-    params: lbf_thresh = config["susie"]["lbf_comparison"]["lbf_thresh"]
-    singularity: config["containers"]["R"]
-    message: "Compare SuSiE credible set retention with vs without an LBF filter"
-    benchmark: "reports/benchmarks/08susie.lbf_comparison.txt"
-    log:    config["susie"]["lbf_comparison"]["log"]
-    script: "../scripts/susie_lbf_filter_comparison.R"
+    benchmark: "reports/benchmarks/08susie.susie_report.benchmark.txt"
+    log:    config["susie"]["susie_report"]["log"]
+    shell:  """
+            Rscript -e "rmarkdown::render('{input.rmd_script}', \
+                output_file = '{params.output_file}', \
+                params = list(cell_types = c({params.cell_types}), \
+                              in_dir = '{params.in_dir}', \
+                              gene_meta_dir = '{params.gene_meta_dir}', \
+                              gene_lookup = '{params.gene_lookup}'))" > {log} 2>&1
+            """
