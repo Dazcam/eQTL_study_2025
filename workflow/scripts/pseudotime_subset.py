@@ -118,12 +118,12 @@ adata.uns['trajectory'] = {
     'terminal_type' : terminal_type,
     'cell_types'    : cell_types,
 }
-log.info(f"Trajectory metadata stored in adata.uns['trajectory']")
+log.info("Trajectory metadata stored in adata.uns['trajectory']")
 
 ##  7. Save subset h5ad  ---------------------------------------------------------------
 log.info(f"Writing subset adata to: {output_h5ad}")
 adata.write_h5ad(output_h5ad)
-log.info(f"Done.")
+log.info("Done.")
 
 # --------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------

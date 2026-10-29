@@ -71,7 +71,7 @@ MARKER_GENES = [
     'PDE1A',  'SYT6',    'TLE4',   'TOX',     'EOMES',
     'GAS7',   'GRIK3',   'HS3ST4', 'UNC5D',   'NKAIN2',
     'PLXNA4', 'BCL11B',  'FEZF2',  'RORB',    'SATB2',
-    'PDGFRA', 'GAD1',    'SATB2'
+    'PDGFRA', 'GAD1'
 ]
 
 # Genes to mark terminal cell positions on the overlay panel.
@@ -316,7 +316,7 @@ axes[1].axis('off')
 
 # Panel C — PCW
 pcw_vals = adata.obs['PCW'].values.astype(float)
-pcw_cmap = plt.cm.get_cmap('RdYlBu_r', len(np.unique(pcw_vals)))
+pcw_cmap = plt.get_cmap('RdYlBu_r', len(np.unique(pcw_vals)))
 sc_c = axes[2].scatter(
     umap1, umap2, c=pcw_vals, cmap=pcw_cmap,
     s=pt_size, alpha=0.5, rasterized=True, linewidths=0

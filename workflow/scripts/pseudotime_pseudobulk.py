@@ -37,7 +37,6 @@ import logging
 import warnings
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -301,10 +300,7 @@ for n in Q_VALUES:
             samp_adata  = bin_adata[samp_mask]
             counts      = samp_adata.X
 
-            if sp.issparse(counts):
-                pseudobulk_counts = np.array(counts.sum(axis=0)).flatten()
-            else:
-                pseudobulk_counts = np.array(counts.sum(axis=0)).flatten()
+            pseudobulk_counts = np.array(counts.sum(axis=0)).flatten()
 
             pseudobulk_rows.append(pseudobulk_counts)
 
@@ -356,7 +352,7 @@ log.info(f"\nPseudobulk summary:\n{summary_df.to_string(index=False)}")
 ##  8. Write sentinel file  ------------------------------------------------------------
 log.info("Writing sentinel file...")
 with open(sentinel_file, 'w') as f:
-    f.write(f"pseudobulk_trajectory completed\n")
+    f.write("pseudobulk_trajectory completed\n")
     f.write(f"trajectory:  {trajectory}\n")
     f.write(f"timestamp:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     f.write(f"cells:       {adata.shape[0]:,}\n")

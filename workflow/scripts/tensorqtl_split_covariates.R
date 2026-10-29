@@ -39,7 +39,7 @@ if (exists("snakemake")) {
 message("\n\nPulling out genotype and expression PC covariate combinations ...")
 
 ##  Load Packages, functions and variables  -------------------------------------------
-# Install and load required libraries
+# Load packages
 library(tidyverse)
 
 cov_input <- as.character(snakemake@input)

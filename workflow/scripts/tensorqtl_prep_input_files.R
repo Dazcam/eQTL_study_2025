@@ -125,7 +125,6 @@ message("\n============================\n")
 
 ##  Normalise counts and build covariates  --------------------------------------------
 report_list <- list()
-#for (cell_type in cell_types) { # Only need loop for local testing
 
 message('\n\nCreating normalised counts and covariate files for: ', cell_type, ' with norm method: ', norm_method)
 report_tibble <- tibble(cell_type = cell_type, norm_method = norm_method)  
