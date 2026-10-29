@@ -16,6 +16,9 @@ PT_PSEUDOBULK_CSVS = [
                       quantile_n=n, bin=range(1, n + 1), allow_missing=True)
 ]
 
+# Paper eQTL reference for the report: pseudotime bins (NPC-to-*) excluded, as in 05
+PT_PAPER_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
+
 # Q4 bins exported to 05TENSORQTL as pseudo cell types for SuSiE, SMR and TWAS
 PT_Q4_EXPORT_TARGETS = expand(config["pseudotime"]["export"]["sentinel"],
                               trajectory=config["trajectories"], bin=range(1, 5))
@@ -232,7 +235,21 @@ rule pseudotime_report:
     output: config["pseudotime"]["report"]["html"]
     params: in_dir              = config["pseudotime"]["report"]["in_dir"],
             cell_type_perm_dir  = config["pseudotime"]["report"]["cell_type_perm_dir"],
-            output_file         = config["pseudotime"]["report"]["output_file"]
+            output_file         = config["pseudotime"]["report"]["output_file"],
+            bmark_dir           = config["pseudotime"]["report"]["bmark_dir"],
+            gene_lookup         = config["pseudotime"]["report"]["gene_lookup"],
+            trajectories        = ",".join(config["trajectories"]),
+            q_values            = ",".join(map(str, PT_Q_VALUES)),
+            exp_pcs             = ",".join(map(str, config["tensorQTL"]["exp_pcs"])),
+            geno_pc             = PT_GENO_PC,
+            window              = config["tensorQTL"]["window"],
+            paper_cell_types    = ",".join(PT_PAPER_CELL_TYPES),
+            paper_exp_pcs       = ",".join(str(config["exp_pc_map"][ct]) for ct in PT_PAPER_CELL_TYPES),
+            n_neighbors         = config["pseudotime"]["palantir"]["n_neighbors"],
+            n_pcs               = config["pseudotime"]["palantir"]["n_pcs"],
+            n_dcs               = config["pseudotime"]["palantir"]["n_dcs"],
+            num_waypoints       = config["pseudotime"]["palantir"]["num_waypoints"],
+            root_gene           = config["pseudotime"]["palantir"]["root_gene"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 8000, time = "1:00:00"
     log:    config["pseudotime"]["report"]["log"]
@@ -244,6 +261,20 @@ rule pseudotime_report:
             output_file = '{params.output_file}', \
             params = list(
                 in_dir             = '{params.in_dir}',
-                cell_type_perm_dir = '{params.cell_type_perm_dir}'
+                cell_type_perm_dir = '{params.cell_type_perm_dir}',
+                bmark_dir          = '{params.bmark_dir}',
+                gene_lookup        = '{params.gene_lookup}',
+                trajectories       = '{params.trajectories}',
+                q_values           = '{params.q_values}',
+                exp_pcs            = '{params.exp_pcs}',
+                geno_pc            = '{params.geno_pc}',
+                window             = '{params.window}',
+                paper_cell_types   = '{params.paper_cell_types}',
+                paper_exp_pcs      = '{params.paper_exp_pcs}',
+                n_neighbors        = '{params.n_neighbors}',
+                n_pcs              = '{params.n_pcs}',
+                n_dcs              = '{params.n_dcs}',
+                num_waypoints      = '{params.num_waypoints}',
+                root_gene          = '{params.root_gene}'
             ))" > {log} 2>&1
         """

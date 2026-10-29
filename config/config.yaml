@@ -624,6 +624,8 @@ pseudotime:
     rmd_script:          scripts/pseudotime_report.Rmd
     in_dir:              ../../results/17PSEUDOTIME/
     cell_type_perm_dir:  ../../results/05TENSORQTL/tensorqtl_perm/
+    gene_lookup:         ../../resources/sheets/gene_lookup_hg38.tsv
+    bmark_dir:           ../reports/benchmarks/
     log:                 ../results/00LOG/17PSEUDOTIME/report.log
 
 # --------  QTL REPLICATION (Pipeline 6)  ----------

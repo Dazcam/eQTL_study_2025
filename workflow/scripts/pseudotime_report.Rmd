@@ -11,38 +11,44 @@ output:
 params:
   in_dir: null
   cell_type_perm_dir: null
+  bmark_dir: null
+  gene_lookup: null
+  trajectories: null
+  q_values: null
+  exp_pcs: null
+  geno_pc: null
+  window: null
+  paper_cell_types: null
+  paper_exp_pcs: null
+  n_neighbors: null
+  n_pcs: null
+  n_dcs: null
+  num_waypoints: null
+  root_gene: null
 ---
 
 ***
 
 ```{r setup, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
-library(knitr)
-library(kableExtra)
-library(stringr)
-library(cowplot)
-library(DT)
 library(gt)
-library(patchwork)
-library(ggrepel)
+library(cowplot)
 library(UpSetR)
-library(ComplexHeatmap)
-library(RColorBrewer)
-library(circlize)
 
 in_dir              <- params$in_dir
 cell_type_perm_dir  <- params$cell_type_perm_dir
 
-trajectories <- c("NPC-to-Glu-DL", "NPC-to-Glu-UL")
-q_values     <- c(4, 5, 6)
-exp_pcs      <- c(10, 20, 30, 40, 50)
-geno_pc      <- 4
+split_param  <- function(x) strsplit(x, ",")[[1]]
+trajectories <- split_param(params$trajectories)
+q_values     <- as.integer(split_param(params$q_values))
+exp_pcs      <- as.integer(split_param(params$exp_pcs))
+geno_pc      <- as.integer(params$geno_pc)
+window_kb    <- as.numeric(params$window) / 1000
 norm_method  <- "quantile"
 
-cell_type_map <- c(
-  "NPC-to-Glu-DL" = "Glu-DL",
-  "NPC-to-Glu-UL" = "Glu-UL"
-)
+# Paper eQTL reference: every non-pseudotime cell type and its selected expression PCs
+paper_exppc_map <- setNames(as.integer(split_param(params$paper_exp_pcs)),
+                            split_param(params$paper_cell_types))
 
 bin_palette <- setNames(
   colorRampPalette(c("#FDE725", "#21908C", "#440154"))(6),
@@ -50,8 +56,7 @@ bin_palette <- setNames(
 )
 
 # Load gene symbol lookup
-gene_lookup_file <- "../../resources/sheets/gene_lookup_hg38.tsv"
-gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
+gene_lookup <- read_tsv(params$gene_lookup, show_col_types = FALSE) |>
   select(ensembl_gene_id, symbol = external_gene_name) |>
   filter(!is.na(symbol) & symbol != "") |>
   distinct(ensembl_gene_id, .keep_all = TRUE)
@@ -83,15 +88,16 @@ Cells were subsetted to two neurogenic trajectories from the full 679,738-cell a
 
 Pseudotime was computed using [Palantir](https://github.com/dpeerlab/Palantir) with:
 
-- Root cell: cell with highest PAX6 expression in NPC population
-- Terminal cell: cell with highest HS3ST4 (Glu-DL) or SATB2 (Glu-UL) expression
-- Harmony-corrected PCA as diffusion map input (n_pcs=30, n_neighbors=10)
-- 1,000 waypoints
+- Root cell: cell with highest `r params$root_gene` expression in NPC population
+- Terminal cell: cell with highest TLE4 (Glu-DL) or SATB2 (Glu-UL) expression
+- Diffusion map on the Harmony-corrected PCA embedding (`r params$n_dcs` diffusion components)
+- `r format(as.integer(params$num_waypoints), big.mark = ",")` waypoints
+- UMAP from a `r params$n_neighbors`-nearest-neighbour graph on `r params$n_pcs` Harmony PCs (visualisation only)
 
 **Pseudobulk generation**
 
-Cells were binned into equal-cell-number quantiles (Q4, Q5, Q6) based on Palantir
-pseudotime. Raw counts were summed per sample per bin. Only samples with matching
+Cells were binned into equal-cell-number quantiles (`r paste0("Q", q_values, collapse = ", ")`)
+based on Palantir pseudotime. Raw counts were summed per sample per bin. Only samples with matching
 genotype data were retained.
 
 **eQTL mapping**
@@ -99,8 +105,8 @@ genotype data were retained.
 cis-eQTL mapping was performed using [TensorQTL](https://github.com/broadinstitute/tensorqtl):
 
 - Normalisation: TMM → log2 → quantile
-- cis-window: ±500 kb
-- Covariates: PCW, sex, 4 genotype PCs, N expression PCs (sensitivity: 10–50)
+- cis-window: ±`r format(window_kb, big.mark = ",")` kb
+- Covariates: PCW, sex, `r geno_pc` genotype PCs, N expression PCs (sensitivity: `r min(exp_pcs)`–`r max(exp_pcs)`)
 - Permutation-based FDR correction (q-value < 0.05)
 - Selected expression PCs: bin-specific, chosen per bin by maximum eGene count at FDR < 0.05 (see Section 3)
 
@@ -117,13 +123,174 @@ tibble(
                 paste(q_values, collapse=", "),
                 paste(exp_pcs, collapse=", "),
                 "Bin-specific (see Section 3)",
-                as.character(geno_pc), norm_method, "±500 kb", "q-value < 0.05")
+                as.character(geno_pc), norm_method,
+                sprintf("\u00b1%s kb", format(window_kb, big.mark = ",")), "q-value < 0.05")
 ) |>
   gt() |>
   tab_header(title = "Analysis parameters") |>
   cols_label(Parameter = "Parameter", Value = "Value") |>
   tab_style(style = cell_text(weight = "bold"),
             locations = cells_column_labels())
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+```{r bmark_load, echo = FALSE, message = FALSE, warning = FALSE}
+rule_names <- c("pseudotime_subset", "pseudotime_palantir", "pseudotime_pseudobulk",
+                "pseudotime_prep_tensorqtl", "pseudotime_split_covariates",
+                "pseudotime_zip_bed", "pseudotime_tensorqtl_nom",
+                "pseudotime_tensorqtl_perm", "pseudotime_export_smr_twas_inputs",
+                "pseudotime_report")
+
+bmark_files <- list.files(params$bmark_dir, pattern = "^17pseudotime\\..*\\.benchmark\\.txt$")
+
+# File names are 17pseudotime.<rule>[_<trajectory>[_Q<n>_bin<b>[_genPC<g>_expPC<e>]]]
+# .benchmark.txt; match the known rule names so rule names containing '_' stay whole
+match_rule <- function(stem) {
+  hit <- rule_names[stem == rule_names | str_starts(stem, paste0(rule_names, "_"))]
+  if (length(hit) == 0) NA_character_ else hit[which.max(nchar(hit))]
+}
+
+# Keep only runs whose trajectory, Q value and expression PCs are in the current config
+is_current <- function(wc) {
+  if (wc == "") return(TRUE)
+  traj <- trajectories[wc == trajectories | str_starts(wc, paste0(trajectories, "_"))]
+  if (length(traj) == 0) return(FALSE)
+  q  <- str_match(wc, "_Q([0-9]+)_bin")[, 2]
+  pc <- str_match(wc, "_expPC([0-9]+)$")[, 2]
+  (is.na(q) || as.integer(q) %in% q_values) && (is.na(pc) || as.integer(pc) %in% exp_pcs)
+}
+
+benchmarks <- tibble(file = bmark_files) |>
+  mutate(stem = str_remove_all(file, "^17pseudotime\\.|\\.benchmark\\.txt$"),
+         rule = map_chr(stem, match_rule),
+         wc   = if_else(is.na(rule), NA_character_,
+                        str_remove(stem, paste0("^", rule, "_?"))))
+
+unmatched <- filter(benchmarks, is.na(rule))$file
+
+benchmarks <- benchmarks |>
+  filter(!is.na(rule)) |>
+  filter(map_lgl(wc, is_current)) |>
+  mutate(data = map(file, function(f) {
+    read_tsv(file.path(params$bmark_dir, f), show_col_types = FALSE,
+             col_types = cols(.default = col_character())) |>
+      transmute(runtime_sec = suppressWarnings(as.numeric(s)),
+                max_rss = suppressWarnings(as.numeric(max_rss)))
+  })) |>
+  unnest(data)
+
+# Summarise by rule
+summary <- benchmarks |>
+  group_by(rule = factor(rule, levels = rule_names)) |>
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec, na.rm = TRUE) / 60,
+    sd_runtime_min = sd(runtime_sec, na.rm = TRUE) / 60,
+    mean_ram_gb = mean(max_rss, na.rm = TRUE) / 1024,
+    sd_ram_gb = sd(max_rss, na.rm = TRUE) / 1024,
+    .groups = "drop"
+  ) |>
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb),
+    mean_ram_gb = if_else(is.nan(mean_ram_gb), NA_real_, mean_ram_gb),  # no RAM recorded
+    rule = as.character(rule)
+  ) |>
+  mutate(across(where(is.numeric), \(x) round(x, 3)))
+
+# Table
+summary |>
+  gt() |>
+  tab_header(
+    title = "Benchmarking",
+    subtitle = "Means and SD across jobs"
+  ) |>
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) |>
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) |>
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+```{r bmark_notes, echo = FALSE, results = "asis"}
+if (length(unmatched) > 0) {
+  cat("\n**Note:** benchmark files not matching a current rule name (not shown):",
+      paste0("`", unmatched, "`", collapse = ", "), "\n")
+}
+```
+
+***
+
+#### Plot
+
+***
+
+```{r runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim = c(14, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
+                                   y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean_runtime_min - sd_runtime_min,
+                    ymax = mean_runtime_min + sd_runtime_min),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    plot.title.position = "plot",
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
+                               y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = mean_ram_gb - sd_ram_gb,
+                    ymax = mean_ram_gb + sd_ram_gb),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    plot.title.position = "plot",
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
 ```
 
 ***
@@ -247,7 +414,7 @@ build_sensitivity_tbl <- function(in_dir, trajectories, q_values, exp_pcs, geno_
   bind_rows(rows)
 }
 
-sensitivity_tbl <- build_sensitivity_tbl(in_dir, trajectories, q_values, exp_pcs)
+sensitivity_tbl <- build_sensitivity_tbl(in_dir, trajectories, q_values, exp_pcs, geno_pc)
 if (nrow(sensitivity_tbl) == 0) stop("No tensorQTL log files found. Check in_dir: ", in_dir)
 message("Loaded sensitivity data: ", nrow(sensitivity_tbl), " rows")
 
@@ -361,7 +528,7 @@ for (traj in trajectories) {
   for (n in q_values) for (b in seq_len(n)) {
     pc <- get_best_exp_pc(traj, n, b)
     key <- sprintf("%s_Q%d_bin%d", traj, n, b)
-    egene_list[[key]] <- read_perm_egenes(in_dir, traj, n, b, pc)
+    egene_list[[key]] <- read_perm_egenes(in_dir, traj, n, b, pc, geno_pc)
   }
 }
 
@@ -435,31 +602,9 @@ detection (lowest nominal p-value).
 
 ```{r overlap_data, echo=FALSE, message=FALSE, warning=FALSE}
 
-# ── Cell type lists and best expPC maps — from tensorqtl_report.Rmd ──────────
-
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                   "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                   "GABA-0",   "GABA-1",   "GABA-2",
-                   "NPC-0",    "NPC-1",    "NPC-2")
-
-exppc_map_L1 <- c(
-  "Glu-UL"    = 50, "Glu-DL"    = 40, "GABA"      = 30,
-  "NPC"       = 30, "MG"        = 30, "OPC"       = 30,
-  "Endo-Peri" = 30
-)
-
-exppc_map_L2 <- c(
-  "Glu-UL-0" = 30, "Glu-UL-1" = 50, "Glu-UL-2" = 40,
-  "Glu-DL-0" = 40, "Glu-DL-1" = 40, "Glu-DL-2" = 30,
-  "GABA-0"   = 30, "GABA-1"   = 40, "GABA-2"   = 40,
-  "NPC-0"    = 50, "NPC-1"    = 30, "NPC-2"    = 20
-)
-
 # ── Function to read eGenes for one cell type ─────────────────────────────────
 
-read_egenes_ct <- function(ct, exppc_map, perm_dir,
-                            geno_pc = 4, norm_method = "quantile") {
+read_egenes_ct <- function(ct, exppc_map, perm_dir, geno_pc, norm_method = "quantile") {
   pc        <- exppc_map[[ct]]
   perm_file <- file.path(
     perm_dir,
@@ -478,17 +623,13 @@ read_egenes_ct <- function(ct, exppc_map, perm_dir,
 
 # ── Build full paper eGene reference set — union of L1 and L2 ────────────────
 
-message("Loading L1 cell type eGenes...")
-egenes_L1 <- map_dfr(cell_types_L1, read_egenes_ct,
-                     exppc_map  = exppc_map_L1,
-                     perm_dir   = cell_type_perm_dir)
+message("Loading L1 and L2 cell type eGenes...")
+egenes_paper <- map_dfr(names(paper_exppc_map), read_egenes_ct,
+                        exppc_map = paper_exppc_map,
+                        perm_dir  = cell_type_perm_dir,
+                        geno_pc   = geno_pc)
 
-message("Loading L2 cell type eGenes...")
-egenes_L2 <- map_dfr(cell_types_L2, read_egenes_ct,
-                     exppc_map  = exppc_map_L2,
-                     perm_dir   = cell_type_perm_dir)
-
-paper_egene_set <- unique(c(egenes_L1$phenotype_id, egenes_L2$phenotype_id))
+paper_egene_set <- unique(egenes_paper$phenotype_id)
 message("Total unique eGenes in full paper (L1 + L2): ", length(paper_egene_set))
 
 # ── Build overlap table ───────────────────────────────────────────────────────
@@ -541,7 +682,7 @@ novel_all <- map_dfr(trajectories, function(traj) {
   map_dfr(q_values, function(n) {
     map_dfr(seq_len(n), function(b) {
       pc <- get_best_exp_pc(traj, n, b)
-      read_perm_novel(in_dir, traj, n, b, pc, paper_egene_set)
+      read_perm_novel(in_dir, traj, n, b, pc, paper_egene_set, geno_pc)
     })
   })
 })
@@ -825,7 +966,7 @@ read_perm_full <- function(in_dir, trajectory, quantile_n, bin, exp_pc, geno_pc 
 q4_slope <- map_dfr(trajectories, function(traj) {
   map_dfr(seq_len(4), function(b) {
     pc <- get_best_exp_pc(traj, 4, b)
-    read_perm_full(in_dir, traj, 4, b, pc)
+    read_perm_full(in_dir, traj, 4, b, pc, geno_pc)
   })
 })
 ```
