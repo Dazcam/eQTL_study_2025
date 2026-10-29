@@ -4,9 +4,9 @@
 #
 # --------------------------------------------------------------------------------------
 #
-# Pipeline:  17PSEUDOTIME | Rule: subset_trajectory (one job per trajectory)
+# Pipeline:  17PSEUDOTIME | Rule: pseudotime_subset (one job per trajectory)
 #            Upstream:   02SCANPY clustering (adata_clusters_v3.h5ad)
-#            Downstream: palantair_trajectory
+#            Downstream: pseudotime_palantir
 #
 # Purpose:   - Assign L1 cell type labels from leiden_harmony_0.2
 #            - Keep only the two cell types named in the trajectory wildcard,

@@ -4,8 +4,8 @@
 #
 # --------------------------------------------------------------------------------------
 #
-# Pipeline:  17PSEUDOTIME | Rule: pseudobulk_trajectory (one job per trajectory)
-#            Upstream:   palantair_trajectory
+# Pipeline:  17PSEUDOTIME | Rule: pseudotime_pseudobulk (one job per trajectory)
+#            Upstream:   pseudotime_palantir
 #            Downstream: pseudotime_prep_tensorqtl (one job per Q value x bin)
 #
 # Purpose:   1. Load the pseudotime h5ad
@@ -352,7 +352,7 @@ log.info(f"\nPseudobulk summary:\n{summary_df.to_string(index=False)}")
 ##  8. Write sentinel file  ------------------------------------------------------------
 log.info("Writing sentinel file...")
 with open(sentinel_file, 'w') as f:
-    f.write("pseudobulk_trajectory completed\n")
+    f.write("pseudotime_pseudobulk completed\n")
     f.write(f"trajectory:  {trajectory}\n")
     f.write(f"timestamp:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     f.write(f"cells:       {adata.shape[0]:,}\n")

@@ -4,9 +4,9 @@
 #
 # --------------------------------------------------------------------------------------
 #
-# Pipeline:  17PSEUDOTIME | Rule: palantair_trajectory (one job per trajectory)
-#            Upstream:   subset_trajectory
-#            Downstream: pseudobulk_trajectory
+# Pipeline:  17PSEUDOTIME | Rule: pseudotime_palantir (one job per trajectory)
+#            Upstream:   pseudotime_subset
+#            Downstream: pseudotime_pseudobulk
 #
 # Purpose:   1. Load the trajectory subset (NPC + one Glu population)
 #            2. Validate inputs (Harmony PCA embedding, counts layer)

@@ -15,6 +15,7 @@ include: 'rules/08susie.smk'
 #include: 'rules/11twas.smk'
 #include: 'rules/11plotting.smk'
 #include: 'rules/12ctwas.smk'
+include: 'rules/17pseudotime.smk'
 
 rule all:
     input:
@@ -23,6 +24,8 @@ rule all:
 #        config["geno_pre_impute"]["geno_pre_report"]["html"],
 #        config["geno_post_impute"]["geno_post_report"]["html"]
 #        config["tensorQTL"]["tensorqtl_report"]["output"]
+        config["pseudotime"]["report"]["html"],
+        PT_Q4_EXPORT_TARGETS,
         config["susie"]["susie_report"]["html"],
 #        config["sldsr"]["ldsr_report"]["html"],
 #        config["smr"]["smr_report"]["html"],
