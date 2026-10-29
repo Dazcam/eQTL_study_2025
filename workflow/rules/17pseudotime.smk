@@ -152,6 +152,28 @@ rule pseudotime_tensorqtl_nom:
                --mode cis_nominal >> {log} 2>&1
             """
 
+rule pseudotime_tensorqtl_perm:
+    input:  genotypes  = config["tensorQTL"]["convert_genotypes"]["output"],
+            counts     = config["pseudotime"]["zip_bed"]["output"],
+            covariates = config["pseudotime"]["split_covariates"]["output"]
+    output: config["pseudotime"]["tensorqtl_perm"]["output"]
+    params: prefix_in  = config["tensorQTL"]["tensorqtl_perm"]["prefix_in"],
+            prefix_out = config["pseudotime"]["tensorqtl_perm"]["prefix_out"],
+            window     = config["tensorQTL"]["window"]
+    singularity: config["containers"]["tensorqtl"]
+    resources: threads = 4, mem_mb = 20000, time = "2:00:00"
+    threads: 4
+    log:    config["pseudotime"]["tensorqtl_perm"]["log"]
+    benchmark: config["pseudotime"]["tensorqtl_perm"]["benchmark"]
+    message: "tensorQTL permutation for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} expPC {wildcards.exp_pc}"
+    shell:
+            """
+            python3 -m tensorqtl {params.prefix_in} {input.counts} {params.prefix_out} \
+               --covariates {input.covariates} \
+               --window {params.window} \
+               --mode cis >> {log} 2>&1
+            """
+
 rule pseudotime_export_smr_twas_inputs:
     input:
         parquet_sentinel = lambda w: (
