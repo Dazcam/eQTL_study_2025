@@ -16,8 +16,9 @@ PT_PSEUDOBULK_CSVS = [
                       quantile_n=n, bin=range(1, n + 1), allow_missing=True)
 ]
 
-# Paper eQTL reference for the report: pseudotime bins (NPC-to-*) excluded, as in 05
-PT_PAPER_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
+# Reference cell types for the report's "Overlap with Full Paper" section:
+# all cell types except the pseudotime bins (NPC-to-*)
+PT_ORIG_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
 
 # Q4 bins exported to 05TENSORQTL as pseudo cell types for SuSiE, SMR and TWAS
 PT_Q4_EXPORT_TARGETS = expand(config["pseudotime"]["export"]["sentinel"],
@@ -243,8 +244,8 @@ rule pseudotime_report:
             exp_pcs             = ",".join(map(str, config["tensorQTL"]["exp_pcs"])),
             geno_pc             = PT_GENO_PC,
             window              = config["tensorQTL"]["window"],
-            paper_cell_types    = ",".join(PT_PAPER_CELL_TYPES),
-            paper_exp_pcs       = ",".join(str(config["exp_pc_map"][ct]) for ct in PT_PAPER_CELL_TYPES),
+            orig_cell_types     = ",".join(PT_ORIG_CELL_TYPES),
+            orig_exp_pcs        = ",".join(str(config["exp_pc_map"][ct]) for ct in PT_ORIG_CELL_TYPES),
             n_neighbors         = config["pseudotime"]["palantir"]["n_neighbors"],
             n_pcs               = config["pseudotime"]["palantir"]["n_pcs"],
             n_dcs               = config["pseudotime"]["palantir"]["n_dcs"],
@@ -269,8 +270,8 @@ rule pseudotime_report:
                 exp_pcs            = '{params.exp_pcs}',
                 geno_pc            = '{params.geno_pc}',
                 window             = '{params.window}',
-                paper_cell_types   = '{params.paper_cell_types}',
-                paper_exp_pcs      = '{params.paper_exp_pcs}',
+                orig_cell_types    = '{params.orig_cell_types}',
+                orig_exp_pcs       = '{params.orig_exp_pcs}',
                 n_neighbors        = '{params.n_neighbors}',
                 n_pcs              = '{params.n_pcs}',
                 n_dcs              = '{params.n_dcs}',
@@ -278,3 +279,4 @@ rule pseudotime_report:
                 root_gene          = '{params.root_gene}'
             ))" > {log} 2>&1
         """
+

@@ -18,8 +18,8 @@ params:
   exp_pcs: null
   geno_pc: null
   window: null
-  paper_cell_types: null
-  paper_exp_pcs: null
+  orig_cell_types: null
+  orig_exp_pcs: null
   n_neighbors: null
   n_pcs: null
   n_dcs: null
@@ -46,9 +46,9 @@ geno_pc      <- as.integer(params$geno_pc)
 window_kb    <- as.numeric(params$window) / 1000
 norm_method  <- "quantile"
 
-# Paper eQTL reference: every non-pseudotime cell type and its selected expression PCs
-paper_exppc_map <- setNames(as.integer(split_param(params$paper_exp_pcs)),
-                            split_param(params$paper_cell_types))
+# Original (non-pseudotime) cell types and their selected expression PCs
+orig_exppc_map <- setNames(as.integer(split_param(params$orig_exp_pcs)),
+                           split_param(params$orig_cell_types))
 
 bin_palette <- setNames(
   colorRampPalette(c("#FDE725", "#21908C", "#440154"))(6),
@@ -624,12 +624,12 @@ read_egenes_ct <- function(ct, exppc_map, perm_dir, geno_pc, norm_method = "quan
 # ── Build full paper eGene reference set — union of L1 and L2 ────────────────
 
 message("Loading L1 and L2 cell type eGenes...")
-egenes_paper <- map_dfr(names(paper_exppc_map), read_egenes_ct,
-                        exppc_map = paper_exppc_map,
-                        perm_dir  = cell_type_perm_dir,
-                        geno_pc   = geno_pc)
+egenes_orig <- map_dfr(names(orig_exppc_map), read_egenes_ct,
+                       exppc_map = orig_exppc_map,
+                       perm_dir  = cell_type_perm_dir,
+                       geno_pc   = geno_pc)
 
-paper_egene_set <- unique(egenes_paper$phenotype_id)
+paper_egene_set <- unique(egenes_orig$phenotype_id)
 message("Total unique eGenes in full paper (L1 + L2): ", length(paper_egene_set))
 
 # ── Build overlap table ───────────────────────────────────────────────────────
