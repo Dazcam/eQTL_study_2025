@@ -1,26 +1,35 @@
 configfile: "../config/config.yaml"
 
+# Pseudotime quantile schemes: Q4, Q5 and Q6 equal-cell-number bins per trajectory.
+# Single source for the pseudobulk script (params), its declared CSV outputs and the
+# report inputs below. The pseudobulk QC figure has one panel per Q value (3 panels).
+PT_Q_VALUES = [4, 5, 6]
+
+# Genotype PCs are fixed for pseudotime; same value as the tensorQTL pipeline
+PT_GENO_PC = config["tensorQTL"]["geno_pcs"]
+
+# Every pseudobulk CSV written per trajectory ({trajectory} left as a wildcard)
+PT_PSEUDOBULK_CSVS = [
+    csv
+    for n in PT_Q_VALUES
+    for csv in expand(config["pseudotime"]["pseudobulk"]["csv"],
+                      quantile_n=n, bin=range(1, n + 1), allow_missing=True)
+]
+
 def get_pseudotime_tensorqtl(wildcards=None):
     files = []
-    for n in [4, 5, 6]:
-        files.extend(
-            expand(
-                config["pseudotime"]["tensorqtl_perm"]["output"],
-                trajectory=config["trajectories"],
-                quantile_n=n,
-                bin=range(1, n + 1),
-                exp_pc=config["pseudotime"]["exp_pcs"]
+    for n in PT_Q_VALUES:
+        for step in ["tensorqtl_perm", "tensorqtl_nom"]:
+            files.extend(
+                expand(
+                    config["pseudotime"][step]["output"],
+                    trajectory=config["trajectories"],
+                    quantile_n=n,
+                    bin=range(1, n + 1),
+                    geno_pc=PT_GENO_PC,
+                    exp_pc=config["pseudotime"]["exp_pcs"]
+                )
             )
-        )
-        files.extend(
-            expand(
-                config["pseudotime"]["tensorqtl_nom"]["output"],
-                trajectory=config["trajectories"],
-                quantile_n=n,
-                bin=range(1, n + 1),
-                exp_pc=config["pseudotime"]["exp_pcs"]
-            )
-        )
     return files
 
 PT_Q4_EXPORT_TARGETS = [
@@ -72,7 +81,9 @@ rule palantair_trajectory:
 rule pseudobulk_trajectory:
     input:  h5ad     = config["pseudotime"]["palantair"]["h5ad"],
             geno     = config["pseudotime"]["pseudobulk"]["geno_sample_file"]
-    output: sentinel = config["pseudotime"]["pseudobulk"]["sentinel"]
+    output: sentinel = config["pseudotime"]["pseudobulk"]["sentinel"],
+            csvs     = PT_PSEUDOBULK_CSVS
+    params: q_values = PT_Q_VALUES
     conda:  config["pseudotime"]["env"]
     resources: threads = 2, mem_mb = 90000, time = "00:15:00"
     threads: 2
@@ -81,14 +92,15 @@ rule pseudobulk_trajectory:
     script: config["pseudotime"]["pseudobulk"]["script"]
 
 rule pseudotime_prep_tensorqtl:
-    input:  pseudobulk  = config["pseudotime"]["pseudobulk"]["sentinel"],
-            cov_file    = config["pseudotime"]["prep_tensorqtl"]["cov_file"],
+    input:  cov_file    = config["pseudotime"]["prep_tensorqtl"]["cov_file"],
             sex_file    = config["pseudotime"]["prep_tensorqtl"]["sex_file"],
-            gene_lookup = config["pseudotime"]["prep_tensorqtl"]["gene_lookup"]
+            gene_lookup = config["pseudotime"]["prep_tensorqtl"]["gene_lookup"],
+            pseudobulk  = config["pseudotime"]["pseudobulk"]["csv"]
     output: exp_out     = config["pseudotime"]["prep_tensorqtl"]["exp_out"],
-            cov_out     = config["pseudotime"]["prep_tensorqtl"]["cov_out"]
-    params: pseudoblk_dir = config["pseudotime"]["prep_tensorqtl"]["pseudoblk_dir"],
-            out_dir       = config["pseudotime"]["prep_tensorqtl"]["out_dir"]
+            cov_out     = config["pseudotime"]["prep_tensorqtl"]["cov_out"],
+            report_rds  = config["pseudotime"]["prep_tensorqtl"]["report_rds"]
+    params: cell_type   = "{trajectory}-Q{quantile_n}-Bin{bin}",
+            norm_method = "quantile"
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time = "2:00:00"
     log:    config["pseudotime"]["prep_tensorqtl"]["log"]
@@ -98,10 +110,11 @@ rule pseudotime_prep_tensorqtl:
 rule pseudotime_split_covariates:
     input:  config["pseudotime"]["split_covariates"]["input"]
     output: config["pseudotime"]["split_covariates"]["output"]
+    params: cell_type = "{trajectory}-Q{quantile_n}-Bin{bin}"
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time = "1:00:00"
     log:    config["pseudotime"]["split_covariates"]["log"]
-    message: "Splitting covariates for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} expPC {wildcards.exp_pc}"
+    message: "Splitting covariates for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} genPC {wildcards.geno_pc} expPC {wildcards.exp_pc}"
     script: config["pseudotime"]["split_covariates"]["script"]
 
 rule pseudotime_zip_bed:

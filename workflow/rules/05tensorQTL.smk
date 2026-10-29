@@ -8,15 +8,14 @@ TQTL_WILDCARDS = dict(
 )
 
 rule prep_tensorQTL_input:
-    input:  cov_file = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
-            sex_file = config["tensorQTL"]["prep_tensorQTL_input"]["sex_file"],
-            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"] 
-    output: cov_out = config["tensorQTL"]["prep_tensorQTL_input"]["cov_out"],
-            exp_out = config["tensorQTL"]["prep_tensorQTL_input"]["exp_out"]
-    params: pseudoblk_dir = config["tensorQTL"]["prep_tensorQTL_input"]["pseudoblk_dir"],
-            report_dir = config["tensorQTL"]["prep_tensorQTL_input"]["report_dir"],
-            out_dir = config["tensorQTL"]["prep_tensorQTL_input"]["out_dir"],
-            batch_var = config["tensorQTL"]["prep_tensorQTL_input"]["batch_var"],
+    input:  cov_file    = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
+            sex_file    = config["tensorQTL"]["prep_tensorQTL_input"]["sex_file"],
+            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"],
+            pseudobulk  = config["tensorQTL"]["prep_tensorQTL_input"]["pseudobulk"]
+    output: cov_out     = config["tensorQTL"]["prep_tensorQTL_input"]["cov_out"],
+            exp_out     = config["tensorQTL"]["prep_tensorQTL_input"]["exp_out"],
+            report_rds  = config["tensorQTL"]["prep_tensorQTL_input"]["report_rds"]
+    params: cell_type   = "{cell_type}",
             norm_method = "{norm_method}"
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time="5:00:00"
@@ -50,6 +49,7 @@ rule convert_genotypes:
 rule split_covariates:
     input:  rules.prep_tensorQTL_input.output.cov_out
     output:  config["tensorQTL"]["split_covariates"]["output"],
+    params:  cell_type = "{cell_type}"
     singularity: config["containers"]["R"]
     resources: threads = 1, mem_mb = 6000, time="5:00:00"
     message: "Divide covariate file to test different PC thresholds in tensorQTL for norm: {wildcards.norm_method}"
@@ -124,7 +124,7 @@ rule tensorqtl_independent:
 
 rule tensorqtl_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
-    input:  perm  = expand(rules.tensorqtl_perm.output, expand(rules.tensorqtl_perm.output, **TQTL_WILDCARDS), 
+    input:  perm  = expand(rules.tensorqtl_perm.output, **TQTL_WILDCARDS),
             indep = expand(rules.tensorqtl_independent.output, **TQTL_WILDCARDS),
             rmd_script = config["tensorQTL"]["tensorqtl_report"]["rmd_script"]
     output: config["tensorQTL"]["tensorqtl_report"]["output"]
@@ -141,4 +141,3 @@ rule tensorqtl_report:
             output_file = '{params.output_file}', \
             params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
-

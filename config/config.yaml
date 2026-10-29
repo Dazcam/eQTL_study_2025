@@ -498,6 +498,7 @@ geno_post_impute:
 # ------------  TENSORQTL (pipeline 5)  ----------------
 
 tensorQTL:
+
   tool:         tensorqtl
   num_chunks:   100
   perm_min:     1000
@@ -516,10 +517,9 @@ tensorQTL:
     gene_lookup:   ../resources/sheets/gene_lookup_hg38.tsv
     exp_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed
     cov_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_base_covariates.txt
-    pseudoblk_dir: ../results/02SCANPY/pseudobulk/
-    out_dir:       ../results/05TENSORQTL/prep_input/
-    report_dir:    reports/05TENSORQTL/
-    log:           ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
+    pseudobulk:    ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv
+    report_rds:    reports/05TENSORQTL/gene_exp_matrix_report_{cell_type}_{norm_method}.rds
+    log:          ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
 
   zip_pblk_cnts:
     output:        ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed.gz
@@ -551,7 +551,7 @@ tensorQTL:
     output:     ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent.cis_independent_qtl.txt.gz
     prefix_out: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent
     prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log   
+    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log
 
   tensorqtl_report:
     rmd_script:  scripts/tensorQTL_report.Rmd
@@ -560,6 +560,132 @@ tensorQTL:
     bmark_dir:   ../reports/benchmarks/
     output_file: ../reports/05TENSORQTL/tensorqtl_report.html
     log:         ../results/00LOG/05TENSORQTL/tensorqtl_report.log
+
+# ------  Pseudotime  -------
+
+trajectories:
+  - 'NPC-to-Glu-DL'
+  - 'NPC-to-Glu-UL'
+
+pseudotime:
+  env: ../envs/pseudotime.yaml
+  subset:
+    input_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    h5ad:       ../results/17PSEUDOTIME/{trajectory}/adata_subset.h5ad
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/subset.log
+    script:     ../scripts/pseudotime_subset.py
+
+  palantir_all:
+    input_h5ad:    ../results/02SCANPY/adata_clusters_v3.h5ad
+    output_h5ad:   ../results/17PSEUDOTIME/palantir_all/adata_palantir_all.h5ad
+    log:           ../results/00LOG/17PSEUDOTIME/palantir_all.log
+    script:        ../scripts/pseudotime_palantir_all.py
+    exclude_types: ['MG', 'GABA', 'Endo-Peri']
+    root_gene:     'PAX6'
+    terminals:
+      Glu-DL: 'TLE4'
+      Glu-UL: 'SATB2'
+      OPC:    'PDGFRA'
+    marker_genes:  ['PAX6', 'TLE4', 'FEZF2', 'BCL11B', 'FOXP2', 'SATB2', 'RORB', 'CUX2', 'PDGFRA']
+    n_neighbors:   10
+    n_pcs:         30
+    n_dcs:         15
+    num_waypoints: 1000
+
+
+  palantair:
+    h5ad:          ../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad
+    log:           ../results/00LOG/17PSEUDOTIME/{trajectory}/pseudotime.log
+    script:        ../scripts/pseudotime_trajectory.py
+    n_neighbors:   10
+    n_pcs:         30
+    n_dcs:         15
+    num_waypoints: 1000
+    root_gene:     "PAX6"
+
+  pseudobulk:
+    sentinel:         ../results/17PSEUDOTIME/{trajectory}/pseudobulk/pseudobulk_complete.txt
+    csv:              ../results/17PSEUDOTIME/{trajectory}/pseudobulk/Q{quantile_n}/Q{quantile_n}_bin{bin}_{trajectory}_pseudobulk.csv
+    log:             ../results/00LOG/17PSEUDOTIME/{trajectory}/pseudobulk.log
+    script:           ../scripts/pseudotime_pseudobulk.py
+    geno_sample_file: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+
+  prep_tensorqtl:
+    exp_out:      ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed
+    cov_out:      ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_base_covariates.txt
+    report_rds:   reports/17PSEUDOTIME/prep_input/gene_exp_matrix_report_{trajectory}_Q{quantile_n}_bin{bin}_quantile.rds
+    log:          ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.log
+    script:       ../scripts/tensorqtl_prep_input_files.R
+    cov_file:     ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    sex_file:     reports/02SCANPY/02_metadata_per_sample.tsv
+    gene_lookup:  ../resources/sheets/gene_lookup_hg38.tsv
+
+  split_covariates:
+    input:  ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_base_covariates.txt
+    output: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.txt
+    log:    ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.log
+    script: ../scripts/tensorqtl_split_covariates.R
+
+  exp_pcs: [10, 20, 30, 40, 50]
+
+  zip_bed:
+    input:  ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed
+    output: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed.gz
+    log:    ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_zip_bed.log
+
+  tensorqtl_nom:
+    output:     ../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom.cis_qtl_pairs.1.parquet
+    prefix_out: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_nom.log
+    benchmark:  ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_nom.benchmark
+
+  tensorqtl_perm:
+    output:     ../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm.cis_qtl.txt.gz
+    prefix_out: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_perm.log
+    benchmark:  ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_perm.benchmark
+
+  bin_exp_pc_map:
+    NPC-to-Glu-DL:
+      1: 30
+      2: 30
+      3: 30
+      4: 40
+    NPC-to-Glu-UL:
+      1: 30
+      2: 40
+      3: 50
+      4: 50
+
+  cell_type_exp_pc_map:
+    NPC-to-Glu-DL: 40
+    NPC-to-Glu-UL: 50
+
+  extract_dosages:
+    output:    ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dosage_subset.tsv
+    log:       ../results/00LOG/17PSEUDOTIME/{trajectory}/extract_dosages.log
+    pvar_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+
+  dynamic_eqtl:
+    candidates_tsv: ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dynamic_eqtl_candidates.tsv
+    results_rds:  ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dynamic_eqtl_results.rds
+    results_tsv:  ../results/17PSEUDOTIME/{trajectory}/dynamic_eqtl/dynamic_eqtl_significant.tsv
+    log:          ../results/00LOG/17PSEUDOTIME/{trajectory}/dynamic_eqtl.log
+    script:       ../scripts/pseudotime_dynamic_eqtl.R
+    dosage_file:  ../results/08SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz
+    dosage_index: ../results/08SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz.tbi
+    min_bins:     3
+    fdr_threshold: 0.05
+    quantile_n:   6
+    exp_pc:       30
+
+  report:
+    html:                reports/17PSEUDOTIME/pseudotime_report.html
+    output_file:         ../reports/17PSEUDOTIME/pseudotime_report.html
+    rmd_script:          scripts/pseudotime_report.Rmd
+    in_dir:              ../../results/17PSEUDOTIME/
+    cell_type_perm_dir:  ../../results/05TENSORQTL/tensorqtl_perm/
+    log:                 ../results/00LOG/17PSEUDOTIME/report.log
 
 # --------  QTL REPLICATION (Pipeline 6)  ----------
 
