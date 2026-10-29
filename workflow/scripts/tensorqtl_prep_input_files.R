@@ -75,10 +75,10 @@ tibble(
   value    = c(cov_file, sex_file, gene_lookup, pseudoblk_in, cov_out,
                exp_out, report_rds, cell_type, norm_method)) |>
   knitr::kable(format = "simple", align = "l") |>
-  print()
+  cat(sep = "\n")
 message("\n============================\n")
 
-## Load data  -------------------------------------------------------------------------
+##  Load data  ------------------------------------------------------------------------
 # Genotype covariate file generate in calc_genotype_pcs rule
 genotype_cov_tbl <- read_delim(cov_file, delim = ' ', 
                                col_names = c('sample', 'sample2', paste0('genPC', seq(1,10,1)))) |>
@@ -123,7 +123,7 @@ message("Sample in mrgd covariate tbl: ", nrow(cov_tbl))
 
 message("\n============================\n")
 
-## Generate cell-specific TMM normalised counts and covariates for QTL analyses  ------
+##  Normalise counts and build covariates  --------------------------------------------
 report_list <- list()
 #for (cell_type in cell_types) { # Only need loop for local testing
 
@@ -217,7 +217,7 @@ write.table(cov_matrix,
             append = FALSE)
 
 
-## Prepare gene expression data -----
+##  Prepare gene expression BED  ------------------------------------------------------
 
 # Gene expression data
 # Add Ensembl IDs using BiomaRt Gene lookup; some genes are symbol, so are emsembl ID
@@ -300,6 +300,8 @@ final_report <- bind_rows(report_list) |>
   print()
 
 write_rds(final_report, report_rds)
+
+message("Done.")
 
 
 #--------------------------------------------------------------------------------------

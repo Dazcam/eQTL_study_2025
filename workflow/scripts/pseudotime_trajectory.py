@@ -1,31 +1,36 @@
 # --------------------------------------------------------------------------------------
 #
-#    pseudotime_trajectory.py
+#    Palantir pseudotime for one neurogenic trajectory
 #
-#    Palantir pseudotime analysis for a single neurogenic trajectory subset
-#    of the prenatal human cerebral cortex snRNA-seq atlas.
+# --------------------------------------------------------------------------------------
 #
-#    Pipeline:
-#      1. Load trajectory-specific subset h5ad (NPC + one Glu population)
-#      2. Recompute neighbour graph on Harmony PCA embedding
-#      3. Palantir diffusion map and multi-scale space
-#      4. Root cell selection — max root_gene expression in NPC, centroid fallback
-#      5. Terminal cell selection — max marker gene expression in Glu population
-#      6. Run Palantir pseudotime with explicit root and terminal
-#      7. Recompute UMAP on subset
-#      8. Six-panel figure: cell type, pseudotime, PCW, PAX6, terminal marker, violin
-#      9. Marker gene feature plots + terminal cell overlay figure
-#      10. Export per-cell summary CSV
-#      11. Save annotated h5ad
+# Pipeline:  17PSEUDOTIME | Rule: palantair_trajectory (one job per trajectory)
+#            Upstream:   subset_trajectory
+#            Downstream: pseudobulk_trajectory
 #
-#    Terminal marker genes are hardcoded near RANDOM_SEED and can be modified
-#    without touching the rest of the script.
+# Purpose:   1. Load the trajectory subset (NPC + one Glu population)
+#            2. Validate inputs (Harmony PCA embedding, counts layer)
+#            3. Recompute the neighbour graph on the Harmony PCA embedding
+#            4. Palantir diffusion map and multi-scale space
+#            5. Root cell: max root_gene expression in the root type, centroid fallback
+#            6. Terminal cell: max TERMINAL_MARKERS gene in the terminal type, same
+#               fallback
+#            7. Run Palantir pseudotime with the explicit root and terminal cells
+#            8. Recompute UMAP on the subset
+#            9. Six-panel figure (cell type, pseudotime, PCW, PAX6, terminal marker,
+#               violin); 9b. marker gene feature plots + terminal overlay panel
+#            10. Export per-cell summary CSV
+#            11. Save annotated h5ad
 #
-#    The Harmony PCA embedding from the full atlas is retained to preserve
-#    batch correction. The neighbour graph is recomputed on the subset using
-#    a configurable number of PCs appropriate for the two-population subset.
+# Inputs:    h5ad             Trajectory subset (adata_subset.h5ad)
 #
-#    Usage: called via Snakemake rule pseudotime_trajectory
+# Outputs:   h5ad             Annotated h5ad with palantir_pseudotime / _entropy
+#            (undeclared, written next to the h5ad)
+#            pseudotime_umap.png, pseudotime_markers.png, pseudotime_summary.csv
+#
+# Notes:     TERMINAL_MARKERS, MARKER_GENES and the overlay genes are set below and
+#            can be changed without touching the rest of the script. The Harmony
+#            embedding from the full atlas is reused to keep the batch correction.
 #
 # --------------------------------------------------------------------------------------
 
@@ -75,24 +80,17 @@ MARKER_GENES = [
 TERMINAL_OVERLAY_GENES   = ['TLE4', 'FEZF2', 'BCL11B', 'FOXP2', 'HS3ST4']
 TERMINAL_OVERLAY_COLOURS = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#fce205']
 
-# ── Logging ───────────────────────────────────────────────────────────────────
-
-log_file = snakemake.log[0]
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger()
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
-logger.addHandler(handler)
+## Set up logging for Snakemake
+logging.basicConfig(filename=snakemake.log[0], level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger()
+sys.excepthook = lambda *exc: log.error("Uncaught exception", exc_info=exc)
 
 sc.settings.verbosity = 1
 
-# ── Parameters ────────────────────────────────────────────────────────────────
+log.info("Running Palantir pseudotime ...")
 
+##  Variables  -------------------------------------------------------------------------
 input_h5ad    = str(snakemake.input.h5ad)
 output_h5ad   = str(snakemake.output.h5ad)
 output_dir    = Path(output_h5ad).parent
@@ -107,18 +105,29 @@ output_figure  = str(output_dir / "pseudotime_umap.png")
 output_markers = str(output_dir / "pseudotime_markers.png")
 output_csv     = str(output_dir / "pseudotime_summary.csv")
 
-logger.info(f"Output directory:  {output_dir}")
-logger.info(f"n_neighbors:       {n_neighbors}")
-logger.info(f"n_pcs:             {n_pcs}")
-logger.info(f"n_dcs:             {n_dcs}")
-logger.info(f"num_waypoints:     {num_waypoints}")
-logger.info(f"root_gene:         {root_gene}")
+variables = {
+    "input_h5ad":     input_h5ad,
+    "output_h5ad":    output_h5ad,
+    "output_figure":  output_figure,
+    "output_markers": output_markers,
+    "output_csv":     output_csv,
+    "n_neighbors":    n_neighbors,
+    "n_pcs":          n_pcs,
+    "n_dcs":          n_dcs,
+    "num_waypoints":  num_waypoints,
+    "root_gene":      root_gene,
+}
+width = max(map(len, variables))
+log.info("Variables")
+log.info("============================")
+for name, value in variables.items():
+    log.info(f"{name:<{width}}  {value}")
+log.info("============================")
 
-# ── 1. Load data ──────────────────────────────────────────────────────────────
-
-logger.info(f"Loading subset adata from: {input_h5ad}")
+##  1. Load data  ----------------------------------------------------------------------
+log.info(f"Loading subset adata from: {input_h5ad}")
 adata = ad.read_h5ad(input_h5ad)
-logger.info(f"Loaded: {adata.shape[0]:,} cells x {adata.shape[1]:,} genes")
+log.info(f"Loaded: {adata.shape[0]:,} cells x {adata.shape[1]:,} genes")
 
 # Read trajectory metadata stored by subset script
 traj       = adata.uns['trajectory']
@@ -127,35 +136,34 @@ root_type  = traj['root_type']
 term_type  = traj['terminal_type']
 cell_types = traj['cell_types']
 
-logger.info(f"Trajectory:    {trajectory}")
-logger.info(f"Root:          {root_type}")
-logger.info(f"Terminal:      {term_type}")
+log.info(f"Trajectory:    {trajectory}")
+log.info(f"Root:          {root_type}")
+log.info(f"Terminal:      {term_type}")
 
 cell_dist = adata.obs['cell_type'].value_counts().sort_index()
-logger.info(f"\nCell type distribution:\n{cell_dist.to_string()}")
+log.info(f"\nCell type distribution:\n{cell_dist.to_string()}")
 
-# ── 2. Validate inputs ────────────────────────────────────────────────────────
-
+##  2. Validate inputs  ----------------------------------------------------------------
 if 'X_pca_harmony' not in adata.obsm:
     raise KeyError(
         "adata.obsm['X_pca_harmony'] not found. "
         "Harmony PCA embedding is required for neighbour graph recomputation."
     )
-logger.info(f"X_pca_harmony shape: {adata.obsm['X_pca_harmony'].shape}")
+log.info(f"X_pca_harmony shape: {adata.obsm['X_pca_harmony'].shape}")
 
 if 'counts' not in adata.layers:
     raise KeyError(
         "adata.layers['counts'] not found — required for downstream pseudobulk."
     )
-logger.info("counts layer present")
+log.info("counts layer present")
 
-# ── 3. Recompute neighbour graph ──────────────────────────────────────────────
+##  3. Recompute neighbour graph  ------------------------------------------------------
 #
 #  The stored graph from the full atlas has edges to all 7 populations.
 #  Recompute on the subset using Harmony PCA to preserve batch correction,
 #  with a configurable n_pcs appropriate for the two-population subset.
 
-logger.info(f"Recomputing neighbour graph (n_neighbors={n_neighbors}, n_pcs={n_pcs})...")
+log.info(f"Recomputing neighbour graph (n_neighbors={n_neighbors}, n_pcs={n_pcs})...")
 sc.pp.neighbors(
     adata,
     n_neighbors  = n_neighbors,
@@ -163,9 +171,9 @@ sc.pp.neighbors(
     use_rep      = 'X_pca_harmony',
     random_state = RANDOM_SEED
 )
-logger.info("Neighbour graph recomputed.")
+log.info("Neighbour graph recomputed.")
 
-# ── 4. Palantir diffusion map ─────────────────────────────────────────────────
+##  4. Palantir diffusion map  ---------------------------------------------------------
 #
 #  Palantir computes multi-scale diffusion distances using an adaptive Gaussian
 #  kernel. This is more robust than Scanpy DPT for trajectories with weak
@@ -175,7 +183,7 @@ logger.info("Neighbour graph recomputed.")
 #  Input: Harmony PCA as a DataFrame — Palantir requires a DataFrame with
 #  cell barcodes as the index.
 
-logger.info(f"Computing Palantir diffusion map (n_components={n_dcs})...")
+log.info(f"Computing Palantir diffusion map (n_components={n_dcs})...")
 pca_df = pd.DataFrame(
     adata.obsm['X_pca_harmony'],
     index=adata.obs_names
@@ -187,15 +195,15 @@ dm_res = palantir.utils.run_diffusion_maps(
     seed         = RANDOM_SEED
 )
 
-logger.info("Computing multi-scale space...")
+log.info("Computing multi-scale space...")
 ms_data = palantir.utils.determine_multiscale_space(dm_res)
 
 # Store diffusion components in adata for reference
 adata.obsm['X_palantir_dm'] = dm_res['EigenVectors'].values
 adata.obsm['X_palantir_ms'] = ms_data.values
-logger.info(f"Diffusion map shape: {adata.obsm['X_palantir_dm'].shape}")
+log.info(f"Diffusion map shape: {adata.obsm['X_palantir_dm'].shape}")
 
-# ── 5. Root cell selection ────────────────────────────────────────────────────
+##  5. Root cell selection  ------------------------------------------------------------
 #
 #  Primary: cell with highest root_gene expression within root cell type.
 #  PAX6 is highest in apical radial glia — the earliest, most uncommitted
@@ -205,10 +213,10 @@ logger.info(f"Diffusion map shape: {adata.obsm['X_palantir_dm'].shape}")
 
 root_cell_id, root_method = select_anchor_cell(adata, root_type, root_gene)
 
-logger.info(f"Root cell:             {root_cell_id}")
-logger.info(f"Root selection method: {root_method}")
+log.info(f"Root cell:             {root_cell_id}")
+log.info(f"Root selection method: {root_method}")
 
-# ── 6. Terminal cell selection ────────────────────────────────────────────────
+##  6. Terminal cell selection  --------------------------------------------------------
 #
 #  Select the cell with highest terminal marker gene expression within the
 #  terminal cell type. Mirrors the root cell selection strategy — deterministic
@@ -225,12 +233,11 @@ if terminal_gene is None:
 
 terminal_cell_id, terminal_method = select_anchor_cell(adata, term_type, terminal_gene)
 
-logger.info(f"Terminal cell:             {terminal_cell_id}")
-logger.info(f"Terminal selection method: {terminal_method}")
+log.info(f"Terminal cell:             {terminal_cell_id}")
+log.info(f"Terminal selection method: {terminal_method}")
 
-# ── 7. Run Palantir pseudotime ────────────────────────────────────────────────
-
-logger.info(f"Running Palantir (num_waypoints={num_waypoints})...")
+##  7. Run Palantir pseudotime  --------------------------------------------------------
+log.info(f"Running Palantir (num_waypoints={num_waypoints})...")
 try:
     pr_res = palantir.core.run_palantir(
         ms_data,
@@ -246,12 +253,12 @@ try:
     pt_summary = adata.obs.groupby('cell_type')['palantir_pseudotime'].agg(
         ['mean', 'median', 'std', 'min', 'max']
     ).round(4)
-    logger.info(f"\nPalantir pseudotime summary by cell type:\n{pt_summary.to_string()}")
+    log.info(f"\nPalantir pseudotime summary by cell type:\n{pt_summary.to_string()}")
 
     palantir_success = True
 
 except Exception as e:
-    logger.error(f"Palantir run failed: {e}")
+    log.error(f"Palantir run failed: {e}")
     palantir_success = False
 
 if not palantir_success:
@@ -259,21 +266,19 @@ if not palantir_success:
         "Palantir pseudotime computation failed — see log for details."
     )
 
-# ── 8. Recompute UMAP on subset ───────────────────────────────────────────────
-
-logger.info("Computing UMAP on subset...")
+##  8. Recompute UMAP on subset  -------------------------------------------------------
+log.info("Computing UMAP on subset...")
 sc.tl.umap(adata, random_state=RANDOM_SEED)
-logger.info("UMAP computed.")
+log.info("UMAP computed.")
 
-# ── Common plot variables ─────────────────────────────────────────────────────
-
+##  Common plot variables  -------------------------------------------------------------
 palette  = {ct: custom_palette[ct] for ct in cell_types if ct in custom_palette}
 umap1    = adata.obsm['X_umap'][:, 0]
 umap2    = adata.obsm['X_umap'][:, 1]
 pt_vals  = adata.obs['palantir_pseudotime'].values
 pt_size  = max(0.2, 20000 / adata.n_obs)
 
-# ── 9. Six-panel figure ───────────────────────────────────────────────────────
+##  9. Six-panel figure  ---------------------------------------------------------------
 #
 #  A: cell type                D: PAX6 expression
 #  B: Palantir pseudotime      E: terminal marker gene (TLE4 or SATB2)
@@ -282,7 +287,7 @@ pt_size  = max(0.2, 20000 / adata.n_obs)
 #  All UMAP panels use direct matplotlib scatter to avoid scanpy rendering
 #  issues at high cell counts.
 
-logger.info("Generating six-panel figure...")
+log.info("Generating six-panel figure...")
 
 fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 axes = axes.flatten()
@@ -338,7 +343,7 @@ for ax, gene in zip(axes[3:5], plot_genes):
                 ha='center', va='center',
                 transform=ax.transAxes, fontsize=11)
         ax.axis('off')
-        logger.warning(f"{gene} not found in adata.var_names — panel left blank")
+        log.warning(f"{gene} not found in adata.var_names — panel left blank")
     ax.set_title(gene, fontsize=13, fontweight='bold')
     ax.axis('off')
 
@@ -372,9 +377,9 @@ fig.suptitle(
 fig.tight_layout()
 fig.savefig(output_figure, dpi=200, bbox_inches='tight')
 plt.close(fig)
-logger.info(f"Figure saved: {output_figure}")
+log.info(f"Figure saved: {output_figure}")
 
-# ── 9b. Marker gene feature plots ────────────────────────────────────────────
+##  9b. Marker gene feature plots  -----------------------------------------------------
 #
 #  6x5 grid of UMAPs coloured by normalised expression for each gene in
 #  MARKER_GENES. Genes absent from adata.var_names shown as blank panels.
@@ -384,7 +389,7 @@ logger.info(f"Figure saved: {output_figure}")
 #  cell positions marked. Shows where each gene's most committed cell sits
 #  on the UMAP — purely for visualisation, does not affect Palantir.
 
-logger.info("Generating marker gene feature plots...")
+log.info("Generating marker gene feature plots...")
 
 n_genes  = len(MARKER_GENES)
 n_cols   = 6
@@ -413,7 +418,7 @@ for i, gene in enumerate(MARKER_GENES):
                 ha='center', va='center',
                 transform=ax.transAxes, fontsize=10, color='grey')
         ax.set_title(gene, fontsize=10, fontweight='bold')
-        logger.warning(f"Marker gene not found in adata.var_names: {gene}")
+        log.warning(f"Marker gene not found in adata.var_names: {gene}")
     ax.axis('off')
 
 # Terminal overlay panel — cell type background + max-expression cell positions
@@ -430,7 +435,7 @@ for ct in adata.obs['cell_type'].cat.categories:
 for gene, colour in zip(TERMINAL_OVERLAY_GENES, TERMINAL_OVERLAY_COLOURS):
     expr = get_gene_expr(adata, gene)
     if expr is None:
-        logger.warning(f"Terminal overlay gene not found: {gene}")
+        log.warning(f"Terminal overlay gene not found: {gene}")
         continue
     max_idx   = np.argmax(expr)
     max_u1    = umap1[max_idx]
@@ -464,11 +469,10 @@ fig.suptitle(
 fig.tight_layout()
 fig.savefig(output_markers, dpi=200, bbox_inches='tight')
 plt.close(fig)
-logger.info(f"Marker figure saved: {output_markers}")
+log.info(f"Marker figure saved: {output_markers}")
 
-# ── 10. Export summary CSV ────────────────────────────────────────────────────
-
-logger.info("Exporting pseudotime summary CSV...")
+##  10. Export summary CSV  ------------------------------------------------------------
+log.info("Exporting pseudotime summary CSV...")
 summary_cols = [
     'cell_type', 'leiden_harmony_0.2', 'sample', 'PCW',
     'palantir_pseudotime', 'palantir_entropy'
@@ -476,10 +480,9 @@ summary_cols = [
 summary_df = adata.obs[summary_cols].copy()
 summary_df.index.name = 'cell_id'
 summary_df.to_csv(output_csv)
-logger.info(f"Summary CSV written: {output_csv} ({summary_df.shape})")
+log.info(f"Summary CSV written: {output_csv} ({summary_df.shape})")
 
-# ── 11. Save annotated h5ad ───────────────────────────────────────────────────
-
+##  11. Save annotated h5ad  -----------------------------------------------------------
 adata.uns['pseudotime_params'] = {
     'trajectory'      : trajectory,
     'root_type'       : root_type,
@@ -497,6 +500,9 @@ adata.uns['pseudotime_params'] = {
     'random_seed'     : RANDOM_SEED,
 }
 
-logger.info(f"Writing annotated adata to: {output_h5ad}")
+log.info(f"Writing annotated adata to: {output_h5ad}")
 adata.write_h5ad(output_h5ad)
-logger.info("Done.")
+log.info("Done.")
+
+# --------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------

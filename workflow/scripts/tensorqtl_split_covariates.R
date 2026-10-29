@@ -1,5 +1,4 @@
 #--------------------------------------------------------------------------------------
-
 #
 #    Split covariates for tensorQTL
 #
@@ -24,8 +23,6 @@
 #            script serves both pipelines; geno_pc and exp_pc are wildcards in both.
 #
 #--------------------------------------------------------------------------------------
-
-## Info  ------------------------------------------------------------------------------
 
 ## Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -52,12 +49,13 @@ geno_pc <- snakemake@wildcards[["geno_pc"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 
 # Make a tibble showing what each variable is set to
+message("\nVariables")
 message("============================")
 tibble(
   variable = c("cov_input", "cov_output", "cell_type", "geno_pc", "exp_pc"),
   value    = c(cov_input, cov_output, cell_type, geno_pc, exp_pc)) |>
   knitr::kable(format = "simple", align = "l") |>
-  print()
+  cat(sep = "\n")
 message("============================\n")
 
 # Pull out genotype and expression PC covariate combinations
