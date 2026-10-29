@@ -137,7 +137,8 @@ jang_l1_types:
 
 eqtl_fdr: 0.05
 
-susie_window: 1000000
+window: 500000
+
 susie_batches: 25
 write_full_susie: TRUE
 
@@ -737,6 +738,7 @@ susie:
     in_dir: ../../results/08SUSIE/susie/
     gene_meta_dir: ../../results/08SUSIE/susie_input/
     gene_lookup: ../../resources/sheets/gene_lookup_hg38.tsv
+    bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/08SUSIE/08susie_report.log
 
 # ------------  SLDSR (Pipeline 9)  ----------------

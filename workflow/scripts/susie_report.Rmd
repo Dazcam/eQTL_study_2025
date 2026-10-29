@@ -2,7 +2,7 @@
 title: "SuSiE report"
 author: "Darren Cameron"
 date: "`r Sys.Date()`"
-output:   
+output:
   html_document:
     df_print: paged
 params:
@@ -10,20 +10,28 @@ params:
   in_dir: null
   gene_meta_dir: null
   gene_lookup: null
+  bmark_dir: null
+  cis_window: null
+  n_batches: null
+  eqtl_fdr: null
 ---
 
 ```{r setup, include=FALSE}
 library(tidyverse)
-library(rmarkdown)
 library(gt)
 library(scales)
-#cell_types <- c("Endo-Peri", "ExN-2", "InN", "OPC", "ExN-1", "InN", "MG", "RG")
-#in_dir <- '~/Desktop/test/susie_test/'
-#gene_meta_dir <- '~/Desktop/test/susie_test/gene_meta/'
-#gene_lookup <- '~/Desktop/test/susie_test/gene_lookup_hg38.tsv'
+library(cowplot)
+
 in_dir <- params$in_dir
-cell_types <- params$cell_types
+cell_types <- strsplit(params$cell_types, ",")[[1]]
 gene_meta_dir <- params$gene_meta_dir
+
+# High-purity credible set variants per cell type
+susie_lst <- map(cell_types, function(cell_type) {
+  read_tsv(paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz'),
+           show_col_types = FALSE)
+}) |>
+  set_names(cell_types)
 
 # Gene symbol lookup (used to add a Gene Symbol column to credible set tables)
 gene_lookup <- read_tsv(params$gene_lookup, show_col_types = FALSE) |>
@@ -39,14 +47,34 @@ We used [susieR](https://stephenslab.github.io/susieR/index.html) for finemappin
 
 ***
 
-1. `get_sig_eGenes`: Get sig. eGenes per cell type from TensorQTL perm output
-2. `prep_susie_gene_meta`: Create gene metadata file per cell type for SuSiE
-3. `vcf_to_dosage`: Generate a allele dosage file from genotypes VCF for SuSiE
-4. `prep_susie_input`: Extract genotype, expression, and covariate data per cell type for SuSiE fine-mapping
-5. `run_susie`: Run SuSiE fine-mapping per cell type
-6. `merge_susie`: Merge SuSiE fine-mapping output into a single file per cell type
-7. `sort_susie`: Sort SuSiE fine-mapping output
-8. `susie_report`: Summarise SuSiE results
+1. `prep_susie_gene_meta`: Get the TSS of each gene from Ensembl (biomaRt) per cell type
+2. `vcf_to_dosage`: Generate an allele dosage file from the genotype VCF
+3. `prep_susie_input`: Prepare expression, covariate and sample files per cell type
+4. `run_susie`: Fine-map eGenes (tensorQTL qval < FDR) per cell type, in batches of genes
+5. `merge_susie`: Merge high-purity credible sets across batches per cell type
+6. `sort_susie`: Sort credible sets by chromosome and position
+7. `susie_report`: Summarise SuSiE results
+
+```{r settings_tbl, echo = FALSE}
+tibble(
+  setting = c("Cis window (either side of TSS)", "Gene batches per cell type", "eGene FDR (tensorQTL qval)"),
+  value   = c(paste(format(as.numeric(params$cis_window), big.mark = ",", scientific = FALSE), "bp"),
+              as.character(params$n_batches), as.character(params$eqtl_fdr))
+) |>
+  gt() |>
+  tab_header(title = "Settings") |>
+  cols_label(setting = "Setting", value = "Value") |>
+  tab_options(
+    table.width = pct(60),
+    table.font.size = 12,
+    data_row.padding = px(5)
+  )
+```
+
+Fixed in `susie_run.R`: L = 10 effects, 95% credible sets, scaled prior variance 0.1,
+purity filter min |r| ≥ 0.5, credible sets sharing a variant with an earlier set for the
+same gene removed, random seed 1 (SuSiE estimates purity from a sample of 100 variants
+for larger credible sets).
 
 ***
 
@@ -57,14 +85,12 @@ We used [susieR](https://stephenslab.github.io/susieR/index.html) for finemappin
 
 ```{r susie_summary_tbl, echo = FALSE, message=FALSE}
 susie_summary_tbl <- map_dfr(cell_types, function(cell_type) {
-  
-  file_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
-  susie_tbl <- read_tsv(file_path, show_col_types = FALSE)
-  
+
+  susie_tbl <- susie_lst[[cell_type]]
+
   cs_tbl <- susie_tbl[!duplicated(susie_tbl$cs_id), ] |>
-    select(cs_id, cs_size, finemapped_region, phenotype_id) |>
-    arrange(desc(cs_size))
-  
+    select(cs_id, cs_size, finemapped_region, phenotype_id)
+
   tibble(
     cell_type = cell_type,
     uniq_cs = n_distinct(susie_tbl$cs_id),
@@ -90,7 +116,7 @@ gt_tbl <- gt(susie_summary_tbl) |>
       one_snp_cs = "Single SNP CS",
       two_snp_cs = "Two SNP CS"
     )
-  
+
 # Render gt table
 gt_tbl
 ```
@@ -105,13 +131,11 @@ gt_tbl
 cs_size_plts <- list()
 
 for (cell_type in cell_types) {
-  file_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
-  susie_tbl <- read_tsv(file_path, show_col_types = FALSE)
+  susie_tbl <- susie_lst[[cell_type]]
 
   cs_tbl <- susie_tbl[!duplicated(susie_tbl$cs_id), ] |>
     select(cs_id, cs_size, finemapped_region, phenotype_id) |>
-    arrange(desc(cs_size)) |>
-    mutate(cell_type = cell_type) 
+    mutate(cell_type = cell_type)
 
   p <- ggplot(cs_tbl, aes(x = cell_type, y = cs_size)) +
     geom_boxplot(outlier.shape = NA, fill = "#69b3a2") +
@@ -139,15 +163,14 @@ cowplot::plot_grid(plotlist = cs_size_plts)
 ```{r cred_set_tbl, echo = FALSE, message=FALSE, results='asis'}
 for (cell_type in cell_types) {
   cat('####', cell_type, '\n\n')
-  
-  file_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
-  susie_tbl <- read_tsv(file_path, show_col_types = FALSE)
-  
+
+  susie_tbl <- susie_lst[[cell_type]]
+
   cs_tbl <- susie_tbl[!duplicated(susie_tbl$cs_id), ] |>
     select(cs_id, cs_size, finemapped_region, phenotype_id) |>
     left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
     arrange(cs_size)
-  
+
 
   gt_tbl <- gt(cs_tbl) |>
       tab_header(title = paste("Credible Sets for", cell_type)) |>
@@ -163,7 +186,7 @@ for (cell_type in cell_types) {
         phenotype_id = "Phenotype ID",
         external_gene_name = "Gene Symbol"
       )
-    
+
     # Render gt table
     print(gt_tbl)
   cat('\n\n\n')
@@ -188,9 +211,9 @@ The sections below address reviewer 2's questions about fine-mapping performance
 
 
 - A credible set's "index variant" is defined here as the SNP in the set with the highest PIP.
-- This is distinct from SuSiE's own `cs_index` (`L1`, `L2`, etc.), the number of independent 
-credible sets SuSiE found at that locus. Note that these labels don't guarantee that 
-L1 is "the strongest" signal.
+- This is distinct from SuSiE's own `cs_index` (`L1`, `L2`, etc.), the effect slot (of L = 10)
+in the SuSiE model that the credible set came from. Note that these labels don't guarantee
+that L1 is "the strongest" signal.
 
 ```{r compute_reviewer_response_summary, echo=FALSE, message=FALSE, warning=FALSE}
 # Index variant = highest-PIP SNP within each cs_id (not the same as SuSiE's
@@ -198,15 +221,14 @@ L1 is "the strongest" signal.
 # guaranteed to be ordered by effect size or evidence strength).
 get_index_variants <- function(cell_type) {
 
-  susie_path <- paste0(in_dir, cell_type, '/', cell_type, '.mrgd.srtd.susie.cred.hp.txt.gz')
-  meta_path  <- paste0(gene_meta_dir, cell_type, '_gene_meta.tsv')  # adjust suffix if your snakemake output differs
+  meta_path <- paste0(gene_meta_dir, cell_type, '_gene_meta.tsv')
 
-  if (!file.exists(susie_path) || !file.exists(meta_path)) {
-    message("Skipping ", cell_type, " - missing susie or gene meta file")
+  if (!file.exists(meta_path)) {
+    message("Skipping ", cell_type, " - missing gene meta file")
     return(NULL)
   }
 
-  susie_tbl <- read_tsv(susie_path, show_col_types = FALSE)
+  susie_tbl <- susie_lst[[cell_type]]
   gene_meta <- read_tsv(meta_path, show_col_types = FALSE) |>
     select(phenotype_id, phenotype_pos)
 
@@ -340,13 +362,13 @@ ggplot(cs_summary_all, aes(x = cell_type, y = cs_log10bf)) +
 #### Distance to TSS
 
 - Table: Average / Median distance to TSS per cell type across all credible sets
-- Boxplot: 
-- Wilcoxon test: rank-sum test comparing dist_to_tss between primary CS 
-  and all lower-ranked CS pooled, restricted to genes with >1 credible set. 
-  Tests whether primary CS index variants are categorically closer to the 
-  TSS than lower-ranked CS index variants. 
-- Rank definition: Within each gene with >1 credible set, credible sets are 
-  ranked by |z| of their index variant (highest-PIP SNP per CS), descending. 
+- Boxplot: distance to TSS by credible set rank, genes with >1 credible set
+- Wilcoxon test: rank-sum test comparing dist_to_tss between primary CS
+  and all lower-ranked CS pooled, restricted to genes with >1 credible set.
+  Tests whether primary CS index variants are categorically closer to the
+  TSS than lower-ranked CS index variants.
+- Rank definition: Within each gene with >1 credible set, credible sets are
+  ranked by |z| of their index variant (highest-PIP SNP per CS), descending.
   Rank is independent of SuSiE's cs_index (L1/L2/...).
 
 ```{r dist_to_tss_summary_tbl, echo=FALSE, message=FALSE}
@@ -449,12 +471,7 @@ cor_by_rank |>
 ```{r compute_maxcpp_source_rank, echo=FALSE, message=FALSE, warning=FALSE}
 compute_maxcpp_source <- function(ct) {
 
-  susie_path <- paste0(in_dir, ct, '/', ct, '.mrgd.srtd.susie.cred.hp.txt.gz')
-  if (!file.exists(susie_path)) {
-    message("Skipping ", ct, " - susie file not found")
-    return(NULL)
-  }
-  susie_tbl <- read_tsv(susie_path, show_col_types = FALSE)
+  susie_tbl <- susie_lst[[ct]]
 
   # For each variant, find the credible set that gives it its maxCPP value
   # (mirrors ldsr_make_annot.R's group_by(variant_id) |> mutate(maxCPP = max(pip)),
@@ -523,8 +540,153 @@ overall_pct |>
 
 ***
 
-A full credible-set-level table (cell type, gene, gene symbol, CS rank, index variant, 
-distance to TSS, PIP, z, CS size, purity, log10 Bayes factor) for all cell types has 
+A full credible-set-level table (cell type, gene, gene symbol, CS rank, index variant,
+distance to TSS, PIP, z, CS size, purity, log10 Bayes factor) for all cell types has
 been written to `r paste0(in_dir, "susie_credible_set_summary.tsv")`.
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+```{r bmark_load, echo = FALSE, message = FALSE, warning = FALSE}
+rule_names <- c("prep_susie_gene_meta", "vcf_to_dosage", "prep_susie_input", "run_susie",
+                "merge_susie", "sort_susie", "susie_report")
+
+bmark_files <- list.files(params$bmark_dir, pattern = "^08susie\\..*\\.benchmark\\.txt$")
+
+# File names are 08susie.<rule>[_<cell_type>[_<batch>_<n_batches>]].benchmark.txt; match
+# the known rule names so rule names containing '_' are kept whole
+benchmarks <- tibble(file = bmark_files) |>
+  mutate(stem = str_remove_all(file, "^08susie\\.|\\.benchmark\\.txt$"),
+         rule = map_chr(stem, function(s) {
+           hit <- rule_names[s == rule_names | str_starts(s, paste0(rule_names, "_"))]
+           if (length(hit) == 0) NA_character_ else hit[1]
+         }),
+         cell_type = if_else(stem == rule, NA_character_,
+                             str_remove(str_remove(stem, paste0("^", rule, "_")),
+                                        "_[0-9]+_[0-9]+$")))
+
+unmatched <- filter(benchmarks, is.na(rule))$file
+
+benchmarks <- benchmarks |>
+  filter(!is.na(rule), is.na(cell_type) | cell_type %in% cell_types) |>
+  mutate(data = map(file, function(f) {
+    read_tsv(file.path(params$bmark_dir, f), show_col_types = FALSE,
+             col_types = cols(.default = col_character())) |>
+      transmute(runtime_sec = suppressWarnings(as.numeric(s)),
+                max_rss = suppressWarnings(as.numeric(max_rss)))
+  })) |>
+  unnest(data)
+
+# Summarise by rule
+summary <- benchmarks |>
+  group_by(rule = factor(rule, levels = rule_names)) |>
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec, na.rm = TRUE) / 60,
+    sd_runtime_min = sd(runtime_sec, na.rm = TRUE) / 60,
+    mean_ram_gb = mean(max_rss, na.rm = TRUE) / 1024,
+    sd_ram_gb = sd(max_rss, na.rm = TRUE) / 1024,
+    .groups = "drop"
+  ) |>
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb),
+    mean_ram_gb = if_else(is.nan(mean_ram_gb), NA_real_, mean_ram_gb),  # no RAM recorded
+    rule = as.character(rule)
+  ) |>
+  mutate(across(where(is.numeric), ~ round(., 3)))
+
+# Table
+summary |>
+  gt() |>
+  tab_header(
+    title = "Benchmarking",
+    subtitle = "Means and SD across jobs"
+  ) |>
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) |>
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) |>
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+```{r bmark_notes, echo = FALSE, results = "asis"}
+if (length(unmatched) > 0) {
+  cat("\n**Note:** benchmark files not matching a current rule name (not shown):",
+      paste0("`", unmatched, "`", collapse = ", "), "\n")
+}
+```
+
+***
+
+#### Plot
+
+***
+
+```{r runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim = c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
+                                   y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = mean_runtime_min - sd_runtime_min,
+                    ymax = mean_runtime_min + sd_runtime_min),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    plot.title.position = "plot",
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
+                               y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = mean_ram_gb - sd_ram_gb,
+                    ymax = mean_ram_gb + sd_ram_gb),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    plot.title.position = "plot",
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+```
 
 ***
