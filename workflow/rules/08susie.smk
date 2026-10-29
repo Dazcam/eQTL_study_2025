@@ -1,10 +1,5 @@
 localrules: prep_susie_gene_meta
 
-rule all:
-    input:
-        config["susie"]["susie_report"]["html"]
-
-
 def susie_exp_bed(w):
     norm_method = config['tensorQTL']['norm_methods'][0]
     return f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed"

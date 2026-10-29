@@ -17,5 +17,6 @@ source(file.path(script_dir, "..", "scripts", "ctwas_functions.R"))
 source(file.path(script_dir, "..", "scripts", "twas_functions.R"))
 source(file.path(script_dir, "..", "scripts", "gwas_functions.R"))
 source(file.path(script_dir, "..", "scripts", "smr_functions.R"))
+source(file.path(script_dir, "..", "scripts", "susie_functions.R"))
 
 test_dir(script_dir, reporter = "summary")
