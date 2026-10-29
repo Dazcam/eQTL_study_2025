@@ -5,10 +5,13 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  05TENSORQTL | Rule: prep_tensorQTL_input
-#            Upstream:   03SCANPY pseudobulk counts; 04 genotype PCs
-#            Downstream: zip_pblk_cnts (expression BED), split_covariates (covariates)
+#            17PSEUDOTIME | Rule: pseudotime_prep_tensorqtl (quantile only)
+#            Upstream:   03SCANPY pseudobulk counts or pseudotime_pseudobulk bins;
+#                        04 genotype PCs
+#            Downstream: zip_pblk_cnts / pseudotime_zip_bed (expression BED),
+#                        split_covariates / pseudotime_split_covariates (covariates)
 #
-# Purpose:   For one cell type x normalisation method:
+# Purpose:   For one cell type (or pseudotime bin) x normalisation method:
 #            - TMM-normalise pseudobulk counts, then apply method-specific
 #              normalisation/filtering (normalise_counts() in functions.R)
 #            - Calculate the top 50 expression PCs
@@ -18,13 +21,15 @@
 # Inputs:    cov_file      Genotype PCs (plink .eigenvec, 10 PCs)
 #            sex_file      Per-sample metadata (sex_code, PCW)
 #            gene_lookup   BioMart gene annotation (hg38)
-#            pseudoblk_dir {cell_type}_pseudobulk.csv (via params)
+#            pseudobulk    Pseudobulk counts CSV (samples x genes)
 #
-# Outputs:   cov_out       {cell_type}_{norm_method}_base_covariates.txt
-#                          Covariates x samples; all genPCs and 50 expPCs
-#            exp_out       {cell_type}_{norm_method}.bed
-#                          TSS-anchored expression BED, autosomes only
-#            report_rds    gene_exp_matrix_report_{cell_type}_{norm_method}.rds
+# Outputs:   cov_out       Base covariates; covariates x samples, all genPCs and
+#                          50 expPCs
+#            exp_out       TSS-anchored expression BED, autosomes only
+#            report_rds    Gene/ID-mapping summary for the tensorQTL report
+#
+# Notes:     cell_type and norm_method come from params, so the same script serves
+#            both pipelines; cell_type is a label for logs and the report only.
 #
 #--------------------------------------------------------------------------------------
 
@@ -48,27 +53,27 @@ library(tidyverse)
 library(limma)  # For quantile normalization (functions.R)
 
 # Load functions
-source("functions.R")
+source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Input and output paths
 cov_file <- snakemake@input[["cov_file"]]
 sex_file <- snakemake@input[["sex_file"]]
 gene_lookup <- snakemake@input[["gene_lookup"]]
+pseudoblk_in <- snakemake@input[["pseudobulk"]]
 cov_out <- snakemake@output[["cov_out"]]
 exp_out <- snakemake@output[["exp_out"]]
-pseudoblk_dir <- snakemake@params[["pseudoblk_dir"]]
-report_dir <- snakemake@params[["report_dir"]]
-cell_type <- snakemake@wildcards[["cell_type"]]
-norm_method <- snakemake@params[["norm_method"]] 
+report_rds <- snakemake@output[["report_rds"]]
+cell_type <- snakemake@params[["cell_type"]]
+norm_method <- snakemake@params[["norm_method"]]
 
 # Make a tibble showing what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("cov_file", "sex_file", "gene_lookup", "cov_out", "exp_out", 
-               "pseudoblk_dir", "report_dir", "cell_type", "norm_method", "batch_var"),
-  value    = c(cov_file, sex_file, gene_lookup, cov_out, exp_out, 
-               pseudoblk_dir, report_dir, cell_type, norm_method, batch_var)) |> 
+  variable = c("cov_file", "sex_file", "gene_lookup", "pseudoblk_in", "cov_out",
+               "exp_out", "report_rds", "cell_type", "norm_method"),
+  value    = c(cov_file, sex_file, gene_lookup, pseudoblk_in, cov_out,
+               exp_out, report_rds, cell_type, norm_method)) |>
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("\n============================\n")
@@ -127,7 +132,7 @@ report_tibble <- tibble(cell_type = cell_type, norm_method = norm_method)
 
 # Load counts: don't use dplyr as we want to keep rownames
 message('\nLoading counts ... \n')
-pseudblk_cnts <- read.csv(paste0(pseudoblk_dir, cell_type, "_pseudobulk.csv"), row.names = 1)
+pseudblk_cnts <- read.csv(pseudoblk_in, row.names = 1)
 print(pseudblk_cnts[1:5, 1:5])
 
 # Transpose to genes as rows, samples as columns (TensorQTL format)
@@ -294,7 +299,7 @@ report_list[[paste(cell_type, norm_method, sep="_")]] <- report_tibble  # Update
 final_report <- bind_rows(report_list) |>
   print()
 
-write_rds(final_report, paste0(report_dir, 'gene_exp_matrix_report_', cell_type, '_', norm_method, '.rds'))
+write_rds(final_report, report_rds)
 
 
 #--------------------------------------------------------------------------------------

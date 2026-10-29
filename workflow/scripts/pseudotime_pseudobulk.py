@@ -47,7 +47,6 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 RANDOM_SEED  = 1234
-Q_VALUES     = [4, 5, 6]
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
@@ -71,10 +70,12 @@ input_h5ad       = str(snakemake.input.h5ad)
 geno_sample_file = str(snakemake.input.geno)
 sentinel_file    = str(snakemake.output.sentinel)
 output_dir       = Path(sentinel_file).parent
+Q_VALUES         = [int(n) for n in snakemake.params.q_values]  # PT_Q_VALUES in 17pseudotime.smk
 
 logger.info(f"Input h5ad:        {input_h5ad}")
 logger.info(f"Geno sample file:  {geno_sample_file}")
 logger.info(f"Output directory:  {output_dir}")
+logger.info(f"Q values:          {Q_VALUES}")
 
 output_figure  = str(output_dir / "pseudobulk_qc.png")
 output_summary = str(output_dir / "pseudobulk_summary.csv")

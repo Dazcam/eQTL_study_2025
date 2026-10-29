@@ -1,12 +1,15 @@
 #--------------------------------------------------------------------------------------
+
 #
 #    Split covariates for tensorQTL
 #
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  05TENSORQTL | Rule: split_covariates
-#            Upstream:   prep_tensorQTL_input (base covariate matrix)
-#            Downstream: tensorqtl_nom, tensorqtl_perm, tensorqtl_independent
+#            17PSEUDOTIME | Rule: pseudotime_split_covariates
+#            Upstream:   prep_tensorQTL_input / pseudotime_prep_tensorqtl
+#            Downstream: tensorqtl_nom, tensorqtl_perm, tensorqtl_independent;
+#                        pseudotime_tensorqtl_nom, pseudotime_tensorqtl_perm
 #
 # Purpose:   Subset the base covariate matrix to PCW, sex, the first {geno_pc}
 #            genotype PCs and the first {exp_pc} expression PCs, so tensorQTL
@@ -16,6 +19,9 @@
 #
 # Outputs:   Covariate matrix for one cell_type / norm_method / geno_pc / exp_pc
 #            combination; rows: PCW, Sex, genPC1..n, expPC1..n
+#
+# Notes:     cell_type comes from params (a label for the log only), so the same
+#            script serves both pipelines; geno_pc and exp_pc are wildcards in both.
 #
 #--------------------------------------------------------------------------------------
 
@@ -41,7 +47,7 @@ library(tidyverse)
 
 cov_input <- as.character(snakemake@input)
 cov_output <- as.character(snakemake@output)
-cell_type <- snakemake@wildcards[["cell_type"]]
+cell_type <- snakemake@params[["cell_type"]]
 geno_pc <- snakemake@wildcards[["geno_pc"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 
@@ -49,12 +55,12 @@ exp_pc <- snakemake@wildcards[["exp_pc"]]
 message("============================")
 tibble(
   variable = c("cov_input", "cov_output", "cell_type", "geno_pc", "exp_pc"),
-  value    = c(cov_input, cov_output, cell_type, geno_pc, exp_pc)) |> 
+  value    = c(cov_input, cov_output, cell_type, geno_pc, exp_pc)) |>
   knitr::kable(format = "simple", align = "l") |>
   print()
 message("============================\n")
 
-# Pull out genotype and expression PC covariate combinations  
+# Pull out genotype and expression PC covariate combinations
 cov_tbl <- read_tsv(cov_input, show_col_types = FALSE) |>
   rename(covariate = `...1`)
 message("Input covariate matrix for ", cell_type, ":\n")
@@ -75,10 +81,10 @@ message("\nCovariate matrix (first 5 rows and columns):\n")
 print(cov_matrix[1:5, 1:5])
 
 message("\nWriting covariate matrix ...\n")
-write.table(cov_matrix, 
-            file = cov_output, 
-            sep = "\t", 
-            quote = FALSE, 
+write.table(cov_matrix,
+            file = cov_output,
+            sep = "\t",
+            quote = FALSE,
             col.names = NA,    # Write sample IDs as column names
             row.names = TRUE,    # Write covariate names as row names
             append = FALSE)
