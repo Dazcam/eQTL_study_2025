@@ -41,6 +41,7 @@ import anndata as ad
 from pathlib import Path
 from datetime import datetime
 from scanpy_gene_lists import custom_palette
+from pseudotime_functions import is_integer_valued
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -132,12 +133,7 @@ logger.info("Restoring raw counts from layers['counts']...")
 adata.X = adata.layers['counts'].copy()
 
 # Sanity check — confirm integer values
-subset_check = adata.X[:100, :100]
-if sp.issparse(subset_check):
-    check_vals = subset_check.data
-else:
-    check_vals = subset_check.flatten()
-is_integer = np.all(np.mod(check_vals[check_vals != 0], 1) == 0)
+is_integer = is_integer_valued(adata.X[:100, :100])
 logger.info(f"Raw counts are integers: {is_integer}")
 if not is_integer:
     raise ValueError(
@@ -311,8 +307,7 @@ for n in Q_VALUES:
         )
 
         # Validate integer values in pseudobulk
-        sample_vals = pseudobulk_df.values
-        is_integer  = np.all(np.mod(sample_vals[sample_vals != 0], 1) == 0)
+        is_integer  = is_integer_valued(pseudobulk_df.values)
         logger.info(f"    Pseudobulk values are integers: {is_integer}")
         if not is_integer:
             raise ValueError(

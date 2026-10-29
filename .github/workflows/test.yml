@@ -1,4 +1,4 @@
-name: Run R Tests
+name: Run Tests
 
 on:
   push:
@@ -28,3 +28,21 @@ jobs:
       - name: Run test suite
         working-directory: workflow/test
         run: Rscript run_tests.R
+
+  python-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python package dependencies
+        run: pip install pytest numpy scipy pandas anndata
+
+      - name: Run test suite
+        working-directory: workflow/test
+        run: python -m pytest -v

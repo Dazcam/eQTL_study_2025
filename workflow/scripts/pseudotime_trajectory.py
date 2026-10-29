@@ -34,7 +34,6 @@ import logging
 import warnings
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -44,6 +43,7 @@ import palantir
 
 from pathlib import Path
 from scanpy_gene_lists import custom_palette
+from pseudotime_functions import get_gene_expr, select_anchor_cell
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -203,46 +203,7 @@ logger.info(f"Diffusion map shape: {adata.obsm['X_palantir_dm'].shape}")
 #
 #  Fallback: NPC cell closest to centroid in Palantir multi-scale space.
 
-npc_mask     = adata.obs['cell_type'] == root_type
-if npc_mask.sum() == 0:
-    raise ValueError(f"No cells found with cell_type == '{root_type}'")
-
-npc_idx      = np.where(npc_mask)[0]
-root_method  = None
-root_cell_id = None
-
-if root_gene in adata.var_names:
-    gene_col  = adata.var_names.get_loc(root_gene)
-    gene_expr = adata.X[npc_idx, gene_col]
-    if sp.issparse(gene_expr):
-        gene_expr = np.array(gene_expr.todense()).flatten()
-    else:
-        gene_expr = np.array(gene_expr).flatten()
-
-    max_expr = gene_expr.max()
-    if max_expr > 0:
-        root_local_idx  = np.argmax(gene_expr)
-        root_global_idx = npc_idx[root_local_idx]
-        root_cell_id    = adata.obs_names[root_global_idx]
-        root_method     = f"{root_gene} expression (max={max_expr:.3f})"
-    else:
-        logger.warning(
-            f"{root_gene} expression is zero for all {root_type} cells "
-            "— falling back to centroid"
-        )
-else:
-    logger.warning(
-        f"{root_gene} not found in adata.var_names — falling back to centroid"
-    )
-
-if root_cell_id is None:
-    npc_ms          = adata.obsm['X_palantir_ms'][npc_idx]
-    centroid        = npc_ms.mean(axis=0)
-    dists           = np.linalg.norm(npc_ms - centroid, axis=1)
-    root_local_idx  = np.argmin(dists)
-    root_global_idx = npc_idx[root_local_idx]
-    root_cell_id    = adata.obs_names[root_global_idx]
-    root_method     = f"{root_type} multi-scale centroid (dist={dists[root_local_idx]:.4f})"
+root_cell_id, root_method = select_anchor_cell(adata, root_type, root_gene)
 
 logger.info(f"Root cell:             {root_cell_id}")
 logger.info(f"Root selection method: {root_method}")
@@ -262,46 +223,7 @@ if terminal_gene is None:
         f"Available: {list(TERMINAL_MARKERS.keys())}"
     )
 
-term_mask = adata.obs['cell_type'] == term_type
-if term_mask.sum() == 0:
-    raise ValueError(f"No cells found with cell_type == '{term_type}'")
-
-term_idx         = np.where(term_mask)[0]
-terminal_method  = None
-terminal_cell_id = None
-
-if terminal_gene in adata.var_names:
-    gene_col  = adata.var_names.get_loc(terminal_gene)
-    gene_expr = adata.X[term_idx, gene_col]
-    if sp.issparse(gene_expr):
-        gene_expr = np.array(gene_expr.todense()).flatten()
-    else:
-        gene_expr = np.array(gene_expr).flatten()
-
-    max_expr = gene_expr.max()
-    if max_expr > 0:
-        term_local_idx   = np.argmax(gene_expr)
-        term_global_idx  = term_idx[term_local_idx]
-        terminal_cell_id = adata.obs_names[term_global_idx]
-        terminal_method  = f"{terminal_gene} expression (max={max_expr:.3f})"
-    else:
-        logger.warning(
-            f"{terminal_gene} expression is zero for all {term_type} cells "
-            "— falling back to centroid"
-        )
-else:
-    logger.warning(
-        f"{terminal_gene} not found in adata.var_names — falling back to centroid"
-    )
-
-if terminal_cell_id is None:
-    term_ms          = adata.obsm['X_palantir_ms'][term_idx]
-    centroid         = term_ms.mean(axis=0)
-    dists            = np.linalg.norm(term_ms - centroid, axis=1)
-    term_local_idx   = np.argmin(dists)
-    term_global_idx  = term_idx[term_local_idx]
-    terminal_cell_id = adata.obs_names[term_global_idx]
-    terminal_method  = f"{term_type} multi-scale centroid (dist={dists[term_local_idx]:.4f})"
+terminal_cell_id, terminal_method = select_anchor_cell(adata, term_type, terminal_gene)
 
 logger.info(f"Terminal cell:             {terminal_cell_id}")
 logger.info(f"Terminal selection method: {terminal_method}")
@@ -402,13 +324,8 @@ axes[2].axis('off')
 plot_genes = ['PAX6', TERMINAL_MARKERS[term_type]]
 
 for ax, gene in zip(axes[3:5], plot_genes):
-    if gene in adata.var_names:
-        gene_idx = adata.var_names.get_loc(gene)
-        expr     = adata.X[:, gene_idx]
-        if sp.issparse(expr):
-            expr = np.array(expr.todense()).flatten()
-        else:
-            expr = np.array(expr).flatten()
+    expr = get_gene_expr(adata, gene)
+    if expr is not None:
         vmax  = float(np.percentile(expr, 99))
         sc_g  = ax.scatter(
             umap1, umap2, c=expr, cmap='Reds',
@@ -479,13 +396,8 @@ axes      = axes.flatten()
 
 for i, gene in enumerate(MARKER_GENES):
     ax = axes[i]
-    if gene in adata.var_names:
-        gene_idx = adata.var_names.get_loc(gene)
-        expr     = adata.X[:, gene_idx]
-        if sp.issparse(expr):
-            expr = np.array(expr.todense()).flatten()
-        else:
-            expr = np.array(expr).flatten()
+    expr = get_gene_expr(adata, gene)
+    if expr is not None:
         pct_expr = (expr > 0).mean() * 100
         vmax     = float(np.percentile(expr, 99))
         sc_g     = ax.scatter(
@@ -516,15 +428,10 @@ for ct in adata.obs['cell_type'].cat.categories:
     )
 
 for gene, colour in zip(TERMINAL_OVERLAY_GENES, TERMINAL_OVERLAY_COLOURS):
-    if gene not in adata.var_names:
+    expr = get_gene_expr(adata, gene)
+    if expr is None:
         logger.warning(f"Terminal overlay gene not found: {gene}")
         continue
-    gene_idx  = adata.var_names.get_loc(gene)
-    expr      = adata.X[:, gene_idx]
-    if sp.issparse(expr):
-        expr = np.array(expr.todense()).flatten()
-    else:
-        expr = np.array(expr).flatten()
     max_idx   = np.argmax(expr)
     max_u1    = umap1[max_idx]
     max_u2    = umap2[max_idx]
