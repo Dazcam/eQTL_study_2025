@@ -22,17 +22,17 @@ rule all:
        config['tables']['susie_diag_tbl']['out_file'], 
         
 
-#rule eqtl_tbl:
-#    output: config['tables']['eqtl_tbl']['out_file']
-#    params: in_dir = config['tables']['eqtl_tbl']['in_dir'],
-#            allele_file = config['tables']['eqtl_tbl']['allele_file'],
-#            peak_dir = config['tables']['eqtl_tbl']['peak_dir'],
-#            cell_types = config['cell_types'],
-#            exp_pc_map = config['exp_pc_map']
-#    singularity: config["containers"]["r_eqtl"]
-#    resources: time="2:00:00"
-#    log:  config['tables']['eqtl_tbl']['log']
-#    script: "../scripts/manuscript_table_smr.R"
+rule eqtl_tbl:
+    output: config['tables']['eqtl_tbl']['out_file']
+    params: in_dir = config['tables']['eqtl_tbl']['in_dir'],
+            allele_file = config['tables']['eqtl_tbl']['allele_file'],
+            peak_dir = config['tables']['eqtl_tbl']['peak_dir'],
+            cell_types = config['cell_types'],
+            exp_pc_map = config['exp_pc_map']
+    singularity: config["containers"]["r_eqtl"]
+    resources: time="2:00:00"
+    log:  config['tables']['eqtl_tbl']['log']
+    script: "../scripts/manuscript_table_eQTL.R"
 
 rule diff_exp_tbl:
     input:
@@ -138,3 +138,24 @@ rule susie_diag_tbl:
     message: "SuSiE fine-mapping diagnostics table (Supp Table 9)"
     log:    config['tables']['susie_diag_tbl']['log']
     script: "../scripts/manuscript_table_susie_diag.R"
+
+rule ldsr_tbl:
+    # MaxCPP S-LDSR supplementary table (one sheet per disorder)
+    input:  "../results/09SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv"
+    output: "../results/13MANUSCRIPT_TABLES/supplementary_table_ldsr.xlsx"
+    params: cell_types = config['cell_types']
+    singularity: config["containers"]["r_eqtl"]
+    log:    "../results/00LOG/13MANUSCRIPT_TABLES/ldsr_tbl.log"
+    script: "../scripts/manuscript_table_ldsr.R"
+
+rule cell_counts_tbl:
+    # Nuclei per L1 cluster, L2 subcluster and pseudotime bin
+    input:  l1 = "../results/02SCANPY/adata_clusters_v3.h5ad",
+            l2 = expand("../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad",
+                        l1_pop = ["Glu-UL", "Glu-DL", "NPC", "GABA"]),
+            pt = expand("../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad",
+                        trajectory = config["trajectories"])
+    output: "../results/13MANUSCRIPT_TABLES/nuclei_counts_tbl.xlsx"
+    conda:  config["scanpy"]["env"]
+    log:    "../results/00LOG/13MANUSCRIPT_TABLES/cell_counts_tbl.log"
+    script: "../scripts/manuscript_table_cell_counts.py"
