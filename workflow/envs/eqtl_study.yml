@@ -258,6 +258,7 @@ dependencies:
       - imageio==2.36.1
       - louvain==0.7.1
       - packaging==26.0
+      - openpyxl==3.1.5      
       - scikit-image==0.25.0
       - tifffile==2024.12.12
       - xlrd==2.0.1

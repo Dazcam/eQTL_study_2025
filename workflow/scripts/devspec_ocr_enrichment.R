@@ -1,20 +1,25 @@
 #--------------------------------------------------------------------------------------
 #
 #    Developmental specificity: OCR enrichment of fetal-specific/shared/
-#    heterogeneous eQTL (adult cortical union only)
+#    heterogeneous/not-expressed eQTL (adult cortical union only)
 #
 #--------------------------------------------------------------------------------------
 
-#  Tests whether three fetal SNP sets are enriched in adult open chromatin
+#  Tests whether four fetal SNP sets are enriched in adult open chromatin
 #  (Li et al. 2023, cortical union only): testable_specific and testable_shared
-#  (from B's "any" tier, unchanged), and the new specific_heterogeneous set (from
-#  C -- testable_specific pairs additionally confirmed as formally heterogeneous
-#  in >=1 tested adult comparison). All three LD-pruned against the same
-#  independent_snps universe (D) before testing.
+#  (from B's "any" tier, unchanged), the specific_heterogeneous set (from C --
+#  testable_specific pairs additionally confirmed as formally heterogeneous in
+#  ALL tested adult comparisons AND magnitude-consistent, i.e. C's final
+#  heterogeneous_snps output), and the not_expressed set (from B --
+#  untestable_genotyped_not_expressed + untestable_not_genotyped_not_expressed
+#  combined, i.e. every pair whose gene simply isn't expressed anywhere in
+#  Jang, regardless of whether the SNP itself was genotyped there). All four
+#  LD-pruned against the same independent_snps universe (D) before testing.
 #
 #  NOTE: specific_heterogeneous is a SUBSET of testable_specific, not an
 #  independent comparison -- interpret side-by-side results with that nesting
-#  in mind, not as three unrelated tests.
+#  in mind, not as four unrelated tests. not_expressed is independent of the
+#  other three (untestable_* was never part of testable_specific/shared).
 #
 #  Step 5 of the developmental-specificity pipeline.
 
@@ -32,7 +37,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nTesting fetal-specific/shared/heterogeneous eQTL enrichment in adult cortical union OCRs ...")
+message("\n\nTesting fetal-specific/shared/heterogeneous/not-expressed eQTL enrichment in adult cortical union OCRs ...")
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -149,15 +154,15 @@ perform_permutation_test <- function(sig_snps_gr, peaks_gr, n_perm = 1000) {
 
 # Main -----------------------------------------------------------------------------------
 
-# 1. Load fetal-specific + shared SNPs from classification, and the new
-#    heterogeneous set from C. All restricted to the LD-independent universe. ----------
+# 1. Load fetal-specific + shared + not-expressed SNPs from classification, and
+#    the heterogeneous set from C. All restricted to the LD-independent universe. -------
 message("\nLoading classification output (B) ...")
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
 
 message("Loading heterogeneity test output (C) ...")
 het_test <- read_rds(heterogeneity_file)
-heterogeneous_pairs <- het_test$heterogeneous_pairs %>% filter(heterogeneous_all)
+heterogeneous_pairs <- het_test$heterogeneous_snps  # already heterogeneous_all AND magnitude_consistent
 
 message("\nRestricting to LD-independent eGene-eSNP pairs ...")
 independent_universe <- read_rds(independent_snps_file)
@@ -191,6 +196,16 @@ specific_heterogeneous_snps <- heterogeneous_pairs %>%
   unique()
 message("  Specific + heterogeneous unique SNPs: ", length(specific_heterogeneous_snps))
 
+# ADDITION -- not_expressed: genes not expressed anywhere in Jang, regardless
+# of whether the SNP itself was genotyped there (combines both
+# untestable_*_not_expressed categories, per request).
+not_expressed_snps <- any_table %>%
+  filter(final_category %in% c("untestable_genotyped_not_expressed",
+                                "untestable_not_genotyped_not_expressed")) %>%
+  pull(variant_id) %>%
+  unique()
+message("  Not-expressed unique SNPs: ", length(not_expressed_snps))
+
 # 2. Build SNP coordinate lookup from existing per-cell-type files ----------------------
 message("\nBuilding SNP coordinate lookup from ", length(snp_lookup_files), " existing files ...")
 
@@ -210,13 +225,15 @@ make_snp_gr <- function(snp_ids, coords) {
     )
 }
 
-specific_gr             <- make_snp_gr(fetal_specific_snps, snp_coords)
-shared_gr               <- make_snp_gr(shared_snps, snp_coords)
+specific_gr               <- make_snp_gr(fetal_specific_snps, snp_coords)
+shared_gr                 <- make_snp_gr(shared_snps, snp_coords)
 specific_heterogeneous_gr <- make_snp_gr(specific_heterogeneous_snps, snp_coords)
+not_expressed_gr          <- make_snp_gr(not_expressed_snps, snp_coords)
 
 message("  Fetal-specific SNPs with coordinates: ", length(specific_gr))
 message("  Shared SNPs with coordinates: ", length(shared_gr))
 message("  Specific+heterogeneous SNPs with coordinates: ", length(specific_heterogeneous_gr))
+message("  Not-expressed SNPs with coordinates: ", length(not_expressed_gr))
 
 # 3. Load Li et al. 2023 adult peaks, cortical union only -------------------------------
 message("\nLoading Li et al. 2023 adult brain cCREs (cortical union only) ...")
@@ -243,13 +260,14 @@ adult_cortical_union_gr <- li_s6 %>%
 
 message("  adult_cortical_union: ", length(adult_cortical_union_gr), " peaks")
 
-# 4. Run the three enrichment tests -------------------------------------------------------
-message("\n--- Running enrichment tests (3 sets x adult_cortical_union) ---\n")
+# 4. Run the four enrichment tests -------------------------------------------------------
+message("\n--- Running enrichment tests (4 sets x adult_cortical_union) ---\n")
 
 snp_sets <- list(
-  fetal_specific = specific_gr,
-  shared         = shared_gr,
-  specific_heterogeneous = specific_heterogeneous_gr
+  fetal_specific         = specific_gr,
+  shared                 = shared_gr,
+  specific_heterogeneous = specific_heterogeneous_gr,
+  not_expressed          = not_expressed_gr
 )
 
 results <- tibble()

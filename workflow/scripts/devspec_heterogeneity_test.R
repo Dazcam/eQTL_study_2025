@@ -2,7 +2,7 @@
 #
 #    Developmental specificity: heterogeneity test on fetal-specific eQTL (Step C)
 #    (REVISED -- single most-significant fetal row per pair, ALL tested adult
-#    comparisons must be heterogeneous)
+#    comparisons must be heterogeneous, ADDITIONALLY magnitude-consistent)
 #
 #--------------------------------------------------------------------------------------
 
@@ -48,13 +48,29 @@
 #  previous AF-based palindromic-SNP resolution (aligned/flipped disambiguation
 #  via allele frequency for A/T, C/G pairs) has been REMOVED entirely -- not
 #  substituted with an external reference (e.g. 1000G), since there is no
-#  guarantee Jang's own allele/strand conventions were harmonized against 1000G,
-#  and introducing that assumption to paper over a missing check would trade one
-#  unvalidated assumption for another. Every palindromic pair is now
-#  unconditionally categorised "palindromic_unresolved" and dropped from the
-#  Q-test (beta_jang_harmonized = NA), regardless of allele frequency. This is
-#  more conservative than the previous af_tol-based partial resolution -- the
-#  af_tol parameter is no longer used by this script.
+#  guarantee Jang's own allele/strand conventions were harmonized against it.
+#  Every palindromic pair is now unconditionally categorised
+#  "palindromic_unresolved" and dropped from the Q-test (beta_jang_harmonized =
+#  NA). The af_tol parameter is no longer used by this script.
+#
+#--------------------------------------------------------------------------------------
+#
+#  ADDITION -- magnitude consistency moved here from the report:
+#
+#  Previously computed only inside devspec_report.Rmd at render time, purely
+#  for display -- the OCR enrichment rule read heterogeneous_pairs directly and
+#  had no way to respect this restriction. Moved upstream so it can actually
+#  gate what feeds OCR: heterogeneous_snps (and therefore ocr_enrich's
+#  "specific_heterogeneous" SNP set) is now restricted to pairs that are BOTH
+#  heterogeneous in every tested comparison AND have |fetal beta| > |adult
+#  beta| in every one of those same comparisons (not just heterogeneous --
+#  the fetal effect is also strictly larger in magnitude, regardless of sign).
+#  heterogeneous_pairs itself still carries ALL heterogeneous-in-all pairs
+#  (unchanged row count), now with a magnitude_consistent column added, so the
+#  report's other tables (which show the full stringent set, not just the
+#  OCR-feeding subset) are unaffected. Two new gene-symbol-annotated tables are
+#  written for direct reporting: magnitude_consistent_pairs and
+#  magnitude_inconsistent_pairs.
 #
 #--------------------------------------------------------------------------------------
 
@@ -70,7 +86,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nRunning heterogeneity test on fetal-specific eQTL vs Jang et al. 2026 (Step C, stringent 'all' rule) ...")
+message("\n\nRunning heterogeneity test on fetal-specific eQTL vs Jang et al. 2026 (Step C, stringent 'all' rule + magnitude consistency) ...")
 
 suppressPackageStartupMessages({
   library(tidyverse)
@@ -81,6 +97,7 @@ suppressPackageStartupMessages({
 eqtl_universe_file  <- snakemake@input[["eqtl_universe"]]
 classification_file <- snakemake@input[["classification"]]
 pvar_file           <- snakemake@input[["pvar_file"]]
+gene_lookup_file    <- snakemake@input[["gene_lookup"]]
 output_file         <- snakemake@output[[1]]
 fdr_thresh          <- snakemake@params[["fdr_thresh"]]
 
@@ -91,9 +108,9 @@ message("\nVariables")
 cat("============================")
 tibble(
   variable = c("eqtl_universe_file", "classification_file", "pvar_file",
-               "fdr_thresh", "output_file"),
+               "gene_lookup_file", "fdr_thresh", "output_file"),
   value    = c(eqtl_universe_file, classification_file, pvar_file,
-               fdr_thresh, output_file)
+               gene_lookup_file, fdr_thresh, output_file)
 ) |>
   knitr::kable(format = "simple", align = "l") |>
   print()
@@ -108,6 +125,11 @@ eqtl_universe  <- read_rds(eqtl_universe_file)
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
 pairs_all <- classification$pairs_all
+
+message("Loading gene symbol lookup ...")
+gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
+  select(ensembl_gene_id, external_gene_name) |>
+  distinct(ensembl_gene_id, .keep_all = TRUE)
 
 n_pairs_specific_B <- any_table %>% filter(final_category == "testable_specific") %>% nrow()
 message("  B: unique (gene, SNP) pairs classified testable_specific: ", n_pairs_specific_B)
@@ -317,9 +339,75 @@ message("  Of which the biologically matched comparison was itself tested and co
 message("  Of which NO biologically matched comparison was available at all (incl. all NPC pairs): ",
         sum(heterogeneous_pairs$heterogeneous_all & !heterogeneous_pairs$matched_type_tested))
 
+# ========================================================================================
+# 6.5 Magnitude consistency (moved here from the report -- see ADDITION note)
+# ========================================================================================
+
+message("\n--- Magnitude consistency (|fetal beta| > |adult beta|) among stringent pairs ---\n")
+
+stringent_magnitude <- usable %>%
+  semi_join(heterogeneous_pairs %>% filter(heterogeneous_all),
+            by = c("phenotype_id", "variant_id")) %>%
+  mutate(
+    magnitude_diff = abs(beta_my) - abs(beta_jang_harmonized),
+    fetal_bigger    = magnitude_diff > 0
+  )
+
+pair_magnitude <- stringent_magnitude %>%
+  group_by(phenotype_id, variant_id) %>%
+  summarise(
+    magnitude_consistent = all(fetal_bigger),
+    min_magnitude_diff    = min(magnitude_diff),
+    max_magnitude_diff    = max(magnitude_diff),
+    .groups = "drop"
+  )
+
+heterogeneous_pairs <- heterogeneous_pairs %>%
+  left_join(pair_magnitude, by = c("phenotype_id", "variant_id"))
+# magnitude_consistent/min/max_magnitude_diff are only meaningful for
+# heterogeneous_all == TRUE pairs; NA for pairs that never reached this stage.
+
+n_pass_magnitude <- sum(pair_magnitude$magnitude_consistent)
+n_stringent       <- nrow(pair_magnitude)
+message("  ", n_pass_magnitude, " of ", n_stringent, " stringent pairs (",
+        round(100 * n_pass_magnitude / n_stringent, 1),
+        "%) also have |fetal beta| > |adult beta| in EVERY tested comparison.")
+
+# Gene-symbol-annotated tables for the two groups, per request
+magnitude_consistent_pairs <- heterogeneous_pairs %>%
+  filter(heterogeneous_all, magnitude_consistent) %>%
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) %>%
+  rename(gene_symbol = external_gene_name) %>%
+  relocate(gene_symbol, .after = phenotype_id)
+
+magnitude_inconsistent_pairs <- heterogeneous_pairs %>%
+  filter(heterogeneous_all, !magnitude_consistent) %>%
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) %>%
+  rename(gene_symbol = external_gene_name) %>%
+  relocate(gene_symbol, .after = phenotype_id)
+
+message("  magnitude_consistent_pairs: ", nrow(magnitude_consistent_pairs), " rows")
+message("  magnitude_inconsistent_pairs: ", nrow(magnitude_inconsistent_pairs), " rows")
+
+n_missing_symbol_consistent <- sum(is.na(magnitude_consistent_pairs$gene_symbol))
+n_missing_symbol_inconsistent <- sum(is.na(magnitude_inconsistent_pairs$gene_symbol))
+if (n_missing_symbol_consistent > 0 | n_missing_symbol_inconsistent > 0) {
+  message("  NOTE: ", n_missing_symbol_consistent, " / ", nrow(magnitude_consistent_pairs),
+          " magnitude-consistent and ", n_missing_symbol_inconsistent, " / ",
+          nrow(magnitude_inconsistent_pairs),
+          " magnitude-inconsistent pairs had no matching gene symbol in the lookup.")
+} else {
+  message("  All rows in both tables matched a gene symbol in the lookup.")
+}
+
+# --- Final OCR-feeding SNP set: heterogeneous in ALL comparisons AND
+# magnitude-consistent (per request -- restricts OCR to the 218, not the 221) ---
 heterogeneous_snps <- heterogeneous_pairs %>%
-  filter(heterogeneous_all) %>%
+  filter(heterogeneous_all, magnitude_consistent) %>%
   distinct(phenotype_id, variant_id)
+
+message("\n  Final heterogeneous_snps fed to OCR enrichment (heterogeneous_all AND magnitude_consistent): ",
+        nrow(heterogeneous_snps))
 
 # ========================================================================================
 # 7. Funnel summary
@@ -336,10 +424,12 @@ funnel <- tibble(
     "C: usable rows entering Q-test",
     "C: unique (gene, SNP) pairs among usable rows",
     "C: heterogeneous rows (FDR<thresh)",
-    "C: unique (gene, SNP) pairs heterogeneous in ALL tested comparisons (final, stringent)"
+    "C: unique (gene, SNP) pairs heterogeneous in ALL tested comparisons (stringent)",
+    "C: of which also magnitude-consistent (final, fed to OCR)"
   ),
   N = c(n_pairs_specific_B, n_unique_pairs_specific, n_joined,
-        n_allele_dropped, n_usable, n_unique_pairs_usable, n_het_rows, n_het_pairs)
+        n_allele_dropped, n_usable, n_unique_pairs_usable, n_het_rows, n_het_pairs,
+        nrow(heterogeneous_snps))
 )
 print(funnel)
 
@@ -358,11 +448,14 @@ usable_out <- usable %>%
 
 write_rds(
   list(
-    usable                  = usable_out,
-    heterogeneous_pairs      = heterogeneous_pairs,
-    heterogeneous_snps        = heterogeneous_snps,
-    allele_status_summary       = status_tbl,
-    funnel                         = funnel
+    usable                       = usable_out,
+    heterogeneous_pairs           = heterogeneous_pairs,
+    heterogeneous_snps             = heterogeneous_snps,
+    magnitude_consistent_pairs      = magnitude_consistent_pairs,
+    magnitude_inconsistent_pairs     = magnitude_inconsistent_pairs,
+    stringent_magnitude                = stringent_magnitude,
+    allele_status_summary                 = status_tbl,
+    funnel                                   = funnel
   ),
   output_file
 )
@@ -372,8 +465,11 @@ message("\nHeterogeneity test results written to: ", output_file)
 output_dir  <- dirname(output_file)
 output_stem <- tools::file_path_sans_ext(basename(output_file))
 
-write_tsv(usable_out,          file.path(output_dir, paste0(output_stem, "_usable.tsv")))
-write_tsv(heterogeneous_pairs, file.path(output_dir, paste0(output_stem, "_heterogeneous_pairs.tsv")))
-write_tsv(status_tbl,          file.path(output_dir, paste0(output_stem, "_allele_status_summary.tsv")))
-write_tsv(funnel,              file.path(output_dir, paste0(output_stem, "_funnel.tsv")))
+write_tsv(usable_out,                    file.path(output_dir, paste0(output_stem, "_usable.tsv")))
+write_tsv(heterogeneous_pairs,           file.path(output_dir, paste0(output_stem, "_heterogeneous_pairs.tsv")))
+write_tsv(magnitude_consistent_pairs,    file.path(output_dir, paste0(output_stem, "_magnitude_consistent_pairs.tsv")))
+write_tsv(magnitude_inconsistent_pairs,  file.path(output_dir, paste0(output_stem, "_magnitude_inconsistent_pairs.tsv")))
+write_tsv(stringent_magnitude,           file.path(output_dir, paste0(output_stem, "_stringent_magnitude.tsv")))
+write_tsv(status_tbl,                    file.path(output_dir, paste0(output_stem, "_allele_status_summary.tsv")))
+write_tsv(funnel,                        file.path(output_dir, paste0(output_stem, "_funnel.tsv")))
 message("Tables (TSV) written to: ", output_dir)

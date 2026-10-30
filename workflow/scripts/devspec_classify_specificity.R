@@ -13,9 +13,7 @@
 #  types. Tested against ALL Jang L1 + L2 cell types pooled (MiGA3 excluded --
 #  a separate microglia-only meta-analysis, not part of the core L1+L2
 #  hierarchy, and would double-count microglia signal alongside MG/MG1-4).
-#  "Shared" = significant in >=1 Jang cell type. This is a broader reference set
-#  than the previous Fujita-only (7 L1 types) design, by intent -- the point is
-#  a more stringent bar for calling something fetal-specific.
+#  "Shared" = significant in >=1 Jang cell type.
 #
 #  Produces the fetal-specific SNP list for the OCR enrichment step (via LD
 #  clumping) and the fetal-specific input population for the heterogeneity test
@@ -25,38 +23,47 @@
 #
 #--------------------------------------------------------------------------------------
 #
-#  MIGRATION NOTE -- Fujita -> Jang et al. 2026 (SingleBrain):
+#  MIGRATION NOTE -- Fujita -> Jang et al. 2026 (SingleBrain): fixed_beta is
+#  used as the effect-size column (not Random_Z, which has no corresponding
+#  beta/se on the natural scale -- see report methods text for the fixed-vs-
+#  random rationale). Sign-normalized against the Allele column at read time:
+#  Jang's beta is relative to the "Allele" column, which is NOT always ALT --
+#  so beta is flipped wherever Allele != alt.
 #
-#  Jang's files have no per-pair Yes/No significance flag equivalent to Fujita's
-#  significant_by_2step_FDR. Significance is derived via a two-check design:
+#--------------------------------------------------------------------------------------
 #
-#    1. TESTABLE: the (gene, SNP) pair is present as a tested pair in that cell
-#       type's full-association file (every tested pair, not just each gene's
-#       lead SNP).
-#    2. SIGNIFICANT: the pair is ALSO that gene's lead SNP in that cell type's
-#       TOP-association file (one row per gene, its single most significant
-#       SNP), AND that row's qval < 0.05 (qval = Random-effect P, FDR-adjusted
-#       across variants within the gene, then Storey's q-value adjusted across
-#       genes -- Jang's own two-stage correction, functionally the closest
-#       equivalent to Fujita's significant_by_2step_FDR).
+#  ADDITION -- significance now checked directly on the fetal pair's OWN
+#  Random_P, not via Jang's lead-SNP/qval design (two prior iterations):
 #
-#  This is a MORE PERMISSIVE definition of "not significant" than Fujita's:
-#  Fujita's flag was available for every tested pair independently, whereas here
-#  a pair that IS tested (testable) but is NOT its gene's lead SNP has no qval
-#  of its own to check at all -- it falls to testable_specific by default, not
-#  because it was formally tested against the two-stage threshold and failed.
-#  This will inflate testable_specific relative to the Fujita-based classification.
-#  No new category is introduced for this middle case (decided deliberately, not
-#  an oversight) -- the effect should instead be documented in the report's
-#  methods text.
+#    v1 (retired): required the pair to be Jang's independently-chosen lead
+#    SNP for that gene (from the top-association file) AND clear qval<0.05.
 #
-#  fixed_beta is used as the effect-size column (not Random_Z, which has no
-#  corresponding beta/se on the natural scale -- see report methods text for the
-#  fixed-vs-random rationale). Sign-normalized against the Allele column at read
-#  time: Jang's beta is relative to the "Allele" column, which is NOT always ALT
-#  (unlike Fujita, where beta was implicitly always ALT-relative) -- so beta is
-#  flipped wherever Allele != alt, making pairs_all's beta always ALT-relative
-#  downstream, exactly matching how Fujita's beta was already treated.
+#    v2 (retired): same lead-SNP requirement, but qval<0.05 replaced with a
+#    Bonferroni threshold sized to OUR comparison space (0.05 / n_cell_types /
+#    n_testable_pairs) rather than Jang's own within-gene/across-gene
+#    correction. This barely moved the numbers -- strong real signals clear
+#    almost any threshold in whichever cell type they're strongest in, so
+#    tightening the cutoff mostly reclassified already-borderline cases.
+#
+#    v3 (current): the lead-SNP requirement itself is dropped. A fetal SNP can
+#    be genuinely significant in Jang without being Jang's own top-ranked SNP
+#    for that gene (a different, LD-linked SNP may have out-ranked it purely
+#    by chance in Jang's own scan) -- gating on lead-SNP status was hiding real
+#    shared signal, not just filtering noise. Now: read the full-association
+#    file only (top-association files are NOT read for significance purposes
+#    at all -- Jang's per-gene multi-SNP scan and its own within-gene FDR
+#    correction solve a search problem we're not running, since we've already
+#    fixed which SNP to check per gene via TensorQTL). Significance = the
+#    pair's own Random_P (raw, uncorrected -- so our fresh Bonferroni
+#    correction isn't double-correcting on top of Jang's) < a Bonferroni
+#    threshold sized to OUR test family: 0.05 / (n Jang cell types) /
+#    (n testable pairs, computed dynamically each run, never hardcoded).
+#
+#    Jang's lead-SNP identity is still read (from the top-association files)
+#    and retained as an INFORMATIONAL, non-gating column (is_jang_lead_snp) --
+#    does this fetal pair also happen to be Jang's own top-ranked SNP for that
+#    gene/cell type. This has no effect on final_category; it's reported
+#    purely as additional context.
 #
 #--------------------------------------------------------------------------------------
 
@@ -102,16 +109,14 @@ message("\n============================\n")
 # Functions ----------------------------------------------------------------------------
 
 # Full-association file: every tested pair for this cell type, filtered to our
-# universe genes/SNPs. beta sign-normalized against Allele (see MIGRATION NOTE).
+# universe genes/SNPs. beta sign-normalized against Allele. Random_P now
+# retained (not dropped) -- it's the actual significance check for this pair,
+# read directly from this file, not from the top-association file.
 #
-# ADDITION -- placeholder-cohort artifact filter (same fix as
-# replication_pi1_enrichment.R's Jang branch): some cohorts encode "not
-# tested for this pair" as beta=0/sd=0 rather than NA, giving that cohort
-# infinite weight (1/SE^2) in the meta-analysis and forcing Fixed_P ==
-# Random_P == 1 exactly. Removed entirely (not just beta/se nulled out) --
-# per decision, every script reading Jang applies the identical filter, so
-# there's one consistent set of rows omitted everywhere rather than a
-# per-script judgement call about which use of the row is "affected".
+# Placeholder-cohort artifact filter (unchanged from prior versions): some
+# cohorts encode "not tested for this pair" as beta=0/sd=0 rather than NA,
+# giving that cohort infinite weight (1/SE^2) in the meta-analysis and forcing
+# Fixed_P == Random_P == 1 exactly. Removed entirely.
 read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
   message("Reading Jang full-association data for: ", jang_ct, " (", file_path, ")")
 
@@ -132,7 +137,7 @@ read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
           " placeholder-cohort artifact rows (Fixed_P==1 & Random_P==1 exactly) out of ",
           n_before_artifact, " (", round(100 * n_removed_artifact / n_before_artifact, 3), "%)")
 
-  dat <- dat %>% select(-Fixed_P, -Random_P)
+  dat <- dat %>% select(-Fixed_P)
 
   # Strip GENCODE version suffix (Jang's feature is e.g. "ENSG00000131591.18";
   # our universe genes are bare ENSG IDs)
@@ -150,9 +155,10 @@ read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
       # Sign-normalize: Jang's beta is relative to Allele, not always alt
       beta = if_else(Allele == alt, fixed_beta, -fixed_beta),
       se   = fixed_sd,
+      random_p = Random_P,
       jang_cell_type = jang_ct
     ) %>%
-    select(gene_id, variant_id, beta, se, ref, alt, jang_cell_type)
+    select(gene_id, variant_id, beta, se, random_p, ref, alt, jang_cell_type)
 
   message("  Genes tested: ", length(gene_set),
           " | SNPs tested: ", length(snp_set),
@@ -161,20 +167,19 @@ read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
   list(gene_set = gene_set, snp_set = snp_set, pair_lookup = pair_lookup)
 }
 
-# Top-association file: one row per gene (its lead SNP), with qval. This is the
-# only place a two-stage-corrected significance value exists in Jang's data.
-# Same artifact filter applied here too -- a gene where EVERY tested SNP is an
-# artifact row would otherwise still surface as that gene's "lead SNP" with
-# qval~1, which should correctly fall out as untested rather than be reported
-# as a (trivially failing) significance check.
+# Top-association file: read ONLY to identify Jang's own lead SNP per gene, for
+# the informational (non-gating) is_jang_lead_snp flag -- NOT used for
+# significance at all (see ADDITION note: this was the source of the lead-SNP
+# gating we've now removed). Same artifact filter applied for consistency,
+# though its effect here is minor (an artifact-only gene's "lead SNP" call is
+# meaningless either way).
 read_jang_top <- function(file_path, jang_ct) {
-  message("Reading Jang top-association data for: ", jang_ct, " (", file_path, ")")
+  message("Reading Jang top-association data for: ", jang_ct, " (", file_path, ") -- lead-SNP identity only")
 
   dat <- read_tsv(
     file_path,
-    col_select = c(feature, variant_id, qval, Fixed_P, Random_P),
-    col_types = cols(feature = "c", variant_id = "c", qval = "d",
-                      Fixed_P = "d", Random_P = "d"),
+    col_select = c(feature, variant_id, Fixed_P, Random_P),
+    col_types = cols(feature = "c", variant_id = "c", Fixed_P = "d", Random_P = "d"),
     show_col_types = FALSE
   )
 
@@ -188,7 +193,7 @@ read_jang_top <- function(file_path, jang_ct) {
   dat %>%
     mutate(gene_id = sub("\\..*", "", feature)) %>%
     filter(str_detect(variant_id, "^rs"), str_detect(gene_id, "^ENSG")) %>%
-    transmute(gene_id, lead_variant_id = variant_id, qval, jang_cell_type = jang_ct)
+    transmute(gene_id, lead_variant_id = variant_id, jang_cell_type = jang_ct)
 }
 
 # Main -----------------------------------------------------------------------------------
@@ -228,59 +233,87 @@ snp_set_any  <- Reduce(union, snp_sets)
 pairs_all <- bind_rows(pair_lookups)
 message("\nTotal pairs_all rows (across all cell types): ", nrow(pairs_all))
 
-# Per-gene/SNP membership lookups, same role as the Fujita version -- used for
-# the "any" tier's testability check, and written to output for Step C.
+# Per-gene/SNP membership lookups, used for the "any" tier's testability check,
+# and written to output for Step C.
 gene_membership <- map_dfr(names(gene_sets), ~ tibble(jang_cell_type = .x, gene_id = gene_sets[[.x]]))
 snp_membership  <- map_dfr(names(snp_sets),  ~ tibble(jang_cell_type = .x, variant_id = snp_sets[[.x]]))
 
-# Loop over Jang top-association files ---------------------------------------------------
-message("\n--- Reading Jang top-association files (", length(jang_cell_types), " cell types) ---\n")
+# --- Dynamic Bonferroni threshold (see ADDITION note at top of file) -------------------
+# "Testable" = gene_expressed AND snp_genotyped both TRUE (pooled across all 35
+# Jang cell types) -- computed directly from unique_pairs/gene_set_any/
+# snp_set_any, never hardcoded.
+message("\n--- Computing dynamic Bonferroni threshold ---\n")
+
+n_testable_pairs <- unique_pairs %>%
+  filter(phenotype_id %in% gene_set_any, variant_id %in% snp_set_any) %>%
+  nrow()
+
+n_jang_cell_types <- length(jang_cell_types)
+
+bonferroni_threshold <- 0.05 / n_jang_cell_types / n_testable_pairs
+
+message("  Testable pairs (gene_expressed & snp_genotyped both TRUE): ", n_testable_pairs)
+message("  Jang cell types: ", n_jang_cell_types)
+message("  Bonferroni threshold = 0.05 / ", n_jang_cell_types, " / ", n_testable_pairs,
+        " = ", format(bonferroni_threshold, scientific = TRUE, digits = 4))
+
+# --- Jang lead-SNP identity (informational only) ---------------------------------------
+message("\n--- Reading Jang top-association files (lead-SNP identity, informational only) ---\n")
 
 top_lookups <- map(jang_cell_types, ~ read_jang_top(jang_top_files[[.x]], .x))
 top_lookup_all <- bind_rows(top_lookups)
-message("Total lead-SNP rows across all cell types: ", nrow(top_lookup_all))
+message("Total lead-SNP identity rows across all cell types: ", nrow(top_lookup_all))
+
+pairs_all <- pairs_all %>%
+  left_join(top_lookup_all, by = c("gene_id", "jang_cell_type")) %>%
+  mutate(is_jang_lead_snp = !is.na(lead_variant_id) & variant_id == lead_variant_id) %>%
+  select(-lead_variant_id)
+
+n_lead_match <- sum(pairs_all$is_jang_lead_snp)
+message("Rows in pairs_all that also match Jang's own lead SNP for that gene/cell type: ",
+        n_lead_match, " / ", nrow(pairs_all),
+        " (", round(100 * n_lead_match / nrow(pairs_all), 2), "%) -- informational, does not affect classification")
 
 # =======================================================================================
 # "ANY" TIER: unique pairs, checked against ALL Jang cell types pooled
 # =======================================================================================
 message("\n--- Building 'any' tier classification ---")
 
-# Is this pairs_all row (gene, snp, tested in cell type X) also cell type X's
-# lead SNP for that gene, with qval < 0.05? (see MIGRATION NOTE for why this is
-# a two-check design rather than a single per-pair flag)
+# Significance = this pair's OWN Random_P (from the full-association file,
+# already on this row) clears our Bonferroni threshold. No lead-SNP
+# requirement (see ADDITION note).
 pairs_all <- pairs_all %>%
-  left_join(
-    top_lookup_all,
-    by = c("gene_id", "jang_cell_type")
-  ) %>%
-  mutate(
-    is_lead_snp = !is.na(lead_variant_id) & variant_id == lead_variant_id,
-    significant_lead = is_lead_snp & !is.na(qval) & qval < 0.05
-  )
+  mutate(significant_pair = !is.na(random_p) & random_p < bonferroni_threshold)
 
-message("Rows in pairs_all that are their gene's lead SNP in that cell type: ",
-        sum(pairs_all$is_lead_snp))
-message("Rows additionally significant (qval<0.05): ", sum(pairs_all$significant_lead))
+message("Rows significant (Random_P < ",
+        format(bonferroni_threshold, scientific = TRUE, digits = 4), "): ",
+        sum(pairs_all$significant_pair))
+message("  Of which also Jang's own lead SNP: ",
+        sum(pairs_all$significant_pair & pairs_all$is_jang_lead_snp))
+message("  Of which NOT Jang's own lead SNP (significant via a non-lead SNP -- ",
+        "exactly the case the old lead-SNP gate would have missed): ",
+        sum(pairs_all$significant_pair & !pairs_all$is_jang_lead_snp))
 
-# Significance call: significant_lead in >= 1 Jang cell type
+# Significance call: significant_pair in >= 1 Jang cell type
 pairs_any_sig <- pairs_all %>%
   group_by(gene_id, variant_id) %>%
   summarise(
-    significant_any    = any(significant_lead),
-    n_jang_types_tested = n(),
+    significant_any     = any(significant_pair),
+    n_jang_types_tested  = n(),
+    any_jang_lead_snp_match = any(is_jang_lead_snp),
     .groups = "drop"
   )
 
-# Provenance: which Jang cell type gave the smallest qval among this pair's
-# lead-SNP rows (for QC/reporting only). NA where the pair was never a lead SNP
-# anywhere.
+# Provenance: which Jang cell type gave the smallest random_p for this pair,
+# across ALL tested cell types (not restricted to lead-SNP rows, since
+# significance is no longer gated on that).
 pairs_any_provenance <- pairs_all %>%
-  filter(is_lead_snp) %>%
   group_by(gene_id, variant_id) %>%
-  slice_min(qval, n = 1, with_ties = FALSE) %>%
+  slice_min(random_p, n = 1, with_ties = FALSE) %>%
   ungroup() %>%
   select(gene_id, variant_id, best_jang_ct = jang_cell_type,
-         qval_adult = qval, beta_adult = beta)
+         random_p_adult = random_p, beta_adult = beta,
+         best_ct_is_jang_lead_snp = is_jang_lead_snp)
 
 pairs_any <- left_join(pairs_any_sig, pairs_any_provenance, by = c("gene_id", "variant_id"))
 
@@ -316,12 +349,11 @@ n_fetal_specific <- sum(any_table$final_category == "testable_specific")
 message("Fetal-specific unique (gene, SNP) pairs: ", n_fetal_specific,
         " out of ", nrow(unique_pairs), " total unique pairs")
 
-message("\nReminder: testable_specific here includes pairs that were tested but were\n",
-        "never any cell type's lead SNP (no qval of their own to check) alongside pairs\n",
-        "that WERE a lead SNP somewhere but failed qval<0.05 -- these two cases are not\n",
-        "distinguished as separate categories (deliberate choice, see MIGRATION NOTE).\n",
-        "This makes testable_specific more permissive than the prior Fujita-based\n",
-        "classification; document this in the report.")
+message("\n--- Lead-SNP match rate among testable_shared pairs (informational) ---")
+shared_lead_match <- any_table %>%
+  filter(final_category == "testable_shared") %>%
+  count(best_ct_is_jang_lead_snp, name = "n")
+print(shared_lead_match)
 
 # Sanity check
 if (any(any_table$final_category == "uncategorised_check_logic")) {
@@ -332,11 +364,13 @@ if (any(any_table$final_category == "uncategorised_check_logic")) {
 # Write tracked output -------------------------------------------------------------------
 write_rds(
   list(
-    any_table       = any_table,
-    any_summary     = any_summary,
-    pairs_all       = pairs_all,
-    gene_membership = gene_membership,
-    snp_membership  = snp_membership
+    any_table            = any_table,
+    any_summary          = any_summary,
+    pairs_all            = pairs_all,
+    gene_membership      = gene_membership,
+    snp_membership       = snp_membership,
+    bonferroni_threshold = bonferroni_threshold,
+    n_testable_pairs     = n_testable_pairs
   ),
   output_file
 )

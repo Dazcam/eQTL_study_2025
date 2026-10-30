@@ -28,6 +28,21 @@
 #  classify_eqtl_specificity's output, does not modify it).
 #
 #--------------------------------------------------------------------------------------
+#
+#  ADDITION -- magnitude-consistent heterogeneous flag:
+#
+#  Adds is_magnitude_consistent_heterogeneous (TRUE/FALSE), joined from
+#  devspec_heterogeneity_test.R's final heterogeneous_snps output -- the 218
+#  pairs that are heterogeneous in ALL tested adult comparisons AND
+#  magnitude-consistent (|fetal beta| > |adult beta| in every one of those
+#  comparisons), i.e. exactly the set fed to OCR enrichment's
+#  "specific_heterogeneous" SNP set. This set is itself a strict subset of
+#  testable_specific, so every TRUE row here should also show
+#  final_category == "testable_specific" -- checked explicitly below and
+#  logged as a warning if violated (would indicate the two inputs came from
+#  different pipeline runs, not a real finding).
+#
+#--------------------------------------------------------------------------------------
 
 # Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -48,22 +63,25 @@ suppressPackageStartupMessages({
 })
 
 # Input and output paths ---------------------------------------------------------------
-smr_files          <- snakemake@input[["smr_files"]]
-classification_file <- snakemake@input[["classification"]]
-gene_lookup_file   <- snakemake@input[["gene_lookup"]]
-output_file        <- snakemake@output[[1]]
-cell_types         <- snakemake@params[["cell_types"]]
-gwas_list          <- snakemake@params[["gwas_list"]]
-p_smr              <- as.numeric(snakemake@params[["p_smr"]])
-p_heidi            <- as.numeric(snakemake@params[["p_heidi"]])
+smr_files            <- snakemake@input[["smr_files"]]
+classification_file  <- snakemake@input[["classification"]]
+heterogeneity_file   <- snakemake@input[["heterogeneity_test"]]
+gene_lookup_file     <- snakemake@input[["gene_lookup"]]
+output_file          <- snakemake@output[[1]]
+cell_types           <- snakemake@params[["cell_types"]]
+gwas_list            <- snakemake@params[["gwas_list"]]
+p_smr                <- as.numeric(snakemake@params[["p_smr"]])
+p_heidi              <- as.numeric(snakemake@params[["p_heidi"]])
 
 # Check variable assignment
 message("\nVariables")
 cat("============================")
 tibble(
-  variable = c("classification_file", "gene_lookup_file", "n_smr_files", "n_cell_types", "n_gwas",
+  variable = c("classification_file", "heterogeneity_file", "gene_lookup_file",
+               "n_smr_files", "n_cell_types", "n_gwas",
                "p_smr", "p_heidi", "output_file"),
-  value    = c(classification_file, gene_lookup_file, length(smr_files), length(cell_types), length(gwas_list),
+  value    = c(classification_file, heterogeneity_file, gene_lookup_file,
+               length(smr_files), length(cell_types), length(gwas_list),
                p_smr, p_heidi, output_file)
 ) |>
   knitr::kable(format = "simple", align = "l") |>
@@ -155,6 +173,42 @@ n_no_match <- sum(smr_overlap$final_category == "not_in_dev_spec_universe")
 message("SMR-significant pairs with NO match in the dev-specificity universe: ",
         n_no_match, " / ", nrow(smr_overlap),
         " (", round(100 * n_no_match / nrow(smr_overlap), 1), "%)")
+
+# ========================================================================================
+# ADDITION -- join against heterogeneity_test's final magnitude-consistent set (218)
+# ========================================================================================
+
+message("\n--- Loading heterogeneity test output and flagging magnitude-consistent-heterogeneous pairs ---\n")
+
+het_test <- read_rds(heterogeneity_file)
+magnitude_consistent_het_pairs <- het_test$heterogeneous_snps  # 218: heterogeneous_all AND magnitude_consistent
+message("  Magnitude-consistent heterogeneous pairs (from Step C, fed to OCR): ",
+        nrow(magnitude_consistent_het_pairs))
+
+smr_overlap <- smr_overlap |>
+  left_join(
+    magnitude_consistent_het_pairs |> mutate(is_magnitude_consistent_heterogeneous = TRUE),
+    by = c("probeID" = "phenotype_id", "topSNP" = "variant_id")
+  ) |>
+  mutate(is_magnitude_consistent_heterogeneous = replace_na(is_magnitude_consistent_heterogeneous, FALSE))
+
+n_flagged <- sum(smr_overlap$is_magnitude_consistent_heterogeneous)
+message("  SMR-significant rows also in the magnitude-consistent heterogeneous set: ",
+        n_flagged, " / ", nrow(smr_overlap))
+
+# Consistency check: every flagged row should be testable_specific (the 218 set
+# is a strict subset of it) -- a violation would mean classification/
+# heterogeneity_test.R outputs are from different runs, not a real finding.
+n_inconsistent <- smr_overlap |>
+  filter(is_magnitude_consistent_heterogeneous, final_category != "testable_specific") |>
+  nrow()
+if (n_inconsistent > 0) {
+  message("  WARNING: ", n_inconsistent, " rows are flagged magnitude-consistent-heterogeneous ",
+          "but final_category != 'testable_specific' -- check classification and heterogeneity_test ",
+          "outputs are from the same pipeline run.")
+} else {
+  message("  Consistency check passed: every flagged row has final_category == 'testable_specific'.")
+}
 
 # ========================================================================================
 # Summary

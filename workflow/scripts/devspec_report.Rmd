@@ -121,6 +121,12 @@ het_usable        <- het_test$usable
 het_heterogeneous <- het_test$heterogeneous_pairs
 het_funnel        <- het_test$funnel
 
+# Magnitude consistency now computed upstream in devspec_heterogeneity_test.R
+# (previously recomputed here at render time -- see report change discussion)
+het_magnitude_consistent   <- het_test$magnitude_consistent_pairs
+het_magnitude_inconsistent <- het_test$magnitude_inconsistent_pairs
+het_stringent_magnitude    <- het_test$stringent_magnitude
+
 # Unpack subcluster/supercluster effect-size object
 subcluster_tbl   <- eqtl_effects$subcluster_specific
 supercluster_tbl <- eqtl_effects$supercluster_specific
@@ -209,20 +215,18 @@ Classify fetal eQTL against Jang et al. 2026 (SingleBrain) adult eGene-eSNP pair
 pooled across all L1+L2 Jang cell types (35 types; MiGA3 excluded -- 
 a separate microglia-only meta-analysis, not part of the core L1+L2 hierarchy).
 
-- `testable_shared`: fetal eQTL is present in nom file, and top assoc file, AND `qval < 0.05` in latter (in >= 1 Jang cell type)
+- `testable_shared`: fetal SNP's own Random_P (Jang nom. file) clears a Bonferroni threshold (0.05 / 35 cell types / n testable pairs) in >= 1 Jang cell type
   - Feeds: OCR enrichment (as the "shared" SNP set)
-- `testable_specific`: present in Jang nom file, but not sig. in any Jang cell type
+- `testable_specific`: present in Jang nom file, but Random_P doesn't clear that threshold in any cell type
   - Feeds: Heterogeneity test (next section), OCR enrichment (as the "fetal-specific" SNP set)
+- `untestable_*_not_expressed`: gene not expressed in Jang at all -- combined into a 4th OCR SNP set (see OCR section)
 
-**Significance note**: Jang has no `significant_by_2step_FDR` column, only a qval
-column in the top assoc. file (i.e. the perm file). 
+Significance is checked on the fetal SNP's own Jang p-value directly, not gated on
+being Jang's independently-chosen lead SNP (tracked separately, informational only).
 
-This makes `testable_specific` more permissive here than under Fujita.
+Both testable categories are LD-pruned (see LD-clumping steps) before being used in OCR enrichment.
 
-Both categories are LD-pruned (see LD-clumping steps) before being used in OCR enrichment.
-
-*Note*: qval in top assoc. is derived from Random_P, beta and se in Jang derived from
-fixed_P and fixed_SD.
+Beta/SE in Jang derived from fixed_beta/fixed_SD; significance from Random_P.
 
 ***
 
@@ -291,6 +295,9 @@ they could against Fujita. Every palindromic pair is therefore uniformly `palind
   - Q is not directional -- it tells you the betas differ, not which way
   - Pairs tested against more adult cell types face a harder bar under the
     "all" rule -- see the stringency table below
+  - A pair only feeds OCR enrichment's "specific_heterogeneous" SNP set if it
+    is ALSO magnitude-consistent (|fetal beta| > |adult beta| in every tested
+    comparison) -- see the Magnitude-consistent/-inconsistent tabs below
 
 ***
 
@@ -360,29 +367,18 @@ only those where |fetal beta| > |adult beta| in EVERY tested comparison for
 that pair -- not just heterogeneous, but the fetal effect strictly larger in
 magnitude, regardless of sign. This sidesteps delta_beta's ambiguity when
 fetal and adult betas have opposite signs (delta_beta can look "fetal-bigger"
-even when adult's magnitude is actually larger). NOT yet fed to OCR
-enrichment -- report-only for now.
+even when adult's magnitude is actually larger). Feeds OCR enrichment's
+"specific_heterogeneous" SNP set (see OCR section) -- computed in
+devspec_heterogeneity_test.R, not re-derived here.
 
 ```{r het-test-magnitude-prep}
-stringent_magnitude <- het_usable |>
-  semi_join(het_heterogeneous |> filter(heterogeneous_all),
-            by = c("phenotype_id", "variant_id")) |>
-  mutate(
-    magnitude_diff = abs(beta_my) - abs(beta_jang_harmonized),
-    fetal_bigger = magnitude_diff > 0
-  )
+stringent_magnitude <- het_stringent_magnitude
 
-pair_magnitude <- stringent_magnitude |>
-  group_by(phenotype_id, variant_id) |>
-  summarise(
-    fetal_cell_type = first(cell_type),
-    n_comparisons = n(),
-    n_fetal_bigger = sum(fetal_bigger),
-    magnitude_consistent = all(fetal_bigger),
-    min_magnitude_diff = min(magnitude_diff),
-    max_magnitude_diff = max(magnitude_diff),
-    .groups = "drop"
-  )
+pair_magnitude <- het_heterogeneous |>
+  filter(heterogeneous_all) |>
+  transmute(phenotype_id, variant_id, fetal_cell_type,
+            n_comparisons = n_comparisons_tested,
+            magnitude_consistent, min_magnitude_diff, max_magnitude_diff)
 ```
 
 ```{r het-test-magnitude-summary-stats, results = "asis"}
@@ -412,11 +408,27 @@ ggplot(stringent_magnitude, aes(x = magnitude_diff)) +
 ```
 
 ```{r het-test-magnitude-final-table}
-pair_magnitude |>
-  filter(magnitude_consistent) |>
-  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
-  select(ENSG = phenotype_id, Symbol = external_gene_name, eSNP = variant_id,
-         Fetal_Cell_Type = fetal_cell_type, N_Comparisons = n_comparisons,
+het_magnitude_consistent |>
+  select(ENSG = phenotype_id, Symbol = gene_symbol, eSNP = variant_id,
+         Fetal_Cell_Type = fetal_cell_type, N_Comparisons = n_comparisons_tested,
+         Min_Magnitude_Diff = min_magnitude_diff, Max_Magnitude_Diff = max_magnitude_diff) |>
+  arrange(Min_Magnitude_Diff) |>
+  mutate(across(where(is.numeric), ~ round(.x, 4))) |>
+  small_dt()
+```
+
+***
+
+#### Magnitude-inconsistent pairs
+
+The stringent (heterogeneous-in-all) pairs that do NOT also have |fetal beta| >
+|adult beta| in every tested comparison -- excluded from OCR enrichment's
+"specific_heterogeneous" SNP set, kept here for transparency.
+
+```{r het-test-magnitude-inconsistent-table}
+het_magnitude_inconsistent |>
+  select(ENSG = phenotype_id, Symbol = gene_symbol, eSNP = variant_id,
+         Fetal_Cell_Type = fetal_cell_type, N_Comparisons = n_comparisons_tested,
          Min_Magnitude_Diff = min_magnitude_diff, Max_Magnitude_Diff = max_magnitude_diff) |>
   arrange(Min_Magnitude_Diff) |>
   mutate(across(where(is.numeric), ~ round(.x, 4))) |>
@@ -696,7 +708,9 @@ Heatmap(
 #### Full slope table
 
 Betas for every (eGene, eSNP) pair across the 7 fetal L1 cell types and 7
-Jang adult L1-pooled cell types.
+Jang adult L1-pooled cell types. Rows with no gene symbol show
+"(no symbol)" in the Symbol column -- type that into the column's search
+box (top of the table) to filter to just those rows.
 
 ```{r full-slope-table}
 slope_full_tbl <- effect_matrix |>
@@ -704,6 +718,7 @@ slope_full_tbl <- effect_matrix |>
   select(external_gene_name, phenotype_id, variant_id,
          all_of(paste0("slope_", full_order))) |>
   rename(Symbol = external_gene_name, ENSG_ID = phenotype_id, SNP = variant_id) |>
+  mutate(Symbol = if_else(is.na(Symbol) | Symbol == "", "(no symbol)", Symbol)) |>
   rename_with(~ str_remove(., "^slope_"), starts_with("slope_"))
 
 small_dt(slope_full_tbl)
@@ -911,10 +926,115 @@ pi1_jang_tbl |>
 
 ***
 
+### Gene symbol coverage {.tabset}
+
+Investigates why the final magnitude-consistent set (see Heterogeneity test
+above) has 100% gene-symbol coverage -- tracks Ensembl ID / gene-symbol
+coverage through each stage of the pipeline, from the full fetal eGene
+universe down to the final magnitude-consistent set.
+
+**Caveat**: `final_category` is assigned per (gene, SNP) PAIR, not per gene --
+a gene with multiple SNPs can appear under more than one category (e.g. one
+SNP `testable_specific`, another `testable_shared` for the same gene). The
+"By classification category" tab below allows that overlap openly (a gene may
+be counted in more than one row) rather than forcing each gene into a single
+bucket.
+
+***
+
+#### Funnel
+
+The sequential path that actually produced the final magnitude-consistent
+set: full universe -> `testable_specific` -> usable (post allele
+harmonization) -> stringent (heterogeneous in all comparisons) ->
+magnitude-consistent.
+
+```{r symbol-funnel-prep}
+check_symbol_coverage <- function(gene_ids, gene_lookup, stage_label) {
+  gene_ids <- unique(gene_ids)
+  matched <- gene_lookup$external_gene_name[match(gene_ids, gene_lookup$ensembl_gene_id)]
+  has_symbol <- !is.na(matched) & matched != ""
+  tibble(
+    Stage = stage_label,
+    N_Unique_Genes = length(gene_ids),
+    N_With_Symbol = sum(has_symbol),
+    N_Without_Symbol = length(gene_ids) - sum(has_symbol)
+  )
+}
+
+symbol_funnel <- bind_rows(
+  check_symbol_coverage(eqtl_universe$phenotype_id, gene_lookup,
+                         "A: Full fetal eGene universe"),
+  check_symbol_coverage(any_table |> filter(final_category == "testable_specific") |> pull(phenotype_id),
+                         gene_lookup, "B: testable_specific pairs"),
+  check_symbol_coverage(het_usable$phenotype_id, gene_lookup,
+                         "C: usable rows (post allele harmonization)"),
+  check_symbol_coverage(het_heterogeneous |> filter(heterogeneous_all) |> pull(phenotype_id),
+                         gene_lookup, "C: heterogeneous in ALL comparisons (stringent)"),
+  check_symbol_coverage(het_magnitude_consistent$phenotype_id, gene_lookup,
+                         "C: magnitude-consistent (final)")
+) |>
+  mutate(Pct_With_Symbol = percent(N_With_Symbol / N_Unique_Genes, accuracy = 0.1))
+```
+
+```{r symbol-funnel-table}
+symbol_funnel |>
+  gt() |>
+  tab_header(title = "Gene symbol coverage through the fetal-specific/heterogeneous pipeline")
+```
+
+***
+
+#### By classification category
+
+Cross-sectional view across ALL of `any_table`'s categories (not just the
+funnel path taken) -- tests whether symbol coverage differs systematically
+between testable and untestable/not-expressed categories, which would point
+to the bias being baked in at the classification step itself (most plausibly
+via Jang's own gene detection skewing toward well-annotated genes) rather
+than introduced anywhere downstream in this pipeline.
+
+```{r symbol-by-category-prep}
+symbol_by_category <- any_table |>
+  distinct(phenotype_id, final_category) |>
+  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) |>
+  mutate(has_symbol = !is.na(external_gene_name) & external_gene_name != "") |>
+  group_by(final_category) |>
+  summarise(
+    N_Unique_Genes = n(),
+    N_With_Symbol = sum(has_symbol),
+    N_Without_Symbol = n() - sum(has_symbol),
+    .groups = "drop"
+  ) |>
+  mutate(Pct_With_Symbol = percent(N_With_Symbol / N_Unique_Genes, accuracy = 0.1)) |>
+  arrange(desc(N_Unique_Genes))
+```
+
+```{r symbol-by-category-table}
+symbol_by_category |>
+  rename(Final_Category = final_category) |>
+  gt() |>
+  tab_header(title = "Gene symbol coverage by classification category")
+```
+
+```{r symbol-by-category-plot, fig.height=4, fig.width=7}
+symbol_by_category |>
+  mutate(prop_with_symbol = N_With_Symbol / N_Unique_Genes,
+         final_category = fct_reorder(final_category, prop_with_symbol)) |>
+  ggplot(aes(x = final_category, y = prop_with_symbol)) +
+  geom_col(fill = "#377EB8") +
+  geom_text(aes(label = percent(prop_with_symbol, accuracy = 0.1)), hjust = -0.1, size = 3.5) +
+  coord_flip(ylim = c(0, 1)) +
+  labs(x = NULL, y = "Proportion of unique genes with a gene symbol") +
+  theme_classic(base_size = 12)
+```
+
+***
+
 ### OCR enrichment {.tabset}
 
-- LD-pruned fetal-specific, shared, and specific-heterogeneous eQTL SNPs
-tested for enrichment in adult cortical OCRs (Li et al. 2023)
+- LD-pruned fetal-specific, shared, specific-heterogeneous, and not-expressed
+eQTL SNPs tested for enrichment in adult cortical OCRs (Li et al. 2023)
 - Cortical adult union peak set manually curated
 
 ***
@@ -932,8 +1052,9 @@ ocr_enrich |>
       recode(snp_set,
              fetal_specific = "Fetal-specific",
              shared = "Shared",
-             specific_heterogeneous = "Specific + heterogeneous"),
-      levels = c("Shared", "Fetal-specific", "Specific + heterogeneous")
+             specific_heterogeneous = "Specific + heterogeneous",
+             not_expressed = "Not expressed"),
+      levels = c("Shared", "Fetal-specific", "Specific + heterogeneous", "Not expressed")
     )
   ) |>
   ggplot(aes(x = snp_set, y = fold_enrichment, fill = snp_set)) +
@@ -941,7 +1062,8 @@ ocr_enrich |>
   geom_hline(yintercept = 1, linetype = "dashed", colour = "grey50") +
   geom_text(aes(label = sig_label), vjust = -0.3, size = 4) +
   scale_fill_manual(values = c("Fetal-specific" = "#E41A1C", "Shared" = "#4DAF4A",
-                                "Specific + heterogeneous" = "#984EA3")) +
+                                "Specific + heterogeneous" = "#984EA3",
+                                "Not expressed" = "grey50")) +
   labs(x = NULL, y = "Fold enrichment (adult cortical union)", fill = NULL) +
   theme_classic(base_size = 13) +
   theme(legend.position = "none")

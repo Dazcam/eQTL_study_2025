@@ -279,6 +279,22 @@ rule eqtl_effect_sizes:
     log:    config["dev_specificity"]["eqtl_effects"]["log"]
     script: "../scripts/devspec_eqtl_effect_sizes.R"
 
+rule eqtl_effect_replication:
+    input:  qtl_perm_files = get_egene_universe_inputs(),
+            nom_files      = get_nom_files(),
+            jang_files     = get_jang_l1_inputs(),
+            pvar_file      = config["dev_specificity"]["beta_correlation"]["pvar_file"]
+    output: config["dev_specificity"]["eqtl_effect_replication"]["out_file"]
+    params: cell_types = DEVSPEC_CELL_TYPES,
+            fetal_l1   = DEVSPEC_FETAL_L1
+    singularity: config["containers"]["r_eqtl"]
+    resources: threads = 4, mem_mb = 64000, time = "02:00:00"
+    threads: 4
+    message: "Discovery -> replication eQTL effect-size correlations (fetal-fetal and fetal L1-adult), no significance cutoff on the replication side"
+    benchmark: "reports/benchmarks/dev_specificity.eqtl_effect_replication.txt"
+    log:    config["dev_specificity"]["eqtl_effect_replication"]["log"]
+    script: "../scripts/devspec_effect_replication.R"
+
 rule beta_correlation:
     input:  jang_l1_files     = get_jang_beta_corr_full_inputs(),
             jang_l1_top_files = get_jang_beta_corr_top_inputs(),

@@ -27,7 +27,7 @@ From: bioconductor/bioconductor_docker
     # Install remaining CRAN packages
     R -e "install.packages(c('knitr', 'DT', 'viridis', 'cowplot', 'rmarkdown', 'glue', 'kableExtra', 
                              'gt', 'gtExtras','qvalue','UpSetR','patchwork','ggrepel', 'LDlinkR',
-                             'lme4', 'ggplotify', 'openxlsx'), repos='https://cloud.r-project.org/')"
+                             'lme4', 'ggplotify', 'openxlsx', 'ggvenn', 'testthat', 'waldo'), repos='https://cloud.r-project.org/')"
     
     # Install additional packages for JOBs
     R -e "install.packages(c('R.utils', 'pracma', 'quadprog'))"
