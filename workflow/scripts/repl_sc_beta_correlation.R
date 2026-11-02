@@ -1,57 +1,44 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: fetal-adult eQTL beta correlation
+#    Fetal vs adult (Jang et al. 2026) eQTL effect-size concordance
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  06QTL-REPLICATION | Rule: beta_correlation (single job)
+#            Upstream:   05TENSORQTL tensorqtl_perm (final expPC per cell type);
+#                        Jang et al. 2026 SingleBrain L1 full + top association files
+#            Downstream: 06 report (effect-size concordance tab; Fig 3F)
+#
+# Purpose:   - Join each fetal cell type's sig. eGene-eSNP pairs (qval < 0.05) to the
+#              matched Jang adult betas, across 8 fetal-adult comparisons
+#              (NPC tested against both Ext and IN)
+#            - Flag a pair as sig. in Jang only if it is the gene's lead SNP in the
+#              top-association file AND qval < 0.05 (two-check design)
+#            - Report opposite-effect pairs (sign(beta_my) != sign(beta_jang)) among
+#              pairs sig. in both datasets, annotated with an allele-coding check
+#              against Jang's ref/alt
+#
+# Inputs:    jang_l1_files       Jang full-association files, 5 unique adult types
+#            jang_l1_top_files   Jang top-association files, same 5 types
+#            pvar_file           our genotype pvar (REF/ALT per rsID)
+#            nom_dir             tensorQTL output dir (params)
+#
+# Outputs:   output_file   rds list: paired_betas, opposite_effects, celltype_map
+#
+# Notes:     - Jang placeholder-cohort rows (Fixed_P == Random_P == 1) are removed
+#              before use (filter_jang_artifacts()).
+#            - Jang beta is relative to `Allele`, not always alt; it is
+#              sign-normalised to alt at read time (align_jang_beta()).
+#            - Effect sizes use fixed_beta/fixed_sd; Random_Z has no matching
+#              beta/se on the natural scale.
+#            - No allele-frequency checks: Jang has no AF column and 1000G is not
+#              used as a substitute, so palindromic pairs are unresolved and get
+#              beta_jang_harmonized = NA.
+#            - Each Jang adult cell type is read once and reused across comparisons.
 #
 #--------------------------------------------------------------------------------------
 
-#  Fetal significant eGene-eSNP pairs (qval<0.05) joined to matched Jang et al.
-#  2026 (SingleBrain) adult betas, across 8 fetal-adult cell type comparisons
-#  (NPC vs both Ext and IN per reviewer request). Identifies opposite-effect
-#  pairs (sign(beta_my) != sign(beta_jang)) restricted to pairs ALSO significant
-#  in Jang (two-check design, see MIGRATION NOTE), and annotates each with
-#  allele-coding comparison against Jang's ref/alt.
-#
-#  Step 5 of the developmental-specificity pipeline.
-#
-#--------------------------------------------------------------------------------------
-#
-#  MIGRATION NOTE -- Fujita -> Jang et al. 2026 (SingleBrain):
-#
-#  1. Significance: Jang has no per-pair Yes/No flag equivalent to Fujita's
-#     significant_by_2step_FDR. Same two-check design as classify_specificity.R
-#     / devspec_heterogeneity_test.R: a pair is "significant in Jang" only if it
-#     IS that gene's lead SNP in the top-association file AND qval < 0.05.
-#     "Present but not the lead SNP" has no qval of its own and is treated as
-#     not significant (same permissiveness caveat as elsewhere in this
-#     migration -- document in report).
-#
-#  2. Effect size: fixed_beta/fixed_sd used (not Random_Z, which has no
-#     corresponding beta/se on the natural scale -- see report methods text).
-#     Sign-normalized against Allele at read time (Jang's beta is relative to
-#     Allele, not always alt), so beta_jang is always alt-relative downstream,
-#     matching how Fujita's beta was already implicitly treated.
-#
-#  3. Allele-frequency checks REMOVED ENTIRELY (not substituted with 1000G):
-#     Jang has no AF column, and per the same decision made for Step C, 1000G
-#     is not used as a substitute reference (no guarantee Jang's allele/strand
-#     conventions were harmonized against it). For full consistency with Step
-#     C, the previously-separate 1000G-vs-our-own-SNP cross-check
-#     (allele_status_1000G / af_concordant_1000G) has ALSO been removed here,
-#     even though it never depended on Jang's AF specifically -- kept it out
-#     to avoid one dataset's harmonization being AF-free while this one still
-#     used an external AF reference. Every palindromic pair is now
-#     unconditionally "palindromic_unresolved" and dropped from opposite_effects
-#     (beta_jang_harmonized = NA). AF_TOLERANCE is no longer used by this script.
-#
-#  4. Preloading: each of the 5 unique Jang adult cell types (Ext, IN, MG, OPC,
-#     End) is read ONCE (full + top files), then joined per comparison -- the
-#     previous Fujita version re-read the same file up to 3x per shared adult
-#     cell type (e.g. Exc for Glu-UL, Glu-DL, and NPC); Jang's larger files
-#     make that redundancy worth removing.
-#
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -65,6 +52,7 @@ if (exists("snakemake")) {
 
 message("\n\nComputing fetal-adult (Jang et al. 2026) eQTL beta correlations and opposite-effects allele checks ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(data.table)
@@ -73,7 +61,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 jang_l1_files    <- snakemake@input[["jang_l1_files"]]    # full-assoc, 5 unique adult types
 jang_l1_top_files <- snakemake@input[["jang_l1_top_files"]] # top-assoc, same 5 types
 pvar_file        <- snakemake@input[["pvar_file"]]
@@ -102,26 +90,22 @@ unique_jang_cts <- unique(celltype_map$jang_cell)
 names(jang_l1_files)     <- unique_jang_cts
 names(jang_l1_top_files) <- unique_jang_cts
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
-  variable = c("n_jang_l1_files", "n_jang_l1_top_files", "pvar_file",
+  variable = c("n_jang_l1_files", "n_jang_l1_top_files", "pvar_file", "nom_dir",
                "n_comparisons", "n_unique_adult_types", "output_file"),
-  value    = c(length(jang_l1_files), length(jang_l1_top_files), pvar_file,
-               nrow(celltype_map), length(unique_jang_cts), output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+  value    = c(length(jang_l1_files), length(jang_l1_top_files), pvar_file, nom_dir,
+               nrow(celltype_map), length(unique_jang_cts), output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
 message("\nCell type comparisons:")
 print(celltype_map)
 
-# ========================================================================================
-# 1. Load our REF/ALT from the pvar file (rsID-keyed lookup)
-# ========================================================================================
-
+##  Load our REF/ALT from the pvar file (rsID-keyed lookup)  --------------------------
 message("\nLoading REF/ALT lookup from pvar file ...")
 pvar_dt <- fread(
   pvar_file,
@@ -132,10 +116,7 @@ pvar_dt <- fread(
 message("  Variants in pvar: ", nrow(pvar_dt))
 setkey(pvar_dt, snp)
 
-# ========================================================================================
-# 2. Preload each unique Jang adult cell type ONCE (full + top files)
-# ========================================================================================
-
+##  Preload each Jang adult cell type once (full + top files)  ------------------------
 message("\n--- Preloading Jang adult cell types (", length(unique_jang_cts), " unique) ---\n")
 
 jang_full_tables <- list()
@@ -161,7 +142,7 @@ for (jct in unique_jang_cts) {
   full_dt[, gene := sub("\\..*", "", feature)]
   full_dt <- full_dt[grepl("^rs", variant_id) & grepl("^ENSG", gene)]
 
-  # Sign-normalize against Allele (see MIGRATION NOTE)
+  # Sign-normalize against Allele (see Notes in header)
   full_dt[, beta_jang := align_jang_beta(fixed_beta, Allele, alt)]
   full_dt[, se_jang := fixed_sd]
   full_dt <- full_dt[, .(snp = variant_id, gene, beta_jang, se_jang,
@@ -191,10 +172,7 @@ for (jct in unique_jang_cts) {
   gc()
 }
 
-# ========================================================================================
-# 3. Run each fetal-adult comparison
-# ========================================================================================
-
+##  Run each fetal-adult comparison  --------------------------------------------------
 message("\n--- Running fetal-adult beta correlations ---\n")
 
 paired_results   <- list()
@@ -228,7 +206,7 @@ for (i in seq_len(nrow(celltype_map))) {
   message("  Overlapping SNP-gene pairs: ", nrow(paired_betas))
 
   # --- Two-check significance: is this pair the gene's Jang lead SNP, with
-  # qval < 0.05? (see MIGRATION NOTE) ---
+  # qval < 0.05? (see Notes in header) ---
   top_lookup <- jang_top_tables[[jang_ct]]
   paired_betas <- top_lookup[paired_betas, on = "gene"]
   paired_betas[, is_lead_snp := !is.na(lead_snp) & snp == lead_snp]
@@ -274,10 +252,7 @@ for (i in seq_len(nrow(celltype_map))) {
   }
 }
 
-# ========================================================================================
-# 4. Combine and summarise
-# ========================================================================================
-
+##  Combine and summarise  ------------------------------------------------------------
 message("\n--- Summary across all comparisons ---\n")
 
 paired_combined <- bind_rows(paired_results)
@@ -304,10 +279,7 @@ if (nrow(opposite_combined) > 0) {
   print(opposite_combined %>% count(my_cell_type, jang_cell_type, allele_status))
 }
 
-# ========================================================================================
-# 5. Write output
-# ========================================================================================
-
+##  Write output  ---------------------------------------------------------------------
 write_rds(
   list(
     paired_betas      = paired_combined,
@@ -317,3 +289,6 @@ write_rds(
   output_file
 )
 message("\nBeta correlation and opposite-effects results written to: ", output_file)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

@@ -1,58 +1,47 @@
 #--------------------------------------------------------------------------------------
 #
-#    pi1 enrichments script
+#    pi1 replication of sig. eQTL between datasets
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  06QTL-REPLICATION | Rules: pi1_enrich_internal (cell type x cell type),
+#                                       pi1_enrich_jang (cell type x Jang L1 type)
+#            Upstream:   05TENSORQTL tensorqtl_perm; cat_nom_qtl;
+#                        Jang et al. 2026 SingleBrain L1 full + top association files
+#            Downstream: 06 report (internal and Jang pi1 tabs; Fig 3D)
+#
+# Purpose:   For one query cell type and one reference, run compute_pi1() both ways:
+#            - Forward: sig. eQTL of our cell type (qval < 0.05) looked up in the
+#              reference's nominal associations
+#            - Reverse: sig. eQTL of the reference looked up in our cell type's
+#              nominal associations
+#            Modes, chosen from the output path (ref_name):
+#            - Internal: reference is another of our cell types; self-comparisons
+#              write NA dummy outputs so Snakemake can track them
+#            - Jang: reference is a Jang et al. 2026 adult L1 cell type
+#
+# Inputs:    public_all   reference nominal associations
+#            public_top   reference top associations (sig. eQTL)
+#            qtl_all      our nominal associations for the cell type (cat_nom_qtl)
+#            qtl_top      our tensorQTL permutation output for the cell type
+#
+# Outputs:   enrich       one-row tibble: pi1, prop_replicating, prop_same_direction
+#                         and overlap_count, forward and reverse (_cell_ref)
+#            pi1          rds list(forward, reverse) of full compute_pi1() results
+#
+# Notes:     Jang reference:
+#            - Forward p-value is Random_P (qvalue() needs raw p-values to estimate
+#              pi0; random-effects side used for significance throughout)
+#            - Beta is relative to `Allele`, not always alt; sign-normalised at read
+#              time (align_jang_beta()), which prop_same_direction depends on
+#            - Placeholder-cohort rows (beta = 0, sd = 0 in a cohort, giving
+#              Fixed_P == Random_P == 1 exactly) are removed before qvalue(), as the
+#              spike at p = 1 would bias pi0 towards 1 (filter_jang_artifacts())
+#            - One file per cell type, so no in-script cell type filtering
 #
 #--------------------------------------------------------------------------------------
 
-#  Built to handle 6 options
-#   - Our eQTL vs. O'Brien bulk eQTL 
-#   - Our eQTL vs. Wen bulk eQTL
-#   - Our eQTL vs. Bryois
-#   - Our eQTL vs. Fugita
-#   - Our eQTL vs. Jang et al. 2026 (SingleBrain)
-#   - Our eQTL vs. Our eQTL (internal comparison)
-#     - For latter R gens dummy file if cell_type == ref_cell_type for smk to track
-
-#   - Tests: 
-#     - Forward: pi1 enrichment of our sig. sn-eQTL in public nominal eQTL data
-#     - Reverse: pi1 of public sig. sn-eQTL in our nominal sn-eQTL data
-
-#--------------------------------------------------------------------------------------
-#
-#  ADDITION -- Jang et al. 2026 (SingleBrain) branch:
-#
-#  Jang publishes one file per cell type already (unlike Fugita's single
-#  combined file with a `celltype` column to filter on) -- the right cell type
-#  is selected purely via the jang_cell_type wildcard's file path, no
-#  in-script filtering needed.
-#
-#  Forward test p-value: Random_P (not Fixed_P) -- consistent with using the
-#  random-effects side for significance/evidence throughout the Fujita->Jang
-#  migration elsewhere in this pipeline (classify_specificity.R,
-#  heterogeneity_test.R, beta_correlation.R all use Random_FDR/qval).
-#  qvalue() needs a raw p-value to estimate pi0 itself, so this must be
-#  Random_P, not the already-FDR-adjusted Random_FDR/qval.
-#
-#  Sign normalization: Jang's beta is relative to the `Allele` column, not
-#  always `alt` (unlike Fugita, where beta was implicitly always
-#  ALT-relative). This directly affects prop_same_direction (computed by
-#  compute_pi1() below via sign(slope_my) == sign(slope_ref)) -- skipping
-#  this normalization would silently corrupt that output for any row where
-#  Allele != alt. Applied at read time for both public_full and public_top.
-#
-#  Placeholder-cohort artifact filter: some cohorts encode "not tested for
-#  this pair" as beta=0/sd=0 rather than NA, which gives that cohort
-#  infinite weight (1/SE^2) in the meta-analysis and forces the pooled
-#  result to Random_P == Fixed_P == 1 exactly -- a data artifact, not a
-#  genuine null, confirmed by manual inspection (see git history / analysis
-#  log for the diagnostic session). Rows matching this exact signature are
-#  removed from public_full before it feeds compute_pi1(), with the removed
-#  count logged -- otherwise this spike at p=1 biases qvalue()'s pi0
-#  estimate toward 1 and masks real signal elsewhere in the distribution.
-#
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -66,6 +55,7 @@ if (exists("snakemake")) {
 
 message("\n\nCalculating pi1 enrichments: sig. sn-eQTL & public reference eQTL ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(qvalue)
@@ -76,7 +66,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
-# Input and output paths)
+# Input and output paths
 public_all_qtl <- snakemake@input[['public_all']]
 public_top_qtl <- snakemake@input[['public_top']]
 qtl_all <- snakemake@input[['qtl_all']]
@@ -112,35 +102,30 @@ bryois_cell_map <- c(
   "Pericytes"           = "Pericytes"
 )
 
-
-
-
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("public_all_qtl", "public_top_qtl", "qtl_all", "qtl_top", "output_enrich",
-               "output_pi1", "cell_type", "ref_cell_type", "exp_pc", "geno_pc", "norm_method", "ref_name"),
+               "output_pi1", "cell_type", "ref_cell_type", "exp_pc", "geno_pc", "norm_method",
+               "ref_name"),
   value    = c(public_all_qtl, public_top_qtl, qtl_all, qtl_top, output_enrich,
-               output_pi1, cell_type, ref_cell_type, exp_pc, geno_pc, norm_method, ref_name)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+               output_pi1, cell_type, ref_cell_type, exp_pc, geno_pc, norm_method,
+               ref_name)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-
-# Functions --------------------------------------------------------------------------
-#------------------------------------------
-# Main function
+##  Main function  ---------------------------------------------------------------------
 run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
                                qtl_all, qtl_top, output_enrich, output_pi1,
                                ref_name, ref_cell_type = NA_character_) {
-  
-  # Skip internal self-comparisons but still write dummy outputs 
+
+  # Skip internal self-comparisons but still write dummy outputs
   if (!is.na(ref_cell_type) && cell_type == ref_cell_type &&
       str_detect(ref_name, "internal")) {
     message("Skipping identical cell_type/ref_cell_type comparison: ", cell_type)
-    
+
     enrichment_results <- tibble(
       cell_type = cell_type,
       ref_cell_type = ref_cell_type,
@@ -153,40 +138,40 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
       prop_same_direction_cell_ref = NA_real_,
       overlap_count_cell_ref = NA_integer_
     )
-    
+
     pi1_results <- list(forward = NULL, reverse = NULL)
-    
+
     write_rds(enrichment_results, output_enrich)
     write_rds(pi1_results, output_pi1)
     message("Wrote dummy outputs for skipped comparison.")
     return(invisible(NULL))
   }
-  
+
   # Load datasets ---------------------------------------------------------------
   if (str_detect(ref_name, 'obrien')) {
     message("Loading O'Brien bulk all eQTL ...")
     public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
       select(variant_id, phenotype_id = gene_id,
              pval = pval_nominal, slope_ref = slope)
-    
+
     message("Loading O'Brien bulk top eQTL (FDR < 0.05) ...")
     public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
       filter(qval < 0.05) %>%
       select(variant_id, phenotype_id = gene_id, slope_my = slope)
   }
-  
+
   if (str_detect(ref_name, 'wen')) {
     message("Loading Wen bulk all eQTL ...")
     public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
       select(variant_id = sid, phenotype_id = pid,
              pval = npval, slope_ref = slope)
-    
+
     message("Loading Wen bulk top eQTL (FDR < 0.05) ...")
     public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
       filter(qval < 0.05) %>%
       select(variant_id = sid, phenotype_id = pid, slope_my = slope)
   }
-  
+
   if (str_detect(ref_name, 'bryois')) {
     message("Loading Bryois nominal all-eQTL (no header) ...")
     public_nom <- read.table(public_all_qtl, header = T, sep = "", stringsAsFactors = FALSE) %>%
@@ -194,21 +179,21 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     public_full <- public_nom %>%
       select(variant_id, phenotype_id, pval = pval_nominal, slope_ref = slope) %>%
       mutate(phenotype_id = str_extract(phenotype_id, "ENSG[0-9]+"))
-    
+
     message("Bryois nominal all-eQTL dimensions:", dim(public_full))
     message("Check that phenotype_ids are ENSG:\n")
     print(public_full[1:5, 1:4])
-    
+
     # Map ref_cell_type (from Snakemake wildcard) to Excel cell_type string
     if (!(ref_cell_type %in% names(bryois_cell_map))) {
       stop("ref_cell_type '", ref_cell_type, "' not recognized. Must be one of: ",
            paste(names(bryois_cell_map), collapse = ", "))
     }
     excel_cell_type <- bryois_cell_map[[ref_cell_type]]
-    
+
     message("\nLoading Bryois permutation / Table S2 (Excel) and extracting significant eQTLs for ref cell type: ", ref_cell_type)
     public_table <- read_excel(public_top_qtl, sheet = "Table S2", skip = 3)  # header start on row 4
-    
+
     public_top <- public_table %>%
       filter(cell_type == excel_cell_type) %>%
       mutate(adj_p = suppressWarnings(as.numeric(adj_p))) %>%
@@ -216,16 +201,16 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
       transmute(variant_id = SNP,
                 phenotype_id = ensembl,
                 slope_my = as.numeric(beta))
-    
+
     message("Bryois: number of top (FDR<0.05) eQTL retained for ", excel_cell_type, ": ", nrow(public_top))
   }
-  
+
   if (str_detect(ref_name, "fugita")) {
     message("Loading Fugita snRNA-seq reference eQTL...")
-    
+
     # read entire table once
     public_nom <- read_tsv(public_all_qtl, show_col_types = FALSE) %>% as_tibble()
-    
+
     # Keep only rows for the requested fugita cell type, if provided
     if (!is.na(ref_cell_type)) {
       public_nom <- public_nom %>% filter(celltype == ref_cell_type)
@@ -233,7 +218,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     } else {
       message("No ref_cell_type wildcard provided; using entire Fugita table (rows: ", nrow(public_nom), ")")
     }
-  
+
     public_full <- public_nom %>%
       transmute(
         variant_id = snps,
@@ -242,7 +227,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
         slope_ref = suppressWarnings(as.numeric(beta))
       ) %>%
       mutate(phenotype_id = str_extract(phenotype_id, "ENSG[0-9]+"))
-    
+
     # top table = those marked as significant in two-step permutation (significant_by_2step_FDR == "Yes")
     public_top <- public_nom %>%
       filter(!is.na(significant_by_2step_FDR) & significant_by_2step_FDR == "Yes") %>%
@@ -252,7 +237,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
         slope_my = suppressWarnings(as.numeric(beta))
       ) %>%
       mutate(phenotype_id = str_extract(phenotype_id, "ENSG[0-9]+"))
-    
+
     message("Fugita: number of top (two-step Yes) eQTL retained: ", nrow(public_top))
     message("Fugita: number of nominal (full) rows retained: ", nrow(public_full))
   }
@@ -324,32 +309,32 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     message("Jang: number of top (qval<0.05) eQTL retained: ", nrow(public_top))
     message("Jang: number of nominal (full) rows retained: ", nrow(public_full))
   }
-  
-  
+
+
   if (!(str_detect(ref_name, "wen") | str_detect(ref_name, "obrien") | str_detect(ref_name, "bryois") | str_detect(ref_name, "fugita") | str_detect(ref_name, "jang"))) {
     message("Internal mode: comparing ", cell_type, " ↔ ", ref_cell_type)
-    
+
     # Load ref cell type all-eQTL
     public_full <- read_tsv(public_all_qtl, show_col_types = FALSE) %>%
       select(variant_id, phenotype_id, pval = pval_nominal, slope_ref = slope)
-    
+
     # Load ref cell type top-eQTL
     public_top <- read_tsv(public_top_qtl, show_col_types = FALSE) %>%
       filter(qval < 0.05) %>%
       select(variant_id, phenotype_id, slope_my = slope)
   }
-  
+
   # Load our dataset (query) -----------------------------------------------------
   message("Loading sig. eQTL (query) for cell type: ", cell_type)
   query_eqtl <- read_tsv(qtl_top, show_col_types = FALSE) %>%
     filter(qval < 0.05) %>%
     select(variant_id, phenotype_id, slope_my = slope)
-  
+
   message("Loading all eQTL (query full) for cell type: ", cell_type)
   full_cell <- read_tsv(qtl_all, show_col_types = FALSE) %>%
     select(variant_id, phenotype_id,
            pval = pval_nominal, slope_ref = slope)
-  
+
   # Initialize results tibble
   enrichment_results <- tibble(
     cell_type = cell_type,
@@ -363,10 +348,10 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     prop_same_direction_cell_ref = NA_real_,
     overlap_count_cell_ref = NA_integer_
   )
-  
+
   # Initialize list to store both pi1 results
   pi1_results <- list(forward = NULL, reverse = NULL)
-  
+
   # Forward: query sig -> reference full
   if (nrow(query_eqtl) > 0) {
     message("\n--- Forward enrichment: ", cell_type, " sig → ", ifelse(is.na(ref_cell_type), ref_name, paste0("(", ref_name, ":", ref_cell_type, ")")), " full ---")
@@ -382,7 +367,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   } else {
     message("No significant eQTLs found for ", cell_type, " (forward).")
   }
-  
+
   # Reverse: reference sig -> query full
   if (nrow(full_cell) > 0) {
     message("\n--- Reverse enrichment: reference sig → ", cell_type, " full ---")
@@ -398,16 +383,15 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
   } else {
     message("No full eQTL data found for ", cell_type, " (reverse).")
   }
-  
+
   # Always write result (even if NA)
   write_rds(enrichment_results, output_enrich)
   write_rds(pi1_results, output_pi1)
   message("\nEnrichment tbl written to: ", output_enrich)
   message("\nPi1 results written to: ", output_pi1)
 }
-#------------------------------------------
 
-# Run with Snakemake params
+##  Run with Snakemake params  ---------------------------------------------------------
 if (exists("snakemake")) {
   run_pi1_enrichment(
     cell_type       = cell_type,

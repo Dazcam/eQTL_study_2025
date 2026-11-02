@@ -1,15 +1,25 @@
 #--------------------------------------------------------------------------------------
 #
-#    Create SNP lookup table for snATAC-seq enrichment
+#    Create hg38 SNP lookup table for sig. eQTL
 #
 #--------------------------------------------------------------------------------------
-
-# 1. Load sig. eQTL an restrict to FDR < 0.05
-# 2. Use BiomaRt to get hg38 SNP coordinates for 1
-
-# Notes: Needs to run on head node BiomaRt requires net access
-
-## Info  ------------------------------------------------------------------------------
+#
+# Pipeline:  06QTL-REPLICATION | Rule: snp_lookup (one job per cell type; localrule)
+#            Upstream:   05TENSORQTL tensorqtl_perm
+#            Downstream: atac_enrich
+#
+# Purpose:   - Load the cell type's sig. eQTL (qval < 0.05)
+#            - Query Ensembl (biomaRt) for the hg38 coordinates of each lead SNP
+#            - Keep SNPs on standard chromosomes (1-22, X, Y)
+#
+# Inputs:    qtl_perm   tensorQTL permutation output for the cell type
+#
+# Outputs:   out_file   rds: refsnp_id, chr_name, chrom_start, chrom_end
+#
+# Notes:     Runs on the head node (localrule) because biomaRt needs network access;
+#            a temporary biomaRt cache is used for the same reason.
+#
+#--------------------------------------------------------------------------------------
 
 ## Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -25,30 +35,30 @@ if (exists("snakemake")) {
 
 message("\n\nObtain SNP lookup file for cell-specific sig. eQTL ...")
 
-# -------------------------------------------------------------------------------------
-
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(biomaRt)
 library(GenomicRanges)
 
 # Input and output paths
-qtl_perm <- snakemake@input[["qtl_perm"]]
-out_file <- as.character(snakemake@output)
+qtl_perm  <- snakemake@input[["qtl_perm"]]
+out_file  <- as.character(snakemake@output)
+cell_type <- snakemake@wildcards[["cell_type"]]
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
-  variable = c("qtl_perm", "out_file"),
-  value    = c(qtl_perm, out_file)) |> 
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+  variable = c("qtl_perm", "out_file", "cell_type"),
+  value    = c(qtl_perm, out_file, cell_type)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
 message("\n--- Generating SNP lookup file ---")
 message("\nProcessing: ", qtl_perm)
 
-# Load significant eQTL SNPs
+##  Load sig. eQTL  ---------------------------------------------------------------------
 my_eqtl <- read_tsv(qtl_perm) %>%
   filter(qval < 0.05) %>%
   dplyr::select(variant_id)
@@ -58,6 +68,7 @@ if (nrow(my_eqtl) == 0) {
   quit(save = "no", status = 0)
 }
 
+##  Look up hg38 coordinates  -----------------------------------------------------------
 # Initialize Ensembl once
 temp_cache <- tempdir()
 Sys.setenv(BIOMART_CACHE = temp_cache)
@@ -80,9 +91,10 @@ snp_lookup_hg38_filt <- snp_lookup_hg38 %>%
   mutate(chr_name = paste0("chr", chr_name)) %>%
   distinct()
 
-message(nrow(snp_lookup_hg38) - nrow(snp_lookup_hg38_filt), 
+message(nrow(snp_lookup_hg38) - nrow(snp_lookup_hg38_filt),
         ' eQTL removed due to non-standard chr annotation.')
 
+##  Write output  ----------------------------------------------------------------------
 message("Number of SNPs retained: ", nrow(snp_lookup_hg38_filt))
 message("Writing SNP list ...")
 write_rds(snp_lookup_hg38_filt, out_file)
