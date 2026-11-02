@@ -1270,7 +1270,6 @@ dev_specificity:
     log: ../results/00LOG/19DEV-SPECIFICITY/classify_specificity.log
 
   heterogeneity_test:
-    af_tol: 0.2
     fdr_thresh: 0.05
     out_file: ../results/19DEV-SPECIFICITY/heterogeneity_test/heterogeneity_results.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/heterogeneity_test.log
@@ -1296,7 +1295,6 @@ dev_specificity:
   ocr_enrich:
     li_s6: ../resources/public_datasets/li_2023/Table_S6_List_of_cCREs_in_bed_format.bed
     li_s7: ../resources/public_datasets/li_2023/Table_S7_Cell_type_assignment_of_cCREs.txt
-    ziffra_dir: ../resources/public_datasets/ziffra_2021/
     snp_lookup_dir: ../results/06QTL-REPLICATION/atac_enrich/
     out_file: ../results/19DEV-SPECIFICITY/ocr_enrich/fetal_specific_ocr_enrichment.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/ocr_enrich.log
@@ -1313,11 +1311,6 @@ dev_specificity:
   eqtl_effect_replication:
     out_file: ../results/19DEV-SPECIFICITY/eqtl_effect_replication/eqtl_effect_replication.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effect_replication.log
-
-  smr_overlap:
-    smr_dir: ../results/10SMR/smr/
-    out_file: ../results/19DEV-SPECIFICITY/smr_overlap/smr_dev_spec_overlap.tsv
-    log: ../results/00LOG/19DEV-SPECIFICITY/smr_overlap.log
 
   report:
     script: scripts/devspec_report.Rmd

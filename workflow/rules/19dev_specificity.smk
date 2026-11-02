@@ -1,33 +1,9 @@
-configfile: "../config/config.yaml" 
+configfile: "../config/config.yaml"
 
-# Pseudotime bins (NPC-to-*) excluded from dev_specificity pipeline 
+# Pseudotime bins (NPC-to-*) excluded from dev_specificity pipeline
 DEVSPEC_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
 
 DEVSPEC_FETAL_L1 = ["Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri"]
-
-def get_smr_files():
-    smr_dir = config["dev_specificity"]["smr_overlap"]["smr_dir"]
-    disorders = list(config["gwas"].keys())
-    return [
-	f"{smr_dir}{ct}/{ct}_{gwas}.smr"
-        for ct in DEVSPEC_CELL_TYPES
-        for gwas in disorders
-    ]
-
-#rule all:
-#   input:
-#       config["dev_specificity"]["extract_universe"]["out_file"],
-#       config["dev_specificity"]["classify_specificity"]["out_file"]
-#        config["dev_specificity"]["heterogeneity_test"]["out_file"]
-#       config["dev_specificity"]["ld_clump"]["snp_list"],         
-#       config["dev_specificity"]["run_ld_clump"]["sentinel"],
-#       config["dev_specificity"]["parse_ld_clump"]["out_file"]
-#       config["dev_specificity"]["ocr_enrich"]["out_file"] 
-#       config["dev_specificity"]["glm_enrich"]["out_file"]
-#        config["dev_specificity"]["eqtl_effects"]["out_file"]
-#        config["dev_specificity"]["smr_overlap"]["out_file"]
-#        config["dev_specificity"]["report"]["html"],
-
 
 def get_egene_universe_inputs():
     geno_pc = config["tensorQTL"]["geno_pcs"]
@@ -63,7 +39,7 @@ def get_snp_lookup_files():
 def get_nom_files():
     nom_dir = config["dev_specificity"]["eqtl_effects"]["nom_dir"]
     return [
-	f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv"
+        f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv"
         for ct in DEVSPEC_CELL_TYPES
     ]
 
@@ -254,23 +230,6 @@ rule eqtl_effect_replication:
     benchmark: "reports/benchmarks/dev_specificity.eqtl_effect_replication.txt"
     log:    config["dev_specificity"]["eqtl_effect_replication"]["log"]
     script: "../scripts/devspec_effect_replication.R"
-
-rule smr_dev_spec_overlap:
-    input:  smr_files      = get_smr_files(),
-            classification = rules.classify_eqtl_specificity.output[0],
-            heterogeneity_test = rules.heterogeneity_test.output[0],
-            gene_lookup    = config["dev_specificity"]["report"]["gene_lookup"]
-    output: config["dev_specificity"]["smr_overlap"]["out_file"]
-    params: cell_types = DEVSPEC_CELL_TYPES,
-            gwas_list  = list(config["gwas"].keys()),
-            p_smr      = config["p_smr"],
-            p_heidi    = config["p_heidi"]
-    singularity: config["containers"]["r_eqtl"]
-    resources: threads = 2, mem_mb = 8000, time = "00:30:00"
-    message: "Overlap SMR-significant SNPs with dev-specificity classification"
-    benchmark: "reports/benchmarks/dev_specificity.smr_dev_spec_overlap.txt"
-    log:    config["dev_specificity"]["smr_overlap"]["log"]
-    script: "../scripts/devspec_smr_overlap.R"
 
 rule dev_specificity_report:
     input:  eqtl_universe    = rules.extract_eqtl_universe.output[0],

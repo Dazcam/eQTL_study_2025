@@ -176,8 +176,6 @@ rule pi1_enrich_internal:
     log:    QR["pi1_enrich_internal"]["log"]
     script: QR["pi1_enrich_internal"]["script"]
 
-# Freeze 2 outputs of this rule were made from the 10SMR nominal export, which
-# used expPC 40 for every cell type; qtl_all now points at the final expPC.
 rule pi1_enrich_jang:
     input:  public_all = QR["pi1_enrich_jang"]["public_all"],
             public_top = QR["pi1_enrich_jang"]["public_top"],
