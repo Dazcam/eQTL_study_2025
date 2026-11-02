@@ -1,3 +1,5 @@
+import re
+
 configfile: "../config/config.yaml"
 
 localrules: dwnld_ziffra, snp_lookup
@@ -38,29 +40,72 @@ def nom_parquets(wc):
                   exp_pc=wc.exp_pc, chr=range(1, 23))
 
 
+def l1_parent(cell_type):
+    """L1 parent of a subcluster (GABA-1 -> GABA); L1 types return themselves."""
+    return re.sub(r"-[0-9]+$", "", cell_type)
+
+
+def ziffra_file(ct):
+    return QR["atac_enrich"]["out_file"].format(cell_type=ct, norm_method=NORM_METHOD,
+                                                geno_pc=GENO_PC, exp_pc=config["exp_pc_map"][ct])
+
+
+def internal_file(kind, ct, ref_ct):
+    """kind: 'enrich' or 'pi1'."""
+    return QR["pi1_enrich_internal"][kind].format(cell_type=ct, ref_cell_type=ref_ct,
+                                                  norm_method=NORM_METHOD, geno_pc=GENO_PC,
+                                                  exp_pc=config["exp_pc_map"][ct],
+                                                  ref_exp_pc=config["exp_pc_map"][ref_ct])
+
+
+def jang_file(kind, ct, jct):
+    """kind: 'enrich' or 'pi1'."""
+    return QR["pi1_enrich_jang"][kind].format(cell_type=ct, jang_cell_type=jct)
+
+
 # Targets  ---------------------------------------------------------------------------
 
-# Ziffra OCR enrichment: all L1 + L2 cell types
-ziffra_inputs = [
-    QR["atac_enrich"]["out_file"].format(cell_type=ct, norm_method=NORM_METHOD,
-                                         geno_pc=GENO_PC, exp_pc=config["exp_pc_map"][ct])
-    for ct in REP_CELL_TYPES
-]
+# Ziffra OCR enrichment: all L1 + L2 cell types, each L1 followed by its subclusters
+REP_L1_CONFIG_ORDER = [ct for ct in REP_CELL_TYPES if l1_parent(ct) == ct]
+ZIFFRA_CELL_TYPES   = [ct for l1 in REP_L1_CONFIG_ORDER
+                       for ct in REP_CELL_TYPES if l1_parent(ct) == l1]
+ziffra_inputs = [ziffra_file(ct) for ct in ZIFFRA_CELL_TYPES]
 
 # Internal pi1: fetal L1 x fetal L1
-internal_inputs = [
-    QR["pi1_enrich_internal"]["pi1"].format(cell_type=ct, ref_cell_type=ref_ct,
-                                            norm_method=NORM_METHOD, geno_pc=GENO_PC,
-                                            exp_pc=config["exp_pc_map"][ct],
-                                            ref_exp_pc=config["exp_pc_map"][ref_ct])
-    for ct in REP_FETAL_L1 for ref_ct in REP_FETAL_L1
-]
+internal_inputs = [internal_file(kind, ct, ref_ct) for kind in ["enrich", "pi1"]
+                   for ct in REP_FETAL_L1 for ref_ct in REP_FETAL_L1]
 
 # Jang pi1: fetal L1 x Jang L1
-jang_pi1_inputs = [
-    QR["pi1_enrich_jang"]["pi1"].format(cell_type=ct, jang_cell_type=jct)
-    for ct in REP_FETAL_L1 for jct in config["jang_l1_types"]
-]
+JANG_L1_ORDER = QR["report"]["jang_l1_order"]
+assert sorted(JANG_L1_ORDER) == sorted(config["jang_l1_types"]), \
+    "qtl_rep.report.jang_l1_order must list the same types as jang_l1_types"
+jang_pi1_inputs = [jang_file(kind, ct, jct) for kind in ["enrich", "pi1"]
+                   for ct in REP_FETAL_L1 for jct in config["jang_l1_types"]]
+
+# Benchmark files of the current runs, by rule (read by the report if present)
+REP_BENCHMARKS = (
+    [("dwnld_ziffra", QR["dwnld_ziffra"]["benchmark"])]
+    + [(rule, QR[rule]["benchmark"].format(cell_type=ct, norm_method=NORM_METHOD,
+                                           geno_pc=GENO_PC, exp_pc=config["exp_pc_map"][ct]))
+       for rule in ["snp_lookup", "atac_enrich"] for ct in ZIFFRA_CELL_TYPES]
+    + [("ziffra_summary", QR["ziffra_summary"]["benchmark"])]
+    + [("cat_nom_qtl", QR["cat_nom_qtl"]["benchmark"].format(cell_type=ct, norm_method=NORM_METHOD,
+                                                            geno_pc=GENO_PC, exp_pc=config["exp_pc_map"][ct]))
+       for ct in REP_FETAL_L1]
+    + [("pi1_enrich_internal", QR["pi1_enrich_internal"]["benchmark"].format(
+            cell_type=ct, ref_cell_type=ref_ct, norm_method=NORM_METHOD, geno_pc=GENO_PC,
+            exp_pc=config["exp_pc_map"][ct], ref_exp_pc=config["exp_pc_map"][ref_ct]))
+       for ct in REP_FETAL_L1 for ref_ct in REP_FETAL_L1]
+    + [("pi1_enrich_jang", QR["pi1_enrich_jang"]["benchmark"].format(cell_type=ct, jang_cell_type=jct))
+       for ct in REP_FETAL_L1 for jct in config["jang_l1_types"]]
+    + [("beta_correlation", QR["beta_correlation"]["benchmark"]),
+       ("pi1_enrichment_report", QR["report"]["benchmark"])]
+)
+
+
+def rmd_path(path):
+    """Paths passed into the Rmd are relative to workflow/scripts/, where it knits."""
+    return "../" + path
 
 
 # Rules  -----------------------------------------------------------------------------
@@ -96,6 +141,16 @@ rule atac_enrich:
     benchmark: QR["atac_enrich"]["benchmark"]
     log:    QR["atac_enrich"]["log"]
     script: QR["atac_enrich"]["script"]
+
+rule ziffra_summary:
+    input:  enrich = ziffra_inputs
+    output: QR["ziffra_summary"]["out_file"]
+    params: cell_types = ZIFFRA_CELL_TYPES
+    singularity: config["containers"]["r_eqtl"]
+    message: "Combine Ziffra ATAC-seq peak enrichments across cell types (Fig 2E)"
+    benchmark: QR["ziffra_summary"]["benchmark"]
+    log:    QR["ziffra_summary"]["log"]
+    script: QR["ziffra_summary"]["script"]
 
 rule cat_nom_qtl:
     input:  parquets = nom_parquets
@@ -153,43 +208,52 @@ rule beta_correlation:
     log:    QR["beta_correlation"]["log"]
     script: QR["beta_correlation"]["script"]
 
-# Report params are rebuilt with the report (stage 6); output_file is relative to the Rmd
 rule pi1_enrichment_report:
-    input:  ziffra = ziffra_inputs,
-            internal = internal_inputs,
-            jang_pi1 = jang_pi1_inputs,
+    input:  ziffra_tbl       = rules.ziffra_summary.output[0],
+            internal         = internal_inputs,
+            jang_pi1         = jang_pi1_inputs,
             beta_correlation = rules.beta_correlation.output[0],
-            rmd_script = config["qtl_rep"]["report"]["script"]
-    output: config["qtl_rep"]["report"]["html"]
-    params: ziffra_dir = "../../results/06QTL-REPLICATION/atac_enrich/",
-            ziffra_indep_dir = "../../results/06QTL-REPLICATION/atac_enrich_indep/",
-            obrien_dir = "../../results/06QTL-REPLICATION/obrien_bulk/",
-            wen_dir = "../../results/06QTL-REPLICATION/wen_bulk/",
-            bryois_dir = "../../results/06QTL-REPLICATION/bryois/",
-            fugita_dir = "../../results/06QTL-REPLICATION/fugita/",
-            internal_dir = "../../results/06QTL-REPLICATION/internal/",
-            beta_dir = "../../results/06QTL-REPLICATION/beta_cor/",
-            tbl_dir = "../../results/13MANUSCRIPT_PLOTS_TABLES/tables/",
-            bmark_dir = "../reports/benchmarks/",
-            output_file = config["qtl_rep"]["report"]["output_file"]
+            gene_lookup      = config["gene_lookup"],
+            rmd_script       = QR["report"]["script"]
+    output: QR["report"]["html"]
+    params: ziffra_tbl       = rmd_path(QR["ziffra_summary"]["out_file"]),
+            internal_enrich  = ",".join(rmd_path(internal_file("enrich", ct, r)) for ct in REP_FETAL_L1 for r in REP_FETAL_L1),
+            internal_pi1     = ",".join(rmd_path(internal_file("pi1", ct, r)) for ct in REP_FETAL_L1 for r in REP_FETAL_L1),
+            jang_enrich      = ",".join(rmd_path(jang_file("enrich", ct, j)) for ct in REP_FETAL_L1 for j in JANG_L1_ORDER),
+            jang_pi1         = ",".join(rmd_path(jang_file("pi1", ct, j)) for ct in REP_FETAL_L1 for j in JANG_L1_ORDER),
+            beta_correlation = rmd_path(QR["beta_correlation"]["out_file"]),
+            gene_lookup      = rmd_path(config["gene_lookup"]),
+            cell_types       = ",".join(REP_CELL_TYPES),
+            fetal_l1         = ",".join(REP_FETAL_L1),
+            jang_l1          = ",".join(JANG_L1_ORDER),
+            exp_pcs          = ",".join(f"{ct}={config['exp_pc_map'][ct]}" for ct in ZIFFRA_CELL_TYPES),
+            geno_pc          = GENO_PC,
+            norm_method      = NORM_METHOD,
+            seed             = QR["atac_enrich"]["seed"],
+            benchmarks       = ",".join(f"{rule}={rmd_path(path)}" for rule, path in REP_BENCHMARKS),
+            output_file      = QR["report"]["output_file"],
+            render           = QR["report"]["render"]
     singularity: config["containers"]["r_eqtl"]
-    message: "Generate pi1 enrichments report report"
+    message: "Generate eQTL replication report"
     resources: time="1:00:00"
-    benchmark: config["qtl_rep"]["report"]["benchmark"]
-    log:     config["qtl_rep"]["report"]["log"]
+    benchmark: QR["report"]["benchmark"]
+    log:    QR["report"]["log"]
     shell:
         """
-        Rscript -e "rmarkdown::render('{input.rmd_script}', \
-            output_file = '{params.output_file}', \
-            params = list(ziffra_dir = '{params.ziffra_dir}',
-            ziffra_indep_dir = '{params.ziffra_indep_dir}',
-            obrien_dir = '{params.obrien_dir}',
-            wen_dir = '{params.wen_dir}',
-            bryois_dir = '{params.bryois_dir}',
-            internal_dir = '{params.internal_dir}',
-            fugita_dir = '{params.fugita_dir}',
-            beta_dir = '{params.beta_dir}',
-            tbl_dir = '{params.tbl_dir}',
-            bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+        Rscript {params.render} {input.rmd_script} {params.output_file} \
+            ziffra_tbl={params.ziffra_tbl} \
+            internal_enrich={params.internal_enrich} \
+            internal_pi1={params.internal_pi1} \
+            jang_enrich={params.jang_enrich} \
+            jang_pi1={params.jang_pi1} \
+            beta_correlation={params.beta_correlation} \
+            gene_lookup={params.gene_lookup} \
+            cell_types={params.cell_types} \
+            fetal_l1={params.fetal_l1} \
+            jang_l1={params.jang_l1} \
+            exp_pcs={params.exp_pcs} \
+            geno_pc={params.geno_pc} \
+            norm_method={params.norm_method} \
+            seed={params.seed} \
+            benchmarks={params.benchmarks} > {log} 2>&1
         """
-

@@ -33,9 +33,9 @@ rule all:
 
 rule eqtl_qc_plt:
     # Fig 2
+    input:  ziffra_tbl = config['qtl_rep']['ziffra_summary']['out_file']
     output: config['plotting']['eqtl_qc_plt']['out_file']
     params: in_dir = config['plotting']['eqtl_qc_plt']['in_dir'],
-            ziffra_dir = config['plotting']['eqtl_qc_plt']['ziffra_dir'],
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['plotting']['eqtl_qc_plt']['log']

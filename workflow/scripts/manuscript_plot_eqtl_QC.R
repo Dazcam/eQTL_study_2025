@@ -33,7 +33,7 @@ library(ggrepel)
 
 # --- Set variables
 in_dir <- snakemake@params[['in_dir']] 
-ziffra_dir <- snakemake@params[['ziffra_dir']] 
+ziffra_tbl_file <- snakemake@input[['ziffra_tbl']]
 out_file <- snakemake@output[[1]] 
 
 #in_dir <- "../results/05TENSORQTL/tensorqtl_perm/"
@@ -351,7 +351,7 @@ combined_plt <- ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fi
 # --- Ziffra
 # Relabel Glu-UL/Glu-DL -> Glu-A/Glu-B on the source columns before building the
 # compound `test` label, so `test` reflects the new names throughout
-ziffra_tbl <- read_tsv(paste0(ziffra_dir, 'ziffra_overlaps_primary.tsv')) |>
+ziffra_tbl <- read_tsv(ziffra_tbl_file) |>
   mutate(clean_peak = str_replace_all(peak_cell_type, "_MACSpeaks", ""),
          eqtl_cell_type = relabel_cell_type(eqtl_cell_type),
          clean_peak = relabel_cell_type(clean_peak),
@@ -435,3 +435,4 @@ ggsave(
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
+
