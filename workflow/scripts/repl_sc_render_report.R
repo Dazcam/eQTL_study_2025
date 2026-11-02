@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Usage:     Rscript scripts/render_report.R <rmd> <output_file> key1=value1 key2=value2 ...
+# Usage:     Rscript scripts/repl_sc_render_report.R <rmd> <output_file> key1=value1 key2=value2 ...
 #
 # Purpose:   Wrapper around rmarkdown::render() for report rules whose params are too
 #            long for `Rscript -e` (R caps -e expressions at 10,000 bytes), e.g.
@@ -17,7 +17,7 @@
 #--------------------------------------------------------------------------------------
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 2) stop("Usage: render_report.R <rmd> <output_file> [key=value ...]")
+if (length(args) < 2) stop("Usage: repl_sc_render_report.R <rmd> <output_file> [key=value ...]")
 
 rmd         <- args[1]
 output_file <- args[2]

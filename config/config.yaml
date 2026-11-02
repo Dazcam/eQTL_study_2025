@@ -698,8 +698,8 @@ qtl_rep:
     script: scripts/repl_sc_report.Rmd
     render: scripts/repl_sc_render_report.R  # rmarkdown::render wrapper; params too long for Rscript -e
     jang_l1_order: ["Ext", "IN", "MG", "OPC", "End", "Ast", "OD"]  # display order: matched adult types first
-    html: reports/06QTL-REPLICATION/06replication_pi1_enrichment_report.html
-    output_file: ../reports/06QTL-REPLICATION/06replication_pi1_enrichment_report.html
+    html: reports/06QTL-REPLICATION/06replication_report.html
+    output_file: ../reports/06QTL-REPLICATION/06replication_report.html
     benchmark: reports/benchmarks/06qtl_replication.pi1_enrichment_report.benchmark.txt
     log: ../results/00LOG/06QTL-REPLICATION/pi1_enrichment_report.log
 

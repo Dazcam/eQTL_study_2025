@@ -16,7 +16,7 @@ include: 'rules/06qtl_replication.smk'
 #include: 'rules/11plotting.smk'
 #include: 'rules/12ctwas.smk'
 #include: 'rules/17pseudotime.smk'
-include:  'rules/19dev_specificity.smk'
+#include:  'rules/19dev_specificity.smk'
 
 rule all:
     input:
@@ -35,4 +35,4 @@ rule all:
 #         config["ctwas"]["ctwas_report"]["output"]
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
 #        config["scanpy"]["subclustering"]["output"],
-         config["dev_specificity"]["report"]["html"]
+#         config["dev_specificity"]["report"]["html"]

@@ -157,20 +157,6 @@ meta-analysis (Jang et al. 2026). pi1 is estimated with qvalue
 
 ***
 
-```{r settings, echo = FALSE, message = FALSE, warning = FALSE}
-tibble(
-  Setting = c("Genotype PCs", "Normalisation method", "eQTL FDR", "Ziffra bootstrap",
-              "Ziffra bootstrap seed", "pi1 minimum overlap"),
-  Value   = c(params$geno_pc, params$norm_method, "qval < 0.05",
-              "1,000 iterations, 500 kb blocks", params$seed, "50 SNP-gene pairs")) |>
-  gt() |>
-  tab_header(title = "Settings")
-
-tibble(`Cell type` = names(exp_pc_map), `Expression PCs` = exp_pc_map) |>
-  gt() |>
-  tab_header(title = "Expression PCs per cell type")
-```
-
 Test direction:
 
 + Forward: pi1 of our sig. sn-eQTL in the reference nominal eQTL data
@@ -623,6 +609,38 @@ opposite_effects |>
          Allele_Status = allele_status) |>
   mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
   small_dt()
+```
+
+***
+
+### Settings {.tabset}
+
+***
+
+#### General
+
+***
+
+```{r settings, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(
+  Setting = c("Genotype PCs", "Normalisation method", "eQTL FDR", "Ziffra bootstrap",
+              "Ziffra bootstrap seed", "pi1 minimum overlap"),
+  Value   = c(params$geno_pc, params$norm_method, "qval < 0.05",
+              "1,000 iterations, 500 kb blocks", params$seed, "50 SNP-gene pairs")) |>
+  gt() |>
+  tab_header(title = "Settings")
+```
+
+***
+
+#### Expression PCs
+
+***
+
+```{r settings-exp-pcs, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(`Cell type` = names(exp_pc_map), `Expression PCs` = exp_pc_map) |>
+  gt() |>
+  tab_header(title = "Expression PCs per cell type")
 ```
 
 ***
