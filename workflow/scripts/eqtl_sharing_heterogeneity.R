@@ -93,6 +93,10 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+
+
 # Input and output paths ---------------------------------------------------------------
 eqtl_universe_file  <- snakemake@input[["eqtl_universe"]]
 classification_file <- snakemake@input[["classification"]]
@@ -237,18 +241,8 @@ joined <- joined %>%
     is_palindromic =
       (ref_my == "A" & alt_my == "T") | (ref_my == "T" & alt_my == "A") |
       (ref_my == "C" & alt_my == "G") | (ref_my == "G" & alt_my == "C"),
-    allele_status = case_when(
-      is.na(ref_my) | is.na(alt_my) | is.na(ref_jang) | is.na(alt_jang) ~ "missing_allele_info",
-      is_palindromic                                                    ~ "palindromic_unresolved",
-      ref_my == ref_jang & alt_my == alt_jang                           ~ "aligned",
-      ref_my == alt_jang & alt_my == ref_jang                           ~ "flipped",
-      TRUE                                                              ~ "mismatched"
-    ),
-    beta_jang_harmonized = case_when(
-      allele_status == "flipped" ~ -beta_jang,
-      allele_status == "aligned" ~  beta_jang,
-      TRUE                        ~ NA_real_
-    )
+    allele_status        = get_allele_status(ref_my, alt_my, ref_jang, alt_jang),
+    beta_jang_harmonized = harmonise_beta(beta_jang, allele_status)
   )
 
 status_tbl <- joined %>% count(allele_status, name = "N") %>% mutate(prop = round(N / sum(N), 4))

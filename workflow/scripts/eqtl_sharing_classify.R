@@ -85,6 +85,10 @@ suppressPackageStartupMessages({
   library(tidyverse)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+
+
 # Input and output paths ---------------------------------------------------------------
 eqtl_universe_file <- snakemake@input[["eqtl_universe"]]
 jang_full_files    <- snakemake@input[["jang_full_files"]]
@@ -130,13 +134,7 @@ read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
     show_col_types = FALSE
   )
 
-  n_before_artifact <- nrow(dat)
-  dat <- dat %>% filter(!(Fixed_P == 1 & Random_P == 1))
-  n_removed_artifact <- n_before_artifact - nrow(dat)
-  message("  Removed ", n_removed_artifact,
-          " placeholder-cohort artifact rows (Fixed_P==1 & Random_P==1 exactly) out of ",
-          n_before_artifact, " (", round(100 * n_removed_artifact / n_before_artifact, 3), "%)")
-
+  dat <- filter_jang_artifacts(dat, "Jang full-association")
   dat <- dat %>% select(-Fixed_P)
 
   # Strip GENCODE version suffix (Jang's feature is e.g. "ENSG00000131591.18";
@@ -153,7 +151,7 @@ read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
     distinct(gene_id, variant_id, .keep_all = TRUE) %>%
     mutate(
       # Sign-normalize: Jang's beta is relative to Allele, not always alt
-      beta = if_else(Allele == alt, fixed_beta, -fixed_beta),
+      beta = align_jang_beta(fixed_beta, Allele, alt),
       se   = fixed_sd,
       random_p = Random_P,
       jang_cell_type = jang_ct
@@ -183,12 +181,7 @@ read_jang_top <- function(file_path, jang_ct) {
     show_col_types = FALSE
   )
 
-  n_before_artifact <- nrow(dat)
-  dat <- dat %>% filter(!(Fixed_P == 1 & Random_P == 1))
-  n_removed_artifact <- n_before_artifact - nrow(dat)
-  message("  Removed ", n_removed_artifact,
-          " placeholder-cohort artifact rows (Fixed_P==1 & Random_P==1 exactly) out of ",
-          n_before_artifact)
+  dat <- filter_jang_artifacts(dat, "Jang top-association")
 
   dat %>%
     mutate(gene_id = sub("\\..*", "", feature)) %>%

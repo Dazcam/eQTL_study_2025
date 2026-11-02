@@ -69,6 +69,10 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+
+
 # Input and output paths ---------------------------------------------------------------
 qtl_perm_files <- snakemake@input[["qtl_perm_files"]]   # perm files, all fetal cell types
 nom_files      <- snakemake@input[["nom_files"]]        # nominal files, same order
@@ -224,9 +228,6 @@ if (length(dup_ids) > 0) {
   message("  Dropping ", length(unique(dup_ids)), " SNP IDs with >1 pvar record (ambiguous alleles)")
   pvar_dt <- pvar_dt[!variant_id %in% dup_ids]
 }
-pvar_dt[, is_palindromic :=
-          (ref_my == "A" & alt_my == "T") | (ref_my == "T" & alt_my == "A") |
-          (ref_my == "C" & alt_my == "G") | (ref_my == "G" & alt_my == "C")]
 setkey(pvar_dt, variant_id)
 message("  Needed SNPs found in pvar: ", nrow(pvar_dt), " / ", uniqueN(pairs_l1$variant_id))
 
@@ -240,9 +241,7 @@ for (jct in jang_order) {
                          "fixed_beta", "Fixed_P", "Random_P"),
               showProgress = FALSE)
 
-  n_before <- nrow(jd)
-  jd <- jd[!(Fixed_P == 1 & Random_P == 1)]
-  message("  Removed ", n_before - nrow(jd), " placeholder-cohort artifact rows out of ", n_before)
+  jd <- filter_jang_artifacts(jd, "Jang full-association")
   jd[, c("Fixed_P", "Random_P") := NULL]
 
   jd[, phenotype_id := sub("\\..*", "", feature)]
@@ -255,22 +254,11 @@ for (jct in jang_order) {
   message("  Universe pairs found in Jang: ", nrow(m), " / ", nrow(pairs_l1))
 
   # Sign-normalise to Jang alt; NA if Allele is neither ref nor alt
-  m[, beta_jang_alt := fifelse(Allele == alt, fixed_beta,
-                        fifelse(Allele == ref, -fixed_beta, NA_real_))]
+  m[, beta_jang_alt := align_jang_beta(fixed_beta, Allele, alt, ref)]
 
   m <- merge(m, pvar_dt, by = "variant_id", all.x = TRUE)
-  m[, allele_status := fcase(
-    is.na(ref_my) | is.na(alt_my) | is.na(ref) | is.na(alt) | is.na(beta_jang_alt), "missing_allele_info",
-    is_palindromic,                                                              "palindromic_unresolved",
-    ref_my == ref & alt_my == alt,                                               "aligned",
-    ref_my == alt & alt_my == ref,                                               "flipped",
-    default =                                                                    "mismatched"
-  )]
-  m[, slope_rep := fcase(
-    allele_status == "aligned",  beta_jang_alt,
-    allele_status == "flipped", -beta_jang_alt,
-    default = NA_real_
-  )]
+  m[, allele_status := get_allele_status(ref_my, alt_my, ref, alt, beta_jang_alt)]
+  m[, slope_rep := harmonise_beta(beta_jang_alt, allele_status)]
 
   status_tbl <- m[, .N, by = allele_status][, jang_cell_type := jct]
   allele_summary[[jct]] <- status_tbl

@@ -45,6 +45,10 @@ suppressPackageStartupMessages({
   library(GenomicRanges)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+
+
 # Input and output paths ---------------------------------------------------------------
 classification_file    <- snakemake@input[["classification"]]
 independent_snps_file  <- snakemake@input[["independent_snps"]]
@@ -120,17 +124,6 @@ snp_coords <- map_dfr(snp_lookup_files, read_rds) %>%
   distinct(refsnp_id, .keep_all = TRUE)
 message("  Total unique SNPs with coordinates: ", nrow(snp_coords))
 
-make_snp_gr <- function(snp_ids, coords) {
-  coords %>%
-    filter(refsnp_id %in% snp_ids) %>%
-    distinct(refsnp_id, .keep_all = TRUE) %>%
-    makeGRangesFromDataFrame(
-      seqnames.field = "chr_name",
-      start.field    = "chrom_start",
-      end.field      = "chrom_end",
-      keep.extra.columns = TRUE
-    )
-}
 
 specific_gr <- make_snp_gr(fetal_specific_snps, snp_coords)
 shared_gr   <- make_snp_gr(shared_snps, snp_coords)
