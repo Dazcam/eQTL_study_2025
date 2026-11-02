@@ -78,7 +78,7 @@ rule snp_lookup:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/qtl_replication.snp_lookup_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["snp_lookup"]["log"]
-    script: "../scripts/replication_create_snp_lookup.R"
+    script: "../scripts/repl_sc_snp_lookup.R"
 
 rule atac_enrich:
     input:  qtl_perm = config["qtl_rep"]["snp_lookup"]["qtl_perm"],
@@ -90,7 +90,7 @@ rule atac_enrich:
     message: "Test for sig. eQTL enrichments in Ziffra ATAC-seq peaks"
     benchmark: "reports/benchmarks/qtl_replication.atac_enrich_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:    config["qtl_rep"]["atac_enrich"]["log"]
-    script: "../scripts/replication_atac_enrichments.R"
+    script: "../scripts/repl_sc_atac_enrichment.R"
 
 rule cat_nom_qtl:
     input:  parquets = lambda wc: expand(config["qtl_rep"]["cat_nom_qtl"]["parquet"], cell_type=wc.cell_type, norm_method=wc.norm_method, geno_pc=wc.geno_pc, exp_pc=wc.exp_pc, chr=range(1, 23), allow_missing=True)
@@ -99,7 +99,7 @@ rule cat_nom_qtl:
     message: "Combine per-chr parquet files into gzip file for pi1 enrichment"
     benchmark: "reports/benchmarks/06qtl_replication.cat_nom_qtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
     log:     config["qtl_rep"]["cat_nom_qtl"]["log"]
-    shell:   "scripts/replication_cat_nom_qtl.py {output} {input.parquets} > {log} 2>&1"
+    shell:   "scripts/repl_sc_cat_nom_qtl.py {output} {input.parquets} > {log} 2>&1"
 
 rule pi1_enrich_internal:
     input:
@@ -114,7 +114,7 @@ rule pi1_enrich_internal:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/06qtl_replication.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}.txt"
     log:    config["qtl_rep"]["pi1_enrich_internal"]["log"]
-    script: "../scripts/replication_pi1_enrichment.R"
+    script: "../scripts/repl_sc_pi1_enrichment.R"
 
 # Freeze 2 outputs of this rule were made from the 10SMR nominal export, which
 # used expPC 40 for every cell type; qtl_all now points at the final expPC.
@@ -140,7 +140,7 @@ rule pi1_enrich_jang:
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/dev_specificity.pi1_enrich_jang_{cell_type}_vs_{jang_cell_type}.txt"
     log:    config["dev_specificity"]["pi1_enrich_jang"]["log"]
-    script: "../scripts/replication_pi1_enrichment.R"
+    script: "../scripts/repl_sc_pi1_enrichment.R"
 
 rule beta_correlation:
     input:  jang_l1_files     = get_jang_beta_corr_full_inputs(),
@@ -154,7 +154,7 @@ rule beta_correlation:
     message: "Compute fetal-adult eQTL beta correlations and flag opposite-effect pairs with allele-flip annotations"
     benchmark: "reports/benchmarks/dev_specificity.beta_correlation.txt"
     log:    config["dev_specificity"]["beta_correlation"]["log"]
-    script: "../scripts/devspec_beta_correlation.R"
+    script: "../scripts/repl_sc_beta_correlation.R"
 
 rule pi1_enrichment_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
@@ -162,7 +162,7 @@ rule pi1_enrichment_report:
             internal = internal_inputs,
             jang_pi1 = jang_pi1_inputs,
             beta_correlation = rules.beta_correlation.output[0],
-            rmd_script = "scripts/replication_pi1_enrichment_report.Rmd"
+            rmd_script = "scripts/repl_sc_report.Rmd"
     output: "reports/06QTL-REPLICATION/06replication_pi1_enrichment_report.html"
     params: ziffra_dir = "../../results/06QTL-REPLICATION/atac_enrich/",
             ziffra_indep_dir = "../../results/06QTL-REPLICATION/atac_enrich_indep/",
@@ -195,3 +195,4 @@ rule pi1_enrichment_report:
             tbl_dir = '{params.tbl_dir}',
             bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
+
