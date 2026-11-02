@@ -7,7 +7,7 @@ configfile: '../config/config.yaml'
 #include: 'rules/03genotypes_pre_impute.smk'
 #include: 'rules/04genotypes_post_impute.smk'
 #include: 'rules/05tensorQTL.smk'
-#include: 'rules/06qtl_replication.smk'
+include: 'rules/06qtl_replication.smk'
 #include: 'rules/07prep_gwas.smk'
 #include: 'rules/08susie.smk'
 #include: 'rules/09sldsr.smk'
@@ -15,7 +15,8 @@ configfile: '../config/config.yaml'
 #include: 'rules/11twas.smk'
 #include: 'rules/11plotting.smk'
 #include: 'rules/12ctwas.smk'
-include: 'rules/17pseudotime.smk'
+#include: 'rules/17pseudotime.smk'
+include:  'rules/19dev_specificity.smk'
 
 rule all:
     input:
@@ -24,8 +25,9 @@ rule all:
 #        config["geno_pre_impute"]["geno_pre_report"]["html"],
 #        config["geno_post_impute"]["geno_post_report"]["html"]
 #        config["tensorQTL"]["tensorqtl_report"]["output"]
-        config["pseudotime"]["report"]["html"],
-        PT_Q4_EXPORT_TARGETS,
+#        config["pseudotime"]["report"]["html"],
+#        PT_Q4_EXPORT_TARGETS,
+         "reports/06QTL-REPLICATION/06replication_pi1_enrichment_report.html",
 #        config["susie"]["susie_report"]["html"],
 #        config["sldsr"]["ldsr_report"]["html"],
 #        config["smr"]["smr_report"]["html"],
@@ -33,3 +35,4 @@ rule all:
 #         config["ctwas"]["ctwas_report"]["output"]
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
 #        config["scanpy"]["subclustering"]["output"],
+         config["dev_specificity"]["report"]["html"]

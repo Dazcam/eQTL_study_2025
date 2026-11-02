@@ -5,19 +5,6 @@ DEVSPEC_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
 
 DEVSPEC_FETAL_L1 = ["Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri"]
 
-jang_pi1_inputs = []
-for ct in DEVSPEC_FETAL_L1:
-    jang_pi1_inputs.extend(
-        expand(
-            config["dev_specificity"]["pi1_enrich_jang"]["pi1"],
-            cell_type=[ct],
-            jang_cell_type=config["jang_l1_types"],
-            exp_pc=[config["exp_pc_map"][ct]],
-            geno_pc=config["tensorQTL"]["geno_pcs"],
-            norm_method=config["tensorQTL"]["norm_methods"]
-        )
-    )
-
 def get_smr_files():
     smr_dir = config["dev_specificity"]["smr_overlap"]["smr_dir"]
     disorders = list(config["gwas"].keys())
@@ -27,8 +14,8 @@ def get_smr_files():
         for gwas in disorders
     ]
 
-rule all:
-   input:
+#rule all:
+#   input:
 #       config["dev_specificity"]["extract_universe"]["out_file"],
 #       config["dev_specificity"]["classify_specificity"]["out_file"]
 #        config["dev_specificity"]["heterogeneity_test"]["out_file"]
@@ -36,12 +23,9 @@ rule all:
 #       config["dev_specificity"]["run_ld_clump"]["sentinel"],
 #       config["dev_specificity"]["parse_ld_clump"]["out_file"]
 #       config["dev_specificity"]["ocr_enrich"]["out_file"] 
-#       config["dev_specificity"]["chip_enrich"]["out_file"]
 #       config["dev_specificity"]["glm_enrich"]["out_file"]
 #        config["dev_specificity"]["eqtl_effects"]["out_file"]
-#       config["dev_specificity"]["beta_correlation"]["out_file"]   
-#       jang_pi1_inputs, 
-        config["dev_specificity"]["smr_overlap"]["out_file"]
+#        config["dev_specificity"]["smr_overlap"]["out_file"]
 #        config["dev_specificity"]["report"]["html"],
 
 
@@ -82,15 +66,6 @@ def get_nom_files():
 	f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv"
         for ct in DEVSPEC_CELL_TYPES
     ]
-
-def get_jang_beta_corr_full_inputs():
-    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
-    return [f"{jang_dir}{ct}_eqtl_full_assoc.tsv.gz" for ct in ["Ext", "IN", "MG", "OPC", "End"]]
-
-def get_jang_beta_corr_top_inputs():
-    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
-    return [f"{jang_dir}{ct}_eqtl_top_assoc.tsv.gz" for ct in ["Ext", "IN", "MG", "OPC", "End"]]
-
 
 rule extract_eqtl_universe:
     input:  qtl_perm_files = get_egene_universe_inputs()
@@ -233,21 +208,6 @@ rule ocr_enrich:
     log:    config["dev_specificity"]["ocr_enrich"]["log"]
     script: "../scripts/devspec_ocr_enrichment.R"
 
-rule chip_enrich:
-    input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
-            heterogeneity_test = rules.heterogeneity_test.output[0],
-            independent_snps = rules.parse_ld_clump.output[0],
-            snp_lookups      = get_snp_lookup_files(),
-            nott_peaks       = config["setup"]["parse_nott_peaks"]["out_file"]
-    output: config["dev_specificity"]["chip_enrich"]["out_file"]
-    singularity: config["containers"]["r_eqtl"]
-    resources: threads = 4, mem_mb = 16000, time = "01:00:00"
-    threads: 4
-    message: "Test fetal-specific/shared/heterogeneous eQTL enrichment in Nott et al. 2019 union ChIP-seq peaks (hg38)"
-    benchmark: "reports/benchmarks/dev_specificity.chip_enrich.txt"
-    log:    config["dev_specificity"]["chip_enrich"]["log"]
-    script: "../scripts/devspec_chip_enrichment.R"
-
 rule glm_enrich:
     input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
             independent_snps = rules.parse_ld_clump.output[0],
@@ -295,39 +255,6 @@ rule eqtl_effect_replication:
     log:    config["dev_specificity"]["eqtl_effect_replication"]["log"]
     script: "../scripts/devspec_effect_replication.R"
 
-rule beta_correlation:
-    input:  jang_l1_files     = get_jang_beta_corr_full_inputs(),
-            jang_l1_top_files = get_jang_beta_corr_top_inputs(),
-            pvar_file         = config["dev_specificity"]["beta_correlation"]["pvar_file"]
-    output: config["dev_specificity"]["beta_correlation"]["out_file"]
-    params: nom_dir = config["dev_specificity"]["beta_correlation"]["nom_dir"]
-    singularity: config["containers"]["r_eqtl"]
-    resources: threads = 4, mem_mb = 64000, time = "04:00:00"
-    threads: 4
-    message: "Compute fetal-adult eQTL beta correlations and flag opposite-effect pairs with allele-flip annotations"
-    benchmark: "reports/benchmarks/dev_specificity.beta_correlation.txt"
-    log:    config["dev_specificity"]["beta_correlation"]["log"]
-    script: "../scripts/devspec_beta_correlation.R"
-
-rule pi1_enrich_jang:
-    input: public_all = config["dev_specificity"]["pi1_enrich_jang"]["public_all"],
-           public_top = config["dev_specificity"]["pi1_enrich_jang"]["public_top"],
-           qtl_all    = config["dev_specificity"]["eqtl_effects"]["nom_dir"] + "{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv",
-           qtl_top    = lambda wildcards: config["tensorQTL"]["tensorqtl_perm"]["output"].format(
-                            cell_type   = wildcards.cell_type,
-                            norm_method = config["tensorQTL"]["norm_methods"][0],
-                            geno_pc     = config["tensorQTL"]["geno_pcs"],
-                            exp_pc      = config["exp_pc_map"][wildcards.cell_type]
-                        )
-    output: enrich = config["dev_specificity"]["pi1_enrich_jang"]["enrich"],
-            pi1    = config["dev_specificity"]["pi1_enrich_jang"]["pi1"]
-    resources: threads = 4, mem_mb = 60000, time="1:00:00"
-    message: "Calc pi1 enrichments between fetal L1 sn-eQTL and Jang et al. 2026 L1 eQTL"
-    singularity: config["containers"]["r_eqtl"]
-    benchmark: "reports/benchmarks/dev_specificity.pi1_enrich_jang_{cell_type}_vs_{jang_cell_type}.txt"
-    log:    config["dev_specificity"]["pi1_enrich_jang"]["log"]
-    script: "../scripts/replication_pi1_enrichment.R"
-
 rule smr_dev_spec_overlap:
     input:  smr_files      = get_smr_files(),
             classification = rules.classify_eqtl_specificity.output[0],
@@ -351,8 +278,7 @@ rule dev_specificity_report:
             heterogeneity_test = rules.heterogeneity_test.output[0],
             ocr_enrich       = rules.ocr_enrich.output[0],
             eqtl_effects     = rules.eqtl_effect_sizes.output[0],
-            beta_correlation = rules.beta_correlation.output[0],
-            pi1_jang         = jang_pi1_inputs,
+            beta_correlation = config["dev_specificity"]["beta_correlation"]["out_file"],
             gene_lookup      = config["dev_specificity"]["report"]["gene_lookup"],
             rmd_script       = config["dev_specificity"]["report"]["script"]
     output: config["dev_specificity"]["report"]["html"]
