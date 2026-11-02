@@ -73,6 +73,9 @@ suppressPackageStartupMessages({
   library(cowplot)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+
 # Input and output paths)
 public_all_qtl <- snakemake@input[['public_all']]
 public_top_qtl <- snakemake@input[['public_top']]
@@ -127,64 +130,6 @@ message("\n============================\n")
 
 
 # Functions --------------------------------------------------------------------------
-# Helper
-compute_pi1 <- function(query_eqtl, full_eqtl, ref_name, min_overlap = 50) {
-  message("Computing pi1 statistic for ", ref_name)
-  
-  merged <- left_join(query_eqtl, full_eqtl, by = c("variant_id", "phenotype_id"))
-  valid_merged <- merged %>%
-    filter(!is.na(pval), is.finite(pval), pval >= 0, pval <= 1)
-  valid_pvals <- valid_merged$pval
-  overlap_count <- length(valid_pvals)
-  
-  message("Number of overlapping eQTLs: ", overlap_count)
-  
-  if (overlap_count < min_overlap) {
-    message("Too few overlapping eQTLs (<", min_overlap, ") for pi1 calculation.")
-    return(list(pi1 = NA, prop_replicating = NA,
-                prop_same_direction = NA,
-                overlap_count = overlap_count,
-                pvals = valid_pvals))
-  }
-  
-  qobj <- tryCatch(
-    qvalue(p = valid_pvals, pi0.method = "smoother"),
-    error = function(e) {
-      message("Smoother failed, trying bootstrap ...")
-      tryCatch(
-        qvalue(p = valid_pvals, pi0.method = "bootstrap"),
-        error = function(e2) {
-          message("Bootstrap also failed: ", e2$message)
-          NULL
-        }
-      )
-    }
-  )
-  
-  if (!is.null(qobj)) {
-    pi1 <- 1 - qobj$pi0
-    prop_replicating <- mean(qobj$qvalues < 0.05)
-    rep_idx <- which(qobj$qvalues < 0.05)
-    replicating <- valid_merged[rep_idx, ]
-    prop_same_direction <- if (nrow(replicating) > 0) {
-      mean(sign(replicating$slope_my) == sign(replicating$slope_ref), na.rm = TRUE)
-    } else {
-      NA
-    }
-    message("pi1 calculated: ", round(pi1, 3))
-  } else {
-    pi1 <- NA
-    prop_replicating <- NA
-    prop_same_direction <- NA
-  }
-  
-  return(list(pi1 = pi1,
-              prop_replicating = prop_replicating,
-              prop_same_direction = prop_same_direction,
-              overlap_count = overlap_count,
-              pvals = valid_pvals))
-}
-
 #------------------------------------------
 # Main function
 run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
@@ -338,14 +283,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     # (both checked -- an artifact row shows this identical exact tie;
     # genuine strong nulls essentially never produce two different
     # meta-analysis models landing on the identical floating-point value).
-    n_before_artifact_filter <- nrow(public_full_raw)
-    public_full_raw <- public_full_raw %>%
-      filter(!(Random_P == 1 & Fixed_P == 1))
-    n_removed_artifact <- n_before_artifact_filter - nrow(public_full_raw)
-    message("Jang full-association: removed ", n_removed_artifact,
-            " placeholder-cohort artifact rows (Random_P==1 & Fixed_P==1 exactly) out of ",
-            n_before_artifact_filter, " (",
-            round(100 * n_removed_artifact / n_before_artifact_filter, 3), "%)")
+    public_full_raw <- filter_jang_artifacts(public_full_raw, "Jang full-association")
 
     # Sign-normalize against Allele: Jang's beta is relative to Allele, not
     # always alt (see ADDITION note at top of file). This directly affects
@@ -354,7 +292,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     public_full <- public_full_raw %>%
       mutate(
         phenotype_id = str_extract(feature, "ENSG[0-9]+"),
-        slope_ref = if_else(Allele == alt, fixed_beta, -fixed_beta),
+        slope_ref = align_jang_beta(fixed_beta, Allele, alt),
         pval = suppressWarnings(as.numeric(Random_P))
       ) %>%
       select(variant_id, phenotype_id, pval, slope_ref)
@@ -371,13 +309,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
     # derived from Random_P and an artifact row's Random_P==1 should already
     # fail the qval<0.05 filter below -- logged anyway so that assumption is
     # visible rather than silently relied upon.
-    n_before_artifact_filter_top <- nrow(public_top_raw)
-    public_top_raw <- public_top_raw %>%
-      filter(!(Random_P == 1 & Fixed_P == 1))
-    n_removed_artifact_top <- n_before_artifact_filter_top - nrow(public_top_raw)
-    message("Jang top-association: removed ", n_removed_artifact_top,
-            " placeholder-cohort artifact rows (Random_P==1 & Fixed_P==1 exactly) out of ",
-            n_before_artifact_filter_top, " (expected ~0, since these should already fail qval<0.05)")
+    public_top_raw <- filter_jang_artifacts(public_top_raw, "Jang top-association")
 
     # top table = gene's lead SNP with qval<0.05 (FDR across variants within
     # gene, then Storey's q across genes -- Jang's own two-stage correction)
@@ -385,7 +317,7 @@ run_pi1_enrichment <- function(cell_type, public_all_qtl, public_top_qtl,
       filter(!is.na(qval) & qval < 0.05) %>%
       mutate(
         phenotype_id = str_extract(feature, "ENSG[0-9]+"),
-        slope_my = if_else(Allele == alt, fixed_beta, -fixed_beta)
+        slope_my = align_jang_beta(fixed_beta, Allele, alt)
       ) %>%
       select(variant_id, phenotype_id, slope_my)
 

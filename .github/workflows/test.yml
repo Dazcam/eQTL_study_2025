@@ -22,7 +22,7 @@ jobs:
       - name: Install R package dependencies
         run: |
           install.packages(c("testthat", "BiocManager", "dplyr", "tibble", "stringr", "tidyr", "purrr"))
-          BiocManager::install("limma", update = FALSE, ask = FALSE)
+          BiocManager::install(c("limma", "qvalue", "GenomicRanges"), update = FALSE, ask = FALSE)
         shell: Rscript {0}
 
       - name: Run test suite

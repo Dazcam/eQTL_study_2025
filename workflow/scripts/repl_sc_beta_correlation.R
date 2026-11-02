@@ -70,6 +70,9 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+
 # Input and output paths ---------------------------------------------------------------
 jang_l1_files    <- snakemake@input[["jang_l1_files"]]    # full-assoc, 5 unique adult types
 jang_l1_top_files <- snakemake@input[["jang_l1_top_files"]] # top-assoc, same 5 types
@@ -152,19 +155,14 @@ for (jct in unique_jang_cts) {
   # consistently across every script that reads Jang -- beta=0/sd=0
   # placeholder cohorts give infinite meta-analysis weight, forcing
   # Fixed_P==Random_P==1 exactly). Removed here before any other use.
-  n_before_artifact <- nrow(full_dt)
-  full_dt <- full_dt[!(Fixed_P == 1 & Random_P == 1)]
-  n_removed_artifact <- n_before_artifact - nrow(full_dt)
-  message("  Removed ", n_removed_artifact,
-          " placeholder-cohort artifact rows (Fixed_P==1 & Random_P==1 exactly) out of ",
-          n_before_artifact, " (", round(100 * n_removed_artifact / n_before_artifact, 3), "%)")
+  full_dt <- filter_jang_artifacts(full_dt, "Jang full-association")
   full_dt[, c("Fixed_P", "Random_P") := NULL]
 
   full_dt[, gene := sub("\\..*", "", feature)]
   full_dt <- full_dt[grepl("^rs", variant_id) & grepl("^ENSG", gene)]
 
   # Sign-normalize against Allele (see MIGRATION NOTE)
-  full_dt[, beta_jang := ifelse(Allele == alt, fixed_beta, -fixed_beta)]
+  full_dt[, beta_jang := align_jang_beta(fixed_beta, Allele, alt)]
   full_dt[, se_jang := fixed_sd]
   full_dt <- full_dt[, .(snp = variant_id, gene, beta_jang, se_jang,
                           ref_jang = ref, alt_jang = alt)]
@@ -180,12 +178,7 @@ for (jct in unique_jang_cts) {
     showProgress = FALSE
   )
 
-  n_before_artifact_top <- nrow(top_dt)
-  top_dt <- top_dt[!(Fixed_P == 1 & Random_P == 1)]
-  n_removed_artifact_top <- n_before_artifact_top - nrow(top_dt)
-  message("  Removed ", n_removed_artifact_top,
-          " placeholder-cohort artifact rows (Fixed_P==1 & Random_P==1 exactly) out of ",
-          n_before_artifact_top)
+  top_dt <- filter_jang_artifacts(top_dt, "Jang top-association")
   top_dt[, c("Fixed_P", "Random_P") := NULL]
 
   top_dt[, gene := sub("\\..*", "", feature)]
@@ -263,21 +256,8 @@ for (i in seq_len(nrow(celltype_map))) {
 
     opp_annotated <- as_tibble(opp_dt) %>%
       mutate(
-        is_palindromic =
-          (ref_my == "A" & alt_my == "T") | (ref_my == "T" & alt_my == "A") |
-          (ref_my == "C" & alt_my == "G") | (ref_my == "G" & alt_my == "C"),
-        allele_status = case_when(
-          is.na(ref_my) | is.na(alt_my) | is.na(ref_jang) | is.na(alt_jang) ~ "missing_allele_info",
-          is_palindromic                                                     ~ "palindromic_unresolved",
-          ref_my == ref_jang & alt_my == alt_jang                            ~ "aligned",
-          ref_my == alt_jang & alt_my == ref_jang                            ~ "flipped",
-          TRUE                                                               ~ "mismatched"
-        ),
-        beta_jang_harmonized = case_when(
-          allele_status == "flipped" ~ -beta_jang,
-          allele_status == "aligned" ~  beta_jang,
-          TRUE                        ~ NA_real_
-        )
+        allele_status        = get_allele_status(ref_my, alt_my, ref_jang, alt_jang),
+        beta_jang_harmonized = harmonise_beta(beta_jang, allele_status)
       ) %>%
       select(my_cell_type, jang_cell_type, gene, snp,
              beta_my, beta_jang, beta_jang_harmonized,

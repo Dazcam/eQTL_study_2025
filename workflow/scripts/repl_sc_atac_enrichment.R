@@ -31,6 +31,9 @@ library(nullranges)
 library(GenomeInfoDb)
 library(readxl)
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+
 # Input and output paths
 qtl_perm <- snakemake@input[["qtl_perm"]]
 snp_file <- snakemake@input[["snp_file"]]
@@ -103,62 +106,6 @@ ziffra_mapping_all <- list(
 # Only run relevant cell type mappings
 ziffra_mapping <- ziffra_mapping_all[cell_type]
 
-# Function for permutation test with ATAC-seq peaks
-perform_permutation_test <- function(sig_snps_gr, peaks_gr, n_perm = 1000) {
-  message("Starting permutation test for ATAC-seq peak enrichment...")
-  
-  # Verify bootRanges availability
-  if (!exists("bootRanges", envir = asNamespace("nullranges"))) {
-    stop("bootRanges function not found. Ensure nullranges is installed and loaded.")
-  }
-  
-  # Ensure peaks_gr has proper seqinfo for hg38
-  hg38_info <- getChromInfoFromUCSC("hg38")
-  seqinfo(peaks_gr) <- Seqinfo(seqnames = hg38_info$chrom,
-                               seqlengths = hg38_info$size,
-                               genome = "hg38")[seqlevels(peaks_gr)]
-  
-  observed_overlap <- length(findOverlaps(sig_snps_gr, peaks_gr))
-  message("Observed overlaps: ", observed_overlap)
-  
-  # Set block length to preserve local structure (e.g., 500kb)
-  block_length <- 500000
-  
-  perm_overlaps <- numeric(n_perm)
-  for (i in seq_len(n_perm)) {
-    if (i %% 100 == 0) message("Permutation ", i, " of ", n_perm)
-    # Generate bootstrapped peaks
-    boot_peaks <- nullranges::bootRanges(
-      y = peaks_gr,
-      blockLength = block_length,
-      R = 1,
-      withinChrom = TRUE
-    )
-    perm_overlaps[i] <- length(findOverlaps(sig_snps_gr, boot_peaks))
-  }
-  
-  # Calculate corrected p-value
-  p_value <- (sum(perm_overlaps >= observed_overlap) + 1) / (n_perm + 1)
-  
-  # Calculate mean of permuted overlaps
-  mean_permuted_overlap <- mean(perm_overlaps)
-  
-  # Calculate fold enrichment
-  fold_enrichment <- observed_overlap / mean_permuted_overlap
-  
-  message("Permutation p-value: ", signif(p_value, 3))
-  message("Fold enrichment: ", signif(fold_enrichment, 3))
-  
-  return(list(
-    p_value = p_value,
-    observed_overlap = observed_overlap,
-    mean_permuted_overlap = mean_permuted_overlap,
-    fold_enrichment = fold_enrichment,
-    perm_overlaps = perm_overlaps  # include raw permuted values for plotting if needed
-  ))
-}
-
-
 ### Ziffra peak overlaps
 ziffra_cell_types <- names(lookup_peaks)[-1]  # Remove 'peak_name'
 
@@ -197,15 +144,7 @@ for (cell_type in names(cell_type_mapping)) {
   }
   
   # Convert to GRanges
-  sig_snps_gr <- read_rds(snp_file) %>%
-    filter(refsnp_id %in% my_eqtl$variant_id) %>%
-    distinct(refsnp_id, .keep_all = TRUE) %>%
-    makeGRangesFromDataFrame(
-      seqnames.field = "chr_name",
-      start.field   = "chrom_start",
-      end.field     = "chrom_end",
-      keep.extra.columns = TRUE
-    )
+  sig_snps_gr <- make_snp_gr(my_eqtl$variant_id, read_rds(snp_file))
   
   # Match peaks
   matching_ziffra_cells <- cell_type_mapping[[cell_type]]
