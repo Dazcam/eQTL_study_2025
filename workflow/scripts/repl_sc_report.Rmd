@@ -295,7 +295,7 @@ pi1_enrich_tbl %>%
 
 ***
 
-```{r, interal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5)}
+```{r, internal_heatmap, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(6,6)}
 # Heatmap order: level 1 cell types in config cell_types order
 heatmap_order <- cell_types[cell_types %in% cell_types_L1]
 
@@ -320,25 +320,21 @@ combinations <- expand.grid(cell_type = heatmap_order, ref_cell_type = heatmap_o
 # Read all pi1 results
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
 
-# Forward only (upper triangle including diagonal)
-pi1_forward_tbl <- pi1_result_tbl %>%
-  select(query = cell_type, ref = ref_cell_type, pi1 = pi1_forward) %>%
+# Full 7x7 square of forward pi1 (discovery -> replication is not symmetric);
+# diagonal set to 1. Same layout as Fig 3C (manuscript_plot_replication.R),
+# without the Glu-A/Glu-B relabelling.
+pi1_int_tbl <- pi1_result_tbl %>%
+  mutate(pi1_final = ifelse(cell_type == ref_cell_type, 1.0, pi1_forward)) %>%
+  select(ref = cell_type, query = ref_cell_type, pi1 = pi1_final) %>%
   mutate(
-    pi1 = ifelse(query == ref, 1.0, pi1),  # diagonal = 1.0
-    row_idx = match(query, heatmap_order),
-    col_idx = match(ref, heatmap_order)
-  ) %>%
-  filter(row_idx <= col_idx)
-
-# Force factor levels for correct ordering
-pi1_int_tbl <- pi1_forward_tbl %>%
-  mutate(
-    query = factor(query, levels = heatmap_order),
+    # Axis orders as in Fig 3C: replication axis reversed, so the diagonal
+    # runs from top-left (MG) to bottom-right (Glu-UL)
+    query = factor(query, levels = rev(heatmap_order)),
     ref = factor(ref, levels = heatmap_order)
   )
 
 plot_int_heatmap <- function(df) {
-  ggplot(df, aes(x = ref, y = query, fill = pi1)) +
+  ggplot(df, aes(x = query, y = ref, fill = pi1)) +
     geom_tile(color = "black", lwd = 1.1, linetype = 1) +
     geom_text(aes(label = ifelse(is.na(pi1), "NA", sprintf("%.2f", pi1))),
               color = "black", size = 3.5) +
@@ -349,7 +345,7 @@ plot_int_heatmap <- function(df) {
       name = expression(pi[1])
     ) +
     coord_equal() +
-    labs(x = "Cell type (Ref)", y = "Cell type (Query)") +
+    labs(x = "Prenatal cell type (replication)", y = "Prenatal cell type (discovery)") +
     theme_minimal(base_size = 13) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
