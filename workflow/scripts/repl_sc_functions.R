@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
 #
-#    Functions for the single-cell replication (06) and eQTL sharing (19) pipelines
+#    Functions for the single-cell replication pipeline (also used by eQTL sharing)
 #
 #--------------------------------------------------------------------------------------
 #
@@ -21,6 +21,13 @@
 #            repl_sc_beta_correlation.R  filter_jang_artifacts, align_jang_beta,
 #                                        get_allele_status, harmonise_beta
 #            repl_sc_atac_enrichment.R   make_snp_gr, perform_permutation_test
+#            devspec_classify_specificity.R  filter_jang_artifacts, align_jang_beta
+#            devspec_eqtl_effect_sizes.R     filter_jang_artifacts, align_jang_beta
+#            devspec_effect_replication.R    filter_jang_artifacts, align_jang_beta,
+#                                            get_allele_status, harmonise_beta
+#            devspec_heterogeneity_test.R    get_allele_status, harmonise_beta
+#            devspec_ocr_enrichment.R        make_snp_gr, perform_permutation_test
+#            devspec_glm_enrichment.R        make_snp_gr
 #
 #--------------------------------------------------------------------------------------
 

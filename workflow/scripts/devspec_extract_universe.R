@@ -57,6 +57,10 @@ suppressPackageStartupMessages({
   library(tidyverse)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "eqtl_sharing_functions.R"))
+
+
 # Input and output paths ---------------------------------------------------------------
 qtl_perm_files  <- snakemake@input[["qtl_perm_files"]]
 output_universe <- snakemake@output[[1]]
@@ -106,10 +110,6 @@ message("\n============================\n")
 
 # Strip L2 sub-cluster suffix to get parent L1 cell type
 # (same convention used in tensorqtl_report.Rmd's egenes_L2 %>% mutate(parent = ...))
-get_parent_cell_type <- function(cell_type, cell_types_L1) {
-  if (cell_type %in% cell_types_L1) return(cell_type)
-  sub("-[^-]+$", "", cell_type)
-}
 
 # Read FDR<0.05 eGene-eSNP pairs for a single cell type
 # (tensorQTL perm output already reports one lead eSNP per eGene)

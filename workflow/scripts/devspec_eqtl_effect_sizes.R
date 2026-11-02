@@ -66,6 +66,11 @@ suppressPackageStartupMessages({
   library(readxl)
 })
 
+# Load functions
+source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
+source(file.path(snakemake@scriptdir, "eqtl_sharing_functions.R"))
+
+
 # Input and output paths ---------------------------------------------------------------
 eqtl_universe_file <- snakemake@input[["eqtl_universe"]]
 nom_files          <- snakemake@input[["nom_files"]]        # all 19 fetal cell types
@@ -86,10 +91,6 @@ de_file <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_genes_L1_and_L2
 # L1 cell types and parent mapping
 cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 
-get_parent_cell_type <- function(ct, L1s) {
-  if (ct %in% L1s) return(ct)
-  sub("-[^-]+$", "", ct)
-}
 
 # Check variable assignment
 message("\nVariables")
@@ -188,19 +189,14 @@ for (jct in jang_l1_types) {
   # original diagnosis: beta=0/sd=0 placeholder cohorts give infinite meta-
   # analysis weight, forcing Fixed_P==Random_P==1 exactly). Removed here
   # before any other use of these rows.
-  n_before_artifact <- nrow(jang_dt)
-  jang_dt <- jang_dt[!(Fixed_P == 1 & Random_P == 1)]
-  n_removed_artifact <- n_before_artifact - nrow(jang_dt)
-  message("  Removed ", n_removed_artifact,
-          " placeholder-cohort artifact rows (Fixed_P==1 & Random_P==1 exactly) out of ",
-          n_before_artifact, " (", round(100 * n_removed_artifact / n_before_artifact, 3), "%)")
+  jang_dt <- filter_jang_artifacts(jang_dt, "Jang full-association")
   jang_dt[, Fixed_P := NULL]
 
   jang_dt[, gene_id := sub("\\..*", "", feature)]
   jang_dt <- jang_dt[grepl("^rs", variant_id) & grepl("^ENSG", gene_id)]
 
   # Sign-normalize against Allele (see MIGRATION NOTE)
-  jang_dt[, beta := ifelse(Allele == alt, fixed_beta, -fixed_beta)]
+  jang_dt[, beta := align_jang_beta(fixed_beta, Allele, alt)]
 
   setkey(jang_dt, gene_id, variant_id)
 
@@ -339,7 +335,7 @@ message("\n--- Identifying supercluster-specific eQTL (L1 only, no L2) ---\n")
 supercluster_specific <- list()
 
 for (l1 in cell_types_L1) {
-  l2_children <- cell_types_L2[sapply(cell_types_L2, get_parent_cell_type, L1s = cell_types_L1) == l1]
+  l2_children <- cell_types_L2[sapply(cell_types_L2, get_parent_cell_type, cell_types_L1 = cell_types_L1) == l1]
 
   if (length(l2_children) == 0) next
 
