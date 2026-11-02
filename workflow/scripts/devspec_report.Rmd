@@ -121,7 +121,7 @@ het_usable        <- het_test$usable
 het_heterogeneous <- het_test$heterogeneous_pairs
 het_funnel        <- het_test$funnel
 
-# Magnitude consistency now computed upstream in devspec_heterogeneity_test.R
+# Magnitude consistency now computed upstream in eqtl_sharing_heterogeneity.R
 # (previously recomputed here at render time -- see report change discussion)
 het_magnitude_consistent   <- het_test$magnitude_consistent_pairs
 het_magnitude_inconsistent <- het_test$magnitude_inconsistent_pairs
@@ -136,7 +136,7 @@ effect_matrix <- eqtl_effects$effect_size_matrix
 effect_long   <- eqtl_effects$effect_size_long
 
 # Unpack beta correlation object (Jang et al. 2026 -- real structure from
-# devspec_beta_correlation.R)
+# repl_sc_beta_correlation.R)
 paired_betas     <- beta_correlation$paired_betas
 opposite_effects <- beta_correlation$opposite_effects
 celltype_map     <- beta_correlation$celltype_map
@@ -369,7 +369,7 @@ magnitude, regardless of sign. This sidesteps delta_beta's ambiguity when
 fetal and adult betas have opposite signs (delta_beta can look "fetal-bigger"
 even when adult's magnitude is actually larger). Feeds OCR enrichment's
 "specific_heterogeneous" SNP set (see OCR section) -- computed in
-devspec_heterogeneity_test.R, not re-derived here.
+eqtl_sharing_heterogeneity.R, not re-derived here.
 
 ```{r het-test-magnitude-prep}
 stringent_magnitude <- het_stringent_magnitude

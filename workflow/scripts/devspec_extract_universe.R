@@ -84,7 +84,7 @@ cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 # labels (Ext/IN/MG) as part of the Fujita -> Jang reference-dataset migration.
 # OPC and End are unchanged (Jang uses the same labels). Column renamed
 # fugita_label_match -> jang_label_match accordingly; classify_eqtl_specificity.R
-# and devspec_heterogeneity_test.R (Step C) both need the matching rename.
+# and eqtl_sharing_heterogeneity.R (Step C) both need the matching rename.
 jang_label_match <- c(
   "Glu-UL"    = "Ext",
   "Glu-DL"    = "Ext",

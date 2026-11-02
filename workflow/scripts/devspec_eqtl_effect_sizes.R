@@ -185,7 +185,7 @@ for (jct in jang_l1_types) {
 
   # ADDITION -- placeholder-cohort artifact filter (same fix applied
   # consistently across every script that reads Jang -- see
-  # replication_pi1_enrichment.R / devspec_classify_specificity.R for the
+  # replication_pi1_enrichment.R / eqtl_sharing_classify.R for the
   # original diagnosis: beta=0/sd=0 placeholder cohorts give infinite meta-
   # analysis weight, forcing Fixed_P==Random_P==1 exactly). Removed here
   # before any other use of these rows.

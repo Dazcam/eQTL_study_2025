@@ -9,8 +9,8 @@
 #
 # Packages:  base R only.
 #
-# Used in:   devspec_extract_universe.R   get_parent_cell_type
-#            devspec_eqtl_effect_sizes.R  get_parent_cell_type
+# Used in:   eqtl_sharing_extract_universe.R   get_parent_cell_type
+#            eqtl_sharing_effect_sizes.R  get_parent_cell_type
 #
 # Notes:     Functions shared with the single-cell replication pipeline (Jang
 #            artifact filter, allele harmonisation, peak enrichment) are in

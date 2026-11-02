@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 
-# Ports the "Subcluster-specific gene table" from devspec_report.Rmd's
+# Ports the "Subcluster-specific gene table" from eqtl_sharing_report.Rmd's
 # "Subcluster-specific eQTL" tab: FDR-sig eGenes in an L2 subcluster but not
 # their L1 parent, with L1-vs-L2 slope/SE/p-value shown side by side.
 #
@@ -19,7 +19,7 @@
 #     other manuscript table/plot in this pipeline (the Rmd itself doesn't
 #     do this -- flagging in case it should too).
 #
-# Independent of devspec_report.Rmd (same reasoning as smr_sig_tbl vs
+# Independent of eqtl_sharing_report.Rmd (same reasoning as smr_sig_tbl vs
 # smr_report.Rmd / ctwas_sig_tbl vs ctwas_report.Rmd): reads directly from
 # the eqtl_effects RDS rather than the report's output, so it doesn't matter
 # which pipeline runs first.

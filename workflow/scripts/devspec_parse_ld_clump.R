@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 
-#  Final step of the LD-independence sub-pipeline (see devspec_prep_ld_clump_input.R
+#  Final step of the LD-independence sub-pipeline (see eqtl_sharing_prep_ld_clump.R
 #  for steps 1-2). Reads every per-gene plink .clumped file produced by run_ld_clump,
 #  keeps each clump's index SNP (the representative of one independent signal) and
 #  drops everything absorbed into it (SP2), combines these with the singleton-gene

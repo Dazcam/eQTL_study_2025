@@ -1313,7 +1313,7 @@ dev_specificity:
     log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effect_replication.log
 
   report:
-    script: scripts/devspec_report.Rmd
+    script: scripts/eqtl_sharing_report.Rmd
     html: reports/19DEV-SPECIFICITY/dev_specificity_report.html
     output_file: ../reports/19DEV-SPECIFICITY/dev_specificity_report.html
     pi1_dir: ../results/19DEV-SPECIFICITY/pi1_jang/

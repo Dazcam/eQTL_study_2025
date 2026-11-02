@@ -21,13 +21,13 @@
 #            repl_sc_beta_correlation.R  filter_jang_artifacts, align_jang_beta,
 #                                        get_allele_status, harmonise_beta
 #            repl_sc_atac_enrichment.R   make_snp_gr, perform_permutation_test
-#            devspec_classify_specificity.R  filter_jang_artifacts, align_jang_beta
-#            devspec_eqtl_effect_sizes.R     filter_jang_artifacts, align_jang_beta
-#            devspec_effect_replication.R    filter_jang_artifacts, align_jang_beta,
+#            eqtl_sharing_classify.R  filter_jang_artifacts, align_jang_beta
+#            eqtl_sharing_effect_sizes.R     filter_jang_artifacts, align_jang_beta
+#            eqtl_sharing_effect_replication.R    filter_jang_artifacts, align_jang_beta,
 #                                            get_allele_status, harmonise_beta
-#            devspec_heterogeneity_test.R    get_allele_status, harmonise_beta
-#            devspec_ocr_enrichment.R        make_snp_gr, perform_permutation_test
-#            devspec_glm_enrichment.R        make_snp_gr
+#            eqtl_sharing_heterogeneity.R    get_allele_status, harmonise_beta
+#            eqtl_sharing_ocr_enrichment.R        make_snp_gr, perform_permutation_test
+#            eqtl_sharing_glm_enrichment.R        make_snp_gr
 #
 #--------------------------------------------------------------------------------------
 

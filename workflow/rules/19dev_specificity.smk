@@ -53,7 +53,7 @@ rule extract_eqtl_universe:
     message: "Extract unique fetal eGene-eSNP universe (L1+L2) for developmental specificity analysis"
     benchmark: "reports/benchmarks/dev_specificity.extract_universe.txt"
     log:    config["dev_specificity"]["extract_universe"]["log"]
-    script: "../scripts/devspec_extract_universe.R"
+    script: "../scripts/eqtl_sharing_extract_universe.R"
 
 rule classify_eqtl_specificity:
     input:  eqtl_universe   = config["dev_specificity"]["extract_universe"]["out_file"],
@@ -67,7 +67,7 @@ rule classify_eqtl_specificity:
     message: "Classify fetal eGene-eSNP pairs as testable/untestable and shared/fetal-specific vs Jang et al. 2026 adult eQTL (all L1+L2 types)"
     benchmark: "reports/benchmarks/dev_specificity.classify_specificity.txt"
     log:    config["dev_specificity"]["classify_specificity"]["log"]
-    script: "../scripts/devspec_classify_specificity.R"
+    script: "../scripts/eqtl_sharing_classify.R"
 
 rule heterogeneity_test:
     input:  eqtl_universe  = rules.extract_eqtl_universe.output[0],
@@ -82,7 +82,7 @@ rule heterogeneity_test:
     message: "Heterogeneity test (Cochran's Q) on fetal-specific eQTL vs matched adult Fujita cell type"
     benchmark: "reports/benchmarks/dev_specificity.heterogeneity_test.txt"
     log:    config["dev_specificity"]["heterogeneity_test"]["log"]
-    script: "../scripts/devspec_heterogeneity_test.R"
+    script: "../scripts/eqtl_sharing_heterogeneity.R"
 
 rule prep_ld_clump_input:
     input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"]
@@ -93,7 +93,7 @@ rule prep_ld_clump_input:
     message: "Prepare per-gene plink association files for LD-independence clumping"
     benchmark: "reports/benchmarks/dev_specificity.prep_ld_clump_input.txt"
     log:    config["dev_specificity"]["prep_ld_clump_input"]["log"]
-    script: "../scripts/devspec_prep_ld_clump_input.R"
+    script: "../scripts/eqtl_sharing_prep_ld_clump.R"
 
 rule run_ld_clump:
     input:  assoc_dir = rules.prep_ld_clump_input.output.assoc_dir,
@@ -166,7 +166,7 @@ rule parse_ld_clump:
     message: "Parse LD clump results into final pruned, LD-independent eGene-eSNP universe"
     benchmark: "reports/benchmarks/dev_specificity.parse_ld_clump.txt"
     log:    config["dev_specificity"]["parse_ld_clump"]["log"]
-    script: "../scripts/devspec_parse_ld_clump.R"
+    script: "../scripts/eqtl_sharing_parse_ld_clump.R"
 
 rule ocr_enrich:
     input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
@@ -182,7 +182,7 @@ rule ocr_enrich:
     message: "Test fetal-specific/shared/heterogeneous eQTL enrichment in adult cortical union OCRs"
     benchmark: "reports/benchmarks/dev_specificity.ocr_enrich.txt"
     log:    config["dev_specificity"]["ocr_enrich"]["log"]
-    script: "../scripts/devspec_ocr_enrichment.R"
+    script: "../scripts/eqtl_sharing_ocr_enrichment.R"
 
 rule glm_enrich:
     input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
@@ -197,7 +197,7 @@ rule glm_enrich:
     message: "GLM comparison: is fetal_specific more concentrated than shared in Li et al. 2023 adult cortical OCRs?"
     benchmark: "reports/benchmarks/dev_specificity.glm_enrich.txt"
     log:    config["dev_specificity"]["glm_enrich"]["log"]
-    script: "../scripts/devspec_glm_enrichment.R"
+    script: "../scripts/eqtl_sharing_glm_enrichment.R"
 
 
 rule eqtl_effect_sizes:
@@ -213,7 +213,7 @@ rule eqtl_effect_sizes:
     message: "Extract effect sizes for unique eGene-eSNP pairs across fetal and adult cell types"
     benchmark: "reports/benchmarks/dev_specificity.eqtl_effect_sizes.txt"
     log:    config["dev_specificity"]["eqtl_effects"]["log"]
-    script: "../scripts/devspec_eqtl_effect_sizes.R"
+    script: "../scripts/eqtl_sharing_effect_sizes.R"
 
 rule eqtl_effect_replication:
     input:  qtl_perm_files = get_egene_universe_inputs(),
@@ -229,7 +229,7 @@ rule eqtl_effect_replication:
     message: "Discovery -> replication eQTL effect-size correlations (fetal-fetal and fetal L1-adult), no significance cutoff on the replication side"
     benchmark: "reports/benchmarks/dev_specificity.eqtl_effect_replication.txt"
     log:    config["dev_specificity"]["eqtl_effect_replication"]["log"]
-    script: "../scripts/devspec_effect_replication.R"
+    script: "../scripts/eqtl_sharing_effect_replication.R"
 
 rule dev_specificity_report:
     input:  eqtl_universe    = rules.extract_eqtl_universe.output[0],

@@ -42,7 +42,7 @@
 #  All fugita_* naming renamed to jang_* throughout (jang_cell_type,
 #  jang_label_match, beta_jang, se_jang, ref_jang, alt_jang,
 #  beta_jang_harmonized), matching the rename already made in
-#  devspec_extract_universe.R and devspec_classify_specificity.R.
+#  eqtl_sharing_extract_universe.R and eqtl_sharing_classify.R.
 #
 #  Jang's data has no allele-frequency column (unlike Fujita's ALT_AF), so the
 #  previous AF-based palindromic-SNP resolution (aligned/flipped disambiguation
@@ -57,7 +57,7 @@
 #
 #  ADDITION -- magnitude consistency moved here from the report:
 #
-#  Previously computed only inside devspec_report.Rmd at render time, purely
+#  Previously computed only inside eqtl_sharing_report.Rmd at render time, purely
 #  for display -- the OCR enrichment rule read heterogeneous_pairs directly and
 #  had no way to respect this restriction. Moved upstream so it can actually
 #  gate what feeds OCR: heterogeneous_snps (and therefore ocr_enrich's

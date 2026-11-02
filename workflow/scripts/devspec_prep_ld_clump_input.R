@@ -9,7 +9,7 @@
 #  (across the 19 fetal cell types) don't actually reflect the same underlying signal
 #  via LD between those eSNPs. This is step 1 of a 3-step LD-independence sub-pipeline:
 #
-#    1. devspec_prep_ld_clump_input.R (this script) -- read eqtl_universe, compute a
+#    1. eqtl_sharing_prep_ld_clump.R (this script) -- read eqtl_universe, compute a
 #       single ranking p-value per (eGene, eSNP) pair (min qval across cell types),
 #       split genes into singleton (1 SNP, no clumping needed) vs multi-SNP (>1 SNP,
 #       candidates for LD clumping), and write one plink association file per
@@ -17,11 +17,11 @@
 #    2. run_ld_clump (plink, separate envmodules rule -- kept out of the R container
 #       to avoid mixing singularity/envmodules dependency management in one rule) --
 #       runs plink --clump per gene against the cohort's own genotypes.
-#    3. devspec_parse_ld_clump.R -- combines clump index SNPs + singleton-gene SNPs
+#    3. eqtl_sharing_parse_ld_clump.R -- combines clump index SNPs + singleton-gene SNPs
 #       into the final pruned, LD-independent (eGene, eSNP) universe used by
 #       ocr_enrich.
 #
-#  Same diagnostic figures as previously eyeballed in devspec_extract_universe.R's log
+#  Same diagnostic figures as previously eyeballed in eqtl_sharing_extract_universe.R's log
 #  (unique pairs, unique genes, SNPs-per-gene distribution, singleton vs multi-SNP gene
 #  counts) are reproduced here so the two logs can be cross-checked against each other.
 
@@ -68,7 +68,7 @@ message("\nLoading eQTL universe ...")
 eqtl_universe <- read_rds(eqtl_universe_file)
 
 # --- Unique (eGene, eSNP) pairs and SNPs-per-gene diagnostics (matches the log output
-# from the earlier devspec_extract_universe.R diagnostic addition) --------------------
+# from the earlier eqtl_sharing_extract_universe.R diagnostic addition) --------------------
 message("\n--- SNPs-per-gene diagnostic ---\n")
 
 unique_gene_snp_pairs <- eqtl_universe %>%

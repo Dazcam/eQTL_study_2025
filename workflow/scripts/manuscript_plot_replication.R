@@ -437,7 +437,7 @@ make_jang_beta_plot <- function(paired_betas_all, my_ct, jang_ct, gene_lookup,
   cor_label <- sprintf("r = %.2f", cor_val)
   
   # --- Point classification: two-check "significant_jang" convention (see
-  # devspec_beta_correlation.R / devspec_report.Rmd), replacing the old
+  # repl_sc_beta_correlation.R / eqtl_sharing_report.Rmd), replacing the old
   # sign-mismatch-only "discordant" rule. A pair is only highlighted as
   # concordant/discordant if it is ALSO significant in Jang (i.e. it IS that
   # gene's lead SNP in Jang's top-association file AND qval < 0.05) -

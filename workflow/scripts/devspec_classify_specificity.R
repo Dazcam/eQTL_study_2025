@@ -5,7 +5,7 @@
 #--------------------------------------------------------------------------------------
 
 #  For every fetal eGene-eSNP pair in the universe extracted by
-#  devspec_extract_universe.R, classifies testability against Jang et al. 2026
+#  eqtl_sharing_extract_universe.R, classifies testability against Jang et al. 2026
 #  (SingleBrain) adult sn-eQTL data and, where testable, calls shared vs.
 #  fetal-specific.
 #

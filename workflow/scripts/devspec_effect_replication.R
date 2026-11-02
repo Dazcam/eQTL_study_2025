@@ -20,8 +20,8 @@
 #  Written to a single RDS only -- no figures. Report and figures pipeline read
 #  this RDS so both draw from the same numbers.
 #
-#  Distinct from devspec_beta_correlation.R (matched fetal-adult cell types,
-#  opposite-effect flagging) and devspec_eqtl_effect_sizes.R (pooled slope
+#  Distinct from repl_sc_beta_correlation.R (matched fetal-adult cell types,
+#  opposite-effect flagging) and eqtl_sharing_effect_sizes.R (pooled slope
 #  matrix); neither is used or modified here.
 #
 #--------------------------------------------------------------------------------------
