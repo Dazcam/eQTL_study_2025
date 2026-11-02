@@ -19,14 +19,12 @@
 # Inputs:    qtl_perm   tensorQTL permutation output for the cell type
 #            snp_file   SNP lookup (hg38 coordinates of the sig. eQTL)
 #            peaks      Ziffra 2021 supplementary tables (xlsx)
-#            peak_dir   directory holding the Ziffra xlsx (params)
+#            peak_sets  L1 cell type -> Ziffra peak set(s) (params)
 #            seed       random seed for the bootstrap (params)
 #
 # Outputs:   out_file   enrichment table: one row per peak set tested
 #
-# Notes:     Seed set once before the permutations, so results are reproducible
-#            for a given seed (outputs before freeze 2 were made without a seed).
-#            bootRanges: https://academic.oup.com/bioinformatics/article/39/5/btad190/7115835
+# Notes:     bootRanges: https://academic.oup.com/bioinformatics/article/39/5/btad190/7115835
 #
 #--------------------------------------------------------------------------------------
 
@@ -56,44 +54,25 @@ qtl_perm <- snakemake@input[["qtl_perm"]]
 snp_file <- snakemake@input[["snp_file"]]
 peaks <- snakemake@input[["peaks"]]
 out_file <- as.character(snakemake@output)
-peak_dir <- snakemake@params[["peak_dir"]]
 seed <- snakemake@params[["seed"]]
 cell_type <- snakemake@wildcards[["cell_type"]]
 gen_pc <- snakemake@wildcards[["geno_pc"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
 norm_method <- snakemake@wildcards[["norm_method"]]
 
-# Our cell type -> Ziffra 2021 ST3 peak set(s)
-ziffra_mapping_all <- list(
-  "NPC"       = "RG_MACSpeaks",
-  "NPC-0"     = "RG_MACSpeaks",
-  "NPC-1"     = "RG_MACSpeaks",
-  "NPC-2"     = "RG_MACSpeaks",
-  "Glu-UL"    = "ulEN_MACSpeaks",
-  "Glu-UL-0"  = "ulEN_MACSpeaks",
-  "Glu-UL-1"  = "ulEN_MACSpeaks",
-  "Glu-UL-2"  = "ulEN_MACSpeaks",
-  "Glu-DL"    = "dlEN_MACSpeaks",
-  "Glu-DL-0"  = "dlEN_MACSpeaks",
-  "Glu-DL-1"  = "dlEN_MACSpeaks",
-  "Glu-DL-2"  = "dlEN_MACSpeaks",
-  "GABA"      = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
-  "GABA-0"    = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
-  "GABA-1"    = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
-  "GABA-2"    = c("IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"),
-  "Endo-Peri" = "EndoMural_MACSpeaks",
-  "MG"        = "Microglia_MACSpeaks",
-  "OPC"       = "AstroOligo_MACSpeaks"
-)
-ziffra_sets <- ziffra_mapping_all[[cell_type]]
+# Ziffra 2021 ST3 peak set(s) for this cell type; subclusters (e.g. GABA-1) use
+# their L1 parent's entry
+peak_sets <- snakemake@params[["peak_sets"]]
+l1_parent <- sub("-[0-9]+$", "", cell_type)
+ziffra_sets <- unlist(peak_sets[[l1_parent]])
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("qtl_perm", "snp_file", "out_file", "peaks", "peak_dir", "cell_type",
+  variable = c("qtl_perm", "snp_file", "out_file", "peaks", "cell_type",
                "gen_pc", "exp_pc", "norm_method", "ziffra_sets", "seed"),
-  value    = c(qtl_perm, snp_file, out_file, peaks, peak_dir, cell_type,
+  value    = c(qtl_perm, snp_file, out_file, peaks, cell_type,
                gen_pc, exp_pc, norm_method, paste(ziffra_sets, collapse = ", "),
                seed)) |>
   knitr::kable(format = "simple") |>
@@ -117,9 +96,9 @@ sig_snps_gr <- make_snp_gr(my_eqtl$variant_id, read_rds(snp_file))
 # ST2: coordinates of all peaks; ST3: 0/1 membership of each peak per cell type
 message("\nLoading Ziffra 2021 snATAC-seq fetal brain peaks ...")
 options(scipen = 999) # stop peak coordinates being written in scientific notation
-peak_list <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx"), sheet = "ST2 AllPrimaryPeaks") %>%
+peak_list <- read_excel(peaks, sheet = "ST2 AllPrimaryPeaks") %>%
   dplyr::select(seqnames, start, end, peak_name)
-lookup_peaks <- read_excel(file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx"), sheet = "ST3 MACSpeaks_byCelltype")
+lookup_peaks <- read_excel(peaks, sheet = "ST3 MACSpeaks_byCelltype")
 
 ziffra_peaks <- map(ziffra_sets, function(ziffra_ct) {
   peaks_in_set <- lookup_peaks %>%

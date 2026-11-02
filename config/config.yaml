@@ -116,6 +116,9 @@ jang_l1_types:
 
 eqtl_fdr: 0.05
 
+# Genotype pvar used for REF/ALT lookups (06 beta_correlation; 19 heterogeneity_test, eqtl_effect_replication)
+pvar_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+
 window: 500000
 
 susie_batches: 25
@@ -610,31 +613,87 @@ pseudotime:
 # --------  QTL REPLICATION (Pipeline 6)  ----------
 
 qtl_rep:
+  # Fetal L1 cell types used for internal pi1, Jang pi1 and beta correlation
+  fetal_l1_types: ["Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri"]
+
+  # Ziffra 2021 ST3 peak set(s) tested per L1 cell type; subclusters (e.g. GABA-1)
+  # use the entry of their L1 parent
+  ziffra_peak_sets:
+    NPC:       ["RG_MACSpeaks"]
+    Glu-UL:    ["ulEN_MACSpeaks"]
+    Glu-DL:    ["dlEN_MACSpeaks"]
+    GABA:      ["IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"]
+    Endo-Peri: ["EndoMural_MACSpeaks"]
+    MG:        ["Microglia_MACSpeaks"]
+    OPC:       ["AstroOligo_MACSpeaks"]
+
+  # Fetal L1 vs Jang et al. 2026 L1 pairs for beta_correlation (order = output row order)
+  jang_comparisons:
+    - {fetal: "Glu-UL",    jang: "Ext"}
+    - {fetal: "Glu-DL",    jang: "Ext"}
+    - {fetal: "GABA",      jang: "IN"}
+    - {fetal: "NPC",       jang: "Ext"}
+    - {fetal: "NPC",       jang: "IN"}
+    - {fetal: "MG",        jang: "MG"}
+    - {fetal: "OPC",       jang: "OPC"}
+    - {fetal: "Endo-Peri", jang: "End"}
+
   dwnld_ziffra:
     output: ../resources/public_datasets/ziffra_2021/Ziffra_2021_supp_tables_2_13.xlsx
     web_link: https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-021-03209-8/MediaObjects/41586_2021_3209_MOESM4_ESM.xlsx
+    benchmark: reports/benchmarks/06qtl_replication.dwnld_ziffra.txt
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_ziffra.log
 
   snp_lookup:
-    qtl_perm: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz    
+    qtl_perm: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz
     out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds
+    script: ../scripts/repl_sc_snp_lookup.R
+    benchmark: reports/benchmarks/qtl_replication.snp_lookup_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup.log
 
   atac_enrich:
-    peak_dir: ../resources/public_datasets/ziffra_2021/
     seed: 1234  # set.seed() before the block-bootstrap permutations
-    out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds    
+    out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds
+    script: ../scripts/repl_sc_atac_enrichment.R
+    benchmark: reports/benchmarks/qtl_replication.atac_enrich_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich.log
 
   cat_nom_qtl:
     parquet: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.{chr}.parquet
-    output: ../results/06QTL-REPLICATION/cat_nom_qtl/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz 
+    output: ../results/06QTL-REPLICATION/cat_nom_qtl/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz
+    script: scripts/repl_sc_cat_nom_qtl.py
+    benchmark: reports/benchmarks/06qtl_replication.cat_nom_qtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_cat_nom_qtl.log
 
   pi1_enrich_internal:
     enrich: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_tbl.rds
     pi1: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_results_tbl.rds
+    script: ../scripts/repl_sc_pi1_enrichment.R
+    benchmark: reports/benchmarks/06qtl_replication.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}.txt
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_internal.log
+
+  # Freeze 2 outputs are in 19DEV-SPECIFICITY/; paths move in the rename pass
+  pi1_enrich_jang:
+    public_all: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_full_assoc.tsv.gz
+    public_top: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_top_assoc.tsv.gz
+    enrich: ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_enrich_tbl.rds
+    pi1:    ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_results_tbl.rds
+    script: ../scripts/repl_sc_pi1_enrichment.R
+    benchmark: reports/benchmarks/dev_specificity.pi1_enrich_jang_{cell_type}_vs_{jang_cell_type}.txt
+    log:    ../results/00LOG/19DEV-SPECIFICITY/{cell_type}_vs_{jang_cell_type}_pi1_enrich_jang.log
+
+  beta_correlation:
+    out_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
+    script: ../scripts/repl_sc_beta_correlation.R
+    benchmark: reports/benchmarks/dev_specificity.beta_correlation.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/beta_correlation.log
+
+  report:
+    script: scripts/repl_sc_report.Rmd
+    html: reports/06QTL-REPLICATION/06replication_pi1_enrichment_report.html
+    output_file: ../reports/06QTL-REPLICATION/06replication_pi1_enrichment_report.html
+    benchmark: reports/benchmarks/06qtl_replication.pi1_enrichment_report.benchmark.txt
+    log: ../results/00LOG/06QTL-REPLICATION/pi1_enrichment_report.log
 
 # ------------  PREP GWAS (Pipeline 7) ----------------
 
@@ -1244,24 +1303,9 @@ dev_specificity:
     out_file: ../results/19DEV-SPECIFICITY/eqtl_effects/eqtl_effect_sizes.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effects.log
 
-  beta_correlation:
-    fugita_dir: ../resources/public_datasets/fugita_2024/
-    nom_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    pvar_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-    thousandG_frq: ../results/10SMR/smr_input/1000G.EUR.hg38.frq
-    out_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
-    log: ../results/00LOG/19DEV-SPECIFICITY/beta_correlation.log
-
   eqtl_effect_replication:
     out_file: ../results/19DEV-SPECIFICITY/eqtl_effect_replication/eqtl_effect_replication.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effect_replication.log
-
-  pi1_enrich_jang:
-    public_all: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_full_assoc.tsv.gz
-    public_top: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_top_assoc.tsv.gz
-    enrich: ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_enrich_tbl.rds
-    pi1:    ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_results_tbl.rds
-    log:    ../results/00LOG/19DEV-SPECIFICITY/{cell_type}_vs_{jang_cell_type}_pi1_enrich_jang.log
 
   smr_overlap:
     smr_dir: ../results/10SMR/smr/

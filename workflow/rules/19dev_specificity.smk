@@ -96,7 +96,7 @@ rule classify_eqtl_specificity:
 rule heterogeneity_test:
     input:  eqtl_universe  = rules.extract_eqtl_universe.output[0],
             classification = rules.classify_eqtl_specificity.output[0],
-            pvar_file      = config["dev_specificity"]["beta_correlation"]["pvar_file"],
+            pvar_file      = config["pvar_file"],
             gene_lookup    = config["dev_specificity"]["report"]["gene_lookup"]
     output: config["dev_specificity"]["heterogeneity_test"]["out_file"]
     params: fdr_thresh  = config["dev_specificity"]["heterogeneity_test"]["fdr_thresh"]
@@ -243,7 +243,7 @@ rule eqtl_effect_replication:
     input:  qtl_perm_files = get_egene_universe_inputs(),
             nom_files      = get_nom_files(),
             jang_files     = get_jang_l1_inputs(),
-            pvar_file      = config["dev_specificity"]["beta_correlation"]["pvar_file"]
+            pvar_file      = config["pvar_file"]
     output: config["dev_specificity"]["eqtl_effect_replication"]["out_file"]
     params: cell_types = DEVSPEC_CELL_TYPES,
             fetal_l1   = DEVSPEC_FETAL_L1
@@ -278,7 +278,7 @@ rule dev_specificity_report:
             heterogeneity_test = rules.heterogeneity_test.output[0],
             ocr_enrich       = rules.ocr_enrich.output[0],
             eqtl_effects     = rules.eqtl_effect_sizes.output[0],
-            beta_correlation = config["dev_specificity"]["beta_correlation"]["out_file"],
+            beta_correlation = config["qtl_rep"]["beta_correlation"]["out_file"],
             gene_lookup      = config["dev_specificity"]["report"]["gene_lookup"],
             rmd_script       = config["dev_specificity"]["report"]["script"]
     output: config["dev_specificity"]["report"]["html"]
@@ -289,7 +289,7 @@ rule dev_specificity_report:
             eqtl_effects     = lambda wc, input: "../" + input.eqtl_effects,
             beta_correlation = lambda wc, input: "../" + input.beta_correlation,
             pi1_dir     = "../" + config["dev_specificity"]["report"]["pi1_dir"],
-            perm_dir    = "../" + config["dev_specificity"]["beta_correlation"]["nom_dir"],
+            perm_dir    = "../" + config["dev_specificity"]["extract_universe"]["qtl_dir"],
             gene_lookup = "../" + config["dev_specificity"]["report"]["gene_lookup"],
             bmark_dir   = "../" + config["dev_specificity"]["report"]["bmark_dir"],
             output_file = config["dev_specificity"]["report"]["output_file"]

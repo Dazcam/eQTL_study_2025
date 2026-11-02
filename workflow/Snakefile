@@ -27,7 +27,7 @@ rule all:
 #        config["tensorQTL"]["tensorqtl_report"]["output"]
 #        config["pseudotime"]["report"]["html"],
 #        PT_Q4_EXPORT_TARGETS,
-         "reports/06QTL-REPLICATION/06replication_pi1_enrichment_report.html",
+         config["qtl_rep"]["report"]["html"],
 #        config["susie"]["susie_report"]["html"],
 #        config["sldsr"]["ldsr_report"]["html"],
 #        config["smr"]["smr_report"]["html"],

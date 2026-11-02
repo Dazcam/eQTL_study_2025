@@ -5,23 +5,26 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  06QTL-REPLICATION | Rule: beta_correlation (single job)
-#            Upstream:   05TENSORQTL tensorqtl_perm (final expPC per cell type);
+#            Upstream:   05TENSORQTL tensorqtl_perm (final expPC per cell type, set
+#                        in the rule from exp_pc_map);
 #                        Jang et al. 2026 SingleBrain L1 full + top association files
 #            Downstream: 06 report (effect-size concordance tab; Fig 3F)
 #
 # Purpose:   - Join each fetal cell type's sig. eGene-eSNP pairs (qval < 0.05) to the
-#              matched Jang adult betas, across 8 fetal-adult comparisons
-#              (NPC tested against both Ext and IN)
+#              matched Jang adult betas, for each fetal-adult comparison in
+#              config (qtl_rep.jang_comparisons; NPC is tested against Ext and IN)
 #            - Flag a pair as sig. in Jang only if it is the gene's lead SNP in the
 #              top-association file AND qval < 0.05 (two-check design)
 #            - Report opposite-effect pairs (sign(beta_my) != sign(beta_jang)) among
 #              pairs sig. in both datasets, annotated with an allele-coding check
 #              against Jang's ref/alt
 #
-# Inputs:    jang_l1_files       Jang full-association files, 5 unique adult types
-#            jang_l1_top_files   Jang top-association files, same 5 types
+# Inputs:    fetal_perm          tensorQTL perm output per unique fetal cell type
+#            jang_l1_files       Jang full-association files per unique adult type
+#            jang_l1_top_files   Jang top-association files, same adult types
 #            pvar_file           our genotype pvar (REF/ALT per rsID)
-#            nom_dir             tensorQTL output dir (params)
+#            fetal_cell,         parallel lists defining the comparisons (params);
+#            jang_cell           file lists above are in order of first appearance
 #
 # Outputs:   output_file   rds list: paired_betas, opposite_effects, celltype_map
 #
@@ -62,31 +65,23 @@ suppressPackageStartupMessages({
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
 # Input and output paths
-jang_l1_files    <- snakemake@input[["jang_l1_files"]]    # full-assoc, 5 unique adult types
-jang_l1_top_files <- snakemake@input[["jang_l1_top_files"]] # top-assoc, same 5 types
-pvar_file        <- snakemake@input[["pvar_file"]]
-output_file      <- snakemake@output[[1]]
-nom_dir          <- snakemake@params[["nom_dir"]]
+fetal_perm        <- snakemake@input[["fetal_perm"]]
+jang_l1_files     <- snakemake@input[["jang_l1_files"]]
+jang_l1_top_files <- snakemake@input[["jang_l1_top_files"]]
+pvar_file         <- snakemake@input[["pvar_file"]]
+output_file       <- snakemake@output[[1]]
 
-geno_pc     <- 4
-norm_method <- "quantile"
-
-exp_pc_map <- c(
-  "Glu-UL"    = 50, "Glu-DL"    = 40, "GABA"      = 30,
-  "NPC"       = 30, "MG"        = 30, "OPC"       = 30,
-  "Endo-Peri" = 30
-)
-
-# 8 fetal-adult cell type comparisons (NPC vs both Ext and IN, no Ast).
-# Jang label equivalents of the old Fujita mapping: Exc->Ext, Inh->IN,
-# Mic->MG (NB: fetal "MG" and Jang "MG" now share the same string -- distinct
-# columns (my_cell/jang_cell) keep this unambiguous throughout).
+# Fetal-adult comparisons (order sets output row order). Fetal "MG" and Jang "MG"
+# share a string; separate my_cell/jang_cell columns keep them distinct.
 celltype_map <- tibble(
-  my_cell   = c("Glu-UL", "Glu-DL", "GABA", "NPC",  "NPC",  "MG",  "OPC", "Endo-Peri"),
-  jang_cell = c("Ext",    "Ext",    "IN",   "Ext",  "IN",   "MG",  "OPC", "End")
+  my_cell   = unlist(snakemake@params[["fetal_cell"]]),
+  jang_cell = unlist(snakemake@params[["jang_cell"]])
 )
 
-unique_jang_cts <- unique(celltype_map$jang_cell)
+# Rule passes one file per unique cell type, in order of first appearance
+unique_fetal_cts <- unique(celltype_map$my_cell)
+unique_jang_cts  <- unique(celltype_map$jang_cell)
+names(fetal_perm)        <- unique_fetal_cts
 names(jang_l1_files)     <- unique_jang_cts
 names(jang_l1_top_files) <- unique_jang_cts
 
@@ -94,10 +89,10 @@ names(jang_l1_top_files) <- unique_jang_cts
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("n_jang_l1_files", "n_jang_l1_top_files", "pvar_file", "nom_dir",
-               "n_comparisons", "n_unique_adult_types", "output_file"),
-  value    = c(length(jang_l1_files), length(jang_l1_top_files), pvar_file, nom_dir,
-               nrow(celltype_map), length(unique_jang_cts), output_file)) |>
+  variable = c("n_fetal_perm", "n_jang_l1_files", "n_jang_l1_top_files", "pvar_file",
+               "n_comparisons", "output_file"),
+  value    = c(length(fetal_perm), length(jang_l1_files), length(jang_l1_top_files),
+               pvar_file, nrow(celltype_map), output_file)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -182,13 +177,11 @@ for (i in seq_len(nrow(celltype_map))) {
 
   my_ct   <- celltype_map$my_cell[i]
   jang_ct <- celltype_map$jang_cell[i]
-  expPC   <- exp_pc_map[[my_ct]]
 
   message("\n=== ", my_ct, " vs ", jang_ct, " ===")
 
   # --- Load fetal significant eGene-eSNP pairs (with af) ---
-  file_dir  <- paste0(nom_dir, my_ct, "_", norm_method, "_genPC_", geno_pc, "_expPC_", expPC, "/")
-  file_path <- paste0(file_dir, my_ct, "_", norm_method, "_perm.cis_qtl.txt.gz")
+  file_path <- fetal_perm[[my_ct]]
 
   message("Reading fetal perm file: ", file_path)
   pooled_my <- read_delim(file_path, delim = "\t", col_names = TRUE, show_col_types = FALSE) %>%
