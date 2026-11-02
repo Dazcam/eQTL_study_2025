@@ -19,11 +19,14 @@
 # Inputs:    qtl_perm   tensorQTL permutation output for the cell type
 #            snp_file   SNP lookup (hg38 coordinates of the sig. eQTL)
 #            peaks      Ziffra 2021 supplementary tables (xlsx)
-#            peak_dir   directory holding the Ziffra xlsx
+#            peak_dir   directory holding the Ziffra xlsx (params)
+#            seed       random seed for the bootstrap (params)
 #
 # Outputs:   out_file   enrichment table: one row per peak set tested
 #
-# Notes:     bootRanges: https://academic.oup.com/bioinformatics/article/39/5/btad190/7115835
+# Notes:     Seed set once before the permutations, so results are reproducible
+#            for a given seed (outputs before freeze 2 were made without a seed).
+#            bootRanges: https://academic.oup.com/bioinformatics/article/39/5/btad190/7115835
 #
 #--------------------------------------------------------------------------------------
 
@@ -54,6 +57,7 @@ snp_file <- snakemake@input[["snp_file"]]
 peaks <- snakemake@input[["peaks"]]
 out_file <- as.character(snakemake@output)
 peak_dir <- snakemake@params[["peak_dir"]]
+seed <- snakemake@params[["seed"]]
 cell_type <- snakemake@wildcards[["cell_type"]]
 gen_pc <- snakemake@wildcards[["geno_pc"]]
 exp_pc <- snakemake@wildcards[["exp_pc"]]
@@ -88,9 +92,10 @@ message("\nVariables")
 message("============================")
 tibble(
   variable = c("qtl_perm", "snp_file", "out_file", "peaks", "peak_dir", "cell_type",
-               "gen_pc", "exp_pc", "norm_method", "ziffra_sets"),
+               "gen_pc", "exp_pc", "norm_method", "ziffra_sets", "seed"),
   value    = c(qtl_perm, snp_file, out_file, peaks, peak_dir, cell_type,
-               gen_pc, exp_pc, norm_method, paste(ziffra_sets, collapse = ", "))) |>
+               gen_pc, exp_pc, norm_method, paste(ziffra_sets, collapse = ", "),
+               seed)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -130,6 +135,7 @@ ziffra_peaks <- map(ziffra_sets, function(ziffra_ct) {
 ##  Enrichment tests  ------------------------------------------------------------------
 message("\n--- Starting Ziffra ATAC-seq Peak Enrichment Analysis ---")
 ziffra_enrichment_results <- tibble()
+set.seed(seed)
 
 for (ziffra_cell in ziffra_sets) {
   message("\nPerforming permutation test for ", cell_type, " vs ", ziffra_cell)

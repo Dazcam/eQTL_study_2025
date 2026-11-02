@@ -621,7 +621,8 @@ qtl_rep:
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup.log
 
   atac_enrich:
-    peak_dir: ../resources/public_datasets/ziffra_2021/ 
+    peak_dir: ../resources/public_datasets/ziffra_2021/
+    seed: 1234  # set.seed() before the block-bootstrap permutations
     out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds    
     log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich.log
 

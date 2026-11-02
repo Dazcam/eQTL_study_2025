@@ -85,7 +85,8 @@ rule atac_enrich:
             peaks = rules.dwnld_ziffra.output,
             snp_file = rules.snp_lookup.output
     output: config["qtl_rep"]["atac_enrich"]["out_file"]
-    params: peak_dir = config["qtl_rep"]["atac_enrich"]["peak_dir"]
+    params: peak_dir = config["qtl_rep"]["atac_enrich"]["peak_dir"],
+            seed     = config["qtl_rep"]["atac_enrich"]["seed"]
     singularity: config["containers"]["r_eqtl"]
     message: "Test for sig. eQTL enrichments in Ziffra ATAC-seq peaks"
     benchmark: "reports/benchmarks/qtl_replication.atac_enrich_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
