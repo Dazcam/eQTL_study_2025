@@ -96,7 +96,7 @@ rule classify_eqtl_specificity:
 rule heterogeneity_test:
     input:  eqtl_universe  = rules.extract_eqtl_universe.output[0],
             classification = rules.classify_eqtl_specificity.output[0],
-            pvar_file      = config["pvar_file"],
+            pvar_file      = config["tensorQTL"]["convert_genotypes"]["pvar"],
             gene_lookup    = config["dev_specificity"]["report"]["gene_lookup"]
     output: config["dev_specificity"]["heterogeneity_test"]["out_file"]
     params: fdr_thresh  = config["dev_specificity"]["heterogeneity_test"]["fdr_thresh"]
@@ -243,7 +243,7 @@ rule eqtl_effect_replication:
     input:  qtl_perm_files = get_egene_universe_inputs(),
             nom_files      = get_nom_files(),
             jang_files     = get_jang_l1_inputs(),
-            pvar_file      = config["pvar_file"]
+            pvar_file      = config["tensorQTL"]["convert_genotypes"]["pvar"]
     output: config["dev_specificity"]["eqtl_effect_replication"]["out_file"]
     params: cell_types = DEVSPEC_CELL_TYPES,
             fetal_l1   = DEVSPEC_FETAL_L1

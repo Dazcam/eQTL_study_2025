@@ -76,7 +76,7 @@ rule dwnld_ziffra:
             """
 
 rule snp_lookup:
-    input:  qtl_perm = QR["snp_lookup"]["qtl_perm"]
+    input:  qtl_perm = config["tensorQTL"]["tensorqtl_perm"]["output"]
     output: QR["snp_lookup"]["out_file"]
     message: "Generate snp lookup for Ziffra ATAC-seq peaks; Net access req. - run local"
     singularity: config["containers"]["r_eqtl"]
@@ -85,7 +85,7 @@ rule snp_lookup:
     script: QR["snp_lookup"]["script"]
 
 rule atac_enrich:
-    input:  qtl_perm = QR["snp_lookup"]["qtl_perm"],
+    input:  qtl_perm = config["tensorQTL"]["tensorqtl_perm"]["output"],
             peaks    = rules.dwnld_ziffra.output,
             snp_file = rules.snp_lookup.output
     output: QR["atac_enrich"]["out_file"]
@@ -141,7 +141,7 @@ rule beta_correlation:
     input:  fetal_perm        = [perm_file(ct) for ct in BETA_FETAL_TYPES],
             jang_l1_files     = expand(QR["pi1_enrich_jang"]["public_all"], jang_cell_type=BETA_JANG_TYPES),
             jang_l1_top_files = expand(QR["pi1_enrich_jang"]["public_top"], jang_cell_type=BETA_JANG_TYPES),
-            pvar_file         = config["pvar_file"]
+            pvar_file         = config["tensorQTL"]["convert_genotypes"]["pvar"]
     output: QR["beta_correlation"]["out_file"]
     params: fetal_cell = [c["fetal"] for c in JANG_COMPARISONS],
             jang_cell  = [c["jang"] for c in JANG_COMPARISONS]

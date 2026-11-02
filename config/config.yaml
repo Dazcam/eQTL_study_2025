@@ -116,9 +116,6 @@ jang_l1_types:
 
 eqtl_fdr: 0.05
 
-# Genotype pvar used for REF/ALT lookups (06 beta_correlation; 19 heterogeneity_test, eqtl_effect_replication)
-pvar_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-
 window: 500000
 
 susie_batches: 25
@@ -503,6 +500,7 @@ tensorQTL:
   convert_genotypes:
     input:         ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     output:        ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen
+    pvar:          ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
     prefix_out:    ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log:           ../results/00LOG/05TENSORQTL/convert_genotypes.log
 
@@ -645,7 +643,6 @@ qtl_rep:
     log: ../results/00LOG/06QTL-REPLICATION/dwnld_ziffra.log
 
   snp_lookup:
-    qtl_perm: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz
     out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds
     script: ../scripts/repl_sc_snp_lookup.R
     benchmark: reports/benchmarks/qtl_replication.snp_lookup_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
