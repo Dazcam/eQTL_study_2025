@@ -1,73 +1,42 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: shared vs. fetal-specific eQTL classification
+#    Classify fetal eQTL as shared with adult brain or fetal-specific
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: classify_eqtl_specificity (single job)
+#            Upstream:   extract_eqtl_universe; Jang et al. 2026 SingleBrain full and
+#                        top association files (all L1 + L2 cell types)
+#            Downstream: heterogeneity_test; ocr_enrich; glm_enrich; report
+#                        (Supp Table 4)
+#
+# Purpose:   For each unique fetal eGene-eSNP pair:
+#            - Testable if the gene is expressed and the SNP genotyped in any Jang
+#              cell type
+#            - Shared if the pair's own Random_P is below a Bonferroni threshold
+#              (0.05 / n Jang cell types / n testable pairs) in any Jang cell type;
+#              otherwise fetal-specific
+#            - Record the adult cell type with the smallest P and whether the
+#              pair is Jang's own lead SNP there (informational only)
+#
+# Inputs:    eqtl_universe_file  fetal eGene-eSNP universe (extract_eqtl_universe)
+#            jang_full_files     Jang full-association files, one per cell type
+#            jang_top_files      Jang top-association files (lead-SNP identity only)
+#            jang_cell_types     Jang cell types, same order as the files (params)
+#
+# Outputs:   output_file  rds list: any_table, any_summary, pairs_all,
+#                         gene_membership, snp_membership, bonferroni_threshold,
+#                         n_testable_pairs (plus untracked .tsv copies)
+#
+# Notes:     - Jang cell types exclude MiGA3 (separate microglia meta-analysis).
+#            - Jang betas are sign-normalised to alt (align_jang_beta()) and
+#              placeholder-cohort rows removed (filter_jang_artifacts()).
+#            - n testable pairs is computed each run (3,479 for the paper run,
+#              P < 4.106e-7); the Methods text gives 2,989 (P < 4.8e-7).
 #
 #--------------------------------------------------------------------------------------
 
-#  For every fetal eGene-eSNP pair in the universe extracted by
-#  eqtl_sharing_extract_universe.R, classifies testability against Jang et al. 2026
-#  (SingleBrain) adult sn-eQTL data and, where testable, calls shared vs.
-#  fetal-specific.
-#
-#  "Any" tier: operates on the unique (gene, SNP) pairs across all fetal cell
-#  types. Tested against ALL Jang L1 + L2 cell types pooled (MiGA3 excluded --
-#  a separate microglia-only meta-analysis, not part of the core L1+L2
-#  hierarchy, and would double-count microglia signal alongside MG/MG1-4).
-#  "Shared" = significant in >=1 Jang cell type.
-#
-#  Produces the fetal-specific SNP list for the OCR enrichment step (via LD
-#  clumping) and the fetal-specific input population for the heterogeneity test
-#  (step C).
-#
-#  Step 2 of the developmental-specificity pipeline.
-#
-#--------------------------------------------------------------------------------------
-#
-#  MIGRATION NOTE -- Fujita -> Jang et al. 2026 (SingleBrain): fixed_beta is
-#  used as the effect-size column (not Random_Z, which has no corresponding
-#  beta/se on the natural scale -- see report methods text for the fixed-vs-
-#  random rationale). Sign-normalized against the Allele column at read time:
-#  Jang's beta is relative to the "Allele" column, which is NOT always ALT --
-#  so beta is flipped wherever Allele != alt.
-#
-#--------------------------------------------------------------------------------------
-#
-#  ADDITION -- significance now checked directly on the fetal pair's OWN
-#  Random_P, not via Jang's lead-SNP/qval design (two prior iterations):
-#
-#    v1 (retired): required the pair to be Jang's independently-chosen lead
-#    SNP for that gene (from the top-association file) AND clear qval<0.05.
-#
-#    v2 (retired): same lead-SNP requirement, but qval<0.05 replaced with a
-#    Bonferroni threshold sized to OUR comparison space (0.05 / n_cell_types /
-#    n_testable_pairs) rather than Jang's own within-gene/across-gene
-#    correction. This barely moved the numbers -- strong real signals clear
-#    almost any threshold in whichever cell type they're strongest in, so
-#    tightening the cutoff mostly reclassified already-borderline cases.
-#
-#    v3 (current): the lead-SNP requirement itself is dropped. A fetal SNP can
-#    be genuinely significant in Jang without being Jang's own top-ranked SNP
-#    for that gene (a different, LD-linked SNP may have out-ranked it purely
-#    by chance in Jang's own scan) -- gating on lead-SNP status was hiding real
-#    shared signal, not just filtering noise. Now: read the full-association
-#    file only (top-association files are NOT read for significance purposes
-#    at all -- Jang's per-gene multi-SNP scan and its own within-gene FDR
-#    correction solve a search problem we're not running, since we've already
-#    fixed which SNP to check per gene via TensorQTL). Significance = the
-#    pair's own Random_P (raw, uncorrected -- so our fresh Bonferroni
-#    correction isn't double-correcting on top of Jang's) < a Bonferroni
-#    threshold sized to OUR test family: 0.05 / (n Jang cell types) /
-#    (n testable pairs, computed dynamically each run, never hardcoded).
-#
-#    Jang's lead-SNP identity is still read (from the top-association files)
-#    and retained as an INFORMATIONAL, non-gating column (is_jang_lead_snp) --
-#    does this fetal pair also happen to be Jang's own top-ranked SNP for that
-#    gene/cell type. This has no effect on final_category; it's reported
-#    purely as additional context.
-#
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -81,6 +50,7 @@ if (exists("snakemake")) {
 
 message("\n\nClassifying fetal eGene-eSNP pairs: testability + shared/specific vs. Jang et al. 2026 ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
 })
@@ -88,8 +58,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
-
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 eqtl_universe_file <- snakemake@input[["eqtl_universe"]]
 jang_full_files    <- snakemake@input[["jang_full_files"]]
 jang_top_files     <- snakemake@input[["jang_top_files"]]
@@ -99,28 +68,20 @@ jang_cell_types    <- snakemake@params[["jang_cell_types"]]
 names(jang_full_files) <- jang_cell_types
 names(jang_top_files)  <- jang_cell_types
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("eqtl_universe_file", "n_jang_full_files", "n_jang_top_files", "output_file"),
-  value    = c(eqtl_universe_file, length(jang_full_files), length(jang_top_files), output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+  value    = c(eqtl_universe_file, length(jang_full_files), length(jang_top_files), output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# Functions ----------------------------------------------------------------------------
+##  Functions  ------------------------------------------------------------------------
 
-# Full-association file: every tested pair for this cell type, filtered to our
-# universe genes/SNPs. beta sign-normalized against Allele. Random_P now
-# retained (not dropped) -- it's the actual significance check for this pair,
-# read directly from this file, not from the top-association file.
-#
-# Placeholder-cohort artifact filter (unchanged from prior versions): some
-# cohorts encode "not tested for this pair" as beta=0/sd=0 rather than NA,
-# giving that cohort infinite weight (1/SE^2) in the meta-analysis and forcing
-# Fixed_P == Random_P == 1 exactly. Removed entirely.
+# Full-association file: every tested pair for one Jang cell type, filtered to the
+# universe genes/SNPs; Random_P is the significance check for the pair
 read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
   message("Reading Jang full-association data for: ", jang_ct, " (", file_path, ")")
 
@@ -165,12 +126,8 @@ read_jang_full <- function(file_path, jang_ct, universe_genes, universe_snps) {
   list(gene_set = gene_set, snp_set = snp_set, pair_lookup = pair_lookup)
 }
 
-# Top-association file: read ONLY to identify Jang's own lead SNP per gene, for
-# the informational (non-gating) is_jang_lead_snp flag -- NOT used for
-# significance at all (see ADDITION note: this was the source of the lead-SNP
-# gating we've now removed). Same artifact filter applied for consistency,
-# though its effect here is minor (an artifact-only gene's "lead SNP" call is
-# meaningless either way).
+# Top-association file: Jang's own lead SNP per gene, for the informational
+# is_jang_lead_snp flag only (not used for significance)
 read_jang_top <- function(file_path, jang_ct) {
   message("Reading Jang top-association data for: ", jang_ct, " (", file_path, ") -- lead-SNP identity only")
 
@@ -189,7 +146,7 @@ read_jang_top <- function(file_path, jang_ct) {
     transmute(gene_id, lead_variant_id = variant_id, jang_cell_type = jang_ct)
 }
 
-# Main -----------------------------------------------------------------------------------
+##  Load fetal universe  --------------------------------------------------------------
 
 message("\nLoading fetal eGene/eSNP universe ...")
 eqtl_universe <- read_rds(eqtl_universe_file)
@@ -203,7 +160,7 @@ unique_pairs <- eqtl_universe %>%
   distinct(phenotype_id, variant_id)
 message("  Unique (gene, SNP) pairs: ", nrow(unique_pairs))
 
-# Loop over Jang full-association files -------------------------------------------------
+##  Read Jang full-association files  -------------------------------------------------
 message("\n--- Reading Jang full-association files (", length(jang_cell_types), " cell types) ---\n")
 
 gene_sets    <- list()
@@ -227,14 +184,12 @@ pairs_all <- bind_rows(pair_lookups)
 message("\nTotal pairs_all rows (across all cell types): ", nrow(pairs_all))
 
 # Per-gene/SNP membership lookups, used for the "any" tier's testability check,
-# and written to output for Step C.
+# and written to output for the heterogeneity test.
 gene_membership <- map_dfr(names(gene_sets), ~ tibble(jang_cell_type = .x, gene_id = gene_sets[[.x]]))
 snp_membership  <- map_dfr(names(snp_sets),  ~ tibble(jang_cell_type = .x, variant_id = snp_sets[[.x]]))
 
-# --- Dynamic Bonferroni threshold (see ADDITION note at top of file) -------------------
-# "Testable" = gene_expressed AND snp_genotyped both TRUE (pooled across all 35
-# Jang cell types) -- computed directly from unique_pairs/gene_set_any/
-# snp_set_any, never hardcoded.
+##  Bonferroni threshold  -------------------------------------------------------------
+# Testable = gene expressed AND SNP genotyped in any Jang cell type
 message("\n--- Computing dynamic Bonferroni threshold ---\n")
 
 n_testable_pairs <- unique_pairs %>%
@@ -250,7 +205,7 @@ message("  Jang cell types: ", n_jang_cell_types)
 message("  Bonferroni threshold = 0.05 / ", n_jang_cell_types, " / ", n_testable_pairs,
         " = ", format(bonferroni_threshold, scientific = TRUE, digits = 4))
 
-# --- Jang lead-SNP identity (informational only) ---------------------------------------
+##  Jang lead-SNP identity (informational only)  --------------------------------------
 message("\n--- Reading Jang top-association files (lead-SNP identity, informational only) ---\n")
 
 top_lookups <- map(jang_cell_types, ~ read_jang_top(jang_top_files[[.x]], .x))
@@ -267,14 +222,10 @@ message("Rows in pairs_all that also match Jang's own lead SNP for that gene/cel
         n_lead_match, " / ", nrow(pairs_all),
         " (", round(100 * n_lead_match / nrow(pairs_all), 2), "%) -- informational, does not affect classification")
 
-# =======================================================================================
-# "ANY" TIER: unique pairs, checked against ALL Jang cell types pooled
-# =======================================================================================
+##  Classify unique pairs against all Jang cell types  --------------------------------
 message("\n--- Building 'any' tier classification ---")
 
-# Significance = this pair's OWN Random_P (from the full-association file,
-# already on this row) clears our Bonferroni threshold. No lead-SNP
-# requirement (see ADDITION note).
+# Significant = the pair's own Random_P below the Bonferroni threshold
 pairs_all <- pairs_all %>%
   mutate(significant_pair = !is.na(random_p) & random_p < bonferroni_threshold)
 
@@ -297,9 +248,7 @@ pairs_any_sig <- pairs_all %>%
     .groups = "drop"
   )
 
-# Provenance: which Jang cell type gave the smallest random_p for this pair,
-# across ALL tested cell types (not restricted to lead-SNP rows, since
-# significance is no longer gated on that).
+# Provenance: the Jang cell type with the smallest random_p for this pair
 pairs_any_provenance <- pairs_all %>%
   group_by(gene_id, variant_id) %>%
   slice_min(random_p, n = 1, with_ties = FALSE) %>%
@@ -354,7 +303,7 @@ if (any(any_table$final_category == "uncategorised_check_logic")) {
           " 'any' tier rows fell through to uncategorised.")
 }
 
-# Write tracked output -------------------------------------------------------------------
+##  Write output  ---------------------------------------------------------------------
 write_rds(
   list(
     any_table            = any_table,
@@ -369,7 +318,7 @@ write_rds(
 )
 message("\nSpecificity classification written to: ", output_file)
 
-# Untracked TSVs for readability outside R -----------------------------------------------
+# Untracked TSVs for readability outside R
 output_dir <- dirname(output_file)
 output_stem <- tools::file_path_sans_ext(basename(output_file))
 
@@ -379,3 +328,6 @@ write_tsv(pairs_all,       file.path(output_dir, paste0(output_stem, "_pairs_all
 write_tsv(gene_membership, file.path(output_dir, paste0(output_stem, "_gene_membership.tsv")))
 write_tsv(snp_membership,  file.path(output_dir, paste0(output_stem, "_snp_membership.tsv")))
 message("\nAny-tier tables (TSV) written to: ", output_dir)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

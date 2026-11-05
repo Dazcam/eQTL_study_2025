@@ -1,32 +1,34 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: GLM comparison of two eQTL categories' relative
-#    concentration in a peak set (Li et al. 2023 adult cortical union OCRs).
+#    Compare adult OCR overlap of fetal-specific vs shared eQTL (logistic regression)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: glm_enrich (single job)
+#            Upstream:   classify_eqtl_specificity; parse_ld_clump;
+#                        06QTL-REPLICATION snp_lookup; Li et al. 2023 cCREs (S6, S7)
+#            Downstream: report (GLM tab)
+#
+# Purpose:   - Flag whether each LD-independent fetal-specific and shared SNP
+#              overlaps the union of Li et al. 2023 adult cortical cCREs
+#            - Fit overlap ~ is_fetal_specific (logistic regression, no covariates)
+#              to test whether the two sets differ in overlap rate
+#
+# Inputs:    classification_file    classify_eqtl_specificity output
+#            independent_snps_file  LD-independent pairs (parse_ld_clump)
+#            snp_lookup_files       hg38 SNP coordinates, one file per cell type
+#            li_s6_file             Li et al. 2023 cCRE coordinates
+#            li_s7_file             Li et al. 2023 cCRE to cell type map
+#
+# Outputs:   output_file  rds list: model, results (odds ratio, 95% CI, P),
+#                         glm_data (plus an untracked .tsv of results)
+#
+# Notes:     Unlike ocr_enrich there is no genomic background model: this compares
+#            the two sets with each other, not with a null.
 #
 #--------------------------------------------------------------------------------------
 
-#  Unlike the bootRanges-based enrichment tests (ocr_enrich / chip_enrich), this
-#  test has NO genomic background model -- it is a direct comparison of two
-#  proportions (fraction of fetal_specific SNPs overlapping peaks vs. fraction
-#  of shared SNPs overlapping peaks), via logistic regression rather than a
-#  plain Fisher's/chi-square test, to allow future covariate adjustment.
-#
-#  This answers a DIFFERENT question to the permutation tests: not "is this
-#  set enriched over a genomically realistic null" but "do these two sets
-#  differ from each other in overlap rate". Treat as complementary to, not a
-#  replacement for, the background-aware enrichment tests.
-#
-#  Current scope: fetal_specific vs. shared only, no covariates. No LD-score
-#  or other covariate included -- SNPs are already LD-pruned (independent_snps),
-#  which addresses row-independence for the regression; it does not address
-#  potential confounding of overlap rate itself (e.g. distance-to-TSS, local
-#  peak density), which is a separate question left open for now.
-#
-#  Peak set: Li et al. 2023 (cortical union), reusing the same Table S6/S7
-#  loading + filtering logic as the retired ocr_enrich script.
-
-#--------------------------------------------------------------------------------------
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -40,6 +42,7 @@ if (exists("snakemake")) {
 
 message("\n\nGLM comparison: fetal_specific vs. shared eQTL concentration in Li et al. 2023 adult cortical union OCRs ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(GenomicRanges)
@@ -48,8 +51,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
-
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 classification_file    <- snakemake@input[["classification"]]
 independent_snps_file  <- snakemake@input[["independent_snps"]]
 snp_lookup_files        <- snakemake@input[["snp_lookups"]]
@@ -57,18 +59,19 @@ li_s6_file             <- snakemake@input[["li_s6"]]
 li_s7_file             <- snakemake@input[["li_s7"]]
 output_file            <- snakemake@output[[1]]
 
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("classification_file", "independent_snps_file", "n_snp_lookups",
                "li_s6_file", "li_s7_file", "output_file"),
   value    = c(classification_file, independent_snps_file, length(snp_lookup_files),
-               li_s6_file, li_s7_file, output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+               li_s6_file, li_s7_file, output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
+# Li et al. 2023 cortical cell types; cCREs in any of these form the union
 all_cortical_types <- c(
   "ITL23_1", "ITL23_2", "ITL23_3", "ITL23_4", "ITL23_5", "ITL23_6",
   "ITL34", "ITL4_1", "ITL4_2", "ITL45_1", "ITL45_2",
@@ -88,10 +91,7 @@ all_cortical_types <- c(
   "OGC_1", "OGC_2", "OGC_3"
 )
 
-# Main -----------------------------------------------------------------------------------
-
-# 1. Load fetal-specific + shared SNPs from classification, restricted to the
-#    LD-independent universe. ------------------------------------------------------------
+##  Load SNP sets (LD-independent pairs only)  ----------------------------------------
 message("\nLoading classification output (B) ...")
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
@@ -117,13 +117,12 @@ shared_snps <- any_table %>%
   unique()
 message("  Shared unique SNPs: ", length(shared_snps))
 
-# 2. Build SNP coordinate lookup from existing per-cell-type files ----------------------
+##  SNP coordinates  ------------------------------------------------------------------
 message("\nBuilding SNP coordinate lookup from ", length(snp_lookup_files), " existing files ...")
 
 snp_coords <- map_dfr(snp_lookup_files, read_rds) %>%
   distinct(refsnp_id, .keep_all = TRUE)
 message("  Total unique SNPs with coordinates: ", nrow(snp_coords))
-
 
 specific_gr <- make_snp_gr(fetal_specific_snps, snp_coords)
 shared_gr   <- make_snp_gr(shared_snps, snp_coords)
@@ -131,7 +130,7 @@ shared_gr   <- make_snp_gr(shared_snps, snp_coords)
 message("  Fetal-specific SNPs with coordinates: ", length(specific_gr))
 message("  Shared SNPs with coordinates: ", length(shared_gr))
 
-# 3. Load Li et al. 2023 adult peaks, cortical union only -------------------------------
+##  Li et al. 2023 adult cortical cCREs (union)  --------------------------------------
 message("\nLoading Li et al. 2023 adult brain cCREs (cortical union only) ...")
 
 options(scipen = 999)
@@ -156,9 +155,9 @@ adult_cortical_union_gr <- li_s6 %>%
 
 message("  adult_cortical_union: ", length(adult_cortical_union_gr), " peaks")
 
-# 4. Build the per-SNP GLM input table ---------------------------------------------------
-#    Full SNP sets (not restricted to overlappers) -- in_category is the outcome,
-#    is_set_A the predictor (1 = fetal_specific, 0 = shared). No covariates for now.
+##  Per-SNP overlap table  ------------------------------------------------------------
+# in_category (overlaps a cCRE) is the outcome; is_set_A the predictor
+# (1 = fetal_specific, 0 = shared)
 message("\nBuilding per-SNP overlap table ...")
 
 glm_data <- bind_rows(
@@ -180,14 +179,13 @@ message("  Set A (fetal_specific): ", sum(glm_data$is_set_A == 1),
 message("  Set B (shared): ", sum(glm_data$is_set_A == 0),
         " (", sum(glm_data$is_set_A == 0 & glm_data$in_category == 1), " overlap peaks)")
 
-# 5. Fit the model -------------------------------------------------------------------------
+##  Fit the model  --------------------------------------------------------------------
 message("\n--- Fitting logistic regression (no covariates) ---\n")
 
 model <- glm(in_category ~ is_set_A, data = glm_data, family = binomial)
 print(summary(model))
 
-# Manual extraction of OR + 95% CI (avoids depending on broom, which errored
-# here -- likely not installed in this container).
+# Odds ratio and 95% CI from the coefficient table (broom is not in the container)
 coefs <- coef(summary(model))
 est   <- coefs["is_set_A", "Estimate"]
 se    <- coefs["is_set_A", "Std. Error"]
@@ -209,11 +207,11 @@ results <- tibble(
 message("\n--- Results summary ---\n")
 print(results)
 
-# Write tracked output ----------------------------------------------------------------
+##  Write output  ---------------------------------------------------------------------
 write_rds(list(model = model, results = results, glm_data = glm_data), output_file)
 message("\nGLM enrichment comparison written to: ", output_file)
 
-# Untracked TSV for readability outside R -----------------------------------------------
+# Untracked TSV for readability outside R
 output_tsv <- sub("\\.rds$", ".tsv", output_file)
 write_tsv(results, output_tsv)
 message("GLM enrichment comparison (TSV) written to: ", output_tsv)

@@ -1,80 +1,43 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: heterogeneity test on fetal-specific eQTL (Step C)
-#    (REVISED -- single most-significant fetal row per pair, ALL tested adult
-#    comparisons must be heterogeneous, ADDITIONALLY magnitude-consistent)
+#    Heterogeneity test (Cochran's Q) on fetal-specific eQTL
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: heterogeneity_test (single job)
+#            Upstream:   extract_eqtl_universe; classify_eqtl_specificity;
+#                        05TENSORQTL convert_genotypes (pvar)
+#            Downstream: ocr_enrich; report (Supp Table 5)
+#
+# Purpose:   For each fetal-specific (gene, SNP) pair:
+#            - Keep one fetal row: the cell type (L1 or L2) with the lowest qval
+#            - Join it to every Jang et al. 2026 cell type the pair was tested in
+#            - Harmonise alleles to our REF/ALT (palindromic pairs dropped)
+#            - Cochran's Q on fetal vs adult beta; BH FDR pooled across all rows
+#            - Call a pair heterogeneous if FDR < fdr_thresh in ALL its tested
+#              adult comparisons, and magnitude-consistent if |fetal beta| >
+#              |adult beta| in all of them
+#
+# Inputs:    eqtl_universe_file   fetal eGene-eSNP universe (extract_eqtl_universe)
+#            classification_file  classify_eqtl_specificity output
+#            pvar_file            our genotype pvar (REF/ALT per rsID)
+#            gene_lookup_file     hg38 gene lookup (gene symbols)
+#            fdr_thresh           FDR threshold for the Q test (params)
+#
+# Outputs:   output_file  rds list: usable, heterogeneous_pairs, heterogeneous_snps,
+#                         magnitude_consistent_pairs, magnitude_inconsistent_pairs,
+#                         stringent_magnitude, allele_status_summary, funnel
+#                         (plus untracked .tsv copies)
+#
+# Notes:     - heterogeneous_snps (fed to ocr_enrich) are pairs heterogeneous in
+#              all comparisons AND magnitude-consistent (218 in the paper run).
+#            - Jang has no allele frequencies, so palindromic (A/T, C/G) pairs
+#              cannot be resolved and are dropped.
+#            - NPC is included; biologically_matched is a diagnostic flag only.
 #
 #--------------------------------------------------------------------------------------
 
-#  For every (gene, SNP) pair classified testable_specific by B, collapses to a
-#  SINGLE fetal reference row per pair -- whichever fetal cell type (L1 or L2)
-#  gives that pair's lowest permutation qval, i.e. where it is most significant.
-#  That one fetal row is then tested against EVERY Jang et al. 2026 adult cell
-#  type the pair was actually tested in (not just the a priori biologically-
-#  matched type).
-#
-#  STRINGENT rule: a pair is called fetal-specific-and-heterogeneous only if it
-#  is heterogeneous in ALL of its successfully-tested adult comparisons (not
-#  just >=1). "Successfully tested" = survived allele harmonization; a
-#  comparison dropped for unresolved allele ambiguity cannot be evaluated and is
-#  excluded from both the count and the all() requirement -- logged separately
-#  per pair so it's clear how many comparisons the "all" rule was actually
-#  applied across.
-#
-#  This is a genuinely stricter bar than the "any" design: a pair tested against
-#  more adult cell types has proportionally more chances to fail on just one.
-#  The per-pair n_comparisons_tested x pass/fail breakdown is logged explicitly
-#  so this effect is visible rather than hidden in a single headline count.
-#
-#  NPC included (no biological-match requirement for testing; biologically_matched
-#  is retained as a per-row diagnostic flag only, always FALSE for NPC).
-#
-#  FDR (BH) pooled once across all usable rows (one row per pair per tested
-#  adult comparison -- no fetal-side duplication now, since each pair
-#  contributes exactly one fetal context).
-#
-#  Step 3 of the developmental-specificity pipeline.
-#
-#--------------------------------------------------------------------------------------
-#
-#  MIGRATION NOTE -- Fujita -> Jang et al. 2026 (SingleBrain):
-#
-#  All fugita_* naming renamed to jang_* throughout (jang_cell_type,
-#  jang_label_match, beta_jang, se_jang, ref_jang, alt_jang,
-#  beta_jang_harmonized), matching the rename already made in
-#  eqtl_sharing_extract_universe.R and eqtl_sharing_classify.R.
-#
-#  Jang's data has no allele-frequency column (unlike Fujita's ALT_AF), so the
-#  previous AF-based palindromic-SNP resolution (aligned/flipped disambiguation
-#  via allele frequency for A/T, C/G pairs) has been REMOVED entirely -- not
-#  substituted with an external reference (e.g. 1000G), since there is no
-#  guarantee Jang's own allele/strand conventions were harmonized against it.
-#  Every palindromic pair is now unconditionally categorised
-#  "palindromic_unresolved" and dropped from the Q-test (beta_jang_harmonized =
-#  NA). The af_tol parameter is no longer used by this script.
-#
-#--------------------------------------------------------------------------------------
-#
-#  ADDITION -- magnitude consistency moved here from the report:
-#
-#  Previously computed only inside eqtl_sharing_report.Rmd at render time, purely
-#  for display -- the OCR enrichment rule read heterogeneous_pairs directly and
-#  had no way to respect this restriction. Moved upstream so it can actually
-#  gate what feeds OCR: heterogeneous_snps (and therefore ocr_enrich's
-#  "specific_heterogeneous" SNP set) is now restricted to pairs that are BOTH
-#  heterogeneous in every tested comparison AND have |fetal beta| > |adult
-#  beta| in every one of those same comparisons (not just heterogeneous --
-#  the fetal effect is also strictly larger in magnitude, regardless of sign).
-#  heterogeneous_pairs itself still carries ALL heterogeneous-in-all pairs
-#  (unchanged row count), now with a magnitude_consistent column added, so the
-#  report's other tables (which show the full stringent set, not just the
-#  OCR-feeding subset) are unaffected. Two new gene-symbol-annotated tables are
-#  written for direct reporting: magnitude_consistent_pairs and
-#  magnitude_inconsistent_pairs.
-#
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -88,6 +51,7 @@ if (exists("snakemake")) {
 
 message("\n\nRunning heterogeneity test on fetal-specific eQTL vs Jang et al. 2026 (Step C, stringent 'all' rule + magnitude consistency) ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(data.table)
@@ -96,8 +60,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
-
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 eqtl_universe_file  <- snakemake@input[["eqtl_universe"]]
 classification_file <- snakemake@input[["classification"]]
 pvar_file           <- snakemake@input[["pvar_file"]]
@@ -107,22 +70,19 @@ fdr_thresh          <- snakemake@params[["fdr_thresh"]]
 
 if (is.null(fdr_thresh)) fdr_thresh <- 0.05
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("eqtl_universe_file", "classification_file", "pvar_file",
                "gene_lookup_file", "fdr_thresh", "output_file"),
   value    = c(eqtl_universe_file, classification_file, pvar_file,
-               gene_lookup_file, fdr_thresh, output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+               gene_lookup_file, fdr_thresh, output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# ========================================================================================
-# 1. Load A (universe) and B (classification)
-# ========================================================================================
+##  Load universe and classification  -------------------------------------------------
 
 message("\nLoading eQTL universe (A) and classification (B) ...")
 eqtl_universe  <- read_rds(eqtl_universe_file)
@@ -138,10 +98,7 @@ gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
 n_pairs_specific_B <- any_table %>% filter(final_category == "testable_specific") %>% nrow()
 message("  B: unique (gene, SNP) pairs classified testable_specific: ", n_pairs_specific_B)
 
-# ========================================================================================
-# 2. Collapse to a SINGLE fetal reference row per pair -- lowest qval (most
-#    significant) across all fetal cell types (L1+L2, incl. NPC) it appears in
-# ========================================================================================
+##  One fetal row per pair (lowest qval)  ---------------------------------------------
 
 message("\n--- Collapsing to single most-significant fetal row per pair ---\n")
 
@@ -183,10 +140,7 @@ n_fetal_celltypes_significant %>%
 message("\nFetal reference cell type chosen, by frequency:")
 fetal_ref_row %>% count(cell_type, sort = TRUE) %>% print(n = Inf)
 
-# ========================================================================================
-# 3. Join the single fetal reference row against EVERY Jang cell type the
-#    pair was tested in
-# ========================================================================================
+##  Join to every tested Jang cell type  ----------------------------------------------
 
 message("\n--- Joining against all available Jang comparisons ---\n")
 
@@ -218,10 +172,7 @@ joined %>%
   knitr::kable(format = "simple", align = "l") %>%
   print()
 
-# ========================================================================================
-# 4. Allele harmonization (REF/ALT string comparison only -- no AF check; see
-#    MIGRATION NOTE above)
-# ========================================================================================
+##  Allele harmonisation  -------------------------------------------------------------
 
 message("\n--- Allele harmonization (REF/ALT only, no AF check) ---\n")
 
@@ -277,9 +228,7 @@ message("  Pairs where >=1 (but not all) adult comparisons were dropped for alle
         n_pairs_lost_some_comparisons,
         " -- the 'all' rule below applies only across each pair's SURVIVING comparisons.")
 
-# ========================================================================================
-# 5. Cochran's Q, FDR (pooled across all usable rows)
-# ========================================================================================
+##  Cochran's Q and FDR  --------------------------------------------------------------
 
 message("\n--- Running Cochran's Q ---\n")
 
@@ -297,9 +246,7 @@ n_het_rows <- sum(usable$heterogeneous)
 message("  Heterogeneous rows (FDR<", fdr_thresh, "): ", n_het_rows,
         " (", round(100 * n_het_rows / n_usable, 2), "%)")
 
-# ========================================================================================
-# 6. Aggregate to final pair-level call: heterogeneous in ALL tested comparisons
-# ========================================================================================
+##  Pair-level call: heterogeneous in all comparisons  --------------------------------
 
 message("\n--- Aggregating to final (gene, SNP)-level heterogeneous call (STRINGENT: all()) ---\n")
 
@@ -333,9 +280,7 @@ message("  Of which the biologically matched comparison was itself tested and co
 message("  Of which NO biologically matched comparison was available at all (incl. all NPC pairs): ",
         sum(heterogeneous_pairs$heterogeneous_all & !heterogeneous_pairs$matched_type_tested))
 
-# ========================================================================================
-# 6.5 Magnitude consistency (moved here from the report -- see ADDITION note)
-# ========================================================================================
+##  Magnitude consistency  ------------------------------------------------------------
 
 message("\n--- Magnitude consistency (|fetal beta| > |adult beta|) among stringent pairs ---\n")
 
@@ -367,7 +312,7 @@ message("  ", n_pass_magnitude, " of ", n_stringent, " stringent pairs (",
         round(100 * n_pass_magnitude / n_stringent, 1),
         "%) also have |fetal beta| > |adult beta| in EVERY tested comparison.")
 
-# Gene-symbol-annotated tables for the two groups, per request
+# Gene-symbol-annotated tables for the two groups
 magnitude_consistent_pairs <- heterogeneous_pairs %>%
   filter(heterogeneous_all, magnitude_consistent) %>%
   left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) %>%
@@ -394,8 +339,7 @@ if (n_missing_symbol_consistent > 0 | n_missing_symbol_inconsistent > 0) {
   message("  All rows in both tables matched a gene symbol in the lookup.")
 }
 
-# --- Final OCR-feeding SNP set: heterogeneous in ALL comparisons AND
-# magnitude-consistent (per request -- restricts OCR to the 218, not the 221) ---
+# SNP set fed to ocr_enrich: heterogeneous in all comparisons AND magnitude-consistent
 heterogeneous_snps <- heterogeneous_pairs %>%
   filter(heterogeneous_all, magnitude_consistent) %>%
   distinct(phenotype_id, variant_id)
@@ -403,9 +347,7 @@ heterogeneous_snps <- heterogeneous_pairs %>%
 message("\n  Final heterogeneous_snps fed to OCR enrichment (heterogeneous_all AND magnitude_consistent): ",
         nrow(heterogeneous_snps))
 
-# ========================================================================================
-# 7. Funnel summary
-# ========================================================================================
+##  Funnel summary  -------------------------------------------------------------------
 
 message("\n--- Population funnel ---\n")
 
@@ -427,9 +369,7 @@ funnel <- tibble(
 )
 print(funnel)
 
-# ========================================================================================
-# 8. Write output
-# ========================================================================================
+##  Write output  ---------------------------------------------------------------------
 
 usable_out <- usable %>%
   select(cell_type, level, parent_cell_type, phenotype_id, variant_id,
@@ -455,7 +395,7 @@ write_rds(
 )
 message("\nHeterogeneity test results written to: ", output_file)
 
-# Untracked TSVs for readability outside R -----------------------------------------------
+# Untracked TSVs for readability outside R
 output_dir  <- dirname(output_file)
 output_stem <- tools::file_path_sans_ext(basename(output_file))
 
@@ -467,3 +407,6 @@ write_tsv(stringent_magnitude,           file.path(output_dir, paste0(output_ste
 write_tsv(status_tbl,                    file.path(output_dir, paste0(output_stem, "_allele_status_summary.tsv")))
 write_tsv(funnel,                        file.path(output_dir, paste0(output_stem, "_funnel.tsv")))
 message("Tables (TSV) written to: ", output_dir)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

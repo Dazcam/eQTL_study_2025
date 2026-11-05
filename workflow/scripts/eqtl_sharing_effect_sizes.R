@@ -1,52 +1,42 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: eQTL effect sizes across fetal and adult cell types
+#    eQTL effect sizes across fetal and adult cell types; subcluster-specific eQTL
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: eqtl_effect_sizes (single job)
+#            Upstream:   extract_eqtl_universe; 10SMR nominal export ({ct}_nom.cis_qtl_pairs);
+#                        Jang et al. 2026 L1 full-association files
+#            Downstream: report (effect-size and subcluster tabs);
+#                        13 subcluster_specific_tbl (Supp Table 3);
+#                        14 family_heatmaps_plt (Supp Figs 3-6)
+#
+# Purpose:   For every unique fetal eGene-eSNP pair:
+#            - Get the nominal slope and P in each fetal cell type (L1 + L2) and in
+#              each Jang L1 cell type
+#            - Build a wide effect-size matrix (fetal L1 x Jang L1)
+#            - Find subcluster-specific eGenes (significant in an L2 subcluster but
+#              not its L1 parent) and supercluster-specific eGenes (significant in
+#              an L1 type but none of its subclusters)
+#            - Flag which subcluster-specific genes are DE markers
+#
+# Inputs:    eqtl_universe_file  fetal eGene-eSNP universe (extract_eqtl_universe)
+#            nom_files           fetal nominal pairs, one per cell type (L1 + L2)
+#            jang_l1_files       Jang L1 full-association files
+#            gene_lookup_file    hg38 gene lookup (gene symbols)
+#            de_file             DE markers per L1/L2 cluster (xlsx)
+#            cell_types          fetal cell types, same order as nom_files (params)
+#            jang_l1_types       Jang L1 types, same order as jang_l1_files (params)
+#
+# Outputs:   output_file  rds list: effect_size_matrix, effect_size_long,
+#                         subcluster_specific, supercluster_specific, de_markers_raw
+#
+# Notes:     Jang effect sizes are fixed_beta, sign-normalised to alt
+#            (align_jang_beta()); Jang nominal P is Random_P.
 #
 #--------------------------------------------------------------------------------------
 
-#  For every unique (eGene, eSNP) pair in the universe (6,844 pairs), extracts
-#  the nominal effect size (slope) and p-value from each fetal L1 and L2 cell
-#  type's nominal cis-eQTL output, and from Jang et al. 2026 adult cell types.
-#
-#  Produces:
-#    1. effect_size_matrix — wide table for correlation heatmap. SCOPE CHANGE
-#       (see MIGRATION NOTE): fetal L1 only (7 types) x Jang L1-pooled only (7
-#       types), no L2 on either side, for now.
-#    2. subcluster_specific_eqtl — L2 eGenes not significant in parent L1,
-#       with nominal stats (slope, SE, nominal p-value) from BOTH the L2
-#       subcluster and its parent L1, for the report's subcluster gene table
-#    3. supercluster_specific — L1 eGenes not significant in any L2 subtype
-#    4. de_crossref — whether subcluster-specific genes are DE markers
-#
-#  (2)-(4) are unaffected by the Fujita -> Jang migration: they compare fetal
-#  L1 against fetal L2 directly and never touch adult data.
-#
-#  Step 6 of the developmental-specificity pipeline.
-#
-#--------------------------------------------------------------------------------------
-#
-#  MIGRATION NOTE -- Fujita -> Jang et al. 2026 (SingleBrain):
-#
-#  effect_size_matrix's SCOPE is deliberately narrowed from the previous
-#  19-fetal (L1+L2) x 7-Fujita design to 7-fetal-L1 x 7-Jang-L1-pooled, per
-#  request -- L2 excluded from both sides for now (two report heatmaps:
-#  fetal-L1-vs-fetal-L1 population-ordered/no dendrogram, and fetal-L1-vs-
-#  adult-L1 only). fetal_effects_long is still built across all 19 fetal cell
-#  types unchanged, since subcluster_specific/supercluster_specific still need
-#  L2 nominal stats -- only the wide matrix used for the heatmap is narrowed.
-#
-#  Adult side: Jang's 7 L1-pooled cell types (Ast, End, Ext, IN, MG, OD, OPC),
-#  not the 28 L2 subtypes. fixed_beta used as the effect-size column (matches
-#  beta_correlation.R/classify_specificity.R's fixed-vs-random rationale --
-#  see report methods text), sign-normalized against Allele (Jang's beta is
-#  relative to Allele, not always alt). Random_P used for pval_nominal (the
-#  informational nominal p-value shown alongside slope), consistent with using
-#  the random-effects side for evidence/significance framing throughout this
-#  migration and the fixed-effects side for magnitude.
-#
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -60,6 +50,7 @@ if (exists("snakemake")) {
 
 message("\n\nExtracting eQTL effect sizes across fetal (L1) and Jang adult (L1) cell types ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(data.table)
@@ -70,8 +61,7 @@ suppressPackageStartupMessages({
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 source(file.path(snakemake@scriptdir, "eqtl_sharing_functions.R"))
 
-
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 eqtl_universe_file <- snakemake@input[["eqtl_universe"]]
 nom_files          <- snakemake@input[["nom_files"]]        # all 19 fetal cell types
 jang_l1_files      <- snakemake@input[["jang_l1_files"]]    # Jang's 7 L1-pooled types only
@@ -82,32 +72,28 @@ jang_l1_types      <- snakemake@params[["jang_l1_types"]]    # 7: Ast, End, Ext,
 names(nom_files)     <- cell_types
 names(jang_l1_files) <- jang_l1_types
 
-# Gene symbol lookup — all matching on ENSG, symbols for display only.
+# Gene symbol lookup (symbols for display only; matching is on ENSG)
 gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
 
-# DE marker table (hardcoded path — fixed analysis artifact, not a tunable parameter)
+# DE marker table
 de_file <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_genes_L1_and_L2_clusters.xlsx"
 
 # L1 cell types and parent mapping
 cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 
-
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("eqtl_universe_file", "n_nom_files", "n_jang_l1_files",
                "gene_lookup_file", "de_file", "output_file"),
   value    = c(eqtl_universe_file, length(nom_files), length(jang_l1_files),
-               gene_lookup_file, de_file, output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+               gene_lookup_file, de_file, output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# ========================================================================================
-# 1. Load gene lookup and universe
-# ========================================================================================
+##  Load gene lookup and universe  ----------------------------------------------------
 
 message("Loading gene symbol lookup ...")
 gene_lookup <- fread(gene_lookup_file, select = c("ensembl_gene_id", "external_gene_name"),
@@ -132,10 +118,7 @@ message("  Pairs with gene symbol: ", sum(!is.na(unique_pairs$gene_symbol)))
 pairs_dt <- as.data.table(unique_pairs[, c("phenotype_id", "variant_id")])
 setkey(pairs_dt, phenotype_id, variant_id)
 
-# ========================================================================================
-# 2. Extract slopes from fetal nominal files (ALL 19 cell types, L1+L2 -- still
-#    needed in full for the subcluster/supercluster analysis in section 5)
-# ========================================================================================
+##  Fetal effect sizes (all L1 + L2 cell types)  --------------------------------------
 
 message("\n--- Extracting fetal nominal effect sizes (all 19 cell types) ---\n")
 
@@ -165,9 +148,7 @@ for (ct in cell_types) {
 fetal_effects_long <- rbindlist(fetal_effects)
 message("\nTotal fetal effect rows: ", nrow(fetal_effects_long))
 
-# ========================================================================================
-# 3. Extract effect sizes from Jang adult L1-pooled files (7 types only)
-# ========================================================================================
+##  Jang adult L1 effect sizes  -------------------------------------------------------
 
 message("\n--- Extracting Jang adult (L1-pooled) nominal effect sizes ---\n")
 
@@ -183,19 +164,14 @@ for (jct in jang_l1_types) {
     showProgress = FALSE
   )
 
-  # ADDITION -- placeholder-cohort artifact filter (same fix applied
-  # consistently across every script that reads Jang -- see
-  # replication_pi1_enrichment.R / eqtl_sharing_classify.R for the
-  # original diagnosis: beta=0/sd=0 placeholder cohorts give infinite meta-
-  # analysis weight, forcing Fixed_P==Random_P==1 exactly). Removed here
-  # before any other use of these rows.
+  # Drop placeholder-cohort rows (Fixed_P == Random_P == 1)
   jang_dt <- filter_jang_artifacts(jang_dt, "Jang full-association")
   jang_dt[, Fixed_P := NULL]
 
   jang_dt[, gene_id := sub("\\..*", "", feature)]
   jang_dt <- jang_dt[grepl("^rs", variant_id) & grepl("^ENSG", gene_id)]
 
-  # Sign-normalize against Allele (see MIGRATION NOTE)
+  # Jang beta is relative to Allele; align to alt
   jang_dt[, beta := align_jang_beta(fixed_beta, Allele, alt)]
 
   setkey(jang_dt, gene_id, variant_id)
@@ -219,10 +195,7 @@ for (jct in jang_l1_types) {
 jang_effects_long <- rbindlist(jang_effects)
 message("\nTotal Jang effect rows: ", nrow(jang_effects_long))
 
-# ========================================================================================
-# 4. Build wide effect-size matrix for correlation heatmap: fetal L1 ONLY x
-#    Jang L1-pooled ONLY (L2 excluded from both sides -- see MIGRATION NOTE)
-# ========================================================================================
+##  Wide effect-size matrix (fetal L1 x Jang L1)  -------------------------------------
 
 message("\n--- Building wide effect-size matrix (fetal L1 x Jang L1-pooled only) ---\n")
 
@@ -253,10 +226,7 @@ if (length(slope_cols) >= 2) {
   print(round(cor_mat, 3))
 }
 
-# ========================================================================================
-# 5. Subcluster-specific eQTL (L2 significant, parent L1 not significant)
-#    -- UNCHANGED, fetal-only, no adult data involved
-# ========================================================================================
+##  Subcluster-specific eQTL (L2 sig., parent L1 not sig.)  ---------------------------
 
 message("\n--- Identifying subcluster-specific eQTL ---\n")
 
@@ -293,7 +263,7 @@ for (l2 in cell_types_L2) {
 
   # L2's own nominal stats (SE, raw p-value) for the same lead SNP, sourced from
   # fetal_effects_long (already built in step 2 for every cell type) rather than
-  # re-reading nominal files -- same source as parent_nom below, for consistency.
+  # re-reading nominal files (same source as parent_nom below)
   l2_nom <- fetal_effects_long[
     cell_type == l2 & phenotype_id %in% l2_specific_genes
   ]
@@ -359,9 +329,7 @@ for (l1 in cell_types_L1) {
 supercluster_tbl <- bind_rows(supercluster_specific)
 message("Total supercluster-specific eGene-eSNP rows: ", nrow(supercluster_tbl))
 
-# ========================================================================================
-# 6. Cross-reference with DE markers -- UNCHANGED
-# ========================================================================================
+##  Cross-reference with DE markers  --------------------------------------------------
 
 message("\n--- Cross-referencing with DE marker genes ---\n")
 
@@ -407,9 +375,7 @@ if (file.exists(de_file)) {
   message("  WARNING: DE file not found at: ", de_file)
 }
 
-# ========================================================================================
-# 7. Summary stats for logging
-# ========================================================================================
+##  Summary  --------------------------------------------------------------------------
 
 message("\n--- Summary ---\n")
 
@@ -430,9 +396,7 @@ if (nrow(subcluster_tbl) > 0) {
   )
 }
 
-# ========================================================================================
-# 8. Write output
-# ========================================================================================
+##  Write output  ---------------------------------------------------------------------
 
 write_rds(
   list(
@@ -445,3 +409,6 @@ write_rds(
   output_file
 )
 message("\nEffect sizes and subcluster analysis written to: ", output_file)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

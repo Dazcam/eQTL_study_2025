@@ -1,31 +1,39 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: OCR enrichment of fetal-specific/shared/
-#    heterogeneous/not-expressed eQTL (adult cortical union only)
+#    Enrichment of fetal-specific and shared eQTL in adult cortical OCRs
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: ocr_enrich (single job)
+#            Upstream:   classify_eqtl_specificity; heterogeneity_test; parse_ld_clump;
+#                        06QTL-REPLICATION snp_lookup; Li et al. 2023 cCREs (S6, S7)
+#            Downstream: report (OCR enrichment tab)
+#
+# Purpose:   Test four LD-independent fetal SNP sets for overlap with the union of
+#            Li et al. 2023 adult cortical cCREs (block bootstrap,
+#            perform_permutation_test(): 1,000 iterations, 500 kb blocks):
+#            - fetal_specific          testable, not significant in any adult cell type
+#            - shared                  testable, significant in an adult cell type
+#            - specific_heterogeneous  heterogeneity_test heterogeneous_snps
+#            - not_expressed           gene not expressed in any Jang cell type
+#
+# Inputs:    classification_file    classify_eqtl_specificity output
+#            heterogeneity_file     heterogeneity_test output
+#            independent_snps_file  LD-independent pairs (parse_ld_clump)
+#            snp_lookup_files       hg38 SNP coordinates, one file per cell type
+#            li_s6_file             Li et al. 2023 cCRE coordinates
+#            li_s7_file             Li et al. 2023 cCRE to cell type map
+#
+# Outputs:   output_file  rds: one row per SNP set (n_snps, n_peaks, p_value,
+#                         observed_overlap, mean_permuted_overlap, fold_enrichment)
+#                         (plus an untracked .tsv copy)
+#
+# Notes:     specific_heterogeneous is a subset of fetal_specific, so the two are
+#            not independent tests.
 #
 #--------------------------------------------------------------------------------------
 
-#  Tests whether four fetal SNP sets are enriched in adult open chromatin
-#  (Li et al. 2023, cortical union only): testable_specific and testable_shared
-#  (from B's "any" tier, unchanged), the specific_heterogeneous set (from C --
-#  testable_specific pairs additionally confirmed as formally heterogeneous in
-#  ALL tested adult comparisons AND magnitude-consistent, i.e. C's final
-#  heterogeneous_snps output), and the not_expressed set (from B --
-#  untestable_genotyped_not_expressed + untestable_not_genotyped_not_expressed
-#  combined, i.e. every pair whose gene simply isn't expressed anywhere in
-#  Jang, regardless of whether the SNP itself was genotyped there). All four
-#  LD-pruned against the same independent_snps universe (D) before testing.
-#
-#  NOTE: specific_heterogeneous is a SUBSET of testable_specific, not an
-#  independent comparison -- interpret side-by-side results with that nesting
-#  in mind, not as four unrelated tests. not_expressed is independent of the
-#  other three (untestable_* was never part of testable_specific/shared).
-#
-#  Step 5 of the developmental-specificity pipeline.
-
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -39,6 +47,7 @@ if (exists("snakemake")) {
 
 message("\n\nTesting fetal-specific/shared/heterogeneous/not-expressed eQTL enrichment in adult cortical union OCRs ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(GenomicRanges)
@@ -49,8 +58,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
-
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 classification_file    <- snakemake@input[["classification"]]
 heterogeneity_file     <- snakemake@input[["heterogeneity_test"]]
 independent_snps_file  <- snakemake@input[["independent_snps"]]
@@ -59,19 +67,19 @@ li_s6_file             <- snakemake@input[["li_s6"]]
 li_s7_file             <- snakemake@input[["li_s7"]]
 output_file            <- snakemake@output[[1]]
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("classification_file", "heterogeneity_file", "independent_snps_file",
                "n_snp_lookups", "li_s6_file", "li_s7_file", "output_file"),
   value    = c(classification_file, heterogeneity_file, independent_snps_file,
-               length(snp_lookup_files), li_s6_file, li_s7_file, output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+               length(snp_lookup_files), li_s6_file, li_s7_file, output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
+# Li et al. 2023 cortical cell types; cCREs in any of these form the union
 all_cortical_types <- c(
   "ITL23_1", "ITL23_2", "ITL23_3", "ITL23_4", "ITL23_5", "ITL23_6",
   "ITL34", "ITL4_1", "ITL4_2", "ITL45_1", "ITL45_2",
@@ -91,13 +99,7 @@ all_cortical_types <- c(
   "OGC_1", "OGC_2", "OGC_3"
 )
 
-# Functions ----------------------------------------------------------------------------
-
-
-# Main -----------------------------------------------------------------------------------
-
-# 1. Load fetal-specific + shared + not-expressed SNPs from classification, and
-#    the heterogeneous set from C. All restricted to the LD-independent universe. -------
+##  Load SNP sets (LD-independent pairs only)  ----------------------------------------
 message("\nLoading classification output (B) ...")
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
@@ -138,9 +140,8 @@ specific_heterogeneous_snps <- heterogeneous_pairs %>%
   unique()
 message("  Specific + heterogeneous unique SNPs: ", length(specific_heterogeneous_snps))
 
-# ADDITION -- not_expressed: genes not expressed anywhere in Jang, regardless
-# of whether the SNP itself was genotyped there (combines both
-# untestable_*_not_expressed categories, per request).
+# not_expressed: gene not expressed in any Jang cell type, whether or not the
+# SNP was genotyped
 not_expressed_snps <- any_table %>%
   filter(final_category %in% c("untestable_genotyped_not_expressed",
                                 "untestable_not_genotyped_not_expressed")) %>%
@@ -148,13 +149,12 @@ not_expressed_snps <- any_table %>%
   unique()
 message("  Not-expressed unique SNPs: ", length(not_expressed_snps))
 
-# 2. Build SNP coordinate lookup from existing per-cell-type files ----------------------
+##  SNP coordinates  ------------------------------------------------------------------
 message("\nBuilding SNP coordinate lookup from ", length(snp_lookup_files), " existing files ...")
 
 snp_coords <- map_dfr(snp_lookup_files, read_rds) %>%
   distinct(refsnp_id, .keep_all = TRUE)
 message("  Total unique SNPs with coordinates: ", nrow(snp_coords))
-
 
 specific_gr               <- make_snp_gr(fetal_specific_snps, snp_coords)
 shared_gr                 <- make_snp_gr(shared_snps, snp_coords)
@@ -166,7 +166,7 @@ message("  Shared SNPs with coordinates: ", length(shared_gr))
 message("  Specific+heterogeneous SNPs with coordinates: ", length(specific_heterogeneous_gr))
 message("  Not-expressed SNPs with coordinates: ", length(not_expressed_gr))
 
-# 3. Load Li et al. 2023 adult peaks, cortical union only -------------------------------
+##  Li et al. 2023 adult cortical cCREs (union)  --------------------------------------
 message("\nLoading Li et al. 2023 adult brain cCREs (cortical union only) ...")
 
 options(scipen = 999)
@@ -191,7 +191,7 @@ adult_cortical_union_gr <- li_s6 %>%
 
 message("  adult_cortical_union: ", length(adult_cortical_union_gr), " peaks")
 
-# 4. Run the four enrichment tests -------------------------------------------------------
+##  Enrichment tests  -----------------------------------------------------------------
 message("\n--- Running enrichment tests (4 sets x adult_cortical_union) ---\n")
 
 snp_sets <- list(
@@ -226,15 +226,18 @@ for (snp_set_name in names(snp_sets)) {
   )
 }
 
-# 5. Summary ------------------------------------------------------------------------------
+##  Summary  --------------------------------------------------------------------------
 message("\n--- Results summary ---\n")
 print(results, n = Inf)
 
-# Write tracked output ----------------------------------------------------------------
+##  Write output  ---------------------------------------------------------------------
 write_rds(results, output_file)
 message("\nOCR enrichment results written to: ", output_file)
 
-# Untracked TSV for readability outside R -----------------------------------------------
+# Untracked TSV for readability outside R
 output_tsv <- sub("\\.rds$", ".tsv", output_file)
 write_tsv(results, output_tsv)
 message("OCR enrichment results (TSV) written to: ", output_tsv)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

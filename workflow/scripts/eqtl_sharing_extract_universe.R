@@ -1,45 +1,32 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: fetal eGene/eSNP universe extraction
+#    Extract the fetal eGene-eSNP universe (L1 + L2)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: extract_eqtl_universe (single job)
+#            Upstream:   05TENSORQTL tensorqtl_perm (final expPC per cell type)
+#            Downstream: classify_eqtl_specificity; heterogeneity_test;
+#                        prep_ld_clump_input; eqtl_effect_sizes
+#
+# Purpose:   - Take the lead eSNP of every sig. eGene (qval < 0.05) in each L1 and L2
+#              cell type
+#            - Tag each row with its level (L1/L2), L1 parent cell type and the
+#              matched Jang et al. 2026 adult cell type (via the parent; NA for NPC)
+#            - Log diagnostics: row counts and SNPs per gene (sizes the LD check)
+#
+# Inputs:    qtl_perm_files  tensorQTL permutation output, one per cell type
+#            cell_types      cell types in the same order as qtl_perm_files (params)
+#
+# Outputs:   output_universe  rds: variant_id, phenotype_id, slope, slope_se, af,
+#                             qval, cell_type, level, parent_cell_type,
+#                             jang_label_match (plus an untracked .tsv copy)
+#
+# Notes:     NPC has no adult equivalent, so jang_label_match is NA.
 #
 #--------------------------------------------------------------------------------------
 
-#  Builds the master long-format table of FDR<0.05 eGene-eSNP pairs across all
-#  L1 + L2 fetal cell types, tagging each row with:
-#    - level (L1 / L2)
-#    - parent_cell_type (L2 -> parent L1 label; L1 -> itself)
-#    - jang_label_match (a priori adult Jang et al. 2026 cell type, via parent
-#      for L2; NA where no defensible adult equivalent exists, e.g. NPC)
-#
-#  Step 1 of the developmental-specificity pipeline (independent for now;
-#  designed to fold into replication_pi1_enrichment.R later if retained for the paper).
-#
-#--------------------------------------------------------------------------------------
-#
-#  ADDITION -- SNPs-per-gene diagnostic (LD-independence check):
-#
-#  Before pruning eSNPs for the OCR enrichment analysis, we need to know how many
-#  of the ~6,844 unique (eGene, eSNP) pairs across all 19 cell types actually
-#  involve more than one distinct eSNP mapped to the same eGene -- since those are
-#  the only cases where LD between the two eSNPs is even a possibility, and the
-#  only cases that would need pruning before being treated as "independent" signals.
-#  This step reports the distribution of SNPs-per-gene (1, 2, 3, 4+) and lists which
-#  genes/SNPs fall into the >1 bucket, purely to size the problem before deciding on
-#  an LD-testing approach (pairwise plink --r2 vs per-gene --clump). It does not
-#  change eqtl_universe's contents or its written output -- diagnostic only, printed
-#  to the log.
-#
-#--------------------------------------------------------------------------------------
-#
-#  ADDITION -- slope_se retained (heterogeneity test, step C):
-#
-#  slope_se is now selected alongside slope so the heterogeneity test (C) can
-#  compute Cochran's Q directly from this table's per-row fetal beta/se, without
-#  a second read of the fetal permutation files.
-#
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -53,6 +40,7 @@ if (exists("snakemake")) {
 
 message("\n\nExtracting fetal eGene/eSNP universe (L1 + L2) ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
 })
@@ -60,8 +48,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "eqtl_sharing_functions.R"))
 
-
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 qtl_perm_files  <- snakemake@input[["qtl_perm_files"]]
 output_universe <- snakemake@output[[1]]
 cell_types      <- snakemake@params[["cell_types"]]
@@ -73,18 +60,8 @@ names(qtl_perm_files) <- cell_types  # preserve cell_type <-> file correspondenc
 # L1 cell types -- fixed by cell-type annotation, not a tunable pipeline parameter.
 cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 
-# A priori biological correspondence between fetal L1 cell types and Jang et al.
-# 2026 (SingleBrain) adult cell types. Fixed mapping -- not a tunable pipeline
-# parameter, hence hardcoded here rather than in config. NPC has no defensible
-# adult equivalent (no progenitor population in the adult cortex), so it is
-# excluded from label/best-match comparisons and only included in the "any"
-# matching tier downstream.
-#
-# NOTE: values updated from Fujita's L1 labels (Exc/Inh/Mic) to Jang's own L1
-# labels (Ext/IN/MG) as part of the Fujita -> Jang reference-dataset migration.
-# OPC and End are unchanged (Jang uses the same labels). Column renamed
-# fugita_label_match -> jang_label_match accordingly; classify_eqtl_specificity.R
-# and eqtl_sharing_heterogeneity.R (Step C) both need the matching rename.
+# A priori matched Jang et al. 2026 adult cell type for each fetal L1 cell type.
+# NPC has no adult equivalent (no progenitors in the adult cortex).
 jang_label_match <- c(
   "Glu-UL"    = "Ext",
   "Glu-DL"    = "Ext",
@@ -95,25 +72,20 @@ jang_label_match <- c(
   "Endo-Peri" = "End"
 )
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("n_cell_types", "geno_pc", "norm_method", "output_universe"),
-  value    = c(length(cell_types), geno_pc, norm_method, output_universe)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+  value    = c(length(cell_types), geno_pc, norm_method, output_universe)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# Functions ----------------------------------------------------------------------------
-
-# Strip L2 sub-cluster suffix to get parent L1 cell type
-# (same convention used in tensorqtl_report.Rmd's egenes_L2 %>% mutate(parent = ...))
-
+##  Functions  ------------------------------------------------------------------------
 # Read FDR<0.05 eGene-eSNP pairs for a single cell type
 # (tensorQTL perm output already reports one lead eSNP per eGene)
-# slope_se added (see ADDITION note above) -- required by the heterogeneity test (C).
+# slope_se is kept for the heterogeneity test (Cochran's Q).
 read_sig_eqtl <- function(cell_type, file_path) {
   message("Reading sig. eQTL for: ", cell_type, " (", file_path, ")")
 
@@ -128,8 +100,7 @@ read_sig_eqtl <- function(cell_type, file_path) {
     mutate(cell_type = cell_type)
 }
 
-# Main -----------------------------------------------------------------------------------
-
+##  Read sig. eQTL  -------------------------------------------------------------------
 eqtl_universe <- map2_dfr(names(qtl_perm_files), qtl_perm_files, read_sig_eqtl)
 
 # Dedup safeguard: one row per (cell_type, phenotype_id)
@@ -161,7 +132,7 @@ message("\nTotal unique eGenes across all ", length(cell_types),
 message("\nRows per cell type:")
 print(eqtl_universe %>% count(cell_type, level))
 
-# --- Row-count relationship diagnostic ---------------------------------------------
+##  Diagnostics  ----------------------------------------------------------------------
 message("\n--- Row-count relationship diagnostic ---\n")
 
 n_rows          <- nrow(eqtl_universe)
@@ -184,7 +155,6 @@ if (!(n_unique_genes <= n_unique_pairs && n_unique_pairs <= n_rows)) {
   message("Row-count relationship holds as expected (n_unique_genes <= n_unique_pairs <= n_rows).")
 }
 
-# --- SNPs-per-gene diagnostic (see ADDITION note at top of file) ----------------------
 message("\n--- SNPs-per-gene diagnostic (for OCR LD-independence check) ---\n")
 
 unique_gene_snp_pairs <- eqtl_universe %>%
@@ -209,10 +179,7 @@ n_multi_snp_genes  <- sum(snps_per_gene$n_snps > 1)
 message("\nGenes with exactly 1 SNP: ", n_single_snp_genes)
 message("Genes with >1 SNP (candidates for LD check): ", n_multi_snp_genes)
 
-# Full per-gene SNP listing for genes with >1 SNP -- this is the direct input
-# list for whichever LD-testing approach is chosen next (pairwise plink --r2
-# vs per-gene --clump). Diagnostic only, printed to the log -- not written to
-# any output file at this stage.
+# Genes with >1 SNP are the candidates for LD clumping (log only)
 multi_snp_gene_detail <- unique_gene_snp_pairs %>%
   semi_join(snps_per_gene %>% filter(n_snps > 1), by = "phenotype_id") %>%
   arrange(phenotype_id, variant_id)
@@ -220,11 +187,14 @@ multi_snp_gene_detail <- unique_gene_snp_pairs %>%
 message("\nSNPs mapped to genes with >1 SNP (first 20 rows shown):")
 print(head(multi_snp_gene_detail, 20))
 
-# Write single tracked output ----------------------------------------------------------
+##  Write output  ---------------------------------------------------------------------
 write_rds(eqtl_universe, output_universe)
 message("\nEgene/eSNP universe written to: ", output_universe)
 
-# Untracked TSV for readability outside R -----------------------------------------------
+# Untracked TSV for readability outside R
 output_universe_tsv <- sub("\\.rds$", ".tsv", output_universe)
 write_tsv(eqtl_universe, output_universe_tsv)
 message("Egene/eSNP universe (TSV) written to: ", output_universe_tsv)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

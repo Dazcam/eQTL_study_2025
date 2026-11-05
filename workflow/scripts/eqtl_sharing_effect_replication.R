@@ -1,56 +1,44 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: discovery -> replication effect-size correlations
+#    Discovery -> replication eQTL effect-size correlations
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: eqtl_effect_replication (single job)
+#            Upstream:   05TENSORQTL tensorqtl_perm; 10SMR nominal export
+#                        ({ct}_nom.cis_qtl_pairs); Jang et al. 2026 L1 full-association
+#                        files; 05TENSORQTL convert_genotypes (pvar)
+#            Downstream: report (effect replication tab);
+#                        14 effect_size_heatmaps_plt (Supp Figs 7-8)
+#
+# Purpose:   For each fetal discovery cell type, take its sig. lead eGene-eSNP pairs
+#            (qval < 0.05) and look up the same pairs' effect sizes in each
+#            replication cell type, with no significance cutoff there. Pearson r,
+#            Spearman r and sign concordance per combination:
+#            - Fetal -> fetal: all fetal cell types (L1 + L2); A -> B differs from B -> A
+#            - Fetal L1 -> adult: the 7 Jang L1 types
+#
+# Inputs:    qtl_perm_files  tensorQTL permutation output, one per fetal cell type
+#            nom_files       fetal nominal pairs, same order as qtl_perm_files
+#            jang_files      Jang L1 full-association files
+#            pvar_file       our genotype pvar (REF/ALT per rsID)
+#            cell_types      fetal cell types, same order as the files (params)
+#            fetal_l1        fetal L1 cell types (params)
+#
+# Outputs:   output_file  rds list: fetal_vs_fetal, fetal_vs_adult (incl.
+#                         allele_status), discovery_counts, settings
+#
+# Notes:     - Discovery slope is from the perm file; replication slope from the
+#              nominal file (fetal) or Jang fixed_beta. The diagonal (perm vs own
+#              nominal) is a sanity check (r ~ 1).
+#            - Jang betas are aligned to Jang's alt, then harmonised to our alt;
+#              palindromic, mismatched and missing-allele pairs are dropped.
+#            - Pairs not tested in a replication cell type are absent; n_tested
+#              records how many pairs contributed to each r.
 #
 #--------------------------------------------------------------------------------------
 
-#  For each fetal cell type (discovery), takes its own FDR<0.05 lead eGene-eSNP
-#  pairs (qval in the tensorQTL permutation file) and looks up the SAME
-#  (gene, SNP) pair's effect size in every other cell type (replication) from
-#  the full nominal output, whether or not the pair is significant there. No
-#  significance cutoff is applied on the replication side. Pearson r (plus
-#  Spearman r and sign concordance) is computed per discovery/replication
-#  combination.
-#
-#    A. Fetal -> Fetal : all fetal cell types (L1 + L2), discovery x replication
-#                        (asymmetric: A->B differs from B->A)
-#    B. Fetal -> Adult : fetal L1 discovery x Jang et al. 2026 L1-pooled types
-#                        (all 7 Jang types incl. Ast and OD)
-#
-#  Written to a single RDS only -- no figures. Report and figures pipeline read
-#  this RDS so both draw from the same numbers.
-#
-#  Distinct from repl_sc_beta_correlation.R (matched fetal-adult cell types,
-#  opposite-effect flagging) and eqtl_sharing_effect_sizes.R (pooled slope
-#  matrix); neither is used or modified here.
-#
-#--------------------------------------------------------------------------------------
-#
-#  NOTES:
-#
-#  1. Discovery slope comes from the perm file (lead SNP per gene); replication
-#     slope comes from the nominal file (fetal) or fixed_beta (Jang). The A->A
-#     diagonal is computed like any other cell (perm slope vs the same cell
-#     type's nominal slope) and doubles as a sanity check (expect r ~= 1).
-#
-#  2. Jang alleles: fixed_beta is relative to Jang's `Allele`. It is first
-#     sign-normalised to Jang's alt, then harmonised to OUR alt using the pvar
-#     ref/alt (aligned -> keep, flipped -> negate). Palindromic (A/T, C/G),
-#     mismatched and missing-allele pairs are dropped (no AF column in Jang, so
-#     palindromes cannot be resolved -- consistent with beta_correlation.R and
-#     the heterogeneity test). The allele-status counts are written to the RDS.
-#     Assumes the tensorQTL slope is relative to the pvar ALT allele.
-#
-#  3. Placeholder-cohort artifact rows in Jang (Fixed_P==1 & Random_P==1) are
-#     removed, as in every other script that reads Jang.
-#
-#  4. Pairs not tested in the replication cell type (no row in the nominal /
-#     Jang file) are simply absent for that cell; n_tested records how many
-#     discovery pairs contributed to each r.
-#
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -64,6 +52,7 @@ if (exists("snakemake")) {
 
 message("\n\nComputing discovery -> replication eQTL effect-size correlations ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(data.table)
@@ -72,8 +61,7 @@ suppressPackageStartupMessages({
 # Load functions
 source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
 
-
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 qtl_perm_files <- snakemake@input[["qtl_perm_files"]]   # perm files, all fetal cell types
 nom_files      <- snakemake@input[["nom_files"]]        # nominal files, same order
 jang_files     <- snakemake@input[["jang_files"]]       # Jang full-assoc, 7 L1-pooled types
@@ -100,19 +88,19 @@ stopifnot(length(jang_order) == length(jang_types))
 
 stopifnot(all(fetal_l1 %in% cell_types))
 
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("n_fetal_cell_types", "n_fetal_l1", "jang_types", "pvar_file",
                "fdr_thresh", "output_file"),
   value    = c(length(cell_types), length(fetal_l1), paste(jang_types, collapse = ","),
-               pvar_file, FDR_THRESH, output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+               pvar_file, FDR_THRESH, output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# Functions ----------------------------------------------------------------------------
+##  Functions  ------------------------------------------------------------------------
 
 # One row of results for a discovery/replication combination
 cor_row <- function(disc_ct, rep_ct, n_discovery, x, y) {
@@ -138,9 +126,7 @@ to_matrix <- function(dt, value, rows, cols) {
   m
 }
 
-# ========================================================================================
-# 1. Discovery sets: FDR<0.05 lead pairs per fetal cell type (perm files)
-# ========================================================================================
+##  Discovery sets (sig. lead pairs per fetal cell type)  -----------------------------
 
 message("--- Reading discovery sets (qval < ", FDR_THRESH, ") ---\n")
 
@@ -160,9 +146,7 @@ discovery_counts <- discovery_counts[match(cell_types, discovery)]
 message("\nTotal discovery rows: ", nrow(disc),
         " | unique (gene, SNP) pairs: ", uniqueN(disc, by = c("phenotype_id", "variant_id")))
 
-# ========================================================================================
-# 2. Fetal -> Fetal
-# ========================================================================================
+##  Fetal -> fetal  -------------------------------------------------------------------
 
 message("\n--- Fetal -> fetal replication slopes (nominal files) ---\n")
 
@@ -203,9 +187,7 @@ fetal_pairs <- rbindlist(fetal_pairs)
 message("Fetal -> fetal diagonal (expect r ~= 1): ",
         paste(round(fetal_long[discovery == replication, pearson_r], 3), collapse = " "))
 
-# ========================================================================================
-# 3. Fetal L1 -> Adult (Jang et al. 2026, 7 L1-pooled types)
-# ========================================================================================
+##  Fetal L1 -> adult (Jang L1)  ------------------------------------------------------
 
 message("\n--- Fetal L1 -> Jang adult replication slopes ---\n")
 
@@ -287,9 +269,7 @@ for (a in fetal_l1) {
 adult_long  <- rbindlist(adult_rows)
 adult_pairs <- rbindlist(adult_pairs)
 
-# ========================================================================================
-# 4. Assemble matrices and write output
-# ========================================================================================
+##  Write output  ---------------------------------------------------------------------
 
 make_block <- function(long, pairs, rows, cols) {
   list(
@@ -321,3 +301,6 @@ print(result$fetal_vs_adult$n_tested)
 
 write_rds(result, output_file)
 message("\nEffect-size replication correlations written to: ", output_file)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

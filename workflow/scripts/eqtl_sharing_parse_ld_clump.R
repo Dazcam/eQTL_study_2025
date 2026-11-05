@@ -1,25 +1,29 @@
 #--------------------------------------------------------------------------------------
 #
-#    Developmental specificity: LD-independence pre-processing (step 3 of 3)
+#    Build the LD-independent fetal eGene-eSNP universe from plink clumps
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  EQTL-SHARING | Rule: parse_ld_clump (single job)
+#            Upstream:   prep_ld_clump_input; run_ld_clump
+#            Downstream: ocr_enrich; glm_enrich
+#
+# Purpose:   - Read each gene's plink .clumped file and keep each clump's index SNP
+#              (one independent signal); SNPs absorbed into a clump (SP2) are dropped
+#            - Add the singleton-gene SNPs (one eSNP; never clumped)
+#            - Log signals per gene and how many SNPs were dropped as LD-redundant
+#
+# Inputs:    clump_dir            {gene}.clumped files from run_ld_clump
+#            singleton_snps_file  singleton-gene pairs (prep_ld_clump_input)
+#
+# Outputs:   output_file  rds: phenotype_id, variant_id (LD-independent pairs)
+#
+# Notes:     A gene keeps more than one row if plink splits its SNPs into more than
+#            one clump (independent signals at the same gene).
 #
 #--------------------------------------------------------------------------------------
 
-#  Final step of the LD-independence sub-pipeline (see eqtl_sharing_prep_ld_clump.R
-#  for steps 1-2). Reads every per-gene plink .clumped file produced by run_ld_clump,
-#  keeps each clump's index SNP (the representative of one independent signal) and
-#  drops everything absorbed into it (SP2), combines these with the singleton-gene
-#  SNPs (genes with only 1 mapped eSNP, which never needed clumping), and writes the
-#  final pruned, LD-independent (eGene, eSNP) universe consumed by ocr_enrich.
-#
-#  A gene can contribute more than one row to the final universe if plink split its
-#  SNPs into more than one clump -- i.e. more than one independent signal at that
-#  gene. This is intentional: independent signals at the same gene are kept as
-#  separate rows; only SNPs absorbed into the same clump as a more significant SNP
-#  are treated as redundant and dropped.
-
-#--------------------------------------------------------------------------------------
-
-# Set up logging for Snakemake
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -33,28 +37,28 @@ if (exists("snakemake")) {
 
 message("\n\nParsing LD clump results and building final pruned eGene-eSNP universe ...")
 
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
 })
 
-# Input and output paths ---------------------------------------------------------------
+# Input and output paths
 clump_dir           <- snakemake@input[["clump_dir"]]
 run_ld_clump_sentinel <- snakemake@input[["run_ld_clump_sentinel"]]
 singleton_snps_file <- snakemake@input[["singleton_snps"]]
 output_file         <- snakemake@output[[1]]
 
-# Check variable assignment
+# Print what each variable is set to
 message("\nVariables")
-cat("============================")
+message("============================")
 tibble(
   variable = c("clump_dir", "singleton_snps_file", "output_file"),
-  value    = c(clump_dir, singleton_snps_file, output_file)
-) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("\n============================\n")
+  value    = c(clump_dir, singleton_snps_file, output_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# Functions ----------------------------------------------------------------------------
+##  Functions  ------------------------------------------------------------------------
 
 # Count entries in a clump's SP2 field ("NONE", or comma-separated "rsID(1),rsID(1),...")
 count_sp2 <- function(sp2_str) {
@@ -62,9 +66,7 @@ count_sp2 <- function(sp2_str) {
   length(str_split(sp2_str, ",")[[1]])
 }
 
-# Read a single .clumped file. Whitespace-delimited with variable padding -- base
-# read.table handles this correctly regardless of run-length, unlike a fixed-delimiter
-# reader.
+# Read one .clumped file (whitespace-padded, so base read.table)
 read_clump_file <- function(f) {
   gene_id <- tools::file_path_sans_ext(basename(f))
 
@@ -88,14 +90,12 @@ read_clump_file <- function(f) {
     select(phenotype_id, variant_id = SNP, n_sp2)
 }
 
-# Main -----------------------------------------------------------------------------------
-
-# --- 1. Load singleton-gene SNPs (no clumping needed) ----------------------------------
+##  Load singleton-gene SNPs  ---------------------------------------------------------
 message("\nLoading singleton-gene SNPs ...")
 singleton_snps <- read_rds(singleton_snps_file)
 message("  Singleton-gene (eGene, eSNP) pairs: ", nrow(singleton_snps))
 
-# --- 2. Parse all .clumped files --------------------------------------------------------
+##  Parse .clumped files  -------------------------------------------------------------
 clump_files <- list.files(clump_dir, pattern = "\\.clumped$", full.names = TRUE)
 message("\nFound ", length(clump_files), " .clumped files in: ", clump_dir)
 
@@ -109,7 +109,7 @@ if (n_genes_parsed != length(clump_files)) {
           "check WARNING messages above for files that failed to parse or were empty.")
 }
 
-# --- 3. Independent-signal diagnostics --------------------------------------------------
+##  Independent-signal diagnostics  ---------------------------------------------------
 message("\n--- Independent-signal diagnostics (multi-SNP genes) ---\n")
 
 signals_per_gene <- clump_results %>% count(phenotype_id, name = "n_signals")
@@ -135,7 +135,7 @@ message("\nIndex (kept) SNPs from multi-SNP genes: ", n_index_snps)
 message("Absorbed (dropped, LD-redundant) SNPs from multi-SNP genes: ", n_absorbed_snps)
 message("Total multi-SNP-gene SNPs accounted for (index + absorbed): ", n_multi_gene_input_snps)
 
-# --- 4. Combine into final pruned universe ----------------------------------------------
+##  Combine into the LD-independent universe  -----------------------------------------
 message("\n--- Building final pruned, LD-independent eGene-eSNP universe ---\n")
 
 independent_universe <- bind_rows(
@@ -158,6 +158,9 @@ message("\nTotal SNPs dropped as LD-redundant: ", n_dropped_total,
         " (", round(100 * n_dropped_total / (nrow(singleton_snps) + n_multi_gene_input_snps), 1),
         "% of the original universe)")
 
-# Write single tracked output ----------------------------------------------------------
+##  Write output  ---------------------------------------------------------------------
 write_rds(independent_universe, output_file)
 message("\nFinal pruned, LD-independent eGene-eSNP universe written to: ", output_file)
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
