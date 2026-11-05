@@ -18,18 +18,17 @@
 #            - Find subcluster-specific eGenes (significant in an L2 subcluster but
 #              not its L1 parent) and supercluster-specific eGenes (significant in
 #              an L1 type but none of its subclusters)
-#            - Flag which subcluster-specific genes are DE markers
 #
 # Inputs:    eqtl_universe_file  fetal eGene-eSNP universe (extract_eqtl_universe)
 #            nom_files           fetal nominal pairs, one per cell type (L1 + L2)
 #            jang_l1_files       Jang L1 full-association files
 #            gene_lookup_file    hg38 gene lookup (gene symbols)
-#            de_file             DE markers per L1/L2 cluster (xlsx)
 #            cell_types          fetal cell types, same order as nom_files (params)
+#            cell_types_L1       fetal L1 cell types (params)
 #            jang_l1_types       Jang L1 types, same order as jang_l1_files (params)
 #
 # Outputs:   output_file  rds list: effect_size_matrix, effect_size_long,
-#                         subcluster_specific, supercluster_specific, de_markers_raw
+#                         subcluster_specific, supercluster_specific
 #
 # Notes:     Jang effect sizes are fixed_beta, sign-normalised to alt
 #            (align_jang_beta()); Jang nominal P is Random_P.
@@ -54,7 +53,6 @@ message("\n\nExtracting eQTL effect sizes across fetal (L1) and Jang adult (L1) 
 suppressPackageStartupMessages({
   library(tidyverse)
   library(data.table)
-  library(readxl)
 })
 
 # Load functions
@@ -72,23 +70,17 @@ jang_l1_types      <- snakemake@params[["jang_l1_types"]]    # 7: Ast, End, Ext,
 names(nom_files)     <- cell_types
 names(jang_l1_files) <- jang_l1_types
 
-# Gene symbol lookup (symbols for display only; matching is on ENSG)
-gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
-
-# DE marker table
-de_file <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/diff_exp_genes_L1_and_L2_clusters.xlsx"
-
-# L1 cell types and parent mapping
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
+gene_lookup_file   <- snakemake@input[["gene_lookup"]]  # symbols for display; matching is on ENSG
+cell_types_L1      <- unlist(snakemake@params[["cell_types_L1"]])
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
   variable = c("eqtl_universe_file", "n_nom_files", "n_jang_l1_files",
-               "gene_lookup_file", "de_file", "output_file"),
+               "gene_lookup_file", "output_file"),
   value    = c(eqtl_universe_file, length(nom_files), length(jang_l1_files),
-               gene_lookup_file, de_file, output_file)) |>
+               gene_lookup_file, output_file)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -329,52 +321,6 @@ for (l1 in cell_types_L1) {
 supercluster_tbl <- bind_rows(supercluster_specific)
 message("Total supercluster-specific eGene-eSNP rows: ", nrow(supercluster_tbl))
 
-##  Cross-reference with DE markers  --------------------------------------------------
-
-message("\n--- Cross-referencing with DE marker genes ---\n")
-
-de_markers <- tibble()
-
-if (file.exists(de_file)) {
-  de_sheets <- excel_sheets(de_file)
-  message("  DE file sheets: ", paste(de_sheets, collapse = ", "))
-
-  de_markers <- map_dfr(de_sheets, function(sheet) {
-    tryCatch({
-      read_excel(de_file, sheet = sheet) %>%
-        mutate(de_cell_type = sheet)
-    }, error = function(e) {
-      message("  WARNING: failed to read sheet '", sheet, "': ", e$message)
-      tibble()
-    })
-  })
-
-  message("  Total DE rows loaded: ", nrow(de_markers))
-
-  gene_col <- intersect(c("gene", "gene_id", "Gene", "gene_name",
-                           "phenotype_id", "ensembl_gene_id"), names(de_markers))
-  if (length(gene_col) > 0) {
-    gene_col <- gene_col[1]
-    message("  Using DE gene column: ", gene_col)
-
-    if (nrow(subcluster_tbl) > 0) {
-      subcluster_tbl <- subcluster_tbl %>%
-        mutate(
-          is_de_marker = map2_lgl(phenotype_id, cell_type_L2, function(gene, ct) {
-            any(de_markers[[gene_col]] == gene & de_markers$de_cell_type == ct)
-          })
-        )
-      message("  Subcluster-specific eGenes that are DE markers: ",
-              sum(subcluster_tbl$is_de_marker, na.rm = TRUE), " / ", nrow(subcluster_tbl))
-    }
-  } else {
-    message("  WARNING: could not identify gene column in DE table. Columns: ",
-            paste(names(de_markers), collapse = ", "))
-  }
-} else {
-  message("  WARNING: DE file not found at: ", de_file)
-}
-
 ##  Summary  --------------------------------------------------------------------------
 
 message("\n--- Summary ---\n")
@@ -403,8 +349,7 @@ write_rds(
     effect_size_matrix      = effect_size_matrix,
     effect_size_long        = as_tibble(rbind(fetal_effects_long, jang_effects_long)),
     subcluster_specific     = subcluster_tbl,
-    supercluster_specific   = supercluster_tbl,
-    de_markers_raw          = de_markers
+    supercluster_specific   = supercluster_tbl
   ),
   output_file
 )

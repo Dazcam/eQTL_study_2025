@@ -1,113 +1,115 @@
+import os
+
 configfile: "../config/config.yaml"
 
-# Pseudotime bins (NPC-to-*) excluded from dev_specificity pipeline
+DS          = config["dev_specificity"]
+NORM_METHOD = config["tensorQTL"]["norm_methods"][0]
+GENO_PC     = config["tensorQTL"]["geno_pcs"]
+
+# Pseudotime bins (NPC-to-*) excluded from the eQTL sharing pipeline
 DEVSPEC_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
+DEVSPEC_FETAL_L1   = config["fetal_l1_types"]
 
-DEVSPEC_FETAL_L1 = ["Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri"]
+# Jang et al. 2026 association files (downloaded by setup get_jang_singlebrain)
+JANG_FULL = config["setup"]["get_jang_singlebrain"]["full_assoc"]
+JANG_TOP  = config["setup"]["get_jang_singlebrain"]["top_assoc"]
 
-def get_egene_universe_inputs():
-    geno_pc = config["tensorQTL"]["geno_pcs"]
-    norm_method = config["tensorQTL"]["norm_methods"][0]
-    return [
-        f"{config['dev_specificity']['extract_universe']['qtl_dir']}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
-        f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
-        for ct in DEVSPEC_CELL_TYPES
-    ]
+# Report: tensorQTL perm output directory (until the report params are rebuilt)
+PERM_DIR = os.path.dirname(os.path.dirname(config["tensorQTL"]["tensorqtl_perm"]["output"])) + "/"
 
-def get_jang_full_inputs():
-    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
-    return [f"{jang_dir}{ct}_eqtl_full_assoc.tsv.gz" for ct in config["jang_cell_types"]]
 
-def get_jang_top_inputs():
-    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
-    return [f"{jang_dir}{ct}_eqtl_top_assoc.tsv.gz" for ct in config["jang_cell_types"]]
+def perm_files(cell_types):
+    """tensorQTL permutation output per cell type, at the final expPC (exp_pc_map)."""
+    return [config["tensorQTL"]["tensorqtl_perm"]["output"].format(
+                cell_type=ct, norm_method=NORM_METHOD, geno_pc=GENO_PC,
+                exp_pc=config["exp_pc_map"][ct])
+            for ct in cell_types]
 
-def get_jang_l1_inputs():
-    jang_dir = config["dev_specificity"]["classify_specificity"]["jang_dir"]
-    return [f"{jang_dir}{ct}_eqtl_full_assoc.tsv.gz"
-            for ct in ["Ast", "End", "Ext", "IN", "MG", "OD", "OPC"]]
 
-def get_snp_lookup_files():
-    geno_pc = config["tensorQTL"]["geno_pcs"]
-    norm_method = config["tensorQTL"]["norm_methods"][0]
-    lookup_dir = config["dev_specificity"]["ocr_enrich"]["snp_lookup_dir"]
-    return [
-        f"{lookup_dir}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}.snp_lookup.rds"
-        for ct in DEVSPEC_CELL_TYPES
-    ]
+def snp_lookup_files(cell_types):
+    """06 snp_lookup output (hg38 SNP coordinates) per cell type."""
+    return [config["qtl_rep"]["snp_lookup"]["out_file"].format(
+                cell_type=ct, norm_method=NORM_METHOD, geno_pc=GENO_PC,
+                exp_pc=config["exp_pc_map"][ct])
+            for ct in cell_types]
 
-def get_nom_files():
-    nom_dir = config["dev_specificity"]["eqtl_effects"]["nom_dir"]
-    return [
-        f"{nom_dir}{ct}/{ct}_nom.cis_qtl_pairs.tsv"
-        for ct in DEVSPEC_CELL_TYPES
-    ]
+
+def smr_nom_files(cell_types):
+    """10SMR nominal export (cat_tensorqtl_nom_snps) per cell type."""
+    return [config["smr"]["cat_tensorqtl_nom_snps"]["cat_snps"].format(cell_type=ct)
+            for ct in cell_types]
+
+
+# Rules  -----------------------------------------------------------------------------
 
 rule extract_eqtl_universe:
-    input:  qtl_perm_files = get_egene_universe_inputs()
-    output: config["dev_specificity"]["extract_universe"]["out_file"]
-    params: cell_types = DEVSPEC_CELL_TYPES,
-            geno_pc = config["tensorQTL"]["geno_pcs"],
-            norm_method = config["tensorQTL"]["norm_methods"][0]
+    input:  qtl_perm_files = perm_files(DEVSPEC_CELL_TYPES)
+    output: DS["extract_universe"]["out_file"]
+    params: cell_types       = DEVSPEC_CELL_TYPES,
+            cell_types_L1    = DEVSPEC_FETAL_L1,
+            jang_label_match = DS["extract_universe"]["jang_label_match"],
+            eqtl_fdr         = config["eqtl_fdr"],
+            geno_pc          = GENO_PC,
+            norm_method      = NORM_METHOD
     singularity: config["containers"]["r_eqtl"]
-    message: "Extract unique fetal eGene-eSNP universe (L1+L2) for developmental specificity analysis"
-    benchmark: "reports/benchmarks/dev_specificity.extract_universe.txt"
-    log:    config["dev_specificity"]["extract_universe"]["log"]
-    script: "../scripts/eqtl_sharing_extract_universe.R"
+    message: "Extract unique fetal eGene-eSNP universe (L1+L2)"
+    benchmark: DS["extract_universe"]["benchmark"]
+    log:    DS["extract_universe"]["log"]
+    script: DS["extract_universe"]["script"]
 
 rule classify_eqtl_specificity:
-    input:  eqtl_universe   = config["dev_specificity"]["extract_universe"]["out_file"],
-            jang_full_files = get_jang_full_inputs(),
-            jang_top_files  = get_jang_top_inputs()
-    output: config["dev_specificity"]["classify_specificity"]["out_file"]
+    input:  eqtl_universe   = rules.extract_eqtl_universe.output[0],
+            jang_full_files = expand(JANG_FULL, jang_cell_type=config["jang_cell_types"]),
+            jang_top_files  = expand(JANG_TOP, jang_cell_type=config["jang_cell_types"])
+    output: DS["classify_specificity"]["out_file"]
     params: jang_cell_types = config["jang_cell_types"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 128000, time = "04:00:00"
     threads: 4
     message: "Classify fetal eGene-eSNP pairs as testable/untestable and shared/fetal-specific vs Jang et al. 2026 adult eQTL (all L1+L2 types)"
-    benchmark: "reports/benchmarks/dev_specificity.classify_specificity.txt"
-    log:    config["dev_specificity"]["classify_specificity"]["log"]
-    script: "../scripts/eqtl_sharing_classify.R"
+    benchmark: DS["classify_specificity"]["benchmark"]
+    log:    DS["classify_specificity"]["log"]
+    script: DS["classify_specificity"]["script"]
 
 rule heterogeneity_test:
     input:  eqtl_universe  = rules.extract_eqtl_universe.output[0],
             classification = rules.classify_eqtl_specificity.output[0],
             pvar_file      = config["tensorQTL"]["convert_genotypes"]["pvar"],
-            gene_lookup    = config["dev_specificity"]["report"]["gene_lookup"]
-    output: config["dev_specificity"]["heterogeneity_test"]["out_file"]
-    params: fdr_thresh  = config["dev_specificity"]["heterogeneity_test"]["fdr_thresh"]
+            gene_lookup    = config["gene_lookup"]
+    output: DS["heterogeneity_test"]["out_file"]
+    params: fdr_thresh = DS["heterogeneity_test"]["fdr_thresh"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 2, mem_mb = 8000, time = "00:20:00"
     threads: 2
-    message: "Heterogeneity test (Cochran's Q) on fetal-specific eQTL vs matched adult Fujita cell type"
-    benchmark: "reports/benchmarks/dev_specificity.heterogeneity_test.txt"
-    log:    config["dev_specificity"]["heterogeneity_test"]["log"]
-    script: "../scripts/eqtl_sharing_heterogeneity.R"
+    message: "Heterogeneity test (Cochran's Q) on fetal-specific eQTL vs Jang et al. 2026 adult cell types"
+    benchmark: DS["heterogeneity_test"]["benchmark"]
+    log:    DS["heterogeneity_test"]["log"]
+    script: DS["heterogeneity_test"]["script"]
 
 rule prep_ld_clump_input:
-    input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"]
-    output: assoc_dir      = directory(config["dev_specificity"]["prep_ld_clump_input"]["assoc_dir"]),
-            singleton_snps = config["dev_specificity"]["prep_ld_clump_input"]["singleton_snps"],
-            snp_list       = config["dev_specificity"]["prep_ld_clump_input"]["snp_list"]
+    input:  eqtl_universe = rules.extract_eqtl_universe.output[0]
+    output: assoc_dir      = directory(DS["prep_ld_clump_input"]["assoc_dir"]),
+            singleton_snps = DS["prep_ld_clump_input"]["singleton_snps"],
+            snp_list       = DS["prep_ld_clump_input"]["snp_list"]
     singularity: config["containers"]["r_eqtl"]
     message: "Prepare per-gene plink association files for LD-independence clumping"
-    benchmark: "reports/benchmarks/dev_specificity.prep_ld_clump_input.txt"
-    log:    config["dev_specificity"]["prep_ld_clump_input"]["log"]
-    script: "../scripts/eqtl_sharing_prep_ld_clump.R"
+    benchmark: DS["prep_ld_clump_input"]["benchmark"]
+    log:    DS["prep_ld_clump_input"]["log"]
+    script: DS["prep_ld_clump_input"]["script"]
 
 rule run_ld_clump:
     input:  assoc_dir = rules.prep_ld_clump_input.output.assoc_dir,
             snp_list  = rules.prep_ld_clump_input.output.snp_list
-    output: clump_dir = directory(config["dev_specificity"]["run_ld_clump"]["clump_dir"]),
-            sentinel  = config["dev_specificity"]["run_ld_clump"]["sentinel"]
+    output: clump_dir = directory(DS["run_ld_clump"]["clump_dir"]),
+            sentinel  = DS["run_ld_clump"]["sentinel"]
     params: bfile_prefix  = config["geno_post_impute"]["vcf_to_plink"]["params"],
-            subset_prefix = config["dev_specificity"]["run_ld_clump"]["subset_prefix"],
-            clump_kb = config["dev_specificity"]["run_ld_clump"]["clump_kb"],
-            clump_r2 = config["dev_specificity"]["run_ld_clump"]["clump_r2"]
+            subset_prefix = DS["run_ld_clump"]["subset_prefix"],
+            clump_kb = DS["run_ld_clump"]["clump_kb"],
+            clump_r2 = DS["run_ld_clump"]["clump_r2"]
     envmodules: "PLINK"
     message: "LD-clump multi-SNP genes' eSNPs against cohort genotypes (independence check)"
-    benchmark: "reports/benchmarks/dev_specificity.run_ld_clump.txt"
-    log:    config["dev_specificity"]["run_ld_clump"]["log"]
+    benchmark: DS["run_ld_clump"]["benchmark"]
+    log:    DS["run_ld_clump"]["log"]
     shell:
         """
         mkdir -p {output.clump_dir}
@@ -161,77 +163,81 @@ rule parse_ld_clump:
     input:  clump_dir             = rules.run_ld_clump.output.clump_dir,
             run_ld_clump_sentinel = rules.run_ld_clump.output.sentinel,
             singleton_snps        = rules.prep_ld_clump_input.output.singleton_snps
-    output: config["dev_specificity"]["parse_ld_clump"]["out_file"]
+    output: DS["parse_ld_clump"]["out_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Parse LD clump results into final pruned, LD-independent eGene-eSNP universe"
-    benchmark: "reports/benchmarks/dev_specificity.parse_ld_clump.txt"
-    log:    config["dev_specificity"]["parse_ld_clump"]["log"]
-    script: "../scripts/eqtl_sharing_parse_ld_clump.R"
+    benchmark: DS["parse_ld_clump"]["benchmark"]
+    log:    DS["parse_ld_clump"]["log"]
+    script: DS["parse_ld_clump"]["script"]
 
 rule ocr_enrich:
-    input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+    input:  classification     = rules.classify_eqtl_specificity.output[0],
             heterogeneity_test = rules.heterogeneity_test.output[0],
-            independent_snps = rules.parse_ld_clump.output[0],
-            snp_lookups      = get_snp_lookup_files(),
-            li_s6            = config["dev_specificity"]["ocr_enrich"]["li_s6"],
-            li_s7            = config["dev_specificity"]["ocr_enrich"]["li_s7"]
-    output: config["dev_specificity"]["ocr_enrich"]["out_file"]
-    params: seed = config["dev_specificity"]["ocr_enrich"]["seed"]
+            independent_snps   = rules.parse_ld_clump.output[0],
+            snp_lookups        = snp_lookup_files(DEVSPEC_CELL_TYPES),
+            li_s6              = DS["ocr_enrich"]["li_s6"],
+            li_s7              = DS["ocr_enrich"]["li_s7"]
+    output: DS["ocr_enrich"]["out_file"]
+    params: seed = DS["ocr_enrich"]["seed"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 16000, time = "01:00:00"
     threads: 4
     message: "Test fetal-specific/shared/heterogeneous eQTL enrichment in adult cortical union OCRs"
-    benchmark: "reports/benchmarks/dev_specificity.ocr_enrich.txt"
-    log:    config["dev_specificity"]["ocr_enrich"]["log"]
-    script: "../scripts/eqtl_sharing_ocr_enrichment.R"
+    benchmark: DS["ocr_enrich"]["benchmark"]
+    log:    DS["ocr_enrich"]["log"]
+    script: DS["ocr_enrich"]["script"]
 
 rule glm_enrich:
-    input:  classification   = config["dev_specificity"]["classify_specificity"]["out_file"],
+    input:  classification   = rules.classify_eqtl_specificity.output[0],
             independent_snps = rules.parse_ld_clump.output[0],
-            snp_lookups      = get_snp_lookup_files(),
-            li_s6            = config["dev_specificity"]["ocr_enrich"]["li_s6"],
-            li_s7            = config["dev_specificity"]["ocr_enrich"]["li_s7"]
-    output: config["dev_specificity"]["glm_enrich"]["out_file"]
+            snp_lookups      = snp_lookup_files(DEVSPEC_CELL_TYPES),
+            li_s6            = DS["ocr_enrich"]["li_s6"],
+            li_s7            = DS["ocr_enrich"]["li_s7"]
+    output: DS["glm_enrich"]["out_file"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 2, mem_mb = 8000, time = "00:20:00"
     threads: 2
-    message: "GLM comparison: is fetal_specific more concentrated than shared in Li et al. 2023 adult cortical OCRs?"
-    benchmark: "reports/benchmarks/dev_specificity.glm_enrich.txt"
-    log:    config["dev_specificity"]["glm_enrich"]["log"]
-    script: "../scripts/eqtl_sharing_glm_enrichment.R"
-
+    message: "GLM comparison: are fetal-specific eQTL less concentrated than shared eQTL in Li et al. 2023 adult cortical OCRs?"
+    benchmark: DS["glm_enrich"]["benchmark"]
+    log:    DS["glm_enrich"]["log"]
+    script: DS["glm_enrich"]["script"]
 
 rule eqtl_effect_sizes:
-    input:  eqtl_universe = config["dev_specificity"]["extract_universe"]["out_file"],
-            nom_files     = get_nom_files(),
-            jang_l1_files = get_jang_l1_inputs()
-    output: config["dev_specificity"]["eqtl_effects"]["out_file"]
+    input:  eqtl_universe = rules.extract_eqtl_universe.output[0],
+            nom_files     = smr_nom_files(DEVSPEC_CELL_TYPES),
+            jang_l1_files = expand(JANG_FULL, jang_cell_type=config["jang_l1_types"]),
+            gene_lookup   = config["gene_lookup"]
+    output: DS["eqtl_effects"]["out_file"]
     params: cell_types    = DEVSPEC_CELL_TYPES,
-            jang_l1_types = ["Ast", "End", "Ext", "IN", "MG", "OD", "OPC"]
+            cell_types_L1 = DEVSPEC_FETAL_L1,
+            jang_l1_types = config["jang_l1_types"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 64000, time = "02:00:00"
     threads: 4
     message: "Extract effect sizes for unique eGene-eSNP pairs across fetal and adult cell types"
-    benchmark: "reports/benchmarks/dev_specificity.eqtl_effect_sizes.txt"
-    log:    config["dev_specificity"]["eqtl_effects"]["log"]
-    script: "../scripts/eqtl_sharing_effect_sizes.R"
+    benchmark: DS["eqtl_effects"]["benchmark"]
+    log:    DS["eqtl_effects"]["log"]
+    script: DS["eqtl_effects"]["script"]
 
 rule eqtl_effect_replication:
-    input:  qtl_perm_files = get_egene_universe_inputs(),
-            nom_files      = get_nom_files(),
-            jang_files     = get_jang_l1_inputs(),
+    input:  qtl_perm_files = perm_files(DEVSPEC_CELL_TYPES),
+            nom_files      = smr_nom_files(DEVSPEC_CELL_TYPES),
+            jang_files     = expand(JANG_FULL, jang_cell_type=config["jang_l1_types"]),
             pvar_file      = config["tensorQTL"]["convert_genotypes"]["pvar"]
-    output: config["dev_specificity"]["eqtl_effect_replication"]["out_file"]
+    output: DS["eqtl_effect_replication"]["out_file"]
     params: cell_types = DEVSPEC_CELL_TYPES,
-            fetal_l1   = DEVSPEC_FETAL_L1
+            fetal_l1   = DEVSPEC_FETAL_L1,
+            jang_order = config["jang_l1_order"],
+            fdr_thresh = config["eqtl_fdr"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 64000, time = "02:00:00"
     threads: 4
     message: "Discovery -> replication eQTL effect-size correlations (fetal-fetal and fetal L1-adult), no significance cutoff on the replication side"
-    benchmark: "reports/benchmarks/dev_specificity.eqtl_effect_replication.txt"
-    log:    config["dev_specificity"]["eqtl_effect_replication"]["log"]
-    script: "../scripts/eqtl_sharing_effect_replication.R"
+    benchmark: DS["eqtl_effect_replication"]["benchmark"]
+    log:    DS["eqtl_effect_replication"]["log"]
+    script: DS["eqtl_effect_replication"]["script"]
 
+# Report params are rebuilt with the report (next stage)
 rule dev_specificity_report:
     input:  eqtl_universe    = rules.extract_eqtl_universe.output[0],
             classification   = rules.classify_eqtl_specificity.output[0],
@@ -239,7 +245,7 @@ rule dev_specificity_report:
             ocr_enrich       = rules.ocr_enrich.output[0],
             eqtl_effects     = rules.eqtl_effect_sizes.output[0],
             beta_correlation = config["qtl_rep"]["beta_correlation"]["out_file"],
-            gene_lookup      = config["dev_specificity"]["report"]["gene_lookup"],
+            gene_lookup      = config["gene_lookup"],
             rmd_script       = config["dev_specificity"]["report"]["script"]
     output: config["dev_specificity"]["report"]["html"]
     params: eqtl_universe    = lambda wc, input: "../" + input.eqtl_universe,
@@ -249,8 +255,8 @@ rule dev_specificity_report:
             eqtl_effects     = lambda wc, input: "../" + input.eqtl_effects,
             beta_correlation = lambda wc, input: "../" + input.beta_correlation,
             pi1_dir     = "../" + config["dev_specificity"]["report"]["pi1_dir"],
-            perm_dir    = "../" + config["dev_specificity"]["extract_universe"]["qtl_dir"],
-            gene_lookup = "../" + config["dev_specificity"]["report"]["gene_lookup"],
+            perm_dir    = "../" + PERM_DIR,
+            gene_lookup = "../" + config["gene_lookup"],
             bmark_dir   = "../" + config["dev_specificity"]["report"]["bmark_dir"],
             output_file = config["dev_specificity"]["report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]

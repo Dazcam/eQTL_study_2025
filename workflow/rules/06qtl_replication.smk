@@ -10,7 +10,11 @@ GENO_PC     = config["tensorQTL"]["geno_pcs"]
 
 # Pseudotime bins (NPC-to-*) excluded from the replication pipeline
 REP_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
-REP_FETAL_L1   = QR["fetal_l1_types"]
+REP_FETAL_L1   = config["fetal_l1_types"]
+
+# Jang et al. 2026 association files (downloaded by setup get_jang_singlebrain)
+JANG_FULL = config["setup"]["get_jang_singlebrain"]["full_assoc"]
+JANG_TOP  = config["setup"]["get_jang_singlebrain"]["top_assoc"]
 
 # beta_correlation: fetal-adult pairs, and the unique cell types on each side
 # (order matters: the script names its input files in this order)
@@ -76,9 +80,9 @@ internal_inputs = [internal_file(kind, ct, ref_ct) for kind in ["enrich", "pi1"]
                    for ct in REP_FETAL_L1 for ref_ct in REP_FETAL_L1]
 
 # Jang pi1: fetal L1 x Jang L1
-JANG_L1_ORDER = QR["report"]["jang_l1_order"]
+JANG_L1_ORDER = config["jang_l1_order"]
 assert sorted(JANG_L1_ORDER) == sorted(config["jang_l1_types"]), \
-    "qtl_rep.report.jang_l1_order must list the same types as jang_l1_types"
+    "jang_l1_order must list the same types as jang_l1_types"
 jang_pi1_inputs = [jang_file(kind, ct, jct) for kind in ["enrich", "pi1"]
                    for ct in REP_FETAL_L1 for jct in config["jang_l1_types"]]
 
@@ -177,8 +181,8 @@ rule pi1_enrich_internal:
     script: QR["pi1_enrich_internal"]["script"]
 
 rule pi1_enrich_jang:
-    input:  public_all = QR["pi1_enrich_jang"]["public_all"],
-            public_top = QR["pi1_enrich_jang"]["public_top"],
+    input:  public_all = JANG_FULL,
+            public_top = JANG_TOP,
             qtl_all    = lambda wc: nom_file(wc.cell_type),
             qtl_top    = lambda wc: perm_file(wc.cell_type)
     output: enrich = QR["pi1_enrich_jang"]["enrich"],
@@ -192,8 +196,8 @@ rule pi1_enrich_jang:
 
 rule beta_correlation:
     input:  fetal_perm        = [perm_file(ct) for ct in BETA_FETAL_TYPES],
-            jang_l1_files     = expand(QR["pi1_enrich_jang"]["public_all"], jang_cell_type=BETA_JANG_TYPES),
-            jang_l1_top_files = expand(QR["pi1_enrich_jang"]["public_top"], jang_cell_type=BETA_JANG_TYPES),
+            jang_l1_files     = expand(JANG_FULL, jang_cell_type=BETA_JANG_TYPES),
+            jang_l1_top_files = expand(JANG_TOP, jang_cell_type=BETA_JANG_TYPES),
             pvar_file         = config["tensorQTL"]["convert_genotypes"]["pvar"]
     output: QR["beta_correlation"]["out_file"]
     params: fetal_cell = [c["fetal"] for c in JANG_COMPARISONS],

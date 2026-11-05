@@ -15,8 +15,11 @@
 #              matched Jang et al. 2026 adult cell type (via the parent; NA for NPC)
 #            - Log diagnostics: row counts and SNPs per gene (sizes the LD check)
 #
-# Inputs:    qtl_perm_files  tensorQTL permutation output, one per cell type
-#            cell_types      cell types in the same order as qtl_perm_files (params)
+# Inputs:    qtl_perm_files    tensorQTL permutation output, one per cell type
+#            cell_types        cell types in the same order as qtl_perm_files (params)
+#            cell_types_L1     fetal L1 cell types (params)
+#            jang_label_match  fetal L1 -> matched Jang L1 type; NPC null (params)
+#            eqtl_fdr          qval threshold for sig. eGenes (params)
 #
 # Outputs:   output_universe  rds: variant_id, phenotype_id, slope, slope_se, af,
 #                             qval, cell_type, level, parent_cell_type,
@@ -54,30 +57,27 @@ output_universe <- snakemake@output[[1]]
 cell_types      <- snakemake@params[["cell_types"]]
 geno_pc         <- snakemake@params[["geno_pc"]]
 norm_method     <- snakemake@params[["norm_method"]]
+eqtl_fdr        <- snakemake@params[["eqtl_fdr"]]
+cell_types_L1   <- unlist(snakemake@params[["cell_types_L1"]])
 
 names(qtl_perm_files) <- cell_types  # preserve cell_type <-> file correspondence
 
-# L1 cell types -- fixed by cell-type annotation, not a tunable pipeline parameter.
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-
-# A priori matched Jang et al. 2026 adult cell type for each fetal L1 cell type.
-# NPC has no adult equivalent (no progenitors in the adult cortex).
-jang_label_match <- c(
-  "Glu-UL"    = "Ext",
-  "Glu-DL"    = "Ext",
-  "GABA"      = "IN",
-  "NPC"       = NA_character_,
-  "MG"        = "MG",
-  "OPC"       = "OPC",
-  "Endo-Peri" = "End"
+# A priori matched Jang et al. 2026 adult cell type for each fetal L1 cell type
+# (config null -> NA: NPC has no adult equivalent)
+jang_label_match <- snakemake@params[["jang_label_match"]]
+jang_label_match <- setNames(
+  vapply(jang_label_match, function(x) if (is.null(x)) NA_character_ else x, character(1)),
+  names(jang_label_match)
 )
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("n_cell_types", "geno_pc", "norm_method", "output_universe"),
-  value    = c(length(cell_types), geno_pc, norm_method, output_universe)) |>
+  variable = c("n_cell_types", "cell_types_L1", "geno_pc", "norm_method", "eqtl_fdr",
+               "output_universe"),
+  value    = c(length(cell_types), paste(cell_types_L1, collapse = ", "), geno_pc,
+               norm_method, eqtl_fdr, output_universe)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -95,7 +95,7 @@ read_sig_eqtl <- function(cell_type, file_path) {
   }
 
   read_tsv(file_path, show_col_types = FALSE) %>%
-    filter(!is.na(qval) & qval < 0.05) %>%
+    filter(!is.na(qval) & qval < eqtl_fdr) %>%
     select(variant_id, phenotype_id, slope, slope_se, af, qval) %>%
     mutate(cell_type = cell_type)
 }

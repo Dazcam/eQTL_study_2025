@@ -24,6 +24,8 @@
 #            pvar_file       our genotype pvar (REF/ALT per rsID)
 #            cell_types      fetal cell types, same order as the files (params)
 #            fetal_l1        fetal L1 cell types (params)
+#            jang_order      Jang L1 order for the fetal -> adult matrix (params)
+#            fdr_thresh      qval threshold for discovery sets (params)
 #
 # Outputs:   output_file  rds list: fetal_vs_fetal, fetal_vs_adult (incl.
 #                         allele_status), discovery_counts, settings
@@ -69,8 +71,7 @@ pvar_file      <- snakemake@input[["pvar_file"]]
 output_file    <- snakemake@output[[1]]
 cell_types     <- snakemake@params[["cell_types"]]      # all fetal (L1+L2), no pseudotime bins
 fetal_l1       <- snakemake@params[["fetal_l1"]]        # 7 fetal L1 types
-
-FDR_THRESH <- 0.05
+FDR_THRESH     <- snakemake@params[["fdr_thresh"]]
 
 # Preserve cell_type <-> file correspondence and verify it from the file names,
 # so an ordering mismatch between helpers fails loudly instead of silently
@@ -83,7 +84,7 @@ stopifnot(all(startsWith(basename(qtl_perm_files), paste0(cell_types, "_"))),
 
 jang_types <- sub("_eqtl_full_assoc\\.tsv\\.gz$", "", basename(jang_files))
 names(jang_files) <- jang_types
-jang_order <- intersect(c("Ext", "IN", "MG", "OPC", "End", "Ast", "OD"), jang_types)
+jang_order <- intersect(unlist(snakemake@params[["jang_order"]]), jang_types)
 stopifnot(length(jang_order) == length(jang_types))
 
 stopifnot(all(fetal_l1 %in% cell_types))
