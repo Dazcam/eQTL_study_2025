@@ -1,0 +1,376 @@
+---
+title: "Replication (bulk) report"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+params:
+  egenes_per_celltype: null
+  overlap: null
+  isoform_summary: null
+  bmark_dir: null
+---
+
+***
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(gt)
+library(cowplot)
+
+egenes_per_celltype_file <- params$egenes_per_celltype
+overlap_file             <- params$overlap
+isoform_summary_file     <- params$isoform_summary
+bmark_dir                <- params$bmark_dir
+```
+
+## Replication (bulk) pipeline steps
+
+***
+
+1. `extract_unique_egenes`: Extract unique FDR-sig eGenes across all L1+L2+pseudotime cell types
+2. `overlap_obrien`: Overlap unique fetal eGenes against O'Brien 2018 bulk gene- and transcript-level significant eQTL
+3. `isoform_eqtl_comparison`: Compare fetal eGenes against bulk transcript-level eQTL for evidence of isoform-specific regulation
+4. `repl_bulk_report`: Summarise replication (bulk) results
+
+***
+
+## Results {.tabset}
+
+### Bulk overlap {.tabset}
+
+***
+
+```{r load-and-join, echo = FALSE, message = FALSE, warning = FALSE}
+# egenes_per_celltype: one row per (cell_type, eGene) -- which cell type(s)
+# each eGene was significant in.
+# overlap: one row per unique eGene ACROSS all cell types -- whether it's
+# gene-/transcript-bulk significant, no cell_type column at all.
+# Joined here (not a separate pipeline rule -- both inputs are already
+# tracked outputs, and this is a plain join + group_by/summarise, the same
+# complexity as the summary tables below).
+egenes_per_celltype <- read_tsv(egenes_per_celltype_file, show_col_types = FALSE)
+overlap             <- read_tsv(overlap_file, show_col_types = FALSE)
+
+joined <- egenes_per_celltype |>
+  left_join(overlap, by = "phenotype_id")
+
+n_unmatched <- sum(is.na(joined$in_gene_bulk))
+if (n_unmatched > 0) {
+  warning(n_unmatched, " (cell_type, phenotype_id) rows had no matching overlap record -- ",
+          "check egenes_per_celltype and overlap came from the same extract_unique_egenes run.")
+}
+
+celltype_overlap <- joined |>
+  group_by(cell_type, level) |>
+  summarise(
+    n_egenes                  = n_distinct(phenotype_id),
+    n_gene_bulk_overlap       = sum(in_gene_bulk, na.rm = TRUE),
+    n_transcript_bulk_overlap = sum(in_transcript_bulk, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# --- Custom colour palette -- identical to the LDSR report's, so cell types
+# read the same colour across every report in this project.
+custom_palette <- c(
+  'Glu-UL' = '#4363d8',
+  'Glu-DL' = '#00B6EB',
+  'NPC' = '#FF5959',
+  'GABA' = '#3CBB75FF',
+  'Endo-Peri' = '#B200ED',
+  'MG' = '#F58231',
+  'OPC' = '#FDE725FF',
+  'Trajectory-to-Glu-UL' = '#E91E8C',
+  'Trajectory-to-Glu-DL' = '#2F4F4F'
+)
+
+# Dependency-free lighten (base R col2rgb/rgb) -- avoids requiring the
+# colorspace package just for this one report.
+lighten_colour <- function(hex, amount = 0.55) {
+  rgb_mat <- col2rgb(hex)
+  rgb_light <- rgb_mat + (255 - rgb_mat) * amount
+  rgb(rgb_light[1, ], rgb_light[2, ], rgb_light[3, ], maxColorValue = 255)
+}
+
+# --- Family / trajectory detection, matching the LDSR report's logic exactly
+# (trajectory check BEFORE the family cascade, since "NPC-to-Glu-UL-Q4-Bin1"
+# contains "Glu-UL" as a substring and would otherwise be mis-classified).
+celltype_overlap <- celltype_overlap |>
+  mutate(
+    is_trajectory = str_detect(cell_type, "-to-"),
+    main_type = case_when(
+      is_trajectory & str_detect(cell_type, "to-Glu-UL") ~ "Trajectory-to-Glu-UL",
+      is_trajectory & str_detect(cell_type, "to-Glu-DL") ~ "Trajectory-to-Glu-DL",
+      str_detect(cell_type, "Glu-UL") ~ "Glu-UL",
+      str_detect(cell_type, "Glu-DL") ~ "Glu-DL",
+      str_detect(cell_type, "GABA") ~ "GABA",
+      str_detect(cell_type, "NPC") ~ "NPC",
+      str_detect(cell_type, "OPC") ~ "OPC",
+      str_detect(cell_type, "MG") ~ "MG",
+      str_detect(cell_type, "Endo-Peri") ~ "Endo-Peri",
+      TRUE ~ cell_type
+    )
+  )
+
+# --- x-axis order: 3 LEVEL blocks (L1, L2, pseudotime), family order within
+# each block (not family-interleaved across the whole axis).
+l1_order <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "Endo-Peri", "MG", "OPC")
+l2_order <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
+              "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
+              "GABA-0", "GABA-1", "GABA-2",
+              "NPC-0", "NPC-1", "NPC-2")
+pt_order <- c(sort(grep("^NPC-to-Glu-UL", celltype_overlap$cell_type, value = TRUE)),
+              sort(grep("^NPC-to-Glu-DL", celltype_overlap$cell_type, value = TRUE)))
+
+cell_order <- c(l1_order, l2_order, pt_order)
+cell_order <- cell_order[cell_order %in% celltype_overlap$cell_type]
+
+celltype_overlap <- celltype_overlap |>
+  mutate(cell_type = factor(cell_type, levels = cell_order))
+
+# x position: sequential within a block, with a gap ONLY at the 2 block
+# boundaries (L1->L2, L2->pseudotime) -- not at every family transition.
+block_order <- celltype_overlap |>
+  arrange(cell_type) |>
+  distinct(cell_type, level) |>
+  mutate(level = factor(level, levels = c("L1", "L2", "pseudotime"))) |>
+  arrange(level, cell_type) |>
+  mutate(
+    block_change = level != lag(level, default = first(level)),
+    x_pos = row_number() + cumsum(block_change) * 2
+  )
+
+celltype_overlap <- celltype_overlap |>
+  left_join(block_order |> select(cell_type, x_pos), by = "cell_type")
+
+# Two SOLID bar layers, dark drawn first, light drawn second on top (light
+# bar is shorter, so it renders as the bottom portion of the same bar) --
+# both with black outlines. Theme styling lifted from the LDSR report's plot.
+bar_width <- 0.8
+
+plot_overlap_bar <- function(dat, overlap_col, title) {
+  dat <- dat |> rename(overlap_n = all_of(overlap_col))
+  light_fill <- lighten_colour(custom_palette[as.character(dat$main_type)], amount = 0.55)
+
+  ggplot(dat, aes(x = x_pos)) +
+    geom_col(aes(y = n_egenes, fill = main_type), width = bar_width, colour = "black") +
+    geom_col(aes(y = overlap_n), fill = light_fill, width = bar_width, colour = "black") +
+    geom_text(aes(y = n_egenes, label = n_egenes), vjust = -0.6, size = 3) +
+    geom_text(aes(y = overlap_n, label = overlap_n), vjust = -0.6, size = 2.8, colour = "grey20") +
+    scale_x_continuous(breaks = block_order$x_pos, labels = block_order$cell_type) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+    scale_fill_manual(values = custom_palette, name = "Cell Type") +
+    theme_minimal(base_size = 12) +
+    theme(
+      axis.text.y = element_text(size = 10),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.spacing = unit(1.2, "lines"),
+      strip.text = element_text(face = "bold"),
+      legend.position = "none"
+    ) +
+    labs(x = NULL, y = "eGenes", title = title)
+}
+```
+
+***
+
+#### Gene-level overlap
+
+Dark bar: total unique eGenes per cell type. Light overlay: of those, how
+many also significant in O'Brien et al. 2018's gene-level bulk analysis
+(TblS2).
+
+```{r gene-bulk-plot, echo = FALSE, message = FALSE, warning = FALSE, fig.width=14, fig.height=6}
+plot_overlap_bar(celltype_overlap, "n_gene_bulk_overlap",
+                  "Fetal eGenes overlapping O'Brien gene-level bulk eQTL")
+```
+
+***
+
+#### Transcript-level overlap
+
+Dark bar: total unique eGenes per cell type. Light overlay: of those, how
+many also significant (gene-deduplicated) in O'Brien et al. 2018's
+transcript-level bulk analysis (TblS3).
+
+```{r transcript-bulk-plot, echo = FALSE, message = FALSE, warning = FALSE, fig.width=14, fig.height=6}
+plot_overlap_bar(celltype_overlap, "n_transcript_bulk_overlap",
+                  "Fetal eGenes overlapping O'Brien transcript-level bulk eQTL")
+```
+
+***
+
+#### Summary table
+
+```{r overlap-summary-table, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(
+  Metric = c("Total unique fetal eGenes", "Overlapping O'Brien gene-level bulk (TblS2)",
+             "Overlapping O'Brien transcript-level bulk (TblS3)", "Overlapping both"),
+  N = c(nrow(overlap),
+        sum(overlap$in_gene_bulk),
+        sum(overlap$in_transcript_bulk),
+        sum(overlap$in_gene_bulk & overlap$in_transcript_bulk))
+) |>
+  gt() |>
+  tab_header(title = "O'Brien 2018 bulk overlap summary")
+```
+
+***
+
+### Isoform comparison {.tabset}
+
+***
+
+#### Summary table
+
+```{r isoform-summary-table, echo = FALSE, message = FALSE, warning = FALSE}
+isoform_summary <- read_tsv(isoform_summary_file, show_col_types = FALSE)
+
+isoform_summary |>
+  count(pattern, name = "N") |>
+  mutate(Proportion = round(N / sum(N), 3)) |>
+  arrange(desc(N)) |>
+  gt() |>
+  tab_header(title = "Isoform pattern classification",
+             subtitle = "Fetal eGene x eSNP pairs vs O'Brien transcript-level bulk eQTL")
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+***
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+files <- list.files(bmark_dir, pattern = "replication_bulk.*\\.txt", full.names = TRUE)
+
+known_rules <- c(
+  "extract_unique_egenes",
+  "overlap_obrien",
+  "isoform_eqtl_comparison",
+  "report"
+)
+known_rules <- known_rules[order(-nchar(known_rules))]
+
+match_rule <- function(rule_full, known_rules) {
+  hit <- known_rules[str_starts(rule_full, known_rules)]
+  if (length(hit) > 0) hit[1] else rule_full
+}
+
+benchmarks <- map_dfr(files, function(f) {
+  df <- read.table(f, header = TRUE, sep = "\t")
+  fname <- basename(f)
+  parts <- strsplit(fname, "\\.")[[1]]
+  rule_full <- parts[2]
+  rule <- match_rule(rule_full, known_rules)
+
+  tibble(
+    file = f,
+    rule = rule,
+    runtime_sec = df$s,
+    runtime_hms = df$h.m.s.,
+    max_rss = df$max_rss
+  )
+})
+
+summary <- benchmarks %>%
+  group_by(rule) %>%
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  arrange(rule)
+
+summary %>%
+  gt() %>%
+  tab_header(
+    title = "Benchmarking",
+    subtitle = "Means and SD across replicates"
+  ) %>%
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) %>%
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) %>%
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+***
+
+#### Plot
+
+***
+
+```{r runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = pmax(mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min), 0),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = pmax(mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb), 0),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+```
