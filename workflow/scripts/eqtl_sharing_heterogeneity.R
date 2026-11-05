@@ -353,15 +353,15 @@ message("\n--- Population funnel ---\n")
 
 funnel <- tibble(
   stage = c(
-    "B: unique (gene, SNP) pairs classified testable_specific",
-    "C: unique pairs after collapsing to single fetal reference row",
-    "C: joined rows (1 fetal row/pair x all tested adult comparisons)",
-    "C: dropped -- unresolved allele harmonization",
-    "C: usable rows entering Q-test",
-    "C: unique (gene, SNP) pairs among usable rows",
-    "C: heterogeneous rows (FDR<thresh)",
-    "C: unique (gene, SNP) pairs heterogeneous in ALL tested comparisons (stringent)",
-    "C: of which also magnitude-consistent (final, fed to OCR)"
+    "unique (gene, SNP) pairs classified testable_specific",
+    "unique pairs after collapsing to single fetal reference row",
+    "joined rows (1 fetal row/pair x all tested adult comparisons)",
+    "dropped -- unresolved allele harmonization",
+    "usable rows entering Q-test",
+    "unique (gene, SNP) pairs among usable rows",
+    "heterogeneous rows (FDR<thresh)",
+    "unique (gene, SNP) pairs heterogeneous in ALL tested comparisons (stringent)",
+    "of which also magnitude-consistent (final, fed to OCR)"
   ),
   N = c(n_pairs_specific_B, n_unique_pairs_specific, n_joined,
         n_allele_dropped, n_usable, n_unique_pairs_usable, n_het_rows, n_het_pairs,

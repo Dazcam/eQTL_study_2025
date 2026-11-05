@@ -1,5 +1,3 @@
-import os
-
 configfile: "../config/config.yaml"
 
 DS          = config["dev_specificity"]
@@ -13,9 +11,6 @@ DEVSPEC_FETAL_L1   = config["fetal_l1_types"]
 # Jang et al. 2026 association files (downloaded by setup get_jang_singlebrain)
 JANG_FULL = config["setup"]["get_jang_singlebrain"]["full_assoc"]
 JANG_TOP  = config["setup"]["get_jang_singlebrain"]["top_assoc"]
-
-# Report: tensorQTL perm output directory (until the report params are rebuilt)
-PERM_DIR = os.path.dirname(os.path.dirname(config["tensorQTL"]["tensorqtl_perm"]["output"])) + "/"
 
 
 def perm_files(cell_types):
@@ -237,33 +232,55 @@ rule eqtl_effect_replication:
     log:    DS["eqtl_effect_replication"]["log"]
     script: DS["eqtl_effect_replication"]["script"]
 
-# Report params are rebuilt with the report (next stage)
+# Benchmark files of the current rules (read by the report if present)
+DEVSPEC_BENCHMARKS = [(rule, DS[key]["benchmark"]) for rule, key in [
+    ("extract_eqtl_universe", "extract_universe"),
+    ("classify_eqtl_specificity", "classify_specificity"),
+    ("heterogeneity_test", "heterogeneity_test"),
+    ("prep_ld_clump_input", "prep_ld_clump_input"),
+    ("run_ld_clump", "run_ld_clump"),
+    ("parse_ld_clump", "parse_ld_clump"),
+    ("ocr_enrich", "ocr_enrich"),
+    ("glm_enrich", "glm_enrich"),
+    ("eqtl_effect_sizes", "eqtl_effects"),
+    ("eqtl_effect_replication", "eqtl_effect_replication"),
+    ("dev_specificity_report", "report"),
+]]
+
+
 rule dev_specificity_report:
-    input:  eqtl_universe    = rules.extract_eqtl_universe.output[0],
-            classification   = rules.classify_eqtl_specificity.output[0],
-            heterogeneity_test = rules.heterogeneity_test.output[0],
-            ocr_enrich       = rules.ocr_enrich.output[0],
-            eqtl_effects     = rules.eqtl_effect_sizes.output[0],
-            beta_correlation = config["qtl_rep"]["beta_correlation"]["out_file"],
-            gene_lookup      = config["gene_lookup"],
-            rmd_script       = config["dev_specificity"]["report"]["script"]
-    output: config["dev_specificity"]["report"]["html"]
-    params: eqtl_universe    = lambda wc, input: "../" + input.eqtl_universe,
-            classification   = lambda wc, input: "../" + input.classification,
-            heterogeneity_test = lambda wc, input: "../" + input.heterogeneity_test,
-            ocr_enrich       = lambda wc, input: "../" + input.ocr_enrich,
-            eqtl_effects     = lambda wc, input: "../" + input.eqtl_effects,
-            beta_correlation = lambda wc, input: "../" + input.beta_correlation,
-            pi1_dir     = "../" + config["dev_specificity"]["report"]["pi1_dir"],
-            perm_dir    = "../" + PERM_DIR,
-            gene_lookup = "../" + config["gene_lookup"],
-            bmark_dir   = "../" + config["dev_specificity"]["report"]["bmark_dir"],
-            output_file = config["dev_specificity"]["report"]["output_file"]
+    input:  eqtl_universe           = rules.extract_eqtl_universe.output[0],
+            classification          = rules.classify_eqtl_specificity.output[0],
+            heterogeneity_test      = rules.heterogeneity_test.output[0],
+            ocr_enrich              = rules.ocr_enrich.output[0],
+            glm_enrich              = rules.glm_enrich.output[0],
+            eqtl_effects            = rules.eqtl_effect_sizes.output[0],
+            eqtl_effect_replication = rules.eqtl_effect_replication.output[0],
+            gene_lookup             = config["gene_lookup"],
+            rmd_script              = DS["report"]["script"]
+    output: DS["report"]["html"]
+    params: eqtl_universe           = lambda wc, input: "../" + input.eqtl_universe,
+            classification          = lambda wc, input: "../" + input.classification,
+            heterogeneity_test      = lambda wc, input: "../" + input.heterogeneity_test,
+            ocr_enrich              = lambda wc, input: "../" + input.ocr_enrich,
+            glm_enrich              = lambda wc, input: "../" + input.glm_enrich,
+            eqtl_effects            = lambda wc, input: "../" + input.eqtl_effects,
+            eqtl_effect_replication = lambda wc, input: "../" + input.eqtl_effect_replication,
+            gene_lookup             = lambda wc, input: "../" + input.gene_lookup,
+            fetal_l1    = ",".join(DEVSPEC_FETAL_L1),
+            jang_l1     = ",".join(config["jang_l1_order"]),
+            eqtl_fdr    = config["eqtl_fdr"],
+            fdr_thresh  = DS["heterogeneity_test"]["fdr_thresh"],
+            clump_kb    = DS["run_ld_clump"]["clump_kb"],
+            clump_r2    = DS["run_ld_clump"]["clump_r2"],
+            seed        = DS["ocr_enrich"]["seed"],
+            benchmarks  = ",".join(f"{rule}=../{path}" for rule, path in DEVSPEC_BENCHMARKS),
+            output_file = DS["report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 64000, time = "01:00:00"
-    message: "Generate developmental specificity report"
-    benchmark: "reports/benchmarks/dev_specificity.report.txt"
-    log: config["dev_specificity"]["report"]["log"]
+    message: "Generate eQTL sharing report"
+    benchmark: DS["report"]["benchmark"]
+    log:    DS["report"]["log"]
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
@@ -272,10 +289,16 @@ rule dev_specificity_report:
                           classification = '{params.classification}', \
                           heterogeneity_test = '{params.heterogeneity_test}', \
                           ocr_enrich = '{params.ocr_enrich}', \
+                          glm_enrich = '{params.glm_enrich}', \
                           eqtl_effects = '{params.eqtl_effects}', \
-                          beta_correlation = '{params.beta_correlation}', \
-                          pi1_dir = '{params.pi1_dir}', \
-                          perm_dir = '{params.perm_dir}', \
+                          eqtl_effect_replication = '{params.eqtl_effect_replication}', \
                           gene_lookup = '{params.gene_lookup}', \
-                          bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+                          fetal_l1 = '{params.fetal_l1}', \
+                          jang_l1 = '{params.jang_l1}', \
+                          eqtl_fdr = '{params.eqtl_fdr}', \
+                          fdr_thresh = '{params.fdr_thresh}', \
+                          clump_kb = '{params.clump_kb}', \
+                          clump_r2 = '{params.clump_r2}', \
+                          seed = '{params.seed}', \
+                          benchmarks = '{params.benchmarks}'))" > {log} 2>&1
         """

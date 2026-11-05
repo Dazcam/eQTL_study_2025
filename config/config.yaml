@@ -1,359 +1,1374 @@
-#--------------------------------------------------------------------------------------
-#
-#    eQTL effect sizes across fetal and adult cell types; subcluster-specific eQTL
-#
-#--------------------------------------------------------------------------------------
-#
-# Pipeline:  EQTL-SHARING | Rule: eqtl_effect_sizes (single job)
-#            Upstream:   extract_eqtl_universe; 10SMR nominal export ({ct}_nom.cis_qtl_pairs);
-#                        Jang et al. 2026 L1 full-association files
-#            Downstream: report (effect-size and subcluster tabs);
-#                        13 subcluster_specific_tbl (Supp Table 3);
-#                        14 family_heatmaps_plt (Supp Figs 3-6)
-#
-# Purpose:   For every unique fetal eGene-eSNP pair:
-#            - Get the nominal slope and P in each fetal cell type (L1 + L2) and in
-#              each Jang L1 cell type
-#            - Build a wide effect-size matrix (fetal L1 x Jang L1)
-#            - Find subcluster-specific eGenes (significant in an L2 subcluster but
-#              not its L1 parent) and supercluster-specific eGenes (significant in
-#              an L1 type but none of its subclusters)
-#
-# Inputs:    eqtl_universe_file  fetal eGene-eSNP universe (extract_eqtl_universe)
-#            nom_files           fetal nominal pairs, one per cell type (L1 + L2)
-#            jang_l1_files       Jang L1 full-association files
-#            gene_lookup_file    hg38 gene lookup (gene symbols)
-#            cell_types          fetal cell types, same order as nom_files (params)
-#            cell_types_L1       fetal L1 cell types (params)
-#            jang_l1_types       Jang L1 types, same order as jang_l1_files (params)
-#
-# Outputs:   output_file  rds list: effect_size_matrix, effect_size_long,
-#                         subcluster_specific, supercluster_specific
-#
-# Notes:     Jang effect sizes are fixed_beta, sign-normalised to alt
-#            (align_jang_beta()); Jang nominal P is Random_P.
-#
-#--------------------------------------------------------------------------------------
-
-## Set up logging for Snakemake
-if (exists("snakemake")) {
-  log_smk <- function() {
-    if (exists("snakemake") && length(snakemake@log) != 0) {
-      log <- file(snakemake@log[[1]], open = "wt")
-      sink(log, append = TRUE)
-      sink(log, append = TRUE, type = "message")
-    }
-  }
-  log_smk()
-}
-
-message("\n\nExtracting eQTL effect sizes across fetal (L1) and Jang adult (L1) cell types ...")
-
-##  Load packages, functions and variables  -------------------------------------------
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(data.table)
-})
-
-# Load functions
-source(file.path(snakemake@scriptdir, "repl_sc_functions.R"))
-source(file.path(snakemake@scriptdir, "eqtl_sharing_functions.R"))
-
-# Input and output paths
-eqtl_universe_file <- snakemake@input[["eqtl_universe"]]
-nom_files          <- snakemake@input[["nom_files"]]        # all 19 fetal cell types
-jang_l1_files      <- snakemake@input[["jang_l1_files"]]    # Jang's 7 L1-pooled types only
-output_file        <- snakemake@output[[1]]
-cell_types         <- snakemake@params[["cell_types"]]       # all 19 fetal (L1+L2)
-jang_l1_types      <- snakemake@params[["jang_l1_types"]]    # 7: Ast, End, Ext, IN, MG, OD, OPC
-
-names(nom_files)     <- cell_types
-names(jang_l1_files) <- jang_l1_types
-
-gene_lookup_file   <- snakemake@input[["gene_lookup"]]  # symbols for display; matching is on ENSG
-cell_types_L1      <- unlist(snakemake@params[["cell_types_L1"]])
-
-# Print what each variable is set to
-message("\nVariables")
-message("============================")
-tibble(
-  variable = c("eqtl_universe_file", "n_nom_files", "n_jang_l1_files",
-               "gene_lookup_file", "output_file"),
-  value    = c(eqtl_universe_file, length(nom_files), length(jang_l1_files),
-               gene_lookup_file, output_file)) |>
-  knitr::kable(format = "simple") |>
-  cat(sep = "\n")
-message("============================\n")
-
-##  Load gene lookup and universe  ----------------------------------------------------
-
-message("Loading gene symbol lookup ...")
-gene_lookup <- fread(gene_lookup_file, select = c("ensembl_gene_id", "external_gene_name"),
-                     showProgress = FALSE) %>%
-  distinct(ensembl_gene_id, .keep_all = TRUE)
-message("  Gene symbols loaded: ", nrow(gene_lookup))
-
-message("Loading eGene/eSNP universe ...")
-eqtl_universe <- read_rds(eqtl_universe_file)
-message("  Rows: ", nrow(eqtl_universe), " | Unique eGenes: ", n_distinct(eqtl_universe$phenotype_id))
-
-# Unique pairs for the effect size matrix
-unique_pairs <- eqtl_universe %>%
-  distinct(phenotype_id, variant_id) %>%
-  left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) %>%
-  rename(gene_symbol = external_gene_name)
-
-message("  Unique (gene, SNP) pairs: ", nrow(unique_pairs))
-message("  Pairs with gene symbol: ", sum(!is.na(unique_pairs$gene_symbol)))
-
-# Convert to data.table for fast keyed joins
-pairs_dt <- as.data.table(unique_pairs[, c("phenotype_id", "variant_id")])
-setkey(pairs_dt, phenotype_id, variant_id)
-
-##  Fetal effect sizes (all L1 + L2 cell types)  --------------------------------------
-
-message("\n--- Extracting fetal nominal effect sizes (all 19 cell types) ---\n")
-
-fetal_effects <- list()
-
-for (ct in cell_types) {
-  message("Reading nominal file for: ", ct, " (", nom_files[[ct]], ")")
-
-  nom_dt <- fread(
-    nom_files[[ct]],
-    select = c("phenotype_id", "variant_id", "slope", "slope_se", "pval_nominal"),
-    showProgress = FALSE
-  )
-  setkey(nom_dt, phenotype_id, variant_id)
-
-  matched <- nom_dt[pairs_dt, nomatch = 0L]
-  message("  Matched pairs: ", nrow(matched))
-
-  fetal_effects[[ct]] <- matched[, .(phenotype_id, variant_id,
-                                      slope, slope_se, pval_nominal,
-                                      cell_type = ct)]
-
-  rm(nom_dt)
-  gc()
-}
-
-fetal_effects_long <- rbindlist(fetal_effects)
-message("\nTotal fetal effect rows: ", nrow(fetal_effects_long))
-
-##  Jang adult L1 effect sizes  -------------------------------------------------------
-
-message("\n--- Extracting Jang adult (L1-pooled) nominal effect sizes ---\n")
-
-jang_effects <- list()
-
-for (jct in jang_l1_types) {
-  message("Reading Jang L1 file for: ", jct, " (", jang_l1_files[[jct]], ")")
-
-  jang_dt <- fread(
-    jang_l1_files[[jct]],
-    select = c("feature", "variant_id", "ref", "alt", "Allele", "fixed_beta", "fixed_sd",
-               "Fixed_P", "Random_P"),
-    showProgress = FALSE
-  )
-
-  # Drop placeholder-cohort rows (Fixed_P == Random_P == 1)
-  jang_dt <- filter_jang_artifacts(jang_dt, "Jang full-association")
-  jang_dt[, Fixed_P := NULL]
-
-  jang_dt[, gene_id := sub("\\..*", "", feature)]
-  jang_dt <- jang_dt[grepl("^rs", variant_id) & grepl("^ENSG", gene_id)]
-
-  # Jang beta is relative to Allele; align to alt
-  jang_dt[, beta := align_jang_beta(fixed_beta, Allele, alt)]
-
-  setkey(jang_dt, gene_id, variant_id)
-
-  pairs_jang <- copy(pairs_dt)
-  setnames(pairs_jang, c("phenotype_id", "variant_id"), c("gene_id", "variant_id"))
-  setkey(pairs_jang, gene_id, variant_id)
-
-  matched <- jang_dt[pairs_jang, nomatch = 0L]
-  message("  Matched pairs: ", nrow(matched))
-
-  jang_effects[[jct]] <- matched[, .(phenotype_id = gene_id, variant_id,
-                                      slope = beta, slope_se = fixed_sd,
-                                      pval_nominal = Random_P,
-                                      cell_type = paste0("Jang_", jct))]
-
-  rm(jang_dt, pairs_jang)
-  gc()
-}
-
-jang_effects_long <- rbindlist(jang_effects)
-message("\nTotal Jang effect rows: ", nrow(jang_effects_long))
-
-##  Wide effect-size matrix (fetal L1 x Jang L1)  -------------------------------------
-
-message("\n--- Building wide effect-size matrix (fetal L1 x Jang L1-pooled only) ---\n")
-
-fetal_l1_effects_long <- fetal_effects_long[cell_type %in% cell_types_L1]
-message("  Fetal L1 rows retained for matrix: ", nrow(fetal_l1_effects_long),
-        " (of ", nrow(fetal_effects_long), " total fetal rows -- L2 excluded from matrix, still",
-        " retained in fetal_effects_long for subcluster analysis below)")
-
-all_effects_long_matrix <- rbind(fetal_l1_effects_long, jang_effects_long)
-
-effect_size_matrix <- unique_pairs %>%
-  left_join(
-    as_tibble(all_effects_long_matrix) %>%
-      select(phenotype_id, variant_id, cell_type, slope) %>%
-      pivot_wider(names_from = cell_type, values_from = slope, names_prefix = "slope_"),
-    by = c("phenotype_id", "variant_id")
-  )
-
-message("  Effect size matrix: ", nrow(effect_size_matrix), " rows x ",
-        ncol(effect_size_matrix), " columns")
-
-# Quick correlation check for logging
-slope_cols <- grep("^slope_", names(effect_size_matrix), value = TRUE)
-if (length(slope_cols) >= 2) {
-  slope_mat <- as.matrix(effect_size_matrix[, slope_cols])
-  cor_mat <- cor(slope_mat, use = "pairwise.complete.obs")
-  message("\nEffect-size correlation matrix (pairwise complete):")
-  print(round(cor_mat, 3))
-}
-
-##  Subcluster-specific eQTL (L2 sig., parent L1 not sig.)  ---------------------------
-
-message("\n--- Identifying subcluster-specific eQTL ---\n")
-
-cell_types_L2 <- setdiff(cell_types, cell_types_L1)
-
-# Get the set of FDR<0.05 eGenes per cell type from the universe
-sig_per_ct <- eqtl_universe %>%
-  distinct(cell_type, phenotype_id, variant_id)
-
-subcluster_specific <- list()
-
-for (l2 in cell_types_L2) {
-  parent <- get_parent_cell_type(l2, cell_types_L1)
-
-  # Pairs significant in L2
-  l2_pairs <- sig_per_ct %>% filter(cell_type == l2)
-  # Pairs significant in parent L1
-  parent_pairs <- sig_per_ct %>% filter(cell_type == parent)
-
-  # L2-specific: gene significant in L2 but not in parent L1
-  l2_specific_genes <- setdiff(l2_pairs$phenotype_id, parent_pairs$phenotype_id)
-
-  if (length(l2_specific_genes) == 0) {
-    message("  ", l2, " → ", parent, ": no subcluster-specific eGenes")
-    next
-  }
-
-  message("  ", l2, " → ", parent, ": ", length(l2_specific_genes), " subcluster-specific eGenes")
-
-  # Get the L2 perm stats for these genes (slope/qval from permutation lead SNP)
-  l2_stats <- eqtl_universe %>%
-    filter(cell_type == l2, phenotype_id %in% l2_specific_genes) %>%
-    select(phenotype_id, variant_id, slope_L2 = slope, qval_L2 = qval)
-
-  # L2's own nominal stats (SE, raw p-value) for the same lead SNP, sourced from
-  # fetal_effects_long (already built in step 2 for every cell type) rather than
-  # re-reading nominal files (same source as parent_nom below)
-  l2_nom <- fetal_effects_long[
-    cell_type == l2 & phenotype_id %in% l2_specific_genes
-  ]
-
-  # Nominal stats from parent L1 for the same (gene, SNP) pairs
-  parent_nom <- fetal_effects_long[
-    cell_type == parent & phenotype_id %in% l2_specific_genes
-  ]
-
-  l2_with_parent <- l2_stats %>%
-    left_join(
-      as_tibble(l2_nom) %>%
-        select(phenotype_id, variant_id,
-               se_L2 = slope_se, pval_nom_L2 = pval_nominal),
-      by = c("phenotype_id", "variant_id")
-    ) %>%
-    left_join(
-      as_tibble(parent_nom) %>%
-        select(phenotype_id, variant_id,
-               slope_parent = slope, se_parent = slope_se, pval_nom_parent = pval_nominal),
-      by = c("phenotype_id", "variant_id")
-    ) %>%
-    left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) %>%
-    rename(gene_symbol = external_gene_name) %>%
-    mutate(
-      cell_type_L2 = l2,
-      parent_L1 = parent
-    )
-
-  subcluster_specific[[l2]] <- l2_with_parent
-}
-
-subcluster_tbl <- bind_rows(subcluster_specific)
-message("\nTotal subcluster-specific eGene-eSNP rows: ", nrow(subcluster_tbl))
-
-# Also identify L1-specific (in L1 but no L2 subtype has it)
-message("\n--- Identifying supercluster-specific eQTL (L1 only, no L2) ---\n")
-
-supercluster_specific <- list()
-
-for (l1 in cell_types_L1) {
-  l2_children <- cell_types_L2[sapply(cell_types_L2, get_parent_cell_type, cell_types_L1 = cell_types_L1) == l1]
-
-  if (length(l2_children) == 0) next
-
-  l1_genes <- sig_per_ct %>% filter(cell_type == l1) %>% pull(phenotype_id) %>% unique()
-  l2_genes <- sig_per_ct %>% filter(cell_type %in% l2_children) %>% pull(phenotype_id) %>% unique()
-
-  l1_only <- setdiff(l1_genes, l2_genes)
-
-  if (length(l1_only) > 0) {
-    message("  ", l1, ": ", length(l1_only), " eGenes significant in L1 but no L2 subtype")
-
-    supercluster_specific[[l1]] <- eqtl_universe %>%
-      filter(cell_type == l1, phenotype_id %in% l1_only) %>%
-      select(phenotype_id, variant_id, slope_L1 = slope, qval_L1 = qval) %>%
-      left_join(gene_lookup, by = c("phenotype_id" = "ensembl_gene_id")) %>%
-      rename(gene_symbol = external_gene_name) %>%
-      mutate(parent_L1 = l1)
-  }
-}
-
-supercluster_tbl <- bind_rows(supercluster_specific)
-message("Total supercluster-specific eGene-eSNP rows: ", nrow(supercluster_tbl))
-
-##  Summary  --------------------------------------------------------------------------
-
-message("\n--- Summary ---\n")
-
-if (nrow(subcluster_tbl) > 0) {
-  message("Subcluster-specific eGenes by L2 cell type:")
-  print(subcluster_tbl %>% count(cell_type_L2, parent_L1, name = "n_specific_eGenes"))
-
-  message("\nMedian nominal p-value of subcluster-specific eGenes in parent L1:")
-  print(
-    subcluster_tbl %>%
-      group_by(cell_type_L2) %>%
-      summarise(
-        median_pval_parent = median(pval_nom_parent, na.rm = TRUE),
-        prop_same_direction = mean(sign(slope_L2) == sign(slope_parent), na.rm = TRUE),
-        prop_nom_sig_parent = mean(pval_nom_parent < 0.05, na.rm = TRUE),
-        .groups = "drop"
-      )
-  )
-}
-
-##  Write output  ---------------------------------------------------------------------
-
-write_rds(
-  list(
-    effect_size_matrix      = effect_size_matrix,
-    effect_size_long        = as_tibble(rbind(fetal_effects_long, jang_effects_long)),
-    subcluster_specific     = subcluster_tbl,
-    supercluster_specific   = supercluster_tbl
-  ),
-  output_file
-)
-message("\nEffect sizes and subcluster analysis written to: ", output_file)
-
-#--------------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------------
+# ------------  GLOBAL  ----------------
+
+plate:
+#  - plate1
+#  - plate2
+  - plate3
+
+MERGE_FQ_JSON: ../config/samples_{plate}.json
+BAM_FILES: ../config/bam_files.json
+
+root_dir: /scratch/c.c1477909/eQTL_study_2025/
+
+cell_types: 
+  - "Glu-UL"
+  - "Glu-DL"
+  - "NPC"
+  - "GABA"
+  - "Endo-Peri"
+  - "OPC" 
+  - "MG"
+  - "Glu-UL-0"
+  - "Glu-UL-1"
+  - "Glu-UL-2"
+  - "Glu-DL-0"
+  - "Glu-DL-1"
+  - "Glu-DL-2"
+  - "GABA-0"
+  - "GABA-1"
+  - "GABA-2"
+  - "NPC-0"
+  - "NPC-1"
+  - "NPC-2"
+  - "NPC-to-Glu-DL-Q4-Bin1"
+  - "NPC-to-Glu-DL-Q4-Bin2"
+  - "NPC-to-Glu-DL-Q4-Bin3"
+  - "NPC-to-Glu-DL-Q4-Bin4"
+  - "NPC-to-Glu-UL-Q4-Bin1"
+  - "NPC-to-Glu-UL-Q4-Bin2"
+  - "NPC-to-Glu-UL-Q4-Bin3"
+  - "NPC-to-Glu-UL-Q4-Bin4"
+
+exp_pc_map:
+  Glu-UL: 50
+  Glu-DL: 40
+  NPC: 30
+  GABA: 30
+  Endo-Peri: 30
+  OPC: 30
+  MG: 30
+  Glu-UL-0: 30
+  Glu-UL-1: 50
+  Glu-UL-2: 40
+  Glu-DL-0: 40
+  Glu-DL-1: 40
+  Glu-DL-2: 30
+  GABA-0: 30
+  GABA-1: 40
+  GABA-2: 40
+  NPC-0: 50
+  NPC-1: 30
+  NPC-2: 20
+  NPC-to-Glu-DL-Q4-Bin1: 30
+  NPC-to-Glu-DL-Q4-Bin2: 30
+  NPC-to-Glu-DL-Q4-Bin3: 30
+  NPC-to-Glu-DL-Q4-Bin4: 40
+  NPC-to-Glu-UL-Q4-Bin1: 30
+  NPC-to-Glu-UL-Q4-Bin2: 40
+  NPC-to-Glu-UL-Q4-Bin3: 50
+  NPC-to-Glu-UL-Q4-Bin4: 50
+
+jang_cell_types:
+  - "Ast"
+  - "Ast1"
+  - "Ast2"
+  - "Ast3"
+  - "Ast4"
+  - "End"
+  - "Ext"
+  - "Ext1"
+  - "Ext2"
+  - "Ext3"
+  - "Ext4"
+  - "Ext5"
+  - "Ext6"
+  - "Ext7"
+  - "Ext8"
+  - "IN"
+  - "IN1"
+  - "IN2"
+  - "IN3"
+  - "IN4"
+  - "IN5"
+  - "IN6"
+  - "IN7"
+  - "MG"
+  - "MG1"
+  - "MG2"
+  - "MG3"
+  - "MG4"
+  - "OD"
+  - "OD1"
+  - "OD2"
+  - "OD3"
+  - "OPC"
+  - "OPC1"
+  - "OPC2"
+
+jang_l1_types:
+  - "Ast"
+  - "End"
+  - "Ext"
+  - "IN"
+  - "MG"
+  - "OD"
+  - "OPC"
+
+# Jang L1 display / matrix order: types matched to a fetal L1 type first
+jang_l1_order: ["Ext", "IN", "MG", "OPC", "End", "Ast", "OD"]
+
+# Fetal L1 cell types (06 replication and eQTL sharing)
+fetal_l1_types: ["Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri"]
+
+eqtl_fdr: 0.05
+
+window: 500000
+
+# Static resource sheets (no producing rule)
+gene_lookup: ../resources/sheets/gene_lookup_hg38.tsv
+
+susie_batches: 25
+write_full_susie: TRUE
+
+annot_types:
+  - maxCPP
+  - CS95   # Rm on freeze 2
+ 
+p_smr: 0.05
+p_heidi: 0.01
+peqtl_smr: 5.0e-8      
+smr_n_samples: 134    
+smr_window: 500
+smr_gene: 'ENSG00000214435' # is 'AS3MT'
+
+twas_run_test: FALSE
+
+gwas:
+  scz: https://figshare.com/ndownloader/files/34517828                  # PMID:35396580, EUR only
+  bpd: https://figshare.com/ndownloader/files/49760772                  # PMID:39843750
+  mdd: https://figshare.com/ndownloader/files/51487022                  # PMID:39814019
+  adhd: https://figshare.com/ndownloader/files/40036684                 # PMID:36702997
+  ocd: https://figshare.com/ndownloader/files/53357735                  # PMID:40360802
+
+mhc_region:    
+  chr: "6"
+  start: 25000000
+  end: 34000000
+
+containers:
+  genotype-qc2hrc: ../resources/containers/genotype-qc2hrc.sif
+  R: ../resources/containers/seurat5f.sif
+  r_eqtl: ../resources/containers/r_eqtl.sif
+  susie: ../resources/containers/susier.sif
+  ubuntu: ../resources/containers/ubuntu_22.04.sif
+  twas: ../resources/containers/twas.sif
+  singler: ../resources/containers/singler.sif
+  mashr: ../resources/containers/mashr.sif
+  tensorqtl: ../resources/containers/tensorqtl.sif
+
+# -------------  SETUP  ----------------
+fastq:
+  plate1:
+    - /nfs/neurocluster/sequencers/foetalRNAseq/241009_A00748_0604_AHV7W2DSXC_fastq/
+    - /nfs/neurocluster/sequencers/foetalRNAseq/240925_A00748_0596_AHL5JFDSXC_fastq/
+    - /nfs/neurocluster/biobank/sequencers-test/241009_A00748_0603_BHVF5CDSXC_fastq/
+
+  plate2:
+    - /nfs/neurocluster/biobank/sequencers-test/241023_A00748_0613_BHVC35DSXC_fastq/
+    - /nfs/neurocluster/biobank/sequencers-test/241023_A00748_0614_AHVG75DSXC_fastq/
+    - /nfs/neurocluster/biobank/sequencers-test/241028_A00748_0618_AHVFYYDSXC_fastq/
+
+  plate3:
+    - /nfs/neurocluster/sequencers2/Nick_Bray/250429_A00748_0690_AHC52JDSXF_fastq/
+    - /nfs/neurocluster/sequencers2/Nick_Bray/250702_A00748_0714_AHC3WJDSXF_fastq_attempt2/
+    - /nfs/neurocluster/sequencers2/Nick_Bray/250716_A00748_0722_AHC52WDSXF_fastq_attempt2/250716_A00748_0722_AHC52WDSXF_fastq/
+
+setup:
+  get_containers:
+    output: ../resources/containers/get_containers.done
+    log: ../results/00LOG/00SETUP/get_containers.log 
+
+  create_parse_json:
+    output: ../config/samples_{plate}.json
+    log: ../results/00LOG/00SETUP/create_parse_json_{plate}.log
+
+  liftover:
+    output: ../resources/liftover/setup_liftover.done
+    outdir: ../resources/liftover
+    log: ../results/00LOG/00SETUP/liftover.log
+
+  get_fugita_data:
+    output: ../resources/public_datasets/fugita_2024/.setup_get_fugita_data.done
+    outdir: ../resources/public_datasets/fugita_2024/
+    token: ../config/passwords/synapse.txt
+    log: ../results/00LOG/00SETUP/get_fugita_data.log
+
+
+  parse_nott_peaks:
+    xlsx_file: ../resources/public_datasets/nott_2019/nott_2019_table_s5.xlsx
+    out_file:  ../resources/public_datasets/nott_2019/nott_peaks_hg19.bed
+    log:       ../results/00LOG/00SETUP/nott_parse_peaks.log
+
+  liftover_nott_hg38:
+    chain:     ../resources/liftover/hg19ToHg38.over.chain.gz
+    output:    ../resources/public_datasets/nott_2019/nott_peaks_hg38.bed
+    unlifted:  ../resources/public_datasets/nott_2019/nott_peaks_hg38.unlifted.bed
+    log:       ../results/00LOG/00SETUP/nott_liftover.log
+
+  get_jang_singlebrain:
+    output: ../resources/public_datasets/Jang_2026/.setup_get_jang_singlebrain.done
+    outdir: ../resources/public_datasets/Jang_2026/
+    full_assoc: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_full_assoc.tsv.gz
+    top_assoc:  ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_top_assoc.tsv.gz
+    log: ../results/00LOG/00SETUP/get_jang_singlebrain.log
+  
+  get_obrien_supp:
+    output: ../resources/public_datasets/obrien_2018/obrien_2018_supp_tables.xlsx
+    web_link: https://media.springernature.com/original/springer-static/esm/art%3A10.1186%2Fs13059-018-1567-1/MediaObjects/13059_2018_1567_MOESM1_ESM.xlsx
+    log: ../results/00LOG/00SETUP/get_obrien_supp.log
+
+# -------------  PARSE (Pipeline 1) ----------------
+
+parse:
+  get_refs:
+    fa_link: "https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+    gtf_link: "https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz"
+    fa_out: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    gtf_out: ../resources/refs/Homo_sapiens.GRCh38.113.gtf.gz
+    outdir: ../resources/refs/
+    log: ../results/00LOG/01PARSE/get_refs.log
+
+  mk_ref:
+    outfile: ../resources/refs/ref.done
+    outdir: ../resources/refs/hg38
+    build: hg38
+    log: ../results/00LOG/01PARSE/mk_ref.log
+
+  cat_fqs:
+    out_r1: ../results/01PARSE/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
+    out_r2: ../results/01PARSE/MRGD_fqs/{plate}/{sample}_R2.fastq.gz
+    log_r1: ../results/00LOG/01PARSE/{plate}/cat_fqs_{sample}_R1.log
+    log_r2: ../results/00LOG/01PARSE/{plate}/cat_fqs_{sample}_R2.log
+    outdir: ../results/01PARSE/MRGD_fqs/
+
+  run_parse:
+    outfile: ../results/01PARSE/{plate}/{sample}/run.done
+    outdir: "../results/01PARSE/{plate}/{sample}"        
+    sample_list: "../config/sample-list_{plate}.txt"
+    log: ../results/00LOG/01PARSE/{plate}/run_parse_{sample}.log
+
+  run_parse_combine:
+    outfile: "../results/01PARSE/{plate}/combine/run.done"
+    outdir: "../results/01PARSE/{plate}/combine"
+    sublib_list: "../config/sublib_lst_{plate}.txt"
+    log: "../results/00LOG/01PARSE/{plate}/run_parse_combine.log"    
+
+# ------------  SCANPY (Pipeline 2) ----------------
+
+scanpy:
+  qc:
+    input: 
+      plate: ../results/01PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad
+      nb: scripts/scanpy_qc.ipynb  
+    output: ../results/02SCANPY/scanpy_qc_{plate}.html
+    nb_out: ../results/02SCANPY/scanpy_qc_{plate}_pm.ipynb
+    html_out: scanpy_qc_{plate}.html
+    benchmark: reports/benchmarks/scanpy_qc.{plate}.benchmark.txt 
+    log: ../results/00LOG/01SCANPY/scanpy_qc_{plate}.log
+
+  clustering:
+    input: scripts/scanpy_clustering.ipynb
+    output: ../results/02SCANPY/scanpy_clustering.html 
+    nb_out: ../results/02SCANPY/scanpy_clustering_pm.ipynb
+    html_out: scanpy_clustering.html
+    benchmark: reports/benchmarks/scanpy_clustering.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_clustering.log
+
+  clustering2:
+    input: scripts/scanpy_clustering2.ipynb
+    output: ../results/02SCANPY/scanpy_clustering2.html
+    nb_out: ../results/02SCANPY/scanpy_clustering2_pm.ipynb
+    html_out: scanpy_clustering2.html
+    benchmark: reports/benchmarks/scanpy_clustering2.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_clustering2.log
+
+  clustering3:
+    input: scripts/scanpy_clustering3.ipynb
+    output: ../results/02SCANPY/scanpy_clustering3.html
+    nb_out: ../results/02SCANPY/scanpy_clustering3_pm.ipynb
+    html_out: scanpy_clustering3.html
+    benchmark: reports/benchmarks/scanpy_clustering3.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_clustering3.log
+
+  annotation:
+    input: scripts/scanpy_annotation.ipynb
+    output: ../results/02SCANPY/scanpy_annotation.html
+    nb_out: ../results/02SCANPY/scanpy_annotation_pm.ipynb
+    html_out: scanpy_annotation.html
+    log: ../results/00LOG/02SCANPY/scanpy_annotation.log
+
+  pseudobulk:
+    input: scripts/scanpy_pseudobulk.ipynb
+    output: ../results/02SCANPY/scanpy_pseudobulk.html
+    nb_out: ../results/02SCANPY/scanpy_pseudobulk_pm.ipynb
+    html_out: scanpy_pseudobulk.html
+    log: ../results/00LOG/02SCANPY/scanpy_pseudobulk.log
+
+  extra:
+    input: scripts/scanpy_extra2.ipynb
+    output: ../results/02SCANPY/scanpy_extra2.html
+    nb_out: ../results/02SCANPY/scanpy_extra2_pm.ipynb
+    html_out: scanpy_extra2.html
+    log: ../results/00LOG/02SCANPY/scanpy_extra2.log
+
+  subclustering:
+    input: scripts/scanpy_subclustering.ipynb
+    output: ../results/02SCANPY/scanpy_subclustering.html
+    nb_out: ../results/02SCANPY/scanpy_subclustering_pm.ipynb
+    html_out: scanpy_subclustering.html
+    benchmark: reports/benchmarks/scanpy_subclustering.benchmark.txt
+    log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
+
+  env: "../envs/eqtl_study.yml"
+
+# ------------  GENOTYPES PRE_IMPUTATION (Pipeline 3) ----------------
+
+geno_pre_impute:
+  convert_raw:
+    input:
+      ped: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.ped
+      map: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.map
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed
+    prefix_in: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
+    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19
+    log: ../results/00LOG/03GENOTYPES-PRE/convert_raw.log
+
+  add_sex_to_fam:
+    sexfile: ../resources/sheets/samples_sex_plink.tsv
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex.bed
+    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex
+    log: ../results/00LOG/03GENOTYPES-PRE/add_sex_to_fam.log 
+   
+  rm_dup_sample:
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.bed
+    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup
+    remove_file: ../config/rm_dup_sample.txt
+    log: ../results/00LOG/03GENOTYPES-PRE/rm_dup_sample.log
+
+  check_het:
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.het
+    log: ../results/00LOG/03GENOTYPES-PRE/check_het.log
+
+  make_kgp3_pgen:
+    input: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen
+    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/make_kgp3_pgen.log
+    workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/
+
+  genotype-qc2hrc:
+    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
+    prefix_in: eqtl_genotypes_hg19_nodup
+    prefix_out: eqtl_genotypes_hg38_preTM
+    shortname: eqtlhg38tm
+    outdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
+    workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC
+    report_dir: reports/03GENOTYPES-PRE/
+    log: ../results/00LOG/03GENOTYPES-PRE/genotype-qc2hrc.log
+
+  cat_genotypes:
+    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.vcf.gz
+    in_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/
+
+  rm_maf_ambig:
+    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.bed
+    prefix_in: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.
+    prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig
+    ambig_snp_lst: reports/03GENOTYPES-PRE/ambig_high_maf_snp_lst.tsv
+    log: ../results/00LOG/03GENOTYPES-PRE/rm_maf_ambig.log
+
+  rm_rare_snps:
+    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps.bed
+    prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps 
+    log: ../results/00LOG/03GENOTYPES-PRE/rm_rare_snps.log
+
+  split_chrs:
+    output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done 
+    prefix_vcf: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.filt
+    outdir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/
+    log: ../results/00LOG/03GENOTYPES-PRE/split_chrs.log
+
+  gather_stats:
+    output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/gather_stats.done
+    gQC2hrc_vcf_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/  
+    final_vcf_dir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/    
+    log: ../results/00LOG/03GENOTYPES-PRE/gather_stats.log     
+
+  geno_pre_report:
+    rmd_script: scripts/genotyping_pre_impute_report.Rmd
+    html: reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
+    out_file: ../reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
+    in_dir: ../reports/03GENOTYPES-PRE/
+    bmark_dir: ../reports/benchmarks/
+    log: ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
+
+
+# ------------  GENOTYPES POST-IMPUTATION (Pipeline 4)  ----------------
+    
+geno_post_impute:
+  impute_check:
+    input:  ../results/04GENOTYPES-POST/TOPMED/chr_{chr}.zip
+    tsv: reports/04GENOTYPES-POST/impute_check/chr_{chr}_summary.tsv
+    vcf: ../results/04GENOTYPES-POST/TOPMED/chr{chr}.dose.vcf.gz
+    in_dir: ../results/04GENOTYPES-POST/TOPMED/
+    pwd: ../config/passwords/topmed.txt 
+    log: ../results/00LOG/04GENOTYPES-POST/impute_check_{chr}.log
+  impute_check_cat:
+    output: ../results/04GENOTYPES-POST/impute_check/chr_ALL_summary.tsv
+  dwnld_dbsnp_ref:
+    output: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz
+    web_link: https://ftp.ncbi.nih.gov/snp/redesign/latest_release/VCF/GCF_000001405.40.gz
+    prefix: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz 
+    log: ../results/00LOG/04GENOTYPES-POST/dwnld_dbsnp_ref.log
+  add_rsID:
+    output: ../results/04GENOTYPES-POST/dbSNP_annotated/chr{chr}.dbSNP.vcf.gz
+    log: ../results/00LOG/04GENOTYPES-POST/add_rsID_{chr}.log     
+  vcf_cat:
+    output: ../results/04GENOTYPES-POST/dbSNP_annotated/chrALL.dbSNP.vcf.gz
+    log: ../results/00LOG/04GENOTYPES-POST/vcf_cat.log    
+  filter_tags:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL.filt.vcf.gz
+    hwe: 0.0001
+    maf: 0.05
+    rsq: 0.8  
+    log: ../results/00LOG/04GENOTYPES-POST/filter_tags.log    
+  check_VCF:  
+    ref_gz: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    log_out: ../results/04GENOTYPES-POST/filtered/check_vcf.check.log
+    list: ../results/04GENOTYPES-POST/filtered/exclusion_list.txt
+    ref: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+    fai: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
+    prefix_out: ../results/04GENOTYPES-POST/filtered/check_vcf
+    log: ../results/00LOG/04GENOTYPES-POST/check_VCF.log
+  exclude_SNPs:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    log: ../results/00LOG/04GENOTYPES-POST/exclde_SNPs.log
+  idx_vcf:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz.tbi
+    log: ../results/00LOG/04GENOTYPES-POST/idx_vcf.log
+  create_combined_log:
+    output: ../results/04GENOTYPES-POST/filtered/combined_genotype_processing.log
+    log: ../results/00LOG/04GENOTYPES-POST/create_combined_log 
+  get_sample_list:
+    output: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+  vcf_to_plink:
+    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bed
+    params: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt
+    log: ../results/00LOG/04GENOTYPES-POST/vcf_to_plink.log
+  get_ld_pruned_snps:
+    output: ../results/04GENOTYPES-POST/covariates/ld_prune.prune.in
+    params: ../results/04GENOTYPES-POST/covariates/ld_prune
+    log: ../results/00LOG/04GENOTYPES-POST/get_ld_pruned_snps.log
+  prune_genotypes:
+    output: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned.bed
+    params: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned
+    log: ../results/00LOG/04GENOTYPES-POST/prune_genotypes.log
+  calc_genotype_pcs:
+    output: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    params: ../results/04GENOTYPES-POST/covariates/pca
+    pcs: 10
+    log: ../results/00LOG/04GENOTYPES-POST/calc_genotype_pcs.log
+  geno_post_report:
+    rmd_script: scripts/genotyping_post_impute_report.Rmd
+    html: reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
+    out_file: ../reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
+    in_dir: ../reports/04GENOTYPES-POST/
+    bmark_dir: ../reports/benchmarks/
+    log: ../results/00LOG/04GENOTYPES-POST/geno_post_report.log
+
+# ------------  TENSORQTL (pipeline 5)  ----------------
+
+tensorQTL:
+
+  window:       500000
+  geno_pcs:     4
+  exp_pcs:      [10,20,30,40,50]
+  norm_methods: ["quantile", "bryois", "fujita", "xue"]
+
+  prep_tensorQTL_input:
+    cov_file:      ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    sex_file:      reports/02SCANPY/02_metadata_per_sample.tsv
+    gene_lookup:   ../resources/sheets/gene_lookup_hg38.tsv
+    exp_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed
+    cov_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_base_covariates.txt
+    pseudobulk:    ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv
+    report_rds:    reports/05TENSORQTL/gene_exp_matrix_report_{cell_type}_{norm_method}.rds
+    log:          ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
+
+  zip_pblk_cnts:
+    output:        ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed.gz
+    log:           ../results/00LOG/05TENSORQTL/zip_pblk_cnts_{cell_type}_{norm_method}.log
+
+  convert_genotypes:
+    input:         ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    output:        ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen
+    pvar:          ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    prefix_out:    ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:           ../results/00LOG/05TENSORQTL/convert_genotypes.log
+
+  split_covariates:
+    output: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt
+    log:    ../results/00LOG/05TENSORQTL/split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
+
+  tensorqtl_nom:
+    output:     ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet
+    prefix_out: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom
+    prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.log
+
+  tensorqtl_perm:
+    output:     ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz
+    prefix_out: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm
+    prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
+
+  tensorqtl_independent:
+    output:     ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent.cis_independent_qtl.txt.gz
+    prefix_out: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent
+    prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log
+
+  tensorqtl_report:
+    rmd_script:  scripts/tensorQTL_report.Rmd
+    output:      reports/05TENSORQTL/tensorqtl_report.html
+    in_dir:      ../../results/05TENSORQTL/tensorqtl_perm/
+    bmark_dir:   ../reports/benchmarks/
+    output_file: ../reports/05TENSORQTL/tensorqtl_report.html
+    log:         ../results/00LOG/05TENSORQTL/tensorqtl_report.log
+
+# ------  Pseudotime  -------
+
+trajectories:
+  - 'NPC-to-Glu-DL'
+  - 'NPC-to-Glu-UL'
+
+pseudotime:
+  env: ../envs/pseudotime.yaml
+  subset:
+    input_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    h5ad:       ../results/17PSEUDOTIME/{trajectory}/adata_subset.h5ad
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/subset.log
+    script:     ../scripts/pseudotime_subset.py
+
+  palantir:
+    h5ad:          ../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad
+    log:           ../results/00LOG/17PSEUDOTIME/{trajectory}/pseudotime.log
+    script:        ../scripts/pseudotime_trajectory.py
+    n_neighbors:   10
+    n_pcs:         30
+    n_dcs:         15
+    num_waypoints: 1000
+    root_gene:     "PAX6"
+
+  pseudobulk:
+    sentinel:         ../results/17PSEUDOTIME/{trajectory}/pseudobulk/pseudobulk_complete.txt
+    csv:              ../results/17PSEUDOTIME/{trajectory}/pseudobulk/Q{quantile_n}/Q{quantile_n}_bin{bin}_{trajectory}_pseudobulk.csv
+    log:              ../results/00LOG/17PSEUDOTIME/{trajectory}/pseudobulk.log
+    script:           ../scripts/pseudotime_pseudobulk.py
+    geno_sample_file: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+
+  prep_tensorqtl:
+    exp_out:      ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed
+    cov_out:      ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_base_covariates.txt
+    report_rds:   reports/17PSEUDOTIME/prep_input/gene_exp_matrix_report_{trajectory}_Q{quantile_n}_bin{bin}_quantile.rds
+    log:          ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.log
+    script:       ../scripts/tensorqtl_prep_input_files.R
+    cov_file:     ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    sex_file:     reports/02SCANPY/02_metadata_per_sample.tsv
+    gene_lookup:  ../resources/sheets/gene_lookup_hg38.tsv
+
+  split_covariates:
+    output: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.txt
+    log:    ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.log
+    script: ../scripts/tensorqtl_split_covariates.R
+
+  zip_bed:
+    output: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed.gz
+    log:    ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_zip_bed.log
+
+  tensorqtl_nom:
+    output:     ../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom.cis_qtl_pairs.1.parquet
+    prefix_out: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_nom.log
+
+  tensorqtl_perm:
+    output:     ../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm.cis_qtl.txt.gz
+    prefix_out: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm
+    log:        ../results/00LOG/17PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_perm.log
+
+  export:
+    sentinel: ../results/05TENSORQTL/prep_input/.pt_export_{trajectory}_Q4_bin{bin}.done
+    log:      ../results/00LOG/17PSEUDOTIME/{trajectory}/export_smr_twas_Q4_bin{bin}.log
+
+  report:
+    html:                reports/17PSEUDOTIME/pseudotime_report.html
+    output_file:         ../reports/17PSEUDOTIME/pseudotime_report.html
+    rmd_script:          scripts/pseudotime_report.Rmd
+    in_dir:              ../../results/17PSEUDOTIME/
+    cell_type_perm_dir:  ../../results/05TENSORQTL/tensorqtl_perm/
+    gene_lookup:         ../../resources/sheets/gene_lookup_hg38.tsv
+    bmark_dir:           ../reports/benchmarks/
+    log:                 ../results/00LOG/17PSEUDOTIME/report.log
+
+# --------  QTL REPLICATION (Pipeline 6)  ----------
+
+qtl_rep:
+  # Ziffra 2021 ST3 peak set(s) tested per L1 cell type; subclusters (e.g. GABA-1)
+  # use the entry of their L1 parent
+  ziffra_peak_sets:
+    NPC:       ["RG_MACSpeaks"]
+    Glu-UL:    ["ulEN_MACSpeaks"]
+    Glu-DL:    ["dlEN_MACSpeaks"]
+    GABA:      ["IN_CGE_MACSpeaks", "IN_MGE_MACSpeaks"]
+    Endo-Peri: ["EndoMural_MACSpeaks"]
+    MG:        ["Microglia_MACSpeaks"]
+    OPC:       ["AstroOligo_MACSpeaks"]
+
+  # Fetal L1 vs Jang et al. 2026 L1 pairs for beta_correlation (order = output row order)
+  jang_comparisons:
+    - {fetal: "Glu-UL",    jang: "Ext"}
+    - {fetal: "Glu-DL",    jang: "Ext"}
+    - {fetal: "GABA",      jang: "IN"}
+    - {fetal: "NPC",       jang: "Ext"}
+    - {fetal: "NPC",       jang: "IN"}
+    - {fetal: "MG",        jang: "MG"}
+    - {fetal: "OPC",       jang: "OPC"}
+    - {fetal: "Endo-Peri", jang: "End"}
+
+  dwnld_ziffra:
+    output: ../resources/public_datasets/ziffra_2021/Ziffra_2021_supp_tables_2_13.xlsx
+    web_link: https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-021-03209-8/MediaObjects/41586_2021_3209_MOESM4_ESM.xlsx
+    benchmark: reports/benchmarks/06qtl_replication.dwnld_ziffra.txt
+    log: ../results/00LOG/06QTL-REPLICATION/dwnld_ziffra.log
+
+  snp_lookup:
+    out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds
+    script: ../scripts/repl_sc_snp_lookup.R
+    benchmark: reports/benchmarks/qtl_replication.snp_lookup_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup.log
+
+  atac_enrich:
+    seed: 1234  # set.seed() before the block-bootstrap permutations
+    out_file: ../results/06QTL-REPLICATION/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds
+    script: ../scripts/repl_sc_atac_enrichment.R
+    benchmark: reports/benchmarks/qtl_replication.atac_enrich_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich.log
+
+  ziffra_summary:
+    out_file: ../results/06QTL-REPLICATION/atac_enrich/ziffra_overlaps_primary.tsv
+    script: ../scripts/repl_sc_ziffra_summary.R
+    benchmark: reports/benchmarks/06qtl_replication.ziffra_summary.txt
+    log: ../results/00LOG/06QTL-REPLICATION/ziffra_summary.log
+
+  cat_nom_qtl:
+    parquet: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.{chr}.parquet
+    output: ../results/06QTL-REPLICATION/cat_nom_qtl/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz
+    script: scripts/repl_sc_cat_nom_qtl.py
+    benchmark: reports/benchmarks/06qtl_replication.cat_nom_qtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_cat_nom_qtl.log
+
+  pi1_enrich_internal:
+    enrich: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_tbl.rds
+    pi1: ../results/06QTL-REPLICATION/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_results_tbl.rds
+    script: ../scripts/repl_sc_pi1_enrichment.R
+    benchmark: reports/benchmarks/06qtl_replication.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}.txt
+    log: ../results/00LOG/06QTL-REPLICATION/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_internal.log
+
+  # Freeze 2 outputs are in 19DEV-SPECIFICITY/; paths move in the rename pass
+  pi1_enrich_jang:
+    enrich: ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_enrich_tbl.rds
+    pi1:    ../results/19DEV-SPECIFICITY/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_results_tbl.rds
+    script: ../scripts/repl_sc_pi1_enrichment.R
+    benchmark: reports/benchmarks/dev_specificity.pi1_enrich_jang_{cell_type}_vs_{jang_cell_type}.txt
+    log:    ../results/00LOG/19DEV-SPECIFICITY/{cell_type}_vs_{jang_cell_type}_pi1_enrich_jang.log
+
+  beta_correlation:
+    out_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
+    script: ../scripts/repl_sc_beta_correlation.R
+    benchmark: reports/benchmarks/dev_specificity.beta_correlation.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/beta_correlation.log
+
+  report:
+    script: scripts/repl_sc_report.Rmd
+    render: scripts/repl_sc_render_report.R  # rmarkdown::render wrapper; params too long for Rscript -e
+    html: reports/06QTL-REPLICATION/06replication_report.html
+    output_file: ../reports/06QTL-REPLICATION/06replication_report.html
+    benchmark: reports/benchmarks/06qtl_replication.pi1_enrichment_report.benchmark.txt
+    log: ../results/00LOG/06QTL-REPLICATION/pi1_enrichment_report.log
+
+# ------------  PREP GWAS (Pipeline 7) ----------------
+
+prep_gwas:
+  get_gwas_sumstats:
+    output: ../results/07PREP-GWAS/{gwas}_hg19_raw.tsv
+    log: ../results/00LOG/07PREP-GWAS/get_gwas_sumstats_{gwas}.log
+
+  standardise_sumstats:
+    output: ../results/07PREP-GWAS/{gwas}_hg19_standardised.tsv
+    temp: ../results/07PREP-GWAS/{gwas}_hg19_raw_temp.tsv
+    log: ../results/00LOG/07PREP-GWAS/standardise_sumstats_{gwas}.log
+
+  add_z_score:
+    output: ../results/07PREP-GWAS/{gwas}_hg19_with_Z.tsv
+    log: ../results/00LOG/07PREP-GWAS/add_z_score_{gwas}.log
+
+  add_N:
+    output: ../results/07PREP-GWAS/{gwas}_hg19_with_N.tsv
+    log: ../results/00LOG/07PREP-GWAS/add_N_{gwas}.log
+
+  make_gwas_bed_hg19:
+    output: ../results/07PREP-GWAS/{gwas}_hg19.bed
+    log: ../results/00LOG/07PREP-GWAS/create_gwas_bed_hg19_{gwas}.log
+
+  liftover_gwas_to_hg38:
+    output: ../results/07PREP-GWAS/{gwas}_hg38.bed
+    chain: ../resources/liftover/hg19ToHg38.over.chain.gz
+    unlifted: ../results/07PREP-GWAS/{gwas}_hg19_unlifted.bed
+    log: ../results/00LOG/07PREP-GWAS/liftover_gwas_to_hg38_{gwas}.log
+
+  add_hg38_coords_to_gwas:
+    output: ../results/07PREP-GWAS/{gwas}_hg38.tsv
+    log: ../results/00LOG/07PREP-GWAS/add_hg38_coords_to_gwas_{gwas}.log
+
+  munge_sumstats:
+    output: ../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz # Chnage back to this for run over weekend
+    prefix: ../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready
+    log: ../results/00LOG/07PREP-GWAS/munge_sumstats_{gwas}.log
+
+# ------------  SUSIE (Pipeline 8)  ----------------
+
+susie:
+  prep_susie_gene_meta:
+    output: ../results/08SUSIE/susie_input/{cell_type}_gene_meta.tsv
+    log: ../results/00LOG/08SUSIE/prep_susie_gene_meta_{cell_type}.log
+ 
+  vcf_to_dosage:
+    vcf: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    out_dosage: ../results/08SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz
+    out_idx: ../results/08SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz.tbi
+    log: ../results/00LOG/08SUSIE/vcf_to_dosage.log
+ 
+  prep_susie_input:
+    out_exp: ../results/08SUSIE/susie_input/{cell_type}_susie_ready.bed
+    out_covar: ../results/08SUSIE/susie_input/{cell_type}_covariates_susie_ready.txt
+    out_samp_lst: ../results/08SUSIE/susie_input/{cell_type}_samp_lst_susie_ready.txt
+    log: ../results/00LOG/08SUSIE/prep_susie_input_{cell_type}.log
+ 
+  run_susie:
+    cs_hp_out: ../results/08SUSIE/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.cred.hp.txt
+    cs_out: ../results/08SUSIE/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.cred.txt
+    snp_out: ../results/08SUSIE/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.snp.txt
+    log: ../results/00LOG/08SUSIE/run_susie_{cell_type}_{batch_index}_{susie_batches}.log
+ 
+  merge_susie:
+    output: ../results/08SUSIE/susie/{cell_type}/{cell_type}.mrgd.susie.cred.hp.txt.gz
+    log: ../results/00LOG/08SUSIE/merge_susie_{cell_type}.log
+ 
+  sort_susie:
+    output: ../results/08SUSIE/susie/{cell_type}/{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz
+    log: ../results/00LOG/08SUSIE/sort_susie_{cell_type}.log
+ 
+  susie_report:
+    output_file: ../reports/08SUSIE/08susie_report.html
+    script: scripts/susie_report.Rmd
+    html: reports/08SUSIE/08susie_report.html
+    in_dir: ../../results/08SUSIE/susie/
+    gene_meta_dir: ../../results/08SUSIE/susie_input/
+    gene_lookup: ../../resources/sheets/gene_lookup_hg38.tsv
+    bmark_dir: ../reports/benchmarks/
+    log: ../results/00LOG/08SUSIE/08susie_report.log
+
+# ------------  SLDSR (Pipeline 9)  ----------------
+sldsr:
+  get_hg38_refs:
+    # Single source of truth for hg38 ref paths: download dir, ldsc --bfile and
+    # --*-chr prefixes are derived from these in rules/09sldsr.smk
+    baseline: ../resources/ldsr/ldsr_hg38_refs/baseline_v1.2/baseline.{chr}.l2.ldscore.gz
+    weights: ../resources/ldsr/ldsr_hg38_refs/weights/weights.hm3_noMHC.{chr}.l2.ldscore.gz
+    frq: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
+    bim: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    snps: ../resources/ldsr/ldsr_hg38_refs/hm3_no_MHC.list.txt
+    log: ../results/00LOG/09SLDSR/get_hg38_refs.log
+
+  get_hg19_refs:
+    # Single source of truth for hg19 ref paths (as above)
+    baseline: ../resources/ldsr/ldsr_hg19_refs/baseline_v1.2/baseline.{chr}.l2.ldscore.gz
+    weights: ../resources/ldsr/ldsr_hg19_refs/weights/weights.hm3_noMHC.{chr}.l2.ldscore.gz
+    frq: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.frq
+    bim: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.bim
+    snps: ../resources/ldsr/ldsr_hg19_refs/hm3_no_MHC.list.txt
+    log: ../results/00LOG/09SLDSR/get_hg19_refs.log
+
+  make_annot:
+    maxcpp: ../results/09SLDSR/annot/{cell_type}/{cell_type}.maxCPP.{chr}.annot.gz
+    cs95: ../results/09SLDSR/annot/{cell_type}/{cell_type}.CS95.{chr}.annot.gz
+    log: ../results/00LOG/09SLDSR/make_annot_{cell_type}.{chr}.log
+
+  lift_hapmap3_snps:
+    output: ../results/09SLDSR/liftover/hm3_hg38_no_MHC.list.txt
+    log: ../results/00LOG/09SLDSR/lift_hapmap3_snps.log
+
+  ldsr_ld_scores_hg38:
+    output: ../results/09SLDSR/annot/{cell_type}/{cell_type}.{annot_type}.{chr}.l2.ldscore.gz
+    log: ../results/00LOG/09SLDSR/ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.log
+
+  ldsr_strat_hg38_bl_v12:
+    output: ../results/09SLDSR/strat_bl_v12/{cell_type}/{annot_type}/{cell_type}_hg38_bl.v1.2_{gwas}.results
+    log: ../results/00LOG/09SLDSR/strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.log
+
+  ldsr_strat_summary:
+    output: ../results/09SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.{annot_type}.summary.tsv
+    log: ../results/00LOG/09SLDSR/ldsr_strat_summary.{annot_type}.log
+
+  ldsr_report:
+    html: reports/09SLDSR/09ldsr_report.html
+    # Paths passed to the Rmd are relative to workflow/scripts/ (where it knits)
+    in_dir: ../../results/09SLDSR/strat_bl_v12/
+    output_file: ../reports/09SLDSR/09ldsr_report.html
+    bmark_dir: ../reports/benchmarks/
+    log: ../results/00LOG/09SLDSR/ldsr_report.log
+
+# ---------  SMR (Pipeline 10)  ----------
+
+smr:
+  get_smr_binary:
+    smr:    ../resources/smr/smr
+    log: ../results/00LOG/10SMR/get_smr_binary.log
+
+  cat_tensorqtl_nom_snps:
+    cat_snps: ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
+    summary:  ../results/10SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
+    log:      ../results/00LOG/10SMR/cat_tensorqtl_nom_snps_{cell_type}.log
+
+  create_query:
+    query:      ../results/10SMR/smr_input/{cell_type}/{cell_type}_query.tsv
+    gene_lst:   ../results/10SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
+    remove_mhc: FALSE
+    log:        ../results/00LOG/10SMR/create_query_{cell_type}.log
+
+  create_besd:
+    besd:   ../results/10SMR/smr_input/{cell_type}/{cell_type}.besd
+    prefix: ../results/10SMR/smr_input/{cell_type}/{cell_type}
+    log:    ../results/00LOG/10SMR/create_besd_{cell_type}.log
+
+  cat_refs:
+    frq_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
+    bed_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bed
+    bim_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    fam_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.1.fam
+    cat_frq: ../results/10SMR/smr_input/1000G.EUR.hg38.frq
+    cat_bed: ../results/10SMR/smr_input/1000G.EUR.hg38.bed
+    cat_bim: ../results/10SMR/smr_input/1000G.EUR.hg38.bim
+    cat_fam: ../results/10SMR/smr_input/1000G.EUR.hg38.fam
+    log:     ../results/00LOG/10SMR/cat_refs.log
+
+  format_gwas:
+    gwas:   ../results/07PREP-GWAS/{gwas}_hg38.tsv
+    ma:     ../results/10SMR/smr_input/gwas/{gwas}_hg38.ma
+    log:    ../results/00LOG/10SMR/format_gwas_{gwas}.log
+
+  smr:
+    geno_prefix: ../results/10SMR/smr_input/1000G.EUR.hg38
+    smr:         ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr
+    smr_prefix:  ../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}
+    log:         ../results/00LOG/10SMR/smr_{cell_type}_{gwas}.log 
+  
+  smr_report:
+    html:      reports/10SMR/10smr_report.html
+    in_dir:    ../results/10SMR/smr
+    log_dir:   ../results/00LOG/10SMR
+    bmark_dir: reports/benchmarks
+    log:       ../results/00LOG/10SMR/smr_report.log
+
+# ---------  TWAS Weights (Pipeline 11)  ----------
+
+twas:
+  get_gemma:
+    output: ../resources/gemma/gemma
+
+  prep_exp_data:
+    input: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
+    exp:   ../results/11TWAS/fusion_input/{cell_type}_plink.txt
+    coord: ../results/11TWAS/fusion_input/{cell_type}_gene_coord.txt
+    log:   ../results/00LOG/11TWAS/prep_exp_data_{cell_type}.log
+
+  convert_vcf:
+    input:  ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    bed:    ../results/11TWAS/fusion_input/genotypes_hg38.bed
+    bim:    ../results/11TWAS/fusion_input/genotypes_hg38.bim
+    fam:    ../results/11TWAS/fusion_input/genotypes_hg38.fam
+    prefix: ../results/11TWAS/fusion_input/genotypes_hg38
+    log:    ../results/00LOG/11TWAS/convert_vcf.log
+
+  get_ldref_snplist:
+    input:   ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    snp_lst: ../results/11TWAS/fusion_input/ldref_snps.txt
+    log:     ../results/00LOG/11TWAS/get_ldref_snplist.log
+
+  prepare_covar:
+    output: ../results/11TWAS/fusion_input/{cell_type}_covariates.txt
+    log:    ../results/00LOG/11TWAS/prepare_covar_{cell_type}.log
+
+  compute_weights:
+    output:        ../results/11TWAS/weights/{cell_type}/all_weights_done.txt
+    outdir:        ../results/11TWAS/weights/{cell_type}
+    log:           ../results/00LOG/11TWAS/compute_all_weights_{cell_type}.log
+    tmp_dir:       ../results/11TWAS/fusion_input
+    fusion_script: ../resources/fusion/FUSION.compute_weights.R
+    gcta:          ../resources/fusion/gcta_nr_robust
+    plink:         /shared/apps/easybuild/x86_64/amd/zen4/software/PLINK/2.0.0-a.6.9-gfbf-2023b/bin/plink  # PLINK v1.9 binary (needed for FUSION --lasso) 
+    hsq_p:         0.01
+    crossval:      5
+    models:        top1,lasso,enet
+
+  make_pos_file:
+    output: ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
+    log:    ../results/00LOG/11TWAS/make_pos_file_{cell_type}.log
+
+  twas_weights_report:
+    script:    scripts/twas_weights_summary.Rmd
+    output:    reports/11TWAS/11twas_weights_report.html
+    bmark_dir: reports/benchmarks
+    log:       ../results/00LOG/11TWAS/twas_weights_report.log
+
+# ---------  CTWAS (Pipeline 12)  ----------
+
+ctwas:
+  create_ld_matrices:
+    script:     ../scripts/ctwas_create_ld_matrices.R
+    output:     ../results/12CTWAS/ld_mats/create_ctwas_ld_matrices.done
+    ld_ref_dir: ../resources/ldsr/ldsr_hg38_refs/plink_files/
+    out_dir:    ../results/12CTWAS/ld_mats/
+    bmrk:       reports/benchmarks/12ctwas.create_ctwas_ld_matrices.benchmark.txt
+    log:        ../results/00LOG/12CTWAS/create_ld_matrices.log
+ 
+  copy_fusion_weights:
+    input:    ../results/11TWAS/weights/{cell_type}/{cell_type}.pos
+    output:   ../results/12CTWAS/weights/stubs/{cell_type}_copy_weights.done
+    src_dir:  ../results/11TWAS/weights/{cell_type}
+    dest_dir: ../results/12CTWAS/weights/{cell_type}
+    bmrk:     reports/benchmarks/12ctwas.copy_weights_{cell_type}.benchmark.txt
+    log:      ../results/00LOG/12CTWAS/copy_weights_{cell_type}.log 
+
+  run_ctwas:
+    script:        ../scripts/ctwas_run.R
+    gwas:          ../results/07PREP-GWAS/{gwas}_hg38.tsv
+    bim_file:      ../results/10SMR/smr_input/1000G.EUR.hg38.bim
+    output:        ../results/12CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
+    weights_dir:   ../results/12CTWAS/weights/{cell_type}/
+    run_weight_qc: false
+    remove_mhc:    FALSE
+    bmrk:          reports/benchmarks/12ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt
+    log:           ../results/00LOG/12CTWAS/ctwas_run_{cell_type}_{gwas}.log
+
+  ctwas_report:
+    rmd_script:  scripts/ctwas_report.Rmd
+    output:      reports/12CTWAS/12ctwas_report.html
+    in_dir:      ../../results/12CTWAS/
+    bmark_dir:   ../reports/benchmarks/
+    lookup_dir:  ../../resources/sheets/
+    tbl_dir:     ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+    output_file: ../reports/12CTWAS/12ctwas_report.html
+    bmrk:        reports/benchmarks/12ctwas.ctwas_report.benchmark.txt
+    log:         ../results/00LOG/12CTWAS/ctwas_report.log 
+
+# ---------  Tables (pipeline 13)  ------------
+tables:
+  eqtl_tbl:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    peak_dir: ../resources/public_datasets/ziffra_2021/
+    out_file: ../results/13MANUSCRIPT_TABLES/eQTL_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/table_eqtl.log
+
+  diff_exp_tbl:
+    nb: scripts/manuscript_table_diff_exp.ipynb
+    nb_out: ../results/13MANUSCRIPT_TABLES/diff_exp_tbl_pm.ipynb
+    html_out: ../results/13MANUSCRIPT_TABLES/diff_exp_tbl.html
+    xlsx_out: ../results/13MANUSCRIPT_TABLES/diff_exp_genes_all_clusters.xlsx
+    pseudotime_dir: ../results/17PSEUDOTIME/
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/table_diff_exp.log
+
+  smr_sig_tbl:
+    # ST 7
+    in_dir:    ../results/10SMR/smr/
+    out_file:  ../results/13MANUSCRIPT_TABLES/{gwas}_smr.tsv
+    xlsx_out:  ../results/13MANUSCRIPT_TABLES/supplementary_table_7.xlsx
+    log:       ../results/00LOG/13MANUSCRIPT_TABLES/smr_sig_tbl.log
+
+  susie_diag_tbl:
+    # ST 9
+    out_file: ../results/13MANUSCRIPT_TABLES/supplementary_table_9.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/susie_diag_tbl.log
+
+  smr_tbl:
+    smr_dir: ../results/13MANUSCRIPT_TABLES/
+    eqtl_nom_dir: ../results/10SMR/smr_input/
+    out_file: ../results/13MANUSCRIPT_TABLES/all_smr_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/all_smr_tbl.log
+
+  smr_ctwas_venn_tbl:
+    smr_tbl_dir: ../results/13MANUSCRIPT_TABLES/
+    ctwas_in_dir: ../results/12CTWAS/
+    weights_dir:  ../results/12CTWAS/weights
+    genes_out:    ../results/13MANUSCRIPT_TABLES/venn_{gwas}_genes.tsv
+    log:          ../results/00LOG/13MANUSCRIPT_TABLES/smr_ctwas_venn_tbl.log
+
+  ctwas_sig_tbl:
+    in_dir: ../results/12CTWAS/
+    weights_dir: ../results/12CTWAS/weights
+    correction_out: ../results/13MANUSCRIPT_TABLES/ctwas_correction_factors.tsv
+    sig_out: ../results/13MANUSCRIPT_TABLES/ctwas_sig_genes.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/ctwas_sig_tbl.log
+
+  subcluster_specific_tbl:
+    out_file: ../results/13MANUSCRIPT_TABLES/subcluster_specific_eqtl_tbl.xlsx
+    log: ../results/00LOG/13MANUSCRIPT_TABLES/subcluster_specific_tbl.log
+
+# ---------  Plots (pipeline 14)  ------------
+plotting:
+  # NOTE: old rule and script rm to 
+  eqtl_boxplots:
+    exp_dir: ../results/05TENSORQTL/prep_input/
+    pval_dir: ../results/10SMR/smr_input/
+    geno_prefix: ../results/05TENSORQTL/prep_input/chrALL_final.filt
+    gene_id: ENSG00000214435
+    snp_id: rs11191424
+    output: reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds
+    log: ../results/00LOG/11PLOTTING/eqtl_boxplots_r.log
+
+  eqtl_qc_plt:
+    # Fig 2
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    out_file: ../results/14MANUSCRIPT_PLOTS/eqtl_qc_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/eqtl_qc_plt.log
+
+  eqtl_boxplots_py:
+    # Prep script for eQTL plots - feeds Fig 3
+    pairs_csv: ../resources/sheets/pairs.csv
+    exp_dir: ../results/05TENSORQTL/prep_input/
+    out_dir: reports/14MANUSCRIPT_PLOTS/eqtl_boxplots/
+    output: reports/14MANUSCRIPT_PLOTS/eqtl_boxplots/plot_qtl.done
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/eqtl_boxplots_py.log
+
+  rep_plt:
+    # Fig 3
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    internal_dir: ../results/06QTL-REPLICATION/internal/
+    jang_pi1_dir: ../results/19DEV-SPECIFICITY/pi1_jang/
+    jang_beta_file: ../results/19DEV-SPECIFICITY/beta_correlation/beta_correlation_results.rds
+    out_file: ../results/14MANUSCRIPT_PLOTS/replication_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/replication_plt.log
+
+  fig4_plt:
+    pseudotime_dir: ../results/17PSEUDOTIME/
+    out_file: ../results/14MANUSCRIPT_PLOTS/figure4.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/fig4_plt.log
+
+  ldsr_plt:
+    # Fig 5
+    in_dir: ../results/09SLDSR/strat_bl_v12/
+    out_file: ../results/14MANUSCRIPT_PLOTS/ldsr_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/ldsr_plt.log
+
+  smr_ctwas_venn:
+    # Fig 6 and Supp Fig X
+    smr_tbl_dir: ../results/13MANUSCRIPT_TABLES/  # cross-pipeline: reads a tables-pipeline output
+    ctwas_in_dir: ../results/12CTWAS/
+    weights_dir: ../results/12CTWAS/weights
+    gene_lookup_file: ../resources/sheets/gene_lookup_hg38.tsv
+    out_file_scz: ../results/14MANUSCRIPT_PLOTS/venn_scz.png
+    out_file_grid: ../results/14MANUSCRIPT_PLOTS/venn_grid_bpd_mdd_adhd_ocd.png
+    genes_out: ../results/14MANUSCRIPT_PLOTS/venn_{gwas}_genes.tsv
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/smr_ctwas_venn.log
+
+  supp_plt:
+    # Supp Fig 1
+    geno_dir: ../results/04GENOTYPES/covariates/
+    expr_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    out_file: ../results/14MANUSCRIPT_PLOTS/expression_PC_plt.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/supplementary_plt.log
+
+  family_heatmaps_plt:
+    # SF 3-6
+    glu_a: ../results/14MANUSCRIPT_PLOTS/family_heatmap_Glu-A.tiff
+    glu_b: ../results/14MANUSCRIPT_PLOTS/family_heatmap_Glu-B.tiff
+    gaba: ../results/14MANUSCRIPT_PLOTS/family_heatmap_GABA.tiff
+    npc: ../results/14MANUSCRIPT_PLOTS/family_heatmap_NPC.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/family_heatmaps_plt.log
+
+  effect_size_heatmaps_plt:
+    # SF 7-8
+    fetal_vs_fetal: ../results/14MANUSCRIPT_PLOTS/effect_size_heatmap_fetal_vs_fetal.tiff
+    fetal_vs_jang: ../results/14MANUSCRIPT_PLOTS/effect_size_heatmap_fetal_vs_jang.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/effect_size_heatmaps_plt.log
+
+  tss_density_plt:
+    # SF9 
+    pseudotime_dir: ../results/17PSEUDOTIME/
+    out_file: ../results/14MANUSCRIPT_PLOTS/tss_density_combined.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/tss_density_plt.log
+
+  bulk_egene_overlaps_plt:
+    # SF 10
+    out_file: ../results/14MANUSCRIPT_PLOTS/bulk_egene_overlaps.tiff
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/bulk_egene_overlaps_plt.log
+
+  snrna_qc_plt:
+    # Supp Fig X -- reviewer request (line 473): snRNA-seq QC summaries
+    in_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    out_file_sample: ../results/14MANUSCRIPT_PLOTS/snrna_qc_per_sample.pdf
+    out_file_celltype: ../results/14MANUSCRIPT_PLOTS/snrna_qc_per_celltype.pdf
+    log: ../results/00LOG/14MANUSCRIPT_PLOTS/snrna_qc_plt.log
+
+# ---------  Data Sharing (pipeline 15)  ------------
+data_sharing:
+  extract_fq:
+    out_r1: ../results/15DATA_SHARING/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
+    out_r2: ../results/15DATA_SHARING/MRGD_fqs/{plate}/{sample}_R2.fastq.gz
+    log_r1: ../results/00LOG/15DATA_SHARING/{plate}/cat_fqs_{sample}_R1.log
+    log_r2: ../results/00LOG/15DATA_SHARING/{plate}/cat_fqs_{sample}_R2.log
+    outdir: ../results/15DATA_SHARING/MRGD_fqs/
+
+  extract_cell_meta:
+    input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
+    output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
+    log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
+
+  data_perm:
+    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    out_file: ../results/15DATA_SHARING/NPC-2_cis_eQTL_perm.tsv.gz   # sentinel path -- dirname() gives the shared output dir; script writes one file per cell type there
+    log: ../results/00LOG/15DATA_SHARING/data_perm.log
+
+  data_nominal:
+    in_dir: ../results/10SMR/smr_input/
+    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
+    out_file: ../results/15DATA_SHARING/NPC-2_cis_eQTL_nominal.tsv.gz
+    log: ../results/00LOG/15DATA_SHARING/data_nominal.log
+
+  data_mk_eqtl_tar:
+    out_dir: ../results/15DATA_SHARING/
+    out_file: ../results/15DATA_SHARING/nbray_2026_dev_brain_eqtl.tar.gz
+    log: ../results/00LOG/15DATA_SHARING/data_mk_eqtl_tar.log
+
+  data_weights:
+    out_dir: ../results/15DATA_SHARING/
+    file_name: fusion_weights.tar.gz
+    out_file: ../results/15DATA_SHARING/fusion_weights.tar.gz
+    log: ../results/00LOG/15DATA_SHARING/data_weights.log
+
+  data_susie:
+    # {cell_type} here is the manuscript label (Glu-A, Glu-B, NPC-to-Glu-B-Bin1, ...)
+    out_file: ../results/15DATA_SHARING/{cell_type}.susie.cred.hp.tsv.gz
+    log: ../results/00LOG/15DATA_SHARING/data_susie_{cell_type}.log
+
+  data_susie_mk_tar:
+    out_file: ../results/15DATA_SHARING/eqtl_atlas_susie_credible_sets.tar
+    top_dir: susie_credible_sets   # directory name inside the tarball
+    log: ../results/00LOG/15DATA_SHARING/data_susie_mk_tar.log
+
+  data_final_scanpy_obj:
+    l1_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad                          # TODO: scanpy_dir + 'adata_clusters_v3.h5ad'
+    # {l1_pop} is the PIPELINE name (Glu-UL, Glu-DL, ...), not the manuscript label
+    l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # TODO: subcluster_dir + ...
+    l2_populations: [Glu-UL, Glu-DL, NPC, GABA]
+    l1_without_l2: [MG, Endo-Peri, OPC]                             # script asserts these are exactly the L1 pops with no L2
+    pt_h5ad: ../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad
+    pt_trajectories: [NPC-to-Glu-DL, NPC-to-Glu-UL]                 # pipeline names
+    pt_n_bins: 4
+    l1_cluster_col: leiden_harmony_0.2
+    keep_obs: [sample]                                              # extend with any other per-cell columns you want to share
+    keep_obsm: [X_umap, X_pca_harmony]
+    x_from_counts: true                                             # X = raw counts (layers['counts']) instead of scaled values
+    out_h5ad: ../results/15DATA_SHARING/eqtl_atlas_snRNAseq.h5ad
+    out_mapping: ../results/15DATA_SHARING/eqtl_atlas_cell_annotations.tsv.gz
+    log: ../results/00LOG/15DATA_SHARING/final_scanpy_obj.log
+
+# --- review
+review:
+  dwnld_qian:
+    output: ../resources/public_datasets/qian_2025/merscope_integrated_855.h5ad
+    web_link: https://zenodo.org/records/14422018/files/merscope_integrated_855.h5ad?download=1 
+    log: ../results/00LOG/15REVIEW/dwnld_qian.log
+
+  prep_qian_ref:
+    output: ../results/15REVIEW/qian_ref_subsampled.h5ad
+    log: ../results/00LOG/15REVIEW/prep_qian_ref.log
+    script: ../scripts/review_prep_qian_ref.py
+
+  prep_singler_query:
+    query_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+    h5ad: ../results/15REVIEW/adata_clusters_v3_query_prepped.h5ad
+    umap_csv: ../results/15REVIEW/umap_coords.csv
+    log: ../results/00LOG/15REVIEW/prep_singler_query.log
+    script: ../scripts/review_prep_singler_query.py
+
+  singler_classify:
+    csv: ../results/15REVIEW/singler_results.csv
+    pred_rds: ../results/15REVIEW/singler_pred.rds
+    sce_rds:  ../results/15REVIEW/singler_sce_sub.rds
+    log: ../results/00LOG/15REVIEW/singler_classify.log
+    script: ../scripts/review_singler_classify.R
+
+  batch_correction_kbet:
+    csv:        ../results/15REVIEW/batch_correction/kbet_results.csv
+    plot:       ../results/15REVIEW/batch_correction/kbet_rejection_rates.png
+    log:        ../results/00LOG/15REVIEW/batch_correction_kbet.log
+    script:     ../scripts/review_kbet.py
+    n_subsample: 10000   # cells to subsample (stratified by cell type)
+    random_seed: 1234
+    k0:          30      # neighbourhood size for chi-squared test
+
+  batch_correction_lisi:
+    csv:        ../results/15REVIEW/batch_correction/lisi_results.csv
+    plot:       ../results/15REVIEW/batch_correction/lisi_scores.png
+    log:        ../results/00LOG/15REVIEW/batch_correction_lisi.log
+    script:     ../scripts/review_lisi.py
+    random_seed: 1234
+    perplexity:  30   
+
+  singler_report:
+    html: reports/15REVIEW/15singler_report.html
+    log:  ../results/00LOG/15REVIEW/singler_report.log
+
+  batch_corr_report:
+    html:   reports/15REVIEW/batch_correction_report.html
+    log:    ../results/00LOG/15REVIEW/batch_corr_report.log
+    script: ../scripts/review_batch_corr_report.py
+
+  isoform_eqtl:
+    bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
+    tensorqtl_dir:    ../results/05TENSORQTL/tensorqtl_perm
+    enst_ensg_map:    ../results/15REVIEW/isoform_eqtl/enst_ensg_map.tsv
+    egenes_combined:  ../results/15REVIEW/isoform_eqtl/egenes_all_celltypes.tsv
+    bulk_hits:        ../results/15REVIEW/isoform_eqtl/bulk_transcript_hits.tsv
+    summary:          ../results/15REVIEW/isoform_eqtl/isoform_comparison_summary.tsv
+    detail:           ../results/15REVIEW/isoform_eqtl/isoform_comparison_detail.tsv
+    log:              ../results/00LOG/15REVIEW/isoform_eqtl_comparison.log
+    script:           ../scripts/review_isoform_eqtl.py
+    fdr_threshold:    0.05
+    nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
+
+# ------  Developmental Specificity  -------
+dev_specificity:
+  extract_universe:
+    # A priori matched Jang L1 type per fetal L1 type; NPC has no adult equivalent
+    jang_label_match:
+      Glu-UL:    Ext
+      Glu-DL:    Ext
+      GABA:      IN
+      NPC:       null
+      MG:        MG
+      OPC:       OPC
+      Endo-Peri: End
+    out_file: ../results/19DEV-SPECIFICITY/extract_universe/eqtl_universe.rds
+    script: ../scripts/eqtl_sharing_extract_universe.R
+    benchmark: reports/benchmarks/dev_specificity.extract_universe.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/extract_universe.log
+
+  classify_specificity:
+    out_file: ../results/19DEV-SPECIFICITY/classify_specificity/eqtl_specificity_classification.rds
+    script: ../scripts/eqtl_sharing_classify.R
+    benchmark: reports/benchmarks/dev_specificity.classify_specificity.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/classify_specificity.log
+
+  heterogeneity_test:
+    fdr_thresh: 0.05
+    out_file: ../results/19DEV-SPECIFICITY/heterogeneity_test/heterogeneity_results.rds
+    script: ../scripts/eqtl_sharing_heterogeneity.R
+    benchmark: reports/benchmarks/dev_specificity.heterogeneity_test.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/heterogeneity_test.log
+
+  prep_ld_clump_input:
+    assoc_dir:      ../results/19DEV-SPECIFICITY/ld_clump/assoc_files/
+    singleton_snps: ../results/19DEV-SPECIFICITY/ld_clump/singleton_snps.rds
+    snp_list:       ../results/19DEV-SPECIFICITY/ld_clump/candidate_snps.txt
+    script:         ../scripts/eqtl_sharing_prep_ld_clump.R
+    benchmark:      reports/benchmarks/dev_specificity.prep_ld_clump_input.txt
+    log:            ../results/00LOG/19DEV-SPECIFICITY/prep_ld_clump_input.log
+
+  run_ld_clump:
+    subset_prefix: ../results/19DEV-SPECIFICITY/ld_clump/geno_subset/candidate_snps_subset
+    clump_dir:     ../results/19DEV-SPECIFICITY/ld_clump/clumped/
+    sentinel:      ../results/19DEV-SPECIFICITY/ld_clump/run_ld_clump.done
+    clump_kb: 1000
+    clump_r2: 0.1
+    benchmark:     reports/benchmarks/dev_specificity.run_ld_clump.txt
+    log:           ../results/00LOG/19DEV-SPECIFICITY/run_ld_clump.log
+
+  parse_ld_clump:
+    out_file: ../results/19DEV-SPECIFICITY/ld_clump/independent_eqtl_universe.rds
+    script:   ../scripts/eqtl_sharing_parse_ld_clump.R
+    benchmark: reports/benchmarks/dev_specificity.parse_ld_clump.txt
+    log:      ../results/00LOG/19DEV-SPECIFICITY/parse_ld_clump.log
+
+  ocr_enrich:
+    li_s6: ../resources/public_datasets/li_2023/Table_S6_List_of_cCREs_in_bed_format.bed
+    li_s7: ../resources/public_datasets/li_2023/Table_S7_Cell_type_assignment_of_cCREs.txt
+    seed: 1234  # set.seed() before the block-bootstrap permutations
+    out_file: ../results/19DEV-SPECIFICITY/ocr_enrich/fetal_specific_ocr_enrichment.rds
+    script: ../scripts/eqtl_sharing_ocr_enrichment.R
+    benchmark: reports/benchmarks/dev_specificity.ocr_enrich.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/ocr_enrich.log
+
+  glm_enrich:
+    out_file:  ../results/19DEV-SPECIFICITY/glm_enrich/fetal_specific_vs_shared_li.rds
+    script:    ../scripts/eqtl_sharing_glm_enrichment.R
+    benchmark: reports/benchmarks/dev_specificity.glm_enrich.txt
+    log:       ../results/00LOG/19DEV-SPECIFICITY/glm_enrich.log
+
+  eqtl_effects:
+    out_file: ../results/19DEV-SPECIFICITY/eqtl_effects/eqtl_effect_sizes.rds
+    script: ../scripts/eqtl_sharing_effect_sizes.R
+    benchmark: reports/benchmarks/dev_specificity.eqtl_effect_sizes.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effects.log
+
+  eqtl_effect_replication:
+    out_file: ../results/19DEV-SPECIFICITY/eqtl_effect_replication/eqtl_effect_replication.rds
+    script: ../scripts/eqtl_sharing_effect_replication.R
+    benchmark: reports/benchmarks/dev_specificity.eqtl_effect_replication.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/eqtl_effect_replication.log
+
+  report:
+    script: scripts/eqtl_sharing_report.Rmd
+    html: reports/19DEV-SPECIFICITY/dev_specificity_report.html
+    output_file: ../reports/19DEV-SPECIFICITY/dev_specificity_report.html
+    benchmark: reports/benchmarks/dev_specificity.report.txt
+    log: ../results/00LOG/19DEV-SPECIFICITY/dev_specificity_report.log
+
+
+# Replication bulk
+replication_bulk:
+  extract_unique_egenes:
+    qtl_dir: ../results/05TENSORQTL/tensorqtl_perm/
+    out_file: ../results/21REPLICATION-BULK/extract_unique_egenes/egenes_per_celltype.tsv
+    log: ../results/00LOG/21REPLICATION-BULK/extract_unique_egenes.log
+
+  overlap_obrien:
+    obrien_supp: ../resources/public_datasets/obrien_2018/obrien_2018_supp_tables.xlsx
+    out_file: ../results/21REPLICATION-BULK/overlap_obrien/fetal_obrien_overlap.tsv
+    log: ../results/00LOG/21REPLICATION-BULK/overlap_obrien.log
+
+  isoform_eqtl:
+    bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
+    summary:          ../results/21REPLICATION-BULK/isoform_eqtl/isoform_comparison_summary.tsv
+    log:              ../results/00LOG/21REPLICATION-BULK/isoform_eqtl_comparison.log
+    script:           ../scripts/repl_bulk_isoform_eqtl.py
+    nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
+
+  report:
+    script: scripts/repl_bulk_report.Rmd
+    html: reports/21REPLICATION-BULK/repl_bulk_report.html
+    output_file: ../reports/21REPLICATION-BULK/repl_bulk_report.html
+    bmark_dir: reports/benchmarks/
+    log: ../results/00LOG/21REPLICATION-BULK/repl_bulk_report.log
