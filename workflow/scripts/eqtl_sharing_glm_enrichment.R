@@ -20,11 +20,13 @@
 #            li_s6_file             Li et al. 2023 cCRE coordinates
 #            li_s7_file             Li et al. 2023 cCRE to cell type map
 #
-# Outputs:   output_file  rds list: model, results (odds ratio, 95% CI, P),
-#                         glm_data (plus an untracked .tsv of results)
+# Outputs:   output_file  rds list: model, results (odds ratio, 95% CI, two- and
+#                         one-tailed P), glm_data (plus an untracked .tsv of results)
 #
-# Notes:     Unlike ocr_enrich there is no genomic background model: this compares
-#            the two sets with each other, not with a null.
+# Notes:     - Unlike ocr_enrich there is no genomic background model: this
+#              compares the two sets with each other, not with a null.
+#            - One-tailed P tests the hypothesis that fetal-specific eQTL overlap
+#              adult OCRs less than shared eQTL (odds ratio < 1): pnorm(z).
 #
 #--------------------------------------------------------------------------------------
 
@@ -92,7 +94,7 @@ all_cortical_types <- c(
 )
 
 ##  Load SNP sets (LD-independent pairs only)  ----------------------------------------
-message("\nLoading classification output (B) ...")
+message("\nLoading classification output ...")
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
 
@@ -190,6 +192,7 @@ coefs <- coef(summary(model))
 est   <- coefs["is_set_A", "Estimate"]
 se    <- coefs["is_set_A", "Std. Error"]
 pval  <- coefs["is_set_A", "Pr(>|z|)"]
+z     <- coefs["is_set_A", "z value"]
 
 results <- tibble(
   comparison      = "fetal_specific_vs_shared",
@@ -201,7 +204,8 @@ results <- tibble(
   odds_ratio      = exp(est),
   ci_low          = exp(est - 1.96 * se),
   ci_high         = exp(est + 1.96 * se),
-  p.value         = pval
+  p.value         = pval,
+  p_one_tailed    = pnorm(z)  # H1: odds ratio < 1 (fetal-specific less enriched)
 )
 
 message("\n--- Results summary ---\n")

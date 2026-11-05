@@ -49,7 +49,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nRunning heterogeneity test on fetal-specific eQTL vs Jang et al. 2026 (Step C, stringent 'all' rule + magnitude consistency) ...")
+message("\n\nRunning heterogeneity test on fetal-specific eQTL vs Jang et al. 2026 (stringent 'all' rule + magnitude consistency) ...")
 
 ##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
@@ -84,7 +84,7 @@ message("============================\n")
 
 ##  Load universe and classification  -------------------------------------------------
 
-message("\nLoading eQTL universe (A) and classification (B) ...")
+message("\nLoading eQTL universe and classification ...")
 eqtl_universe  <- read_rds(eqtl_universe_file)
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
@@ -96,7 +96,7 @@ gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
   distinct(ensembl_gene_id, .keep_all = TRUE)
 
 n_pairs_specific_B <- any_table %>% filter(final_category == "testable_specific") %>% nrow()
-message("  B: unique (gene, SNP) pairs classified testable_specific: ", n_pairs_specific_B)
+message("  Unique (gene, SNP) pairs classified testable_specific: ", n_pairs_specific_B)
 
 ##  One fetal row per pair (lowest qval)  ---------------------------------------------
 
@@ -153,7 +153,7 @@ joined <- fetal_ref_row %>%
   inner_join(pairs_all_lookup, by = c("phenotype_id", "variant_id"))
 
 n_joined <- nrow(joined)
-message("  C: joined rows (1 fetal row per pair x all tested Jang comparisons): ", n_joined)
+message("  Joined rows (1 fetal row per pair x all tested Jang comparisons): ", n_joined)
 
 joined <- joined %>%
   mutate(
@@ -205,10 +205,10 @@ usable <- joined %>% filter(!is.na(beta_jang_harmonized))
 n_usable <- nrow(usable)
 n_unique_pairs_usable <- usable %>% distinct(phenotype_id, variant_id) %>% nrow()
 
-message("\n  C: dropped -- unresolved allele harmonization (mismatched/palindromic/missing): ",
+message("\n  Dropped -- unresolved allele harmonization (mismatched/palindromic/missing): ",
         n_allele_dropped)
-message("  C: usable rows entering Q-test: ", n_usable)
-message("  C: unique (gene, SNP) pairs among usable rows: ", n_unique_pairs_usable)
+message("  Usable rows entering Q-test: ", n_usable)
+message("  Unique (gene, SNP) pairs among usable rows: ", n_unique_pairs_usable)
 
 n_pairs_lost_some_comparisons <- joined %>%
   distinct(phenotype_id, variant_id) %>%

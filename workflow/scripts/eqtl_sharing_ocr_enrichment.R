@@ -23,6 +23,7 @@
 #            snp_lookup_files       hg38 SNP coordinates, one file per cell type
 #            li_s6_file             Li et al. 2023 cCRE coordinates
 #            li_s7_file             Li et al. 2023 cCRE to cell type map
+#            seed                   random seed for the bootstrap (params)
 #
 # Outputs:   output_file  rds: one row per SNP set (n_snps, n_peaks, p_value,
 #                         observed_overlap, mean_permuted_overlap, fold_enrichment)
@@ -66,15 +67,16 @@ snp_lookup_files        <- snakemake@input[["snp_lookups"]]
 li_s6_file             <- snakemake@input[["li_s6"]]
 li_s7_file             <- snakemake@input[["li_s7"]]
 output_file            <- snakemake@output[[1]]
+seed                   <- snakemake@params[["seed"]]
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
   variable = c("classification_file", "heterogeneity_file", "independent_snps_file",
-               "n_snp_lookups", "li_s6_file", "li_s7_file", "output_file"),
+               "n_snp_lookups", "li_s6_file", "li_s7_file", "output_file", "seed"),
   value    = c(classification_file, heterogeneity_file, independent_snps_file,
-               length(snp_lookup_files), li_s6_file, li_s7_file, output_file)) |>
+               length(snp_lookup_files), li_s6_file, li_s7_file, output_file, seed)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -100,11 +102,11 @@ all_cortical_types <- c(
 )
 
 ##  Load SNP sets (LD-independent pairs only)  ----------------------------------------
-message("\nLoading classification output (B) ...")
+message("\nLoading classification output ...")
 classification <- read_rds(classification_file)
 any_table <- classification$any_table
 
-message("Loading heterogeneity test output (C) ...")
+message("Loading heterogeneity test output ...")
 het_test <- read_rds(heterogeneity_file)
 heterogeneous_pairs <- het_test$heterogeneous_snps  # already heterogeneous_all AND magnitude_consistent
 
@@ -202,6 +204,7 @@ snp_sets <- list(
 )
 
 results <- tibble()
+set.seed(seed)
 
 for (snp_set_name in names(snp_sets)) {
   snp_gr <- snp_sets[[snp_set_name]]

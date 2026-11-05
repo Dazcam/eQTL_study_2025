@@ -1296,6 +1296,7 @@ dev_specificity:
     li_s6: ../resources/public_datasets/li_2023/Table_S6_List_of_cCREs_in_bed_format.bed
     li_s7: ../resources/public_datasets/li_2023/Table_S7_Cell_type_assignment_of_cCREs.txt
     snp_lookup_dir: ../results/06QTL-REPLICATION/atac_enrich/
+    seed: 1234  # set.seed() before the block-bootstrap permutations
     out_file: ../results/19DEV-SPECIFICITY/ocr_enrich/fetal_specific_ocr_enrichment.rds
     log: ../results/00LOG/19DEV-SPECIFICITY/ocr_enrich.log
 

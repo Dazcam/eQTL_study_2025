@@ -176,6 +176,7 @@ rule ocr_enrich:
             li_s6            = config["dev_specificity"]["ocr_enrich"]["li_s6"],
             li_s7            = config["dev_specificity"]["ocr_enrich"]["li_s7"]
     output: config["dev_specificity"]["ocr_enrich"]["out_file"]
+    params: seed = config["dev_specificity"]["ocr_enrich"]["seed"]
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 4, mem_mb = 16000, time = "01:00:00"
     threads: 4
