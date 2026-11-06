@@ -23,8 +23,7 @@ rule all:
 #       config['plotting']['family_heatmaps_plt']['npc'],
 #       config['plotting']['effect_size_heatmaps_plt']['fetal_vs_fetal'],
 #       config['plotting']['effect_size_heatmaps_plt']['fetal_vs_jang'],
-#       config['plotting']['fig4_plt']['out_file'],
-       config['plotting']['tss_density_plt']['out_file']
+       config['plotting']['fig4_plt']['out_file']
 #       config['plotting']['snrna_qc_plt']['out_file_sample'],
 #       config['plotting']['snrna_qc_plt']['out_file_celltype'],
 
@@ -145,17 +144,6 @@ rule effect_size_heatmaps_plt:
     resources:   time="0:30:00"
     log:         config['plotting']['effect_size_heatmaps_plt']['log']
     script:      "../scripts/manuscript_plot_effect_size_heatmaps.R"
-
-rule pseud_tss_density_plt:
-    # SF 9 -- combined TSS-distance density plots per trajectory
-    output: config['plotting']['tss_density_plt']['out_file']
-    params: pseudotime_dir = config['plotting']['tss_density_plt']['pseudotime_dir'],
-            exp_pc_map     = config['exp_pc_map'],
-            trajectories   = config['trajectories']
-    singularity: config["containers"]["r_eqtl"]
-    resources: time="0:30:00"
-    log:    config['plotting']['tss_density_plt']['log']
-    script: "../scripts/manuscript_plot_tss_density.R"
 
 rule bulk_egene_overlaps_plt:
     # SF 10

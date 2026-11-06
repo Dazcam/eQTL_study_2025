@@ -125,7 +125,7 @@ BIN_ORDER     = [4, 3, 2, 1]   # bottom -> top, so Bin 1 is at the top
 COLOURS       = {"Novel": "#B3B3B3", "Shared": "#B2DF8A"}   # gray70 / light green
 BAR_LINEWIDTH = 1.8
 
-# Panel C styling: same bin palette as SF9, i.e. R's
+# Panel C styling: same bin palette as pseudotime_report.Rmd, i.e. R's
 # colorRampPalette(c("#FDE725", "#21908C", "#440154"))(6), bins 1..4 use the first 4
 _ramp = LinearSegmentedColormap.from_list("bin_ramp", ["#FDE725", "#21908C", "#440154"])
 BIN_PALETTE = {b: to_hex(_ramp(x)) for b, x in zip(range(1, 7), np.linspace(0, 1, 6))}

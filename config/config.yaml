@@ -1102,12 +1102,6 @@ plotting:
     fetal_vs_jang: ../results/14MANUSCRIPT_PLOTS/effect_size_heatmap_fetal_vs_jang.tiff
     log: ../results/00LOG/14MANUSCRIPT_PLOTS/effect_size_heatmaps_plt.log
 
-  tss_density_plt:
-    # SF9 
-    pseudotime_dir: ../results/17PSEUDOTIME/
-    out_file: ../results/14MANUSCRIPT_PLOTS/tss_density_combined.tiff
-    log: ../results/00LOG/14MANUSCRIPT_PLOTS/tss_density_plt.log
-
   bulk_egene_overlaps_plt:
     # SF 10
     out_file: ../results/14MANUSCRIPT_PLOTS/bulk_egene_overlaps.tiff
