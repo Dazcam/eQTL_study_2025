@@ -53,3 +53,4 @@ workflow/smk-*.log
 workflow/reports/benchmarks/
 workflow/reports/fq_check/
 workflow/reports/04GENOTYPES-POST/pca.*
+workflow/reports/old_reports/
