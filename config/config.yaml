@@ -266,7 +266,7 @@ scanpy:
     output: ../results/02SCANPY/scanpy_qc_{plate}.html
     nb_out: ../results/02SCANPY/scanpy_qc_{plate}_pm.ipynb
     html_out: scanpy_qc_{plate}.html
-    benchmark: reports/benchmarks/scanpy_qc.{plate}.benchmark.txt 
+    benchmark: reports/benchmarks/02scanpy.scanpy_qc_{plate}.benchmark.txt 
     log: ../results/00LOG/01SCANPY/scanpy_qc_{plate}.log
 
   clustering:
@@ -274,7 +274,7 @@ scanpy:
     output: ../results/02SCANPY/scanpy_clustering.html 
     nb_out: ../results/02SCANPY/scanpy_clustering_pm.ipynb
     html_out: scanpy_clustering.html
-    benchmark: reports/benchmarks/scanpy_clustering.benchmark.txt
+    benchmark: reports/benchmarks/02scanpy.scanpy_clustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_clustering.log
 
   clustering2:
@@ -319,7 +319,7 @@ scanpy:
     output: ../results/02SCANPY/scanpy_subclustering.html
     nb_out: ../results/02SCANPY/scanpy_subclustering_pm.ipynb
     html_out: scanpy_subclustering.html
-    benchmark: reports/benchmarks/scanpy_subclustering.benchmark.txt
+    benchmark: reports/benchmarks/02scanpy.scanpy_subclustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
   clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad   # written by the clustering notebooks
@@ -651,40 +651,40 @@ replication_sc:
   dwnld_ziffra:
     output: ../resources/public_datasets/ziffra_2021/Ziffra_2021_supp_tables_2_13.xlsx
     web_link: https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-021-03209-8/MediaObjects/41586_2021_3209_MOESM4_ESM.xlsx
-    benchmark: reports/benchmarks/07replication_sc.dwnld_ziffra.txt
+    benchmark: reports/benchmarks/07replication_sc.dwnld_ziffra.benchmark.txt
     log: ../results/00LOG/07REPLICATION-SC/dwnld_ziffra.log
 
   snp_lookup:
     out_file: ../results/07REPLICATION-SC/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.snp_lookup.rds
     script: ../scripts/repl_sc_snp_lookup.R
-    benchmark: reports/benchmarks/qtl_replication.snp_lookup_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
+    benchmark: reports/benchmarks/07replication_sc.snp_lookup_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
     log: ../results/00LOG/07REPLICATION-SC/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_snp_lookup.log
 
   atac_enrich:
     seed: 1234  # set.seed() before the block-bootstrap permutations
     out_file: ../results/07REPLICATION-SC/atac_enrich/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.ziffra_peak_enrich.rds
     script: ../scripts/repl_sc_atac_enrichment.R
-    benchmark: reports/benchmarks/qtl_replication.atac_enrich_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
+    benchmark: reports/benchmarks/07replication_sc.atac_enrich_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
     log: ../results/00LOG/07REPLICATION-SC/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_atac_enrich.log
 
   ziffra_summary:
     out_file: ../results/07REPLICATION-SC/atac_enrich/ziffra_overlaps_primary.tsv
     script: ../scripts/repl_sc_ziffra_summary.R
-    benchmark: reports/benchmarks/07replication_sc.ziffra_summary.txt
+    benchmark: reports/benchmarks/07replication_sc.ziffra_summary.benchmark.txt
     log: ../results/00LOG/07REPLICATION-SC/ziffra_summary.log
 
   cat_nom_qtl:
     parquet: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.{chr}.parquet
     output: ../results/07REPLICATION-SC/cat_nom_qtl/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.cis_qtl_pairs.tsv.gz
     script: scripts/repl_sc_cat_nom_qtl.py
-    benchmark: reports/benchmarks/07replication_sc.cat_nom_qtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt
+    benchmark: reports/benchmarks/07replication_sc.cat_nom_qtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
     log: ../results/00LOG/07REPLICATION-SC/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_cat_nom_qtl.log
 
   pi1_enrich_internal:
     enrich: ../results/07REPLICATION-SC/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_tbl.rds
     pi1: ../results/07REPLICATION-SC/internal/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_results_tbl.rds
     script: ../scripts/repl_sc_pi1_enrichment.R
-    benchmark: reports/benchmarks/07replication_sc.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}.txt
+    benchmark: reports/benchmarks/07replication_sc.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}.benchmark.txt
     log: ../results/00LOG/07REPLICATION-SC/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_internal.log
 
   # Freeze 2 outputs are in 15EQTL-SHARING/; paths move in the rename pass
@@ -692,13 +692,13 @@ replication_sc:
     enrich: ../results/15EQTL-SHARING/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_enrich_tbl.rds
     pi1:    ../results/15EQTL-SHARING/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_results_tbl.rds
     script: ../scripts/repl_sc_pi1_enrichment.R
-    benchmark: reports/benchmarks/eqtl_sharing.pi1_enrich_jang_{cell_type}_vs_{jang_cell_type}.txt
+    benchmark: reports/benchmarks/07replication_sc.pi1_enrich_jang_{cell_type}_vs_{jang_cell_type}.benchmark.txt
     log:    ../results/00LOG/15EQTL-SHARING/{cell_type}_vs_{jang_cell_type}_pi1_enrich_jang.log
 
   beta_correlation:
     out_file: ../results/15EQTL-SHARING/beta_correlation/beta_correlation_results.rds
     script: ../scripts/repl_sc_beta_correlation.R
-    benchmark: reports/benchmarks/eqtl_sharing.beta_correlation.txt
+    benchmark: reports/benchmarks/07replication_sc.beta_correlation.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/beta_correlation.log
 
   report:
@@ -715,21 +715,21 @@ replication_bulk:
   extract_unique_egenes:
     out_file:  ../results/08REPLICATION-BULK/extract_unique_egenes/egenes_per_celltype.tsv
     log:       ../results/00LOG/08REPLICATION-BULK/extract_unique_egenes.log
-    benchmark: reports/benchmarks/replication_bulk.extract_unique_egenes.txt
+    benchmark: reports/benchmarks/08replication_bulk.extract_unique_egenes.benchmark.txt
     script:    ../scripts/repl_bulk_extract_unique_egenes.R
 
   overlap_obrien:
     obrien_supp: ../resources/public_datasets/obrien_2018/obrien_2018_supp_tables.xlsx
     out_file:    ../results/08REPLICATION-BULK/overlap_obrien/fetal_obrien_overlap.tsv
     log:         ../results/00LOG/08REPLICATION-BULK/overlap_obrien.log
-    benchmark:   reports/benchmarks/replication_bulk.overlap_obrien.txt
+    benchmark:   reports/benchmarks/08replication_bulk.overlap_obrien.benchmark.txt
     script:      ../scripts/repl_bulk_overlap_obrien.R
 
   isoform_eqtl:
     bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
     summary:          ../results/08REPLICATION-BULK/isoform_eqtl/isoform_comparison_summary.tsv
     log:              ../results/00LOG/08REPLICATION-BULK/isoform_eqtl_comparison.log
-    benchmark:        reports/benchmarks/replication_bulk.isoform_eqtl_comparison.txt
+    benchmark:        reports/benchmarks/08replication_bulk.isoform_eqtl_comparison.benchmark.txt
     script:           ../scripts/repl_bulk_isoform_eqtl.py
     nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
 
@@ -737,7 +737,7 @@ replication_bulk:
     script: scripts/repl_bulk_report.Rmd
     html: reports/08REPLICATION-BULK/08replication_bulk_report.html
     output_file: ../reports/08REPLICATION-BULK/08replication_bulk_report.html
-    benchmark: reports/benchmarks/replication_bulk.report.txt
+    benchmark: reports/benchmarks/08replication_bulk.repl_bulk_report.benchmark.txt
     log: ../results/00LOG/08REPLICATION-BULK/repl_bulk_report.log
 
 # ------------  Pipeline 09: Prep GWAS  ------------
@@ -983,7 +983,7 @@ ctwas:
     output:     ../results/14CTWAS/ld_mats/create_ctwas_ld_matrices.done
     ld_ref_dir: ../resources/ldsr/ldsr_hg38_refs/plink_files/
     out_dir:    ../results/14CTWAS/ld_mats/
-    bmrk:       reports/benchmarks/14ctwas.create_ctwas_ld_matrices.benchmark.txt
+    bmrk:       reports/benchmarks/14ctwas.create_ld_matrices.benchmark.txt
     log:        ../results/00LOG/14CTWAS/create_ld_matrices.log
  
   copy_fusion_weights:
@@ -991,7 +991,7 @@ ctwas:
     output:   ../results/14CTWAS/weights/stubs/{cell_type}_copy_weights.done
     src_dir:  ../results/13TWAS-WEIGHTS/weights/{cell_type}
     dest_dir: ../results/14CTWAS/weights/{cell_type}
-    bmrk:     reports/benchmarks/14ctwas.copy_weights_{cell_type}.benchmark.txt
+    bmrk:     reports/benchmarks/14ctwas.copy_fusion_weights_{cell_type}.benchmark.txt
     log:      ../results/00LOG/14CTWAS/copy_weights_{cell_type}.log 
 
   run_ctwas:
@@ -1030,20 +1030,20 @@ eqtl_sharing:
       Endo-Peri: End
     out_file: ../results/15EQTL-SHARING/extract_universe/eqtl_universe.rds
     script: ../scripts/eqtl_sharing_extract_universe.R
-    benchmark: reports/benchmarks/eqtl_sharing.extract_universe.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.extract_eqtl_universe.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/extract_universe.log
 
   classify_specificity:
     out_file: ../results/15EQTL-SHARING/classify_specificity/eqtl_specificity_classification.rds
     script: ../scripts/eqtl_sharing_classify.R
-    benchmark: reports/benchmarks/eqtl_sharing.classify_specificity.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.classify_eqtl_specificity.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/classify_specificity.log
 
   heterogeneity_test:
     fdr_thresh: 0.05
     out_file: ../results/15EQTL-SHARING/heterogeneity_test/heterogeneity_results.rds
     script: ../scripts/eqtl_sharing_heterogeneity.R
-    benchmark: reports/benchmarks/eqtl_sharing.heterogeneity_test.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.heterogeneity_test.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/heterogeneity_test.log
 
   prep_ld_clump_input:
@@ -1051,7 +1051,7 @@ eqtl_sharing:
     singleton_snps: ../results/15EQTL-SHARING/ld_clump/singleton_snps.rds
     snp_list:       ../results/15EQTL-SHARING/ld_clump/candidate_snps.txt
     script:         ../scripts/eqtl_sharing_prep_ld_clump.R
-    benchmark:      reports/benchmarks/eqtl_sharing.prep_ld_clump_input.txt
+    benchmark:      reports/benchmarks/15eqtl_sharing.prep_ld_clump_input.benchmark.txt
     log:            ../results/00LOG/15EQTL-SHARING/prep_ld_clump_input.log
 
   run_ld_clump:
@@ -1060,13 +1060,13 @@ eqtl_sharing:
     sentinel:      ../results/15EQTL-SHARING/ld_clump/run_ld_clump.done
     clump_kb: 1000
     clump_r2: 0.1
-    benchmark:     reports/benchmarks/eqtl_sharing.run_ld_clump.txt
+    benchmark:     reports/benchmarks/15eqtl_sharing.run_ld_clump.benchmark.txt
     log:           ../results/00LOG/15EQTL-SHARING/run_ld_clump.log
 
   parse_ld_clump:
     out_file: ../results/15EQTL-SHARING/ld_clump/independent_eqtl_universe.rds
     script:   ../scripts/eqtl_sharing_parse_ld_clump.R
-    benchmark: reports/benchmarks/eqtl_sharing.parse_ld_clump.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.parse_ld_clump.benchmark.txt
     log:      ../results/00LOG/15EQTL-SHARING/parse_ld_clump.log
 
   ocr_enrich:
@@ -1075,32 +1075,32 @@ eqtl_sharing:
     seed: 1234  # set.seed() before the block-bootstrap permutations
     out_file: ../results/15EQTL-SHARING/ocr_enrich/fetal_specific_ocr_enrichment.rds
     script: ../scripts/eqtl_sharing_ocr_enrichment.R
-    benchmark: reports/benchmarks/eqtl_sharing.ocr_enrich.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.ocr_enrich.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/ocr_enrich.log
 
   glm_enrich:
     out_file:  ../results/15EQTL-SHARING/glm_enrich/fetal_specific_vs_shared_li.rds
     script:    ../scripts/eqtl_sharing_glm_enrichment.R
-    benchmark: reports/benchmarks/eqtl_sharing.glm_enrich.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.glm_enrich.benchmark.txt
     log:       ../results/00LOG/15EQTL-SHARING/glm_enrich.log
 
   eqtl_effects:
     out_file: ../results/15EQTL-SHARING/eqtl_effects/eqtl_effect_sizes.rds
     script: ../scripts/eqtl_sharing_effect_sizes.R
-    benchmark: reports/benchmarks/eqtl_sharing.eqtl_effect_sizes.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.eqtl_effect_sizes.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/eqtl_effects.log
 
   eqtl_effect_replication:
     out_file: ../results/15EQTL-SHARING/eqtl_effect_replication/eqtl_effect_replication.rds
     script: ../scripts/eqtl_sharing_effect_replication.R
-    benchmark: reports/benchmarks/eqtl_sharing.eqtl_effect_replication.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.eqtl_effect_replication.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/eqtl_effect_replication.log
 
   report:
     script: scripts/eqtl_sharing_report.Rmd
     html: reports/15EQTL-SHARING/15eqtl_sharing_report.html
     output_file: ../reports/15EQTL-SHARING/15eqtl_sharing_report.html
-    benchmark: reports/benchmarks/eqtl_sharing.report.txt
+    benchmark: reports/benchmarks/15eqtl_sharing.eqtl_sharing_report.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/eqtl_sharing_report.log
 
 

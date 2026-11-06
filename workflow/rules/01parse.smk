@@ -61,7 +61,7 @@ rule cat_fqs:
             r2 = temp(config["parse"]["cat_fqs"]["out_r2"])
     log:    r1 = config["parse"]["cat_fqs"]["log_r1"],
             r2 = config["parse"]["cat_fqs"]["log_r2"]
-    benchmark: "reports/benchmarks/parse.{plate}.{sample}.cat_fq.benchmark.txt"
+    benchmark: "reports/benchmarks/01parse.cat_fqs_{plate}_{sample}.benchmark.txt"
     params: outdir = config["parse"]["cat_fqs"]["outdir"],
             fq_size = "reports/benchmarks/input_fq_sizes.tsv"
     shell:
@@ -80,7 +80,7 @@ rule run_parse:
                 plate=wc.plate, sample=wc.sample
             )            
     priority: 50
-    benchmark: "reports/benchmarks/parse.{plate}.{sample}.run_parse.benchmark.txt"
+    benchmark: "reports/benchmarks/01parse.run_parse_{plate}_{sample}.benchmark.txt"
     resources: threads = 32, mem_mb = 360000, time="10-0:00:00"
     message: "Running Parse alignment"
     log:     config["parse"]["run_parse"]["log"]
@@ -111,7 +111,7 @@ rule run_parse_combine:
         sublib_list=lambda wc: config["parse"]["run_parse_combine"]["sublib_list"].format(plate=wc.plate),
         outdir=lambda wc: config["parse"]["run_parse_combine"]["outdir"].format(plate=wc.plate)
     resources: threads = 32, mem_mb = 360000, time="3-0:00:00"
-    benchmark: "reports/benchmarks/parse.{plate}.run_parse_combine.benchmark.txt"
+    benchmark: "reports/benchmarks/01parse.run_parse_combine_{plate}.benchmark.txt"
     message: "Combining Parse for fastq files"
     log:     config["parse"]["run_parse_combine"]["log"]
     shell:

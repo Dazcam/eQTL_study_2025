@@ -1002,20 +1002,21 @@ for(cell_type in cell_types) {
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files for the pipeline
-files <- list.files(bmark_dir, pattern = "05tensorQTL.*\\.txt", full.names = TRUE)
+known_rules <- c("prep_tensorQTL_input", "zip_pblk_cnts", "convert_genotypes", "split_covariates",
+                 "tensorqtl_nom", "tensorqtl_perm", "tensorqtl_independent", "tensorqtl_report")
+files <- list.files(bmark_dir, pattern = "^05tensorQTL\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
 benchmarks <- map_dfr(files, function(f) {
   df <- read.table(f, header = TRUE, sep = "\t")
   fname <- basename(f)
   parts <- strsplit(fname, "\\.")[[1]]
 
-  # this field holds things like:
-  # "prep_tensorQTL_input_Endo-Peri", "split_covariates_Endo-Peri_genPC_4_expPC_10",
-  # "perm_ExN-2_genPC_4_expPC_50", "nom_ExN-2_genPC_4_expPC_50", "convert_genotypes"
+  # rule name followed by optional wildcards, e.g. "tensorqtl_perm_NPC_quantile_genPC_4_expPC_30"
   rule_full <- parts[2]
 
-  # strip everything after the first "_" → leaves only the base rule
-  rule <- str_split(rule_full, "_")[[1]][1]
+  # match the longest known rule name so rule names containing "_" stay whole
+  hit  <- known_rules[rule_full == known_rules | str_starts(rule_full, paste0(known_rules, "_"))]
+  rule <- if (length(hit) == 0) rule_full else hit[which.max(nchar(hit))]
 
   tibble(
     file = f,

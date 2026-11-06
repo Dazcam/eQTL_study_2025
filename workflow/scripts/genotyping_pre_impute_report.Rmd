@@ -257,7 +257,7 @@ datatable(final_snp_cnt_tbl, caption = 'Table 7. SNP counts after GenotypeQCtoHR
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files
-files <- list.files(bmark_dir, pattern = "geno_pre_impute.*.benchmark.txt", full.names = TRUE)
+files <- list.files(bmark_dir, pattern = "^03genotypes_pre_impute\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
 # Read and combine
 benchmarks <- map_dfr(files, function(f) {

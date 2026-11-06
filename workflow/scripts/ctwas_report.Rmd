@@ -327,7 +327,7 @@ by_disorder |>
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files for the pipeline
-files <- list.files(bmark_dir, pattern = "14ctwas.*\\.txt", full.names = TRUE)
+files <- list.files(bmark_dir, pattern = "^14ctwas\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
 benchmarks <- map_dfr(files, function(f) {
   df <- read.table(f, header = TRUE, sep = "\t")
@@ -335,11 +335,11 @@ benchmarks <- map_dfr(files, function(f) {
   parts <- strsplit(fname, "\\.")[[1]]
 
   # this field holds the benchmark name, e.g. "run_ctwas_Glu-UL_scz",
-  # "copy_weights_NPC", "create_ctwas_ld_matrices", "ctwas_report"
+  # "copy_fusion_weights_NPC", "create_ld_matrices", "ctwas_report"
   rule_full <- parts[2]
 
   # strip the wildcards → leaves only the rule
-  rule <- str_extract(rule_full, "^(create_ctwas_ld_matrices|copy_weights|run_ctwas|ctwas_report)")
+  rule <- str_extract(rule_full, "^(create_ld_matrices|copy_fusion_weights|run_ctwas|ctwas_report)")
   rule <- if_else(is.na(rule), rule_full, rule)
 
   tibble(

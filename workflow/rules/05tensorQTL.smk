@@ -30,7 +30,7 @@ rule prep_tensorQTL_input:
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time="5:00:00"
     message: "Prep pseudoblk GeX and covariate matricies for tensorQTL with norm: {wildcards.norm_method}"
-    benchmark: "reports/benchmarks/05tensorQTL.prep_tensorQTL_input_{cell_type}_{norm_method}.txt"
+    benchmark: "reports/benchmarks/05tensorQTL.prep_tensorQTL_input_{cell_type}_{norm_method}.benchmark.txt"
     log:    config["tensorQTL"]["prep_tensorQTL_input"]["log"]
     wildcard_constraints: cell_type = TQTL_CELL_TYPE_REGEX
     script: "../scripts/tensorqtl_prep_input_files.R"
@@ -40,7 +40,7 @@ rule zip_pblk_cnts:
     output:  config["tensorQTL"]["zip_pblk_cnts"]["output"]
     singularity: config["containers"]["fastqtl"] # Use bgzip and tabix in container
     message: "bgzip and index pseudoblk counts for norm: {wildcards.norm_method}"
-    benchmark: "reports/benchmarks/05tensorQTL.zip_pbulk_cnts_{cell_type}_{norm_method}.txt"
+    benchmark: "reports/benchmarks/05tensorQTL.zip_pblk_cnts_{cell_type}_{norm_method}.benchmark.txt"
     log:     config["tensorQTL"]["zip_pblk_cnts"]["log"]
     wildcard_constraints: cell_type = TQTL_CELL_TYPE_REGEX
     shell:
@@ -55,7 +55,7 @@ rule convert_genotypes:
     params: config["tensorQTL"]["convert_genotypes"]["prefix_out"]
     envmodules: "plink/2.0"
     message: "Convert genotypes to plink2 format for tensorQTL"
-    benchmark: "reports/benchmarks/05tensorQTL.convert_genotypes.txt"
+    benchmark: "reports/benchmarks/05tensorQTL.convert_genotypes.benchmark.txt"
     shell: "plink2 --vcf {input} --make-pgen --out {params}" 
 
 rule split_covariates:
@@ -65,7 +65,7 @@ rule split_covariates:
     singularity: config["containers"]["R"]
     resources: threads = 1, mem_mb = 6000, time="5:00:00"
     message: "Divide covariate file to test different PC thresholds in tensorQTL for norm: {wildcards.norm_method}"
-    benchmark: "reports/benchmarks/05tensorQTL.split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"   
+    benchmark: "reports/benchmarks/05tensorQTL.split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt"   
     log:    config["tensorQTL"]["split_covariates"]["log"]
     wildcard_constraints: cell_type = TQTL_CELL_TYPE_REGEX
     script: "../scripts/tensorqtl_split_covariates.R"
@@ -81,7 +81,7 @@ rule tensorqtl_nom:
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
     message: "Run tensorQTL nominal for norm: {wildcards.norm_method}"
-    benchmark: "reports/benchmarks/05tensorQTL.nom_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    benchmark: "reports/benchmarks/05tensorQTL.tensorqtl_nom_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt"
     log:    config["tensorQTL"]["tensorqtl_nom"]["log"]
     wildcard_constraints: cell_type = TQTL_CELL_TYPE_REGEX
     shell:
@@ -103,7 +103,7 @@ rule tensorqtl_perm:
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 20000, time="5:00:00"
     message: "Run tensorQTL permutation for norm: {wildcards.norm_method}"
-    benchmark: "reports/benchmarks/05tensorQTL.perm_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    benchmark: "reports/benchmarks/05tensorQTL.tensorqtl_perm_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt"
     log:    config["tensorQTL"]["tensorqtl_perm"]["log"]
     wildcard_constraints: cell_type = TQTL_CELL_TYPE_REGEX
     shell:
@@ -126,7 +126,7 @@ rule tensorqtl_independent:
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
     message: "Run tensorQTL independent analysis for norm: {wildcards.norm_method}"
-    benchmark: "reports/benchmarks/05tensorQTL.independent_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.txt"
+    benchmark: "reports/benchmarks/05tensorQTL.tensorqtl_independent_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt"
     log:    config["tensorQTL"]["tensorqtl_independent"]["log"]
     wildcard_constraints: cell_type = TQTL_CELL_TYPE_REGEX
     shell:

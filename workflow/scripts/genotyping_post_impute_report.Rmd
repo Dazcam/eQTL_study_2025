@@ -155,7 +155,7 @@ p
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
 # List all benchmark files for the pipeline
-files <- list.files(bmark_dir, pattern = "geno_post_impute.*\\.txt", full.names = TRUE)
+files <- list.files(bmark_dir, pattern = "^04genotypes_post_impute\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
 # Read and combine benchmark files
 benchmarks <- map_dfr(files, function(f) {
