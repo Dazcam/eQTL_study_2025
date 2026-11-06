@@ -17,6 +17,7 @@ configfile: '../config/config.yaml'
 #include: 'rules/12ctwas.smk'
 #include: 'rules/17pseudotime.smk'
 include:  'rules/19dev_specificity.smk'
+#include: 'rules/21replication_bulk.smk'
 
 rule all:
     input:
@@ -36,3 +37,4 @@ rule all:
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
 #        config["scanpy"]["subclustering"]["output"],
          config["dev_specificity"]["report"]["html"]
+#        config["replication_bulk"]["report"]["html"]

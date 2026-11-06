@@ -10,10 +10,6 @@ def get_all_egene_perm_files():
         for ct in config["cell_types"]
     ]
 
-rule all:
-    input:
-         config["replication_bulk"]["report"]["html"]
-
 rule extract_unique_egenes:
     input:  perm_files = get_all_egene_perm_files()
     output: config["replication_bulk"]["extract_unique_egenes"]["out_file"]
