@@ -238,6 +238,11 @@ benchmarks <- benchmarks |>
   })) |>
   unnest(data)
 
+# No current benchmark files: keep the columns so the table and plots render empty
+if (nrow(benchmarks) == 0) {
+  benchmarks <- tibble(rule = character(), runtime_sec = numeric(), max_rss = numeric())
+}
+
 # Summarise by rule
 summary <- benchmarks |>
   group_by(rule = factor(rule, levels = rule_names)) |>
@@ -291,6 +296,10 @@ summary |>
 ```
 
 ```{r bmark_notes, echo = FALSE, results = "asis"}
+if (nrow(benchmarks) == 0) {
+  cat("\n**Note:** no benchmark files found for the current rules and settings in",
+      paste0("`", params$bmark_dir, "`"), "\n")
+}
 if (length(unmatched) > 0) {
   cat("\n**Note:** benchmark files not matching a current rule name (not shown):",
       paste0("`", unmatched, "`", collapse = ", "), "\n")
