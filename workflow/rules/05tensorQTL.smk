@@ -20,7 +20,7 @@ TQTL_WILDCARDS = dict(
 rule prep_tensorQTL_input:
     input:  cov_file    = config["tensorQTL"]["prep_tensorQTL_input"]["cov_file"],
             sex_file    = config["tensorQTL"]["prep_tensorQTL_input"]["sex_file"],
-            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"],
+            gene_lookup = config["gene_lookup"],
             pseudobulk  = config["tensorQTL"]["prep_tensorQTL_input"]["pseudobulk"]
     output: cov_out     = config["tensorQTL"]["prep_tensorQTL_input"]["cov_out"],
             exp_out     = config["tensorQTL"]["prep_tensorQTL_input"]["exp_out"],
