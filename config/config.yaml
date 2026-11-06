@@ -1332,19 +1332,23 @@ dev_specificity:
 # Replication bulk
 replication_bulk:
   extract_unique_egenes:
-    qtl_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    out_file: ../results/21REPLICATION-BULK/extract_unique_egenes/egenes_per_celltype.tsv
-    log: ../results/00LOG/21REPLICATION-BULK/extract_unique_egenes.log
+    out_file:  ../results/21REPLICATION-BULK/extract_unique_egenes/egenes_per_celltype.tsv
+    log:       ../results/00LOG/21REPLICATION-BULK/extract_unique_egenes.log
+    benchmark: reports/benchmarks/replication_bulk.extract_unique_egenes.txt
+    script:    ../scripts/repl_bulk_extract_unique_egenes.R
 
   overlap_obrien:
     obrien_supp: ../resources/public_datasets/obrien_2018/obrien_2018_supp_tables.xlsx
-    out_file: ../results/21REPLICATION-BULK/overlap_obrien/fetal_obrien_overlap.tsv
-    log: ../results/00LOG/21REPLICATION-BULK/overlap_obrien.log
+    out_file:    ../results/21REPLICATION-BULK/overlap_obrien/fetal_obrien_overlap.tsv
+    log:         ../results/00LOG/21REPLICATION-BULK/overlap_obrien.log
+    benchmark:   reports/benchmarks/replication_bulk.overlap_obrien.txt
+    script:      ../scripts/repl_bulk_overlap_obrien.R
 
   isoform_eqtl:
     bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
     summary:          ../results/21REPLICATION-BULK/isoform_eqtl/isoform_comparison_summary.tsv
     log:              ../results/00LOG/21REPLICATION-BULK/isoform_eqtl_comparison.log
+    benchmark:        reports/benchmarks/replication_bulk.isoform_eqtl_comparison.txt
     script:           ../scripts/repl_bulk_isoform_eqtl.py
     nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
 
@@ -1353,4 +1357,5 @@ replication_bulk:
     html: reports/21REPLICATION-BULK/repl_bulk_report.html
     output_file: ../reports/21REPLICATION-BULK/repl_bulk_report.html
     bmark_dir: reports/benchmarks/
+    benchmark: reports/benchmarks/replication_bulk.report.txt
     log: ../results/00LOG/21REPLICATION-BULK/repl_bulk_report.log

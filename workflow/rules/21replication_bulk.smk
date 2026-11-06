@@ -1,70 +1,70 @@
 configfile: "../config/config.yaml"
 
-def get_all_egene_perm_files():
-    qtl_dir = config["replication_bulk"]["extract_unique_egenes"]["qtl_dir"]
-    geno_pc = config["tensorQTL"]["geno_pcs"]
-    norm_method = config["tensorQTL"]["norm_methods"][0]
-    return [
-        f"{qtl_dir}{ct}_{norm_method}_genPC_{geno_pc}_expPC_{config['exp_pc_map'][ct]}/"
-        f"{ct}_{norm_method}_perm.cis_qtl.txt.gz"
-        for ct in config["cell_types"]
-    ]
+RB = config["replication_bulk"]
+
+
+def perm_files(cell_types):
+    """tensorQTL permutation output per cell type, at the final expPC (exp_pc_map)."""
+    return [config["tensorQTL"]["tensorqtl_perm"]["output"].format(
+                cell_type=ct, norm_method=config["tensorQTL"]["norm_methods"][0],
+                geno_pc=config["tensorQTL"]["geno_pcs"], exp_pc=config["exp_pc_map"][ct])
+            for ct in cell_types]
+
 
 rule extract_unique_egenes:
-    input:  perm_files = get_all_egene_perm_files()
-    output: config["replication_bulk"]["extract_unique_egenes"]["out_file"]
+    input:  perm_files = perm_files(config["cell_types"])
+    output: RB["extract_unique_egenes"]["out_file"]
     params: cell_types  = config["cell_types"],
             l1_types    = config["fetal_l1_types"],
             eqtl_fdr    = config["eqtl_fdr"],
             geno_pc     = config["tensorQTL"]["geno_pcs"],
             norm_method = config["tensorQTL"]["norm_methods"][0]
     singularity: config["containers"]["r_eqtl"]
-    message: "Extract unique FDR-sig eGenes across all L1+L2+pseudotime cell types"
-    benchmark: "reports/benchmarks/replication_bulk.extract_unique_egenes.txt"
-    log:    config["replication_bulk"]["extract_unique_egenes"]["log"]
-    script: "../scripts/repl_bulk_extract_unique_egenes.R"
+    message:   "Extract unique FDR-sig eGenes across all L1+L2+pseudotime cell types"
+    benchmark: RB["extract_unique_egenes"]["benchmark"]
+    log:       RB["extract_unique_egenes"]["log"]
+    script:    RB["extract_unique_egenes"]["script"]
 
 rule overlap_obrien:
     input:  fetal_egenes = rules.extract_unique_egenes.output[0],
-            obrien_supp  = config["replication_bulk"]["overlap_obrien"]["obrien_supp"]
-    output: config["replication_bulk"]["overlap_obrien"]["out_file"]
+            obrien_supp  = RB["overlap_obrien"]["obrien_supp"]
+    output: RB["overlap_obrien"]["out_file"]
     singularity: config["containers"]["r_eqtl"]
-    message: "Overlap unique fetal eGenes against O'Brien 2018 bulk gene- and transcript-level significant eQTL"
-    benchmark: "reports/benchmarks/replication_bulk.overlap_obrien.txt"
-    log:    config["replication_bulk"]["overlap_obrien"]["log"]
-    script: "../scripts/repl_bulk_overlap_obrien.R"
+    message:   "Overlap unique fetal eGenes against O'Brien 2018 bulk gene- and transcript-level significant eQTL"
+    benchmark: RB["overlap_obrien"]["benchmark"]
+    log:       RB["overlap_obrien"]["log"]
+    script:    RB["overlap_obrien"]["script"]
 
 rule isoform_eqtl_comparison:
-    input:   fetal_egenes = rules.extract_unique_egenes.output[0],
-             gtf          = config["parse"]["get_refs"]["gtf_out"],
-             bulk_eqtl    = config["replication_bulk"]["isoform_eqtl"]["bulk_eqtl"],
-             gene_lookup  = config["gene_lookup"]
-    output:  config["replication_bulk"]["isoform_eqtl"]["summary"]
-    params:  nominal_threshold = config["replication_bulk"]["isoform_eqtl"].get("nominal_threshold", 0.05)
-    conda:   config["scanpy"]["env"]
+    input:  fetal_egenes = rules.extract_unique_egenes.output[0],
+            gtf          = config["parse"]["get_refs"]["gtf_out"],
+            bulk_eqtl    = RB["isoform_eqtl"]["bulk_eqtl"],
+            gene_lookup  = config["gene_lookup"]
+    output: RB["isoform_eqtl"]["summary"]
+    params: nominal_threshold = RB["isoform_eqtl"]["nominal_threshold"]
+    conda:  config["scanpy"]["env"]
     resources: threads = 8, mem_mb = 48000, time = "3:00:00"
     threads: 8
-    log:     config["replication_bulk"]["isoform_eqtl"]["log"]
-    benchmark: "reports/benchmarks/replication_bulk.isoform_eqtl_comparison.txt"
-    message: "Comparing snRNA-seq eGenes against bulk transcript-level eQTL (O'Brien et al.)"
-    script:  config["replication_bulk"]["isoform_eqtl"]["script"]
-
+    message:   "Comparing snRNA-seq eGenes against bulk transcript-level eQTL (O'Brien et al.)"
+    benchmark: RB["isoform_eqtl"]["benchmark"]
+    log:       RB["isoform_eqtl"]["log"]
+    script:    RB["isoform_eqtl"]["script"]
 
 rule repl_bulk_report:
     input:  egenes_per_celltype = rules.extract_unique_egenes.output[0],
             overlap             = rules.overlap_obrien.output[0],
             isoform_summary     = rules.isoform_eqtl_comparison.output[0],
-            rmd_script          = config["replication_bulk"]["report"]["script"]
-    output: config["replication_bulk"]["report"]["html"]
+            rmd_script          = RB["report"]["script"]
+    output: RB["report"]["html"]
     params: egenes_per_celltype = lambda wc, input: "../" + input.egenes_per_celltype,
             overlap             = lambda wc, input: "../" + input.overlap,
             isoform_summary     = lambda wc, input: "../" + input.isoform_summary,
-            bmark_dir           = "../" + config["replication_bulk"]["report"]["bmark_dir"],
-            output_file         = config["replication_bulk"]["report"]["output_file"]
+            bmark_dir           = "../" + RB["report"]["bmark_dir"],
+            output_file         = RB["report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
-    message: "Generate replication_bulk report"
-    benchmark: "reports/benchmarks/replication_bulk.report.txt"
-    log: config["replication_bulk"]["report"]["log"]
+    message:   "Generate replication_bulk report"
+    benchmark: RB["report"]["benchmark"]
+    log:       RB["report"]["log"]
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
