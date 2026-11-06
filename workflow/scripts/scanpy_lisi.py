@@ -1,35 +1,31 @@
 # --------------------------------------------------------------------------------------
 #
-#    review_lisi.py
+#    LISI batch-correction assessment (pre- and post-Harmony)
 #
-#    Assesses Harmony batch correction quality using LISI (Local Inverse
-#    Simpson's Index) on both pre- and post-Harmony PCA embeddings.
+# --------------------------------------------------------------------------------------
 #
-#    Two metrics are computed:
-#      - iLISI (integration LISI): measures batch mixing in the embedding.
-#            Score near 1 = poor mixing (one batch dominates each neighbourhood).
-#            Score near N_batches = good mixing.
-#            Computed on BOTH pre- and post-Harmony embeddings for comparison.
+# Pipeline:  02SCANPY | Rule: scanpy_lisi (single job)
+#            Upstream:   02SCANPY clustering (adata_clusters_v3.h5ad)
+#            Downstream: None
 #
-#      - cLISI (cell-type LISI): measures cell type separation in the embedding.
-#            Score near 1 = cell types are well separated (desired).
-#            Score near N_cell_types = cell types are blended (over-correction).
-#            Computed on post-Harmony embedding only.
+# Purpose:   Local Inverse Simpson's Index (LISI) on the PCA embeddings:
+#            - iLISI (batch mixing) on the pre- and post-Harmony embeddings;
+#              near 1 = one batch dominates, near N batches = good mixing
+#            - cLISI (cell type separation) on the post-Harmony embedding;
+#              near 1 = cell types well separated
+#            kNN graphs are built with pynndescent (approximate NN, as used by
+#            Scanpy) to scale to ~680K cells.
 #
-#    kNN is built using pynndescent (approximate NN) for scalability at ~680K cells.
-#    This is the same backend Scanpy uses for UMAP and gives equivalent accuracy
-#    for LISI purposes.
+# Inputs:    h5ad           Clustered atlas (X_pca_pre_harmony, X_pca_harmony,
+#                           obs batch column, obs['leiden_harmony_0.2'])
+#            batch_col      obs column holding the batch (sample)
+#            cell_type_col  name for the L1 cell type column
+#            random_seed    pynndescent seed
+#            perplexity     neighbourhood size (k = 3 x perplexity)
 #
-#    Inputs:
-#        - adata_clusters_v3.h5ad  (contains X_pca_pre_harmony, X_pca_harmony,
-#                                   obs['sample'], obs['leiden_harmony_0.2'])
-#
-#    Outputs:
-#        - CSV of per-cell iLISI (pre/post) and cLISI (post) scores
-#        - CSV summary per cell type (_summary suffix, same directory)
-#        - Violin plot comparing distributions
-#
-#    Usage: called via Snakemake rule batch_correction_lisi
+# Outputs:   csv            Per-cell iLISI (pre/post) and cLISI (post) scores
+#            plot           Violin plots per cell type + overall medians
+#            (undeclared, next to csv) <csv>_summary.csv per cell type
 #
 # --------------------------------------------------------------------------------------
 
@@ -46,33 +42,43 @@ import matplotlib.patches as mpatches
 from pynndescent import NNDescent
 from scanpy_gene_lists import cluster_anns
 
-# ── Logging ───────────────────────────────────────────────────────────────────────────
+## Set up logging for Snakemake
+logging.basicConfig(filename=snakemake.log[0], level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger()
+sys.excepthook = lambda *exc: log.error("Uncaught exception", exc_info=exc)
 
-log_file = snakemake.log[0]
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger()
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
-logger.addHandler(handler)
+log.info("Running LISI batch-correction assessment ...")
 
-# ── Parameters ────────────────────────────────────────────────────────────────────────
-
+##  Variables  -------------------------------------------------------------------------
 input_h5ad    = str(snakemake.input.h5ad)
 output_csv    = str(snakemake.output.csv)
 output_plot   = str(snakemake.output.plot)
 
-batch_col     = snakemake.params.batch_col        # 'sample'
-cell_type_col = snakemake.params.cell_type_col    # 'cell_type'
-random_seed   = int(snakemake.params.random_seed) # default 1234
-perplexity    = int(snakemake.params.perplexity)  # neighbourhood size, default 30
+batch_col     = snakemake.params.batch_col
+cell_type_col = snakemake.params.cell_type_col
+random_seed   = int(snakemake.params.random_seed)
+perplexity    = int(snakemake.params.perplexity)
 n_threads     = int(snakemake.resources.threads)
 
-# ── LISI implementation ───────────────────────────────────────────────────────────────
+variables = {
+    "input_h5ad":    input_h5ad,
+    "output_csv":    output_csv,
+    "output_plot":   output_plot,
+    "batch_col":     batch_col,
+    "cell_type_col": cell_type_col,
+    "random_seed":   random_seed,
+    "perplexity":    perplexity,
+    "n_threads":     n_threads,
+}
+width = max(map(len, variables))
+log.info("Variables")
+log.info("============================")
+for name, value in variables.items():
+    log.info(f"{name:<{width}}  {value}")
+log.info("============================")
+
+##  LISI implementation  ---------------------------------------------------------------
 
 def compute_lisi(embedding, labels, perplexity=30, random_seed=1234, n_threads=1,
                  label_name='labels'):
@@ -112,7 +118,7 @@ def compute_lisi(embedding, labels, perplexity=30, random_seed=1234, n_threads=1
     # Standard LISI practice: k = 3 * perplexity
     k = min(3 * perplexity, n_cells - 1)
 
-    logger.info(f"    [{label_name}] Building approximate kNN graph "
+    log.info(f"    [{label_name}] Building approximate kNN graph "
                 f"(k={k}, perplexity={perplexity}, "
                 f"n_cells={n_cells:,}, n_labels={n_labels}, "
                 f"n_threads={n_threads})...")
@@ -130,7 +136,7 @@ def compute_lisi(embedding, labels, perplexity=30, random_seed=1234, n_threads=1
     indices   = indices[:, 1:].astype(np.int32)
     distances = distances[:, 1:].astype(np.float32)
 
-    logger.info(f"    [{label_name}] kNN graph built. Computing LISI scores...")
+    log.info(f"    [{label_name}] kNN graph built. Computing LISI scores...")
 
     # ── Vectorised per-cell LISI ──────────────────────────────────────────────────────
     lisi_scores = np.zeros(n_cells, dtype=np.float32)
@@ -186,40 +192,40 @@ def compute_lisi(embedding, labels, perplexity=30, random_seed=1234, n_threads=1
         simpson = (label_probs ** 2).sum(axis=1)              # (chunk,)
         lisi_scores[start:end] = np.where(simpson > 0, 1.0 / simpson, 1.0)
 
-    logger.info(f"    [{label_name}] Done. "
+    log.info(f"    [{label_name}] Done. "
                 f"mean={lisi_scores.mean():.3f}  median={np.median(lisi_scores):.3f}")
 
     return lisi_scores
 
-# ── Load data ─────────────────────────────────────────────────────────────────────────
+##  Load data  -------------------------------------------------------------------------
 
-logger.info(f"Loading h5ad from: {input_h5ad}")
+log.info(f"Loading h5ad from: {input_h5ad}")
 adata = ad.read_h5ad(input_h5ad)
-logger.info(f"Object shape: {adata.shape} ({adata.shape[0]:,} cells x {adata.shape[1]:,} genes)")
+log.info(f"Object shape: {adata.shape} ({adata.shape[0]:,} cells x {adata.shape[1]:,} genes)")
 
-# ── Assign cell type labels ───────────────────────────────────────────────────────────
+##  Assign cell type labels  -----------------------------------------------------------
 
-logger.info("Assigning L1 cell type labels from leiden_harmony_0.2...")
+log.info("Assigning L1 cell type labels from leiden_harmony_0.2...")
 adata.obs[cell_type_col] = adata.obs['leiden_harmony_0.2'].map(cluster_anns)
 
 n_unmapped = adata.obs[cell_type_col].isna().sum()
 if n_unmapped > 0:
-    logger.warning(f"WARNING: {n_unmapped:,} cells could not be mapped to a cell type label")
+    log.warning(f"WARNING: {n_unmapped:,} cells could not be mapped to a cell type label")
 else:
-    logger.info("All cells successfully mapped to L1 labels")
+    log.info("All cells successfully mapped to L1 labels")
 
-logger.info(f"Cell type distribution:\n"
+log.info(f"Cell type distribution:\n"
             f"{adata.obs[cell_type_col].value_counts().sort_index().to_string()}")
 
-# ── Validate embeddings ───────────────────────────────────────────────────────────────
+##  Validate embeddings  ---------------------------------------------------------------
 
 for key in ['X_pca_pre_harmony', 'X_pca_harmony']:
     if key not in adata.obsm:
         raise KeyError(f"Required embedding '{key}' not found in adata.obsm. "
                        f"Available keys: {list(adata.obsm.keys())}")
-logger.info("Both X_pca_pre_harmony and X_pca_harmony found in adata.obsm")
+log.info("Both X_pca_pre_harmony and X_pca_harmony found in adata.obsm")
 
-# ── Extract arrays ────────────────────────────────────────────────────────────────────
+##  Extract arrays  --------------------------------------------------------------------
 
 emb_pre  = np.array(adata.obsm['X_pca_pre_harmony'], dtype=np.float32)
 emb_post = np.array(adata.obsm['X_pca_harmony'],     dtype=np.float32)
@@ -229,44 +235,44 @@ ctypes   = adata.obs[cell_type_col].values
 # Drop cells with unmapped cell types
 valid_mask = ~pd.isnull(ctypes)
 if valid_mask.sum() < len(ctypes):
-    logger.warning(f"Dropping {(~valid_mask).sum():,} cells with unmapped cell types")
+    log.warning(f"Dropping {(~valid_mask).sum():,} cells with unmapped cell types")
     emb_pre  = emb_pre[valid_mask]
     emb_post = emb_post[valid_mask]
     batches  = batches[valid_mask]
     ctypes   = ctypes[valid_mask]
 
 n_cells = emb_pre.shape[0]
-logger.info(f"Running LISI on {n_cells:,} cells with {n_threads} threads")
+log.info(f"Running LISI on {n_cells:,} cells with {n_threads} threads")
 
-# ── Compute iLISI pre-Harmony ─────────────────────────────────────────────────────────
+##  Compute iLISI pre-Harmony  ---------------------------------------------------------
 
-logger.info("Computing iLISI on pre-Harmony embedding...")
+log.info("Computing iLISI on pre-Harmony embedding...")
 ilisi_pre = compute_lisi(emb_pre, batches, perplexity=perplexity,
                          random_seed=random_seed, n_threads=n_threads,
                          label_name='iLISI-pre')
-logger.info(f"  iLISI pre-Harmony:  mean={ilisi_pre.mean():.3f}  "
+log.info(f"  iLISI pre-Harmony:  mean={ilisi_pre.mean():.3f}  "
             f"median={np.median(ilisi_pre):.3f}")
 
-# ── Compute iLISI post-Harmony ────────────────────────────────────────────────────────
+##  Compute iLISI post-Harmony  --------------------------------------------------------
 
-logger.info("Computing iLISI on post-Harmony embedding...")
+log.info("Computing iLISI on post-Harmony embedding...")
 ilisi_post = compute_lisi(emb_post, batches, perplexity=perplexity,
                           random_seed=random_seed, n_threads=n_threads,
                           label_name='iLISI-post')
-logger.info(f"  iLISI post-Harmony: mean={ilisi_post.mean():.3f}  "
+log.info(f"  iLISI post-Harmony: mean={ilisi_post.mean():.3f}  "
             f"median={np.median(ilisi_post):.3f}")
 
-# ── Compute cLISI post-Harmony ────────────────────────────────────────────────────────
+##  Compute cLISI post-Harmony  --------------------------------------------------------
 
-logger.info("Computing cLISI on post-Harmony embedding...")
+log.info("Computing cLISI on post-Harmony embedding...")
 clisi_post = compute_lisi(emb_post, ctypes, perplexity=perplexity,
                           random_seed=random_seed, n_threads=n_threads,
                           label_name='cLISI-post')
-logger.info(f"  cLISI post-Harmony: mean={clisi_post.mean():.3f}  "
+log.info(f"  cLISI post-Harmony: mean={clisi_post.mean():.3f}  "
             f"median={np.median(clisi_post):.3f}  "
             f"(ideal ~1.0; n_cell_types={len(np.unique(ctypes))})")
 
-# ── Assemble per-cell results ─────────────────────────────────────────────────────────
+##  Assemble per-cell results  ---------------------------------------------------------
 
 results_df = pd.DataFrame({
     'cell_id'     : adata.obs_names[valid_mask],
@@ -277,9 +283,9 @@ results_df = pd.DataFrame({
     'clisi_post'  : clisi_post
 })
 
-# ── Per-cell-type summary ─────────────────────────────────────────────────────────────
+##  Per-cell-type summary  -------------------------------------------------------------
 
-logger.info("\nPer-cell-type LISI summary:")
+log.info("\nPer-cell-type LISI summary:")
 summary_records = []
 for ct in sorted(np.unique(ctypes)):
     mask = results_df[cell_type_col] == ct
@@ -294,25 +300,25 @@ for ct in sorted(np.unique(ctypes)):
         'clisi_post_median' : round(float(results_df.loc[mask, 'clisi_post'].median()), 3),
     }
     summary_records.append(rec)
-    logger.info(f"  {ct} (n={rec['n_cells']:,}): "
+    log.info(f"  {ct} (n={rec['n_cells']:,}): "
                 f"iLISI pre={rec['ilisi_pre_mean']:.3f} "
                 f"-> post={rec['ilisi_post_mean']:.3f} | "
                 f"cLISI post={rec['clisi_post_mean']:.3f}")
 
 summary_df = pd.DataFrame(summary_records)
 
-# ── Save CSVs ─────────────────────────────────────────────────────────────────────────
+##  Save CSVs  -------------------------------------------------------------------------
 
 results_df.to_csv(output_csv, index=False)
-logger.info(f"Per-cell results saved to: {output_csv}")
+log.info(f"Per-cell results saved to: {output_csv}")
 
 summary_path = output_csv.replace('.csv', '_summary.csv')
 summary_df.to_csv(summary_path, index=False)
-logger.info(f"Per-cell-type summary saved to: {summary_path}")
+log.info(f"Per-cell-type summary saved to: {summary_path}")
 
-# ── Plot ──────────────────────────────────────────────────────────────────────────────
+##  Plot  ------------------------------------------------------------------------------
 
-logger.info("Generating violin plot...")
+log.info("Generating violin plot...")
 
 cell_types_ordered = sorted(np.unique(ctypes))
 colours = {
@@ -404,5 +410,8 @@ fig.suptitle('LISI batch correction assessment (pre- and post-Harmony)',
              fontsize=13, y=1.01)
 plt.tight_layout()
 fig.savefig(output_plot, dpi=300, bbox_inches='tight')
-logger.info(f"Plot saved to: {output_plot}")
-logger.info("LISI assessment complete.")
+log.info(f"Plot saved to: {output_plot}")
+log.info("LISI assessment complete.")
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

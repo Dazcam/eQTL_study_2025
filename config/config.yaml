@@ -321,6 +321,19 @@ scanpy:
     benchmark: reports/benchmarks/scanpy_subclustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
+  clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad   # written by the clustering notebooks
+
+  lisi:
+    csv:           ../results/02SCANPY/batch_correction/lisi_results.csv
+    plot:          ../results/02SCANPY/batch_correction/lisi_scores.png
+    log:           ../results/00LOG/02SCANPY/scanpy_lisi.log
+    benchmark:     reports/benchmarks/02scanpy.scanpy_lisi.benchmark.txt
+    script:        ../scripts/scanpy_lisi.py
+    batch_col:     sample
+    cell_type_col: cell_type
+    random_seed:   1234
+    perplexity:    30
+
   env: "../envs/eqtl_study.yml"
 
 # ------------  GENOTYPES PRE_IMPUTATION (Pipeline 3) ----------------
@@ -1210,14 +1223,6 @@ review:
     n_subsample: 10000   # cells to subsample (stratified by cell type)
     random_seed: 1234
     k0:          30      # neighbourhood size for chi-squared test
-
-  batch_correction_lisi:
-    csv:        ../results/15REVIEW/batch_correction/lisi_results.csv
-    plot:       ../results/15REVIEW/batch_correction/lisi_scores.png
-    log:        ../results/00LOG/15REVIEW/batch_correction_lisi.log
-    script:     ../scripts/review_lisi.py
-    random_seed: 1234
-    perplexity:  30   
 
   singler_report:
     html: reports/15REVIEW/15singler_report.html

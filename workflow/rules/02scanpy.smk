@@ -118,3 +118,19 @@ rule scanpy_extra:
     shell:
              "papermill {input.nb} {params.nb_out} --execution-timeout -1 --request-save-on-cell-execute -p plate extra >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
+
+rule scanpy_lisi:
+    input:  h5ad = config["scanpy"]["clusters_h5ad"]
+    output: csv  = config["scanpy"]["lisi"]["csv"],
+            plot = config["scanpy"]["lisi"]["plot"]
+    params: batch_col     = config["scanpy"]["lisi"]["batch_col"],
+            cell_type_col = config["scanpy"]["lisi"]["cell_type_col"],
+            random_seed   = config["scanpy"]["lisi"]["random_seed"],
+            perplexity    = config["scanpy"]["lisi"]["perplexity"]
+    conda:  config["scanpy"]["env"]
+    resources: threads = 10, mem_mb = 200000, time = "2:00:00"
+    threads: 10
+    message:   "Running LISI (iLISI / cLISI) batch correction assessment pre- and post-Harmony"
+    benchmark: config["scanpy"]["lisi"]["benchmark"]
+    log:       config["scanpy"]["lisi"]["log"]
+    script:    config["scanpy"]["lisi"]["script"]
