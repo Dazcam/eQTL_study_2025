@@ -9,7 +9,9 @@ params:
   egenes_per_celltype: null
   overlap: null
   isoform_summary: null
-  bmark_dir: null
+  eqtl_fdr: null
+  nominal_threshold: null
+  benchmarks: null
 ---
 
 ***
@@ -22,10 +24,20 @@ library(cowplot)
 egenes_per_celltype_file <- params$egenes_per_celltype
 overlap_file             <- params$overlap
 isoform_summary_file     <- params$isoform_summary
-bmark_dir                <- params$bmark_dir
+
+# Benchmark files of the current rules, passed by the rule as rule=path pairs
+benchmark_pairs <- strsplit(params$benchmarks, ",")[[1]]
+benchmark_files <- tibble(rule = sub("=.*", "", benchmark_pairs),
+                          file = sub("^[^=]*=", "", benchmark_pairs))
 ```
 
-## Replication (bulk) pipeline steps
+## Replication (bulk) pipeline steps {.tabset}
+
+***
+
+We compared our snRNA-seq eGenes with bulk RNA-seq eQTL from 120 second-trimester
+human fetal brains, mapped at the gene and transcript level. The citation for the
+bulk eQTL is [O'Brien et al. (2018), DOI: 10.1186/s13059-018-1567-1](https://doi.org/10.1186/s13059-018-1567-1).
 
 ***
 
@@ -35,8 +47,6 @@ bmark_dir                <- params$bmark_dir
 4. `repl_bulk_report`: Summarise replication (bulk) results
 
 ***
-
-## Results {.tabset}
 
 ### Bulk overlap {.tabset}
 
@@ -240,6 +250,29 @@ isoform_summary |>
 
 ***
 
+### Settings {.tabset}
+
+***
+
+#### General
+
+```{r settings, echo = FALSE}
+tibble(
+  Setting = c("eQTL FDR (fetal sig. eGenes)", "Bulk transcript significance (nominal p)",
+              "Gene-level bulk eQTL", "Transcript-level bulk eQTL", "Cell types"),
+  Value   = c(params$eqtl_fdr, params$nominal_threshold,
+              "O'Brien 2018 TblS2 (significant only)", "O'Brien 2018 TblS3 (significant only)",
+              sprintf("%d (L1 %d, L2 %d, pseudotime %d)",
+                      n_distinct(egenes_per_celltype$cell_type),
+                      n_distinct(egenes_per_celltype$cell_type[egenes_per_celltype$level == "L1"]),
+                      n_distinct(egenes_per_celltype$cell_type[egenes_per_celltype$level == "L2"]),
+                      n_distinct(egenes_per_celltype$cell_type[egenes_per_celltype$level == "pseudotime"])))) |>
+  gt() |>
+  tab_header(title = "Settings")
+```
+
+***
+
 ### Benchmarking {.tabset}
 
 ***
@@ -249,36 +282,19 @@ isoform_summary |>
 ***
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
-files <- list.files(bmark_dir, pattern = "replication_bulk.*\\.txt", full.names = TRUE)
-
-known_rules <- c(
-  "extract_unique_egenes",
-  "overlap_obrien",
-  "isoform_eqtl_comparison",
-  "report"
-)
-known_rules <- known_rules[order(-nchar(known_rules))]
-
-match_rule <- function(rule_full, known_rules) {
-  hit <- known_rules[str_starts(rule_full, known_rules)]
-  if (length(hit) > 0) hit[1] else rule_full
-}
-
-benchmarks <- map_dfr(files, function(f) {
-  df <- read.table(f, header = TRUE, sep = "\t")
-  fname <- basename(f)
-  parts <- strsplit(fname, "\\.")[[1]]
-  rule_full <- parts[2]
-  rule <- match_rule(rule_full, known_rules)
-
-  tibble(
-    file = f,
-    rule = rule,
-    runtime_sec = df$s,
-    runtime_hms = df$h.m.s.,
-    max_rss = df$max_rss
-  )
-})
+# Files not yet written (rules not run) are skipped
+benchmarks <- benchmark_files |>
+  filter(file.exists(file)) |>
+  pmap_dfr(function(rule, file) {
+    df <- read.table(file, header = TRUE, sep = "\t")
+    tibble(
+      file = file,
+      rule = rule,
+      runtime_sec = df$s,
+      runtime_hms = df$h.m.s.,
+      max_rss = df$max_rss
+    )
+  })
 
 summary <- benchmarks %>%
   group_by(rule) %>%

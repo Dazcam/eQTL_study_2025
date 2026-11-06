@@ -11,6 +11,14 @@ def perm_files(cell_types):
             for ct in cell_types]
 
 
+# Benchmark file per rule, shown in the report
+REPL_BULK_BENCHMARKS = [(rule, RB[key]["benchmark"]) for rule, key in [
+    ("extract_unique_egenes",   "extract_unique_egenes"),
+    ("overlap_obrien",          "overlap_obrien"),
+    ("isoform_eqtl_comparison", "isoform_eqtl"),
+    ("repl_bulk_report",        "report")]]
+
+
 rule extract_unique_egenes:
     input:  perm_files = perm_files(config["cell_types"])
     output: RB["extract_unique_egenes"]["out_file"]
@@ -59,7 +67,9 @@ rule repl_bulk_report:
     params: egenes_per_celltype = lambda wc, input: "../" + input.egenes_per_celltype,
             overlap             = lambda wc, input: "../" + input.overlap,
             isoform_summary     = lambda wc, input: "../" + input.isoform_summary,
-            bmark_dir           = "../" + RB["report"]["bmark_dir"],
+            eqtl_fdr            = config["eqtl_fdr"],
+            nominal_threshold   = RB["isoform_eqtl"]["nominal_threshold"],
+            benchmarks          = ",".join(f"{rule}=../{path}" for rule, path in REPL_BULK_BENCHMARKS),
             output_file         = RB["report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message:   "Generate replication_bulk report"
@@ -72,5 +82,7 @@ rule repl_bulk_report:
             params = list(egenes_per_celltype = '{params.egenes_per_celltype}', \
                           overlap = '{params.overlap}', \
                           isoform_summary = '{params.isoform_summary}', \
-                          bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+                          eqtl_fdr = '{params.eqtl_fdr}', \
+                          nominal_threshold = '{params.nominal_threshold}', \
+                          benchmarks = '{params.benchmarks}'))" > {log} 2>&1
         """

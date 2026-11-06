@@ -1356,6 +1356,5 @@ replication_bulk:
     script: scripts/repl_bulk_report.Rmd
     html: reports/21REPLICATION-BULK/repl_bulk_report.html
     output_file: ../reports/21REPLICATION-BULK/repl_bulk_report.html
-    bmark_dir: reports/benchmarks/
     benchmark: reports/benchmarks/replication_bulk.report.txt
     log: ../results/00LOG/21REPLICATION-BULK/repl_bulk_report.log
