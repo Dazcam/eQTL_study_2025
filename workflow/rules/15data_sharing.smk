@@ -33,7 +33,7 @@ rule data_perm:
             exp_pc_map       = config['exp_pc_map'],
             norm_method      = config['tensorQTL']['norm_methods'][0],
             genPC            = config['tensorQTL']['geno_pcs'],
-            gene_lookup_file = config['dev_specificity']['report']['gene_lookup']
+            gene_lookup_file = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['data_sharing']['data_perm']['log']
@@ -44,7 +44,7 @@ rule data_nominal:
     params: in_dir           = config['data_sharing']['data_nominal']['in_dir'],
             allele_file      = config['data_sharing']['data_nominal']['allele_file'],
             cell_types       = config['cell_types'],
-            gene_lookup_file = config['dev_specificity']['report']['gene_lookup']
+            gene_lookup_file = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources: time="4:00:00", threads = 10, mem_mb = 80000
     log:  config['data_sharing']['data_nominal']['log']
@@ -106,7 +106,7 @@ rule data_susie:
     input:  
         susie = lambda wc: config["susie"]["sort_susie"]["output"].replace(
                         "{cell_type}", CT_NEW2OLD[wc.cell_type]),
-        gene_lookup = config['dev_specificity']['report']['gene_lookup']
+        gene_lookup = config['gene_lookup']
     output: tsv = config['data_sharing']['data_susie']['out_file']
     params: cell_type_old = lambda wc: CT_NEW2OLD[wc.cell_type]
     singularity: config["containers"]["r_eqtl"]

@@ -66,7 +66,8 @@ rule replication_plt:
     output: config['plotting']['rep_plt']['out_file']
     params: in_dir = config['plotting']['rep_plt']['in_dir'],
             internal_dir = config['plotting']['rep_plt']['internal_dir'],
-            jang_pi1_dir = config['plotting']['rep_plt']['jang_pi1_dir']
+            jang_pi1_dir = config['plotting']['rep_plt']['jang_pi1_dir'],
+            gene_lookup  = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['plotting']['rep_plt']['log']
@@ -118,13 +119,13 @@ rule supplementary_plt:
 rule family_heatmaps_plt:
     # SF 3-6 -- subcluster-specific family heatmaps
     input:  eqtl_effects = config['dev_specificity']['eqtl_effects']['out_file'],
-            gene_lookup  = config['dev_specificity']['report']['gene_lookup']
+            gene_lookup  = config['gene_lookup']
     output: glu_a = config['plotting']['family_heatmaps_plt']['glu_a'],
             glu_b = config['plotting']['family_heatmaps_plt']['glu_b'],
             gaba  = config['plotting']['family_heatmaps_plt']['gaba'],
             npc   = config['plotting']['family_heatmaps_plt']['npc']
     params: eqtl_effects = config['dev_specificity']['eqtl_effects']['out_file'],
-            gene_lookup  = config['dev_specificity']['report']['gene_lookup']
+            gene_lookup  = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources:   time="0:30:00"
     log:         config['plotting']['family_heatmaps_plt']['log']

@@ -117,7 +117,7 @@ rule pseudotime_pseudobulk:
 rule pseudotime_prep_tensorqtl:
     input:  cov_file    = config["pseudotime"]["prep_tensorqtl"]["cov_file"],
             sex_file    = config["pseudotime"]["prep_tensorqtl"]["sex_file"],
-            gene_lookup = config["pseudotime"]["prep_tensorqtl"]["gene_lookup"],
+            gene_lookup = config["gene_lookup"],
             pseudobulk  = config["pseudotime"]["pseudobulk"]["csv"]
     output: exp_out     = config["pseudotime"]["prep_tensorqtl"]["exp_out"],
             cov_out     = config["pseudotime"]["prep_tensorqtl"]["cov_out"],
@@ -232,13 +232,14 @@ rule pseudotime_export_smr_twas_inputs:
 
 rule pseudotime_report:
     input:  perm           = get_pseudotime_tensorqtl(),
+            gene_lookup    = config["gene_lookup"],
             rmd_script     = config["pseudotime"]["report"]["rmd_script"]
     output: config["pseudotime"]["report"]["html"]
     params: in_dir              = config["pseudotime"]["report"]["in_dir"],
             cell_type_perm_dir  = config["pseudotime"]["report"]["cell_type_perm_dir"],
             output_file         = config["pseudotime"]["report"]["output_file"],
             bmark_dir           = config["pseudotime"]["report"]["bmark_dir"],
-            gene_lookup         = config["pseudotime"]["report"]["gene_lookup"],
+            gene_lookup         = lambda wc, input: "../" + input.gene_lookup,
             trajectories        = ",".join(config["trajectories"]),
             q_values            = ",".join(map(str, PT_Q_VALUES)),
             exp_pcs             = ",".join(map(str, config["tensorQTL"]["exp_pcs"])),

@@ -497,7 +497,6 @@ tensorQTL:
   prep_tensorQTL_input:
     cov_file:      ../results/04GENOTYPES-POST/covariates/pca.eigenvec
     sex_file:      reports/02SCANPY/02_metadata_per_sample.tsv
-    gene_lookup:   ../resources/sheets/gene_lookup_hg38.tsv
     exp_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed
     cov_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_base_covariates.txt
     pseudobulk:    ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv
@@ -584,7 +583,6 @@ pseudotime:
     script:       ../scripts/tensorqtl_prep_input_files.R
     cov_file:     ../results/04GENOTYPES-POST/covariates/pca.eigenvec
     sex_file:     reports/02SCANPY/02_metadata_per_sample.tsv
-    gene_lookup:  ../resources/sheets/gene_lookup_hg38.tsv
 
   split_covariates:
     output: ../results/17PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.txt
@@ -615,7 +613,6 @@ pseudotime:
     rmd_script:          scripts/pseudotime_report.Rmd
     in_dir:              ../../results/17PSEUDOTIME/
     cell_type_perm_dir:  ../../results/05TENSORQTL/tensorqtl_perm/
-    gene_lookup:         ../../resources/sheets/gene_lookup_hg38.tsv
     bmark_dir:           ../reports/benchmarks/
     log:                 ../results/00LOG/17PSEUDOTIME/report.log
 
@@ -783,7 +780,6 @@ susie:
     html: reports/08SUSIE/08susie_report.html
     in_dir: ../../results/08SUSIE/susie/
     gene_meta_dir: ../../results/08SUSIE/susie_input/
-    gene_lookup: ../../resources/sheets/gene_lookup_hg38.tsv
     bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/08SUSIE/08susie_report.log
 
@@ -975,7 +971,6 @@ ctwas:
     output:      reports/12CTWAS/12ctwas_report.html
     in_dir:      ../../results/12CTWAS/
     bmark_dir:   ../reports/benchmarks/
-    lookup_dir:  ../../resources/sheets/
     tbl_dir:     ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/
     output_file: ../reports/12CTWAS/12ctwas_report.html
     bmrk:        reports/benchmarks/12ctwas.ctwas_report.benchmark.txt

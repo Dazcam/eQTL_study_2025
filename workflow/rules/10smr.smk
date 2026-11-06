@@ -75,7 +75,7 @@ rule create_query:
             snps = rules.cat_refs.output.bim,
             genes = config["susie"]["prep_susie_gene_meta"]["output"],
             frq = rules.cat_refs.output.frq,
-            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"]
+            gene_lookup = config["gene_lookup"]
     output: query = config["smr"]["create_query"]["query"],
             gene_lst = config["smr"]["create_query"]["gene_lst"]
     params: remove_mhc = config["smr"]["create_query"]["remove_mhc"],
@@ -143,7 +143,7 @@ rule smr:
 
 rule smr_report:
     input:  smr_files = expand(rules.smr.output, cell_type = config["cell_types"], gwas = config["gwas"]),
-            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"],
+            gene_lookup = config["gene_lookup"],
             rmd_script = "scripts/smr_report.Rmd"
     output: config["smr"]["smr_report"]["html"]
     params: cell_types = ",".join(config["cell_types"]),

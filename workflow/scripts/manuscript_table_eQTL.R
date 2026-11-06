@@ -42,7 +42,7 @@ genPC <- 4
 expPC_map <- unlist(snakemake@params[["exp_pc_map"]])
 cell_types <- names(expPC_map)
 
-gene_lookup_file <- '../resources/sheets/gene_lookup_hg38.tsv'
+gene_lookup_file <- snakemake@params[["gene_lookup_file"]]
 gene_lookup_tbl <- suppressMessages(read_tsv(gene_lookup_file)) |>
   select(ensembl_gene_id, external_gene_name) |>
   distinct(ensembl_gene_id, .keep_all = TRUE)

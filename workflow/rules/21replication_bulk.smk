@@ -40,7 +40,7 @@ rule isoform_eqtl_comparison:
     input:   fetal_egenes = rules.extract_unique_egenes.output[0],
              gtf          = config["parse"]["get_refs"]["gtf_out"],
              bulk_eqtl    = config["replication_bulk"]["isoform_eqtl"]["bulk_eqtl"],
-             gene_lookup  = config["dev_specificity"]["report"]["gene_lookup"]
+             gene_lookup  = config["gene_lookup"]
     output:  config["replication_bulk"]["isoform_eqtl"]["summary"]
     params:  nominal_threshold = config["replication_bulk"]["isoform_eqtl"].get("nominal_threshold", 0.05)
     conda:   config["scanpy"]["env"]

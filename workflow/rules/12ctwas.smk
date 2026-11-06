@@ -41,7 +41,7 @@ rule run_ctwas:
             gwas        = config["ctwas"]["run_ctwas"]["gwas"],
             weights     = rules.copy_fusion_weights.output,
             bim_file    = config["ctwas"]["run_ctwas"]["bim_file"],
-            gene_lookup = config["tensorQTL"]["prep_tensorQTL_input"]["gene_lookup"]
+            gene_lookup = config["gene_lookup"]
     output: config["ctwas"]["run_ctwas"]["output"]
     params: ld_dir        = config["ctwas"]["create_ld_matrices"]["out_dir"],
             weights_dir   = config["ctwas"]["run_ctwas"]["weights_dir"],
@@ -61,12 +61,13 @@ rule run_ctwas:
 rule ctwas_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:
-            ctwas_res  = expand(rules.run_ctwas.output, cell_type = config['cell_types'], gwas = config['gwas']),
-            rmd_script = config["ctwas"]["ctwas_report"]["rmd_script"]
+            ctwas_res   = expand(rules.run_ctwas.output, cell_type = config['cell_types'], gwas = config['gwas']),
+            gene_lookup = config["gene_lookup"],
+            rmd_script  = config["ctwas"]["ctwas_report"]["rmd_script"]
     output: config["ctwas"]["ctwas_report"]["output"]
     params: in_dir      = config["ctwas"]["ctwas_report"]["in_dir"],
             bmark_dir   = config["ctwas"]["ctwas_report"]["bmark_dir"],
-            lookup_dir  = config["ctwas"]["ctwas_report"]["lookup_dir"],
+            gene_lookup = lambda wc, input: "../" + input.gene_lookup,
             cell_types  = ",".join(config["cell_types"]),
             gwas        = ",".join(config["gwas"].keys()),
             output_file = config["ctwas"]["ctwas_report"]["output_file"]
@@ -80,7 +81,7 @@ rule ctwas_report:
             output_file = '{params.output_file}', \
             params = list(in_dir = '{params.in_dir}', \
                           bmark_dir = '{params.bmark_dir}', \
-                          lookup_dir = '{params.lookup_dir}', \
+                          gene_lookup = '{params.gene_lookup}', \
                           cell_types = '{params.cell_types}', \
                           gwas = '{params.gwas}'))" > {log} 2>&1
         """

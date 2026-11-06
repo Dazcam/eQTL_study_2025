@@ -28,7 +28,8 @@ rule eqtl_tbl:
             allele_file = config['tables']['eqtl_tbl']['allele_file'],
             peak_dir = config['tables']['eqtl_tbl']['peak_dir'],
             cell_types = config['cell_types'],
-            exp_pc_map = config['exp_pc_map']
+            exp_pc_map = config['exp_pc_map'],
+            gene_lookup_file = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources: time="2:00:00"
     log:  config['tables']['eqtl_tbl']['log']
@@ -62,7 +63,7 @@ rule smr_sig_tbl:
     params: traits           = GWAS_TRAITS,
             cell_types       = config['cell_types'],
             in_dir           = config['tables']['smr_sig_tbl']['in_dir'],
-            gene_lookup_file = config['dev_specificity']['report']['gene_lookup'],
+            gene_lookup_file = config['gene_lookup'],
             p_smr            = config['p_smr'],
             p_heidi          = config['p_heidi']
     singularity: config["containers"]["r_eqtl"]
@@ -90,7 +91,7 @@ rule smr_ctwas_venn_tbl:
             ctwas_in_dir     = config['tables']['smr_ctwas_venn_tbl']['ctwas_in_dir'],
             weights_dir      = config['tables']['smr_ctwas_venn_tbl']['weights_dir'],
             cell_types       = config['cell_types'],
-            gene_lookup_file = config['dev_specificity']['report']['gene_lookup'],
+            gene_lookup_file = config['gene_lookup'],
             ctwas_pip_thresh = 0.8,
             ctwas_use_bf     = True,
             ctwas_bf_thresh  = 0.05,
@@ -107,7 +108,7 @@ rule ctwas_sig_tbl:
             cell_types       = config['cell_types'],
             in_dir           = config['tables']['ctwas_sig_tbl']['in_dir'],
             weights_dir      = config['tables']['ctwas_sig_tbl']['weights_dir'],
-            gene_lookup_file = config['dev_specificity']['report']['gene_lookup'],
+            gene_lookup_file = config['gene_lookup'],
             pip_thresh       = 0.8,
             bf_p_thresh      = 0.05
     singularity: config["containers"]["r_eqtl"]

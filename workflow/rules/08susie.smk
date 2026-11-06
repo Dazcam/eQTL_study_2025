@@ -145,13 +145,13 @@ rule susie_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  susie_files     = expand(rules.sort_susie.output, cell_type = config["cell_types"]),
             gene_meta_files = expand(rules.prep_susie_gene_meta.output, cell_type = config["cell_types"]),
-            gene_lookup     = "../resources/sheets/gene_lookup_hg38.tsv",
+            gene_lookup     = config["gene_lookup"],
             rmd_script      = config["susie"]["susie_report"]["script"]
     output: config["susie"]["susie_report"]["html"]
     params: cell_types    = ",".join(config["cell_types"]),
             in_dir        = config["susie"]["susie_report"]["in_dir"],
             gene_meta_dir = config["susie"]["susie_report"]["gene_meta_dir"],
-            gene_lookup   = config["susie"]["susie_report"]["gene_lookup"],
+            gene_lookup   = lambda wc, input: "../" + input.gene_lookup,
             bmark_dir     = config["susie"]["susie_report"]["bmark_dir"],
             cis_window    = config["window"],
             n_batches     = config["susie_batches"],

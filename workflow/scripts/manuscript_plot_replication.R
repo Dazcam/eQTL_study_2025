@@ -39,6 +39,7 @@ library(grid)
 in_dir <- snakemake@params[['in_dir']]
 internal_dir <- snakemake@params[['internal_dir']]
 jang_pi1_dir <- snakemake@params[['jang_pi1_dir']]
+gene_lookup_file <- snakemake@params[['gene_lookup']]
 jang_beta_file <- snakemake@input[['beta_file']]
 out_file <- snakemake@output[[1]]
 
@@ -90,7 +91,7 @@ eqtl_list <- list()
 genPC <- 4
 norm_method <- 'quantile'
 
-gene_lookup <- read_tsv('../resources/sheets/gene_lookup_hg38.tsv') |>
+gene_lookup <- read_tsv(gene_lookup_file) |>
   select(gene = ensembl_gene_id, symbol = external_gene_name)
 
 
