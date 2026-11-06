@@ -1,32 +1,34 @@
 # --------------------------------------------------------------------------------------
 #
-#    repl_bulk_isoform_eqtl.py
+#    Compare fetal eGenes with bulk transcript-level eQTL (isoform patterns)
 #
-#    Compares snRNA-seq gene-level eQTL (all L1+L2+pseudotime cell types) against
-#    bulk transcript-level eQTL (O'Brien et al. 2018) to assess whether identified
-#    eGenes show evidence of isoform-specific regulation.
+# --------------------------------------------------------------------------------------
 #
-#    Strategy:
-#      1. Parse GTF to build ENST -> ENSG mapping (Ensembl 113)
-#      2. Load unique fetal eGenes from the shared extract_unique_egenes output
-#         (repl_bulk_extract_unique_egenes.R) -- NOT re-derived from raw perm
-#         files here (see MIGRATION NOTE below)
-#      3. Pre-filter the ~12G bulk file using awk (subprocess) to extract only
-#         rows matching our target SNP + transcript pairs -- avoids loading
-#         the full file into memory
-#      4. For each eGene, classify the bulk transcript pattern:
-#           - n_transcripts_tested   : transcripts of this gene in bulk data
-#           - n_transcripts_nominal  : transcripts with p < nominal_threshold
-#           - isoform_specific       : only 1 (of >1) transcript significant (flag)
-#           - direction_concordant   : snRNA-seq and bulk slope same sign
-#           - pattern                : one of [all_sig, isoform_specific,
-#                                       none_sig, not_in_bulk]
-#      5. Add gene symbols and write the per-eGene summary table (single
-#         tracked Snakemake output); per-transcript detail, the bulk-hits
-#         extract, and the ENST->ENSG map are written as untracked side
-#         files for caching/debugging
+# Pipeline:  21REPLICATION-BULK | Rule: isoform_eqtl_comparison (single job)
+#            Upstream:   extract_unique_egenes; 00setup get_refs (GTF)
+#            Downstream: repl_bulk_report
 #
-#    Usage: called via Snakemake rule isoform_eqtl_comparison
+# Purpose:   For each fetal eGene x lead eSNP pair, classify the O'Brien et al.
+#            2018 bulk transcript-level eQTL for transcripts of that gene at the
+#            same SNP:
+#            1. Build an ENST -> ENSG map from the GTF
+#            2. Pre-filter the ~12G bulk file with awk to the target SNPs and
+#               transcripts (avoids loading it into memory)
+#            3. Classify each pair: not_in_bulk, none_sig, all_sig or
+#               isoform_specific (some but not all transcripts significant)
+#            4. Record direction concordance with the snRNA-seq slope and the most
+#               significant bulk transcript
+#            5. Add gene symbols and write the per-pair summary
+#
+# Inputs:    fetal_egenes       extract_unique_egenes output
+#            gtf                Ensembl GTF (transcript -> gene)
+#            bulk_eqtl          O'Brien 2018 all transcript-level eQTL (gz)
+#            gene_lookup        hg38 gene lookup (gene symbols)
+#            nominal_threshold  bulk p-value for a transcript to count as significant
+#
+# Outputs:   summary            TSV, one row per eGene x eSNP pair
+#            (undeclared, written next to summary) enst_ensg_map.tsv,
+#            bulk_transcript_hits.tsv, isoform_comparison_detail.tsv
 #
 # --------------------------------------------------------------------------------------
 
@@ -41,44 +43,49 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# ── Logging ───────────────────────────────────────────────────────────────────────────
+## Set up logging for Snakemake
+logging.basicConfig(filename=snakemake.log[0], level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger()
+sys.excepthook = lambda *exc: log.error("Uncaught exception", exc_info=exc)
 
-log_file = snakemake.log[0]
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger()
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.INFO)
-logger.addHandler(handler)
+log.info("Comparing fetal eGenes with bulk transcript-level eQTL ...")
 
-# ── Parameters ────────────────────────────────────────────────────────────────────────
-
+##  Variables  -------------------------------------------------------------------------
 gtf_path          = str(snakemake.input.gtf)
 bulk_eqtl_path    = str(snakemake.input.bulk_eqtl)
 fetal_egenes_path = str(snakemake.input.fetal_egenes)
 gene_lookup_path  = str(snakemake.input.gene_lookup)
 
-out_summary  = str(snakemake.output[0])
-out_dir      = Path(out_summary).parent
+out_summary   = str(snakemake.output[0])
+out_dir       = Path(out_summary).parent
 out_enst_map  = str(out_dir / "enst_ensg_map.tsv")
 out_bulk_hits = str(out_dir / "bulk_transcript_hits.tsv")
 out_detail    = str(out_dir / "isoform_comparison_detail.tsv")
 
 nominal_threshold = float(snakemake.params.nominal_threshold)
 
-logger.info(f"Fetal eGenes file: {fetal_egenes_path}")
-logger.info(f"Bulk nominal threshold: {nominal_threshold}")
+variables = {
+    "fetal_egenes_path": fetal_egenes_path,
+    "gtf_path":          gtf_path,
+    "bulk_eqtl_path":    bulk_eqtl_path,
+    "gene_lookup_path":  gene_lookup_path,
+    "nominal_threshold": nominal_threshold,
+    "out_summary":       out_summary,
+}
+width = max(map(len, variables))
+log.info("Variables")
+log.info("============================")
+for name, value in variables.items():
+    log.info(f"{name:<{width}}  {value}")
+log.info("============================")
 
-# ── 1. Build ENST -> ENSG mapping from GTF ───────────────────────────────────────────
+##  1. Build ENST -> ENSG mapping from GTF  --------------------------------------------
 #
 #  Parse transcript-level records only. Each transcript line contains both
 #  gene_id (ENSG) and transcript_id (ENST) attributes.
 
-logger.info(f"Parsing GTF for ENST -> ENSG mapping: {gtf_path}")
+log.info(f"Parsing GTF for ENST -> ENSG mapping: {gtf_path}")
 
 enst_ensg = {}
 
@@ -108,30 +115,30 @@ with opener(gtf_path, 'rt') as fh:
             ensg_clean = gene_id.split('.')[0]
             enst_ensg[enst_clean] = ensg_clean
 
-logger.info(f"ENST -> ENSG mapping built: {len(enst_ensg):,} transcripts")
+log.info(f"ENST -> ENSG mapping built: {len(enst_ensg):,} transcripts")
 
 enst_ensg_df = pd.DataFrame(
     list(enst_ensg.items()),
     columns=['transcript_id', 'gene_id']
 )
 enst_ensg_df.to_csv(out_enst_map, sep='\t', index=False)
-logger.info(f"ENST -> ENSG map written: {out_enst_map}")
+log.info(f"ENST -> ENSG map written: {out_enst_map}")
 
-# ── 2. Load unique fetal eGenes from the shared extract_unique_egenes output ─────────
+##  2. Load unique fetal eGenes  -------------------------------------------------------
 
-logger.info("Loading fetal eGenes from shared extract_unique_egenes output...")
+log.info("Loading fetal eGenes from shared extract_unique_egenes output...")
 
 all_egenes = pd.read_csv(fetal_egenes_path, sep='\t')
 all_egenes['gene_id'] = all_egenes['phenotype_id'].str.split('.').str[0]
 
-logger.info(f"Rows loaded (eGene x cell_type pairs): {len(all_egenes):,}")
-logger.info(f"Unique eGenes: {all_egenes['gene_id'].nunique():,}")
-logger.info(f"Unique SNPs:   {all_egenes['variant_id'].nunique():,}")
+log.info(f"Rows loaded (eGene x cell_type pairs): {len(all_egenes):,}")
+log.info(f"Unique eGenes: {all_egenes['gene_id'].nunique():,}")
+log.info(f"Unique SNPs:   {all_egenes['variant_id'].nunique():,}")
 if 'level' in all_egenes.columns:
-    logger.info(f"Cell types by level: "
+    log.info(f"Cell types by level: "
                 f"{all_egenes[['cell_type','level']].drop_duplicates()['level'].value_counts().to_dict()}")
 
-# ── 3. Build lookup sets for bulk file filtering ──────────────────────────────────────
+##  3. Build lookup sets for bulk file filtering  --------------------------------------
 #
 #  Strategy: for each eGene we want to find all transcripts of that gene in bulk,
 #  tested against the same top SNP from snRNA-seq.
@@ -159,11 +166,11 @@ target_ensts = set()
 for ensg in target_genes:
     target_ensts.update(ensg_to_enst.get(ensg, set()))
 
-logger.info(f"Target SNPs:        {len(target_snps):,}")
-logger.info(f"Target eGenes:      {len(target_genes):,}")
-logger.info(f"Target transcripts: {len(target_ensts):,}")
+log.info(f"Target SNPs:        {len(target_snps):,}")
+log.info(f"Target eGenes:      {len(target_genes):,}")
+log.info(f"Target transcripts: {len(target_ensts):,}")
 
-# ── 4. Pre-filter bulk file using awk ─────────────────────────────────────────────────
+##  4. Pre-filter bulk file using awk  -------------------------------------------------
 #
 #  Write lookup files for awk, then use FNR==NR pattern to build in-memory
 #  hash tables of target SNPs and transcripts, filtering the bulk file in one pass.
@@ -175,11 +182,11 @@ tmp_dir.mkdir(parents=True, exist_ok=True)
 snp_list_path  = tmp_dir / "target_snps.txt"
 enst_list_path = tmp_dir / "target_ensts.txt"
 
-logger.info(f"Writing target SNP list ({len(target_snps):,} SNPs)...")
+log.info(f"Writing target SNP list ({len(target_snps):,} SNPs)...")
 with open(snp_list_path, 'w') as f:
     f.write('\n'.join(target_snps) + '\n')
 
-logger.info(f"Writing target ENST list ({len(target_ensts):,} transcripts)...")
+log.info(f"Writing target ENST list ({len(target_ensts):,} transcripts)...")
 with open(enst_list_path, 'w') as f:
     f.write('\n'.join(target_ensts) + '\n')
 
@@ -199,8 +206,8 @@ awk_cmd = (
     f"<(zcat {bulk_eqtl_path})"
 )
 
-logger.info("Pre-filtering bulk file with awk (this may take a few minutes)...")
-logger.info(f"awk command: {awk_cmd}")
+log.info("Pre-filtering bulk file with awk (this may take a few minutes)...")
+log.info(f"awk command: {awk_cmd}")
 
 result = subprocess.run(
     awk_cmd,
@@ -211,10 +218,10 @@ result = subprocess.run(
 )
 
 if result.returncode != 0:
-    logger.error(f"awk filtering failed:\n{result.stderr}")
+    log.error(f"awk filtering failed:\n{result.stderr}")
     raise RuntimeError("awk bulk file filtering failed")
 
-logger.info(f"awk filtering complete. Output size: {len(result.stdout):,} characters")
+log.info(f"awk filtering complete. Output size: {len(result.stdout):,} characters")
 
 bulk_filtered = pd.read_csv(
     io.StringIO(result.stdout),
@@ -230,20 +237,20 @@ bulk_filtered['gene_id_ensg'] = bulk_filtered['transcript_id'].map(enst_ensg)
 
 n_missing_map = bulk_filtered['gene_id_ensg'].isna().sum()
 if n_missing_map > 0:
-    logger.warning(f"{n_missing_map:,} bulk rows could not be mapped to ENSG "
+    log.warning(f"{n_missing_map:,} bulk rows could not be mapped to ENSG "
                    f"(transcript not in GTF -- may be from older Ensembl release)")
 
 bulk_filtered = bulk_filtered.dropna(subset=['gene_id_ensg'])
 
-logger.info(f"Bulk rows after filtering and mapping: {len(bulk_filtered):,}")
-logger.info(f"Unique transcripts in bulk hits:  {bulk_filtered['transcript_id'].nunique():,}")
-logger.info(f"Unique genes in bulk hits:        {bulk_filtered['gene_id_ensg'].nunique():,}")
-logger.info(f"Unique SNPs in bulk hits:         {bulk_filtered['variant_id'].nunique():,}")
+log.info(f"Bulk rows after filtering and mapping: {len(bulk_filtered):,}")
+log.info(f"Unique transcripts in bulk hits:  {bulk_filtered['transcript_id'].nunique():,}")
+log.info(f"Unique genes in bulk hits:        {bulk_filtered['gene_id_ensg'].nunique():,}")
+log.info(f"Unique SNPs in bulk hits:         {bulk_filtered['variant_id'].nunique():,}")
 
 bulk_filtered.to_csv(out_bulk_hits, sep='\t', index=False)
-logger.info(f"Bulk hits written: {out_bulk_hits}")
+log.info(f"Bulk hits written: {out_bulk_hits}")
 
-# ── 5. Classify isoform patterns per eGene ────────────────────────────────────────────
+##  5. Classify isoform patterns per eGene  --------------------------------------------
 #
 #  For each unique ENSG + variant_id pair across all cell types, characterise
 #  the bulk transcript pattern.
@@ -254,9 +261,7 @@ logger.info(f"Bulk hits written: {out_bulk_hits}")
 #    all_sig           : all tested transcripts significant (gene-wide effect)
 #    isoform_specific  : only a subset (>=1 but not all) transcripts significant
 #
-#  isoform_specific is the key flag for the reviewer response
-
-logger.info("Classifying isoform patterns for each eGene x SNP pair...")
+log.info("Classifying isoform patterns for each eGene x SNP pair...")
 
 # Unique eGene x SNP pairs (collapse across cell types for the bulk lookup)
 egene_snp_pairs = (all_egenes[['gene_id', 'variant_id', 'slope']]
@@ -365,23 +370,23 @@ for _, row in egene_snp_pairs.iterrows():
 summary_df = pd.DataFrame(summary_rows)
 detail_df  = pd.DataFrame(detail_rows)
 
-# ── 6. Summary statistics ─────────────────────────────────────────────────────────────
+##  6. Summary statistics  -------------------------------------------------------------
 
-logger.info("\n── Pattern classification summary ──────────────────────────")
+log.info("\n── Pattern classification summary ──────────────────────────")
 pattern_counts = summary_df['pattern'].value_counts()
-logger.info(f"\n{pattern_counts.to_string()}")
-logger.info(f"\nTotal eGene x SNP pairs:      {len(summary_df):,}")
-logger.info(f"Isoform-specific candidates:  "
+log.info(f"\n{pattern_counts.to_string()}")
+log.info(f"\nTotal eGene x SNP pairs:      {len(summary_df):,}")
+log.info(f"Isoform-specific candidates:  "
             f"{summary_df['isoform_specific'].sum():,} "
             f"({100*summary_df['isoform_specific'].mean():.1f}%)")
-logger.info(f"Not found in bulk:            "
+log.info(f"Not found in bulk:            "
             f"{(summary_df['pattern']=='not_in_bulk').sum():,} "
             f"({100*(summary_df['pattern']=='not_in_bulk').mean():.1f}%)")
-logger.info(f"Direction concordant (of those in bulk): "
+log.info(f"Direction concordant (of those in bulk): "
             f"{summary_df['direction_concordant'].sum():.0f} / "
             f"{summary_df['direction_concordant'].notna().sum():.0f}")
 
-logger.info("\n── Per cell type eGene counts and isoform-specific rates ────")
+log.info("\n── Per cell type eGene counts and isoform-specific rates ────")
 ct_stats = (all_egenes[['cell_type','gene_id','variant_id']]
             .merge(summary_df[['gene_id','variant_id','pattern','isoform_specific']],
                    on=['gene_id','variant_id'], how='left')
@@ -397,11 +402,11 @@ ct_stats = (all_egenes[['cell_type','gene_id','variant_id']]
 ct_stats['pct_isoform_specific'] = (
     ct_stats['n_isoform_spec'] / ct_stats['n_egenes'] * 100
 ).round(1)
-logger.info(f"\n{ct_stats.to_string(index=False)}")
+log.info(f"\n{ct_stats.to_string(index=False)}")
 
-# ── 7. Add gene symbols and write outputs ─────────────────────────────────────────────
+##  7. Add gene symbols and write outputs  ---------------------------------------------
 
-logger.info(f"\nLoading gene symbol lookup: {gene_lookup_path}")
+log.info(f"\nLoading gene symbol lookup: {gene_lookup_path}")
 gene_lookup = pd.read_csv(gene_lookup_path, sep='\t', usecols=['ensembl_gene_id', 'external_gene_name'])
 gene_lookup = gene_lookup.drop_duplicates(subset='ensembl_gene_id')
 
@@ -411,7 +416,7 @@ summary_df = summary_df.merge(
 )
 n_missing_symbol = summary_df['gene_symbol'].isna().sum()
 if n_missing_symbol > 0:
-    logger.warning(f"{n_missing_symbol:,} eGenes had no matching gene symbol in the lookup")
+    log.warning(f"{n_missing_symbol:,} eGenes had no matching gene symbol in the lookup")
 
 # Move gene_symbol next to gene_id for readability
 cols = summary_df.columns.tolist()
@@ -419,10 +424,10 @@ cols.insert(cols.index('gene_id') + 1, cols.pop(cols.index('gene_symbol')))
 summary_df = summary_df[cols]
 
 summary_df.to_csv(out_summary, sep='\t', index=False)
-logger.info(f"\nSummary (tracked output) written: {out_summary} ({summary_df.shape})")
+log.info(f"\nSummary (tracked output) written: {out_summary} ({summary_df.shape})")
 
 if detail_df.empty:
-    logger.warning("No transcript-level detail rows generated -- "
+    log.warning("No transcript-level detail rows generated -- "
                    "check that bulk SNPs match snRNA-seq variant IDs")
     detail_df = pd.DataFrame(columns=[
         'gene_id','variant_id','transcript_id',
@@ -430,7 +435,7 @@ if detail_df.empty:
         'bulk_significant','pattern','isoform_specific','snrna_slope'
     ])
 detail_df.to_csv(out_detail, sep='\t', index=False)
-logger.info(f"Detail (untracked) written:  {out_detail} ({detail_df.shape})")
+log.info(f"Detail (untracked) written:  {out_detail} ({detail_df.shape})")
 
 for f in [snp_list_path, enst_list_path]:
     try:
@@ -438,4 +443,7 @@ for f in [snp_list_path, enst_list_path]:
     except Exception:
         pass
 
-logger.info("Done.")
+log.info("Done.")
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
