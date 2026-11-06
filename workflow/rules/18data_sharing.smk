@@ -86,12 +86,12 @@ rule data_weights:
            """
 
 rule final_genotypes:
-    input: vcf = "../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz",
-           samples = "../resources/sheets/final_134_sample_ids.txt"
-    output: "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
+    input:  vcf     = config["geno_post_impute"]["exclude_SNPs"]["output"],
+            samples = config["data_sharing"]["final_genotypes"]["samples"]
+    output: config["data_sharing"]["final_genotypes"]["out_file"]
     envmodules: "BCFtools"
     resources: time="30:00"
-    log: "../results/00LOG/13MANUSCRIPT_PLOTS_TABLES/final_genotypes.log"
+    log:    config["data_sharing"]["final_genotypes"]["log"]
     shell: """
            bcftools view \
              --samples-file {input.samples} \
@@ -139,7 +139,7 @@ rule data_susie_mk_tar:
 rule final_scanpy_obj:
     # L1 object + the four L2 subclustering objects + one pseudotime object per trajectory
     input:
-        l1 = config['data_sharing']['final_scanpy_obj']['l1_h5ad'],
+        l1 = config['scanpy']['clusters_h5ad'],
         l2 = expand(config['data_sharing']['final_scanpy_obj']['l2_h5ad'],
                     l1_pop = config['data_sharing']['final_scanpy_obj']['l2_populations']),
         pt = expand(config['pseudotime']['palantir']['h5ad'],

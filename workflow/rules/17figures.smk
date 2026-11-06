@@ -11,7 +11,7 @@ rule all:
 #        config['figures']['data_nominal']['out_file'],
 #        config['figures']['data_mk_eqtl_tar']['out_file']
 #        config['figures']['data_weights']['out_file']
-#        "../results/13MANUSCRIPT_PLOTS_TABLES/data_sharing/eqtl_atlas_genotypes.vcf.gz"
+#        config['data_sharing']['final_genotypes']['out_file']
 #       config['figures']['smr_ctwas_venn']['out_file_grid']
 #       config["figures"]["diff_exp_tbl"]["html_out"],
 #       config["figures"]["diff_exp_tbl"]["xlsx_out"] 
@@ -100,9 +100,16 @@ rule ldsr_fig:
 
 rule smr_ctwas_venn_fig:
     # Fig 6 and Supp Fig X
-    output: plot_grid = config['figures']['smr_ctwas_venn']['out_file_grid']
-    params: cell_types  = config['cell_types'],
-            gene_lookup = config['gene_lookup']
+    input:  smr_sig_tbls = expand(config['tables']['smr_sig_tbl']['out_file'], gwas = list(config['gwas'].keys()))
+    output: plot_scz  = config['figures']['smr_ctwas_venn']['out_file_scz'],
+            plot_grid = config['figures']['smr_ctwas_venn']['out_file_grid']
+    params: traits       = list(config['gwas'].keys()),
+            smr_tbl_dir  = config['figures']['smr_ctwas_venn']['smr_tbl_dir'],
+            ctwas_in_dir = config['figures']['smr_ctwas_venn']['ctwas_in_dir'],
+            weights_dir  = config['figures']['smr_ctwas_venn']['weights_dir'],
+            genes_out    = lambda wc: config['figures']['smr_ctwas_venn']['genes_out'],
+            cell_types   = config['cell_types'],
+            gene_lookup  = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources: time="3:30:00"
     log: config['figures']['smr_ctwas_venn']['log']
@@ -111,7 +118,7 @@ rule smr_ctwas_venn_fig:
 rule supplementary_fig:
     # Supp Fig 2 & 12
     output: config['figures']['supp_fig']['out_file']
-    params: geno_dir = config['figures']['supp_fig']['geno_dir'],
+    params: geno_dir = config['geno_post_impute']['calc_genotype_pcs']['params'].rsplit('/', 1)[0] + '/',
             expr_dir = config['figures']['supp_fig']['expr_dir'],
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
@@ -160,7 +167,7 @@ rule bulk_egene_overlaps_fig:
 
 rule snrna_qc_fig:
     # Supp Fig X -- snRNA-seq QC per sample and per cell type (reviewer, line 473)
-    input:  h5ad = config['figures']['snrna_qc_fig']['in_h5ad']
+    input:  h5ad = config['scanpy']['clusters_h5ad']
     output: per_sample   = config['figures']['snrna_qc_fig']['out_file_sample'],
             per_celltype = config['figures']['snrna_qc_fig']['out_file_celltype']
     conda:  config["scanpy"]["env"]

@@ -74,7 +74,7 @@ def pt_export_inputs(wildcards):
 
 
 rule pseudotime_subset:
-    input:  h5ad   = config["pseudotime"]["subset"]["input_h5ad"]
+    input:  h5ad   = config["scanpy"]["clusters_h5ad"]
     output: h5ad   = config["pseudotime"]["subset"]["h5ad"]
     conda:  config["pseudotime"]["env"]
     resources: threads = 2, mem_mb = 180000, time = "00:30:00"

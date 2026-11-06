@@ -8,7 +8,7 @@
 #   - one gene-membership TSV per trait (Ensembl ID + symbol + region),
 #     unchanged from the per-gwas version
 #
-# Runs as a Snakemake `script:` (cell types and gene lookup come from the rule).
+# Runs as a Snakemake `script:`; paths and cell types come from the rule.
 #
 # CHANGE FROM PREVIOUS VERSION: no longer driven by a per-gwas Snakemake
 # wildcard - all 5 traits are processed in this single script invocation,
@@ -32,16 +32,16 @@ suppressMessages({
 })
 
 # ---- Parameters ------------------------------------------------------------
-# Cell types and the gene lookup come from the rule (config); the remaining
-# paths and settings are fixed here.
-traits           <- c("scz", "bpd", "mdd", "adhd", "ocd")
-smr_tbl_dir      <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/"
-ctwas_in_dir     <- "../results/14CTWAS/"
-weights_dir      <- "../results/14CTWAS/weights"
+# Paths, traits and cell types come from the rule (config); the significance
+# and plotting settings are fixed here.
+traits           <- unlist(snakemake@params[["traits"]])
+smr_tbl_dir      <- snakemake@params[["smr_tbl_dir"]]
+ctwas_in_dir     <- snakemake@params[["ctwas_in_dir"]]
+weights_dir      <- snakemake@params[["weights_dir"]]
 cell_types       <- unlist(snakemake@params[["cell_types"]])
 gene_lookup_file <- snakemake@params[["gene_lookup"]]
-genes_out_tmpl   <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/venn_{gwas}_genes.tsv" # untracked by Snakemake, written silently
-out_plot_scz     <- "../results/13MANUSCRIPT_PLOTS_TABLES/plots/venn_scz.png"           # untracked by Snakemake, written silently
+genes_out_tmpl   <- snakemake@params[["genes_out"]]   # per-trait gene tables, {gwas} filled below
+out_plot_scz     <- snakemake@output[["plot_scz"]]
 ctwas_pip_thresh <- 0.8
 ctwas_use_bf     <- TRUE    # BF-corrected significance is the real criterion; PIP>0.8 alone was the report's bug
 ctwas_bf_thresh  <- 0.05

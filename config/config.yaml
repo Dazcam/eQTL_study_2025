@@ -267,7 +267,7 @@ scanpy:
     nb_out: ../results/02SCANPY/scanpy_qc_{plate}_pm.ipynb
     html_out: scanpy_qc_{plate}.html
     benchmark: reports/benchmarks/02scanpy.scanpy_qc_{plate}.benchmark.txt 
-    log: ../results/00LOG/01SCANPY/scanpy_qc_{plate}.log
+    log: ../results/00LOG/02SCANPY/scanpy_qc_{plate}.log
 
   clustering:
     input: scripts/scanpy_clustering.ipynb
@@ -557,7 +557,6 @@ trajectories:
 pseudotime:
   env: ../envs/pseudotime.yaml
   subset:
-    input_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
     h5ad:       ../results/06PSEUDOTIME/{trajectory}/adata_subset.h5ad
     log:        ../results/00LOG/06PSEUDOTIME/{trajectory}/subset.log
     script:     ../scripts/pseudotime_subset.py
@@ -1010,7 +1009,7 @@ ctwas:
     output:      reports/14CTWAS/14ctwas_report.html
     in_dir:      ../../results/14CTWAS/
     bmark_dir:   ../reports/benchmarks/
-    tbl_dir:     ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/
+#    tbl_dir:     ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/   # unused
     output_file: ../reports/14CTWAS/14ctwas_report.html
     bmrk:        reports/benchmarks/14ctwas.ctwas_report.benchmark.txt
     log:         ../results/00LOG/14CTWAS/ctwas_report.log 
@@ -1163,15 +1162,15 @@ tables:
 # ------------  Pipeline 17: Manuscript figures  ------------
 
 figures:
-  # NOTE: old rule and script rm to 
-  eqtl_boxplots:
-    exp_dir: ../results/05TENSORQTL/prep_input/
-    pval_dir: ../results/12SMR/smr_input/
-    geno_prefix: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-    gene_id: ENSG00000214435
-    snp_id: rs11191424
-    output: reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds
-    log: ../results/00LOG/11PLOTTING/eqtl_boxplots_r.log
+  # Unused: the R boxplot rule was removed (see eqtl_boxplots_py)
+#  eqtl_boxplots:
+#    exp_dir: ../results/05TENSORQTL/prep_input/
+#    pval_dir: ../results/12SMR/smr_input/
+#    geno_prefix: ../results/05TENSORQTL/prep_input/chrALL_final.filt
+#    gene_id: ENSG00000214435
+#    snp_id: rs11191424
+#    output: reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds
+#    log: ../results/00LOG/11PLOTTING/eqtl_boxplots_r.log
 
   eqtl_qc_fig:
     # Fig 2
@@ -1213,7 +1212,7 @@ figures:
     smr_tbl_dir: ../results/16MANUSCRIPT-TABLES/  # cross-pipeline: reads a tables-pipeline output
     ctwas_in_dir: ../results/14CTWAS/
     weights_dir: ../results/14CTWAS/weights
-    gene_lookup_file: ../resources/sheets/gene_lookup_hg38.tsv
+#    gene_lookup_file: ../resources/sheets/gene_lookup_hg38.tsv   # unused: top-level gene_lookup
     out_file_scz: ../results/17MANUSCRIPT-FIGURES/venn_scz.png
     out_file_grid: ../results/17MANUSCRIPT-FIGURES/venn_grid_bpd_mdd_adhd_ocd.png
     genes_out: ../results/17MANUSCRIPT-FIGURES/venn_{gwas}_genes.tsv
@@ -1221,7 +1220,7 @@ figures:
 
   supp_fig:
     # Supp Fig 1
-    geno_dir: ../results/04GENOTYPES/covariates/
+#    geno_dir: ../results/04GENOTYPES/covariates/   # replaced by the 04 calc_genotype_pcs output
     expr_dir: ../results/05TENSORQTL/tensorqtl_perm/
     out_file: ../results/17MANUSCRIPT-FIGURES/expression_PC_plt.pdf
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/supplementary_plt.log
@@ -1247,7 +1246,6 @@ figures:
 
   snrna_qc_fig:
     # Supp Fig X -- reviewer request (line 473): snRNA-seq QC summaries
-    in_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
     out_file_sample: ../results/17MANUSCRIPT-FIGURES/snrna_qc_per_sample.pdf
     out_file_celltype: ../results/17MANUSCRIPT-FIGURES/snrna_qc_per_celltype.pdf
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/snrna_qc_plt.log
@@ -1262,10 +1260,11 @@ data_sharing:
     log_r2: ../results/00LOG/18DATA-SHARING/{plate}/cat_fqs_{sample}_R2.log
     outdir: ../results/18DATA-SHARING/MRGD_fqs/
 
-  extract_cell_meta:
-    input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
-    output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
-    log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
+  # Unused: no rule; outputs archived to results/old_results/14DATA_SHARING
+#  extract_cell_meta:
+#    input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
+#    output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
+#    log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
 
   data_perm:
     in_dir: ../results/05TENSORQTL/tensorqtl_perm/
@@ -1295,13 +1294,17 @@ data_sharing:
     out_file: ../results/18DATA-SHARING/{cell_type}.susie.cred.hp.tsv.gz
     log: ../results/00LOG/18DATA-SHARING/data_susie_{cell_type}.log
 
+  final_genotypes:
+    samples:  ../resources/sheets/final_134_sample_ids.txt
+    out_file: ../results/18DATA-SHARING/eqtl_atlas_genotypes.vcf.gz
+    log:      ../results/00LOG/18DATA-SHARING/final_genotypes.log
+
   data_susie_mk_tar:
     out_file: ../results/18DATA-SHARING/eqtl_atlas_susie_credible_sets.tar
     top_dir: susie_credible_sets   # directory name inside the tarball
     log: ../results/00LOG/18DATA-SHARING/data_susie_mk_tar.log
 
   data_final_scanpy_obj:
-    l1_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad                          # TODO: scanpy_dir + 'adata_clusters_v3.h5ad'
     # {l1_pop} is the PIPELINE name (Glu-UL, Glu-DL, ...), not the manuscript label
     l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # TODO: subcluster_dir + ...
     l2_populations: [Glu-UL, Glu-DL, NPC, GABA]
