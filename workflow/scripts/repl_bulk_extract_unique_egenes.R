@@ -11,13 +11,15 @@
 #
 # Purpose:   - Read the tensorQTL permutation output for every cell type in
 #              config (L1, L2 and pseudotime bins)
-#            - Keep eGenes at qval < 0.05, one lead eSNP per eGene
+#            - Keep eGenes at qval < eqtl_fdr, one lead eSNP per eGene
 #            - Tag each cell type as L1, L2 or pseudotime
 #            - Report the per-cell-type and total unique eGene counts
 #
 # Inputs:    perm_files   tensorQTL perm results, one per cell type (same order
 #                         as cell_types)
 #            cell_types   config['cell_types']
+#            l1_types     config['fetal_l1_types'] (L1 level tag)
+#            eqtl_fdr     qval threshold for an eGene
 #
 # Outputs:   output       TSV, one row per (cell_type, eGene): phenotype_id,
 #                         variant_id, slope, slope_se, pval_nominal, qval,
@@ -46,23 +48,24 @@ message("\n\nExtracting FDR-significant eGenes across all cell types ...")
 library(tidyverse)
 
 # Input and output paths
-perm_files  <- snakemake@input[["perm_files"]]
-output_file <- snakemake@output[[1]]
-cell_types  <- snakemake@params[["cell_types"]]
-geno_pc     <- snakemake@params[["geno_pc"]]
-norm_method <- snakemake@params[["norm_method"]]
+perm_files    <- snakemake@input[["perm_files"]]
+output_file   <- snakemake@output[[1]]
+cell_types    <- snakemake@params[["cell_types"]]
+geno_pc       <- snakemake@params[["geno_pc"]]
+norm_method   <- snakemake@params[["norm_method"]]
+cell_types_L1 <- unlist(snakemake@params[["l1_types"]])
+eqtl_fdr      <- as.numeric(snakemake@params[["eqtl_fdr"]])
 
 names(perm_files) <- cell_types
-
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("n_cell_types", "geno_pc", "norm_method", "cell_types_L1", "output_file"),
+  variable = c("n_cell_types", "geno_pc", "norm_method", "cell_types_L1", "eqtl_fdr",
+               "output_file"),
   value    = c(length(cell_types), geno_pc, norm_method,
-               paste(cell_types_L1, collapse = ", "), output_file)) |>
+               paste(cell_types_L1, collapse = ", "), eqtl_fdr, output_file)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -87,11 +90,11 @@ read_sig_egenes <- function(cell_type, file_path) {
   }
 
   dat <- read_tsv(file_path, show_col_types = FALSE) |>
-    filter(!is.na(qval) & qval < 0.05) |>
+    filter(!is.na(qval) & qval < eqtl_fdr) |>
     dplyr::select(phenotype_id, variant_id, slope, slope_se, pval_nominal, qval) |>
     mutate(cell_type = cell_type)
 
-  message("  Sig. eGenes (qval < 0.05): ", nrow(dat))
+  message("  Sig. eGenes (qval < ", eqtl_fdr, "): ", nrow(dat))
   dat
 }
 

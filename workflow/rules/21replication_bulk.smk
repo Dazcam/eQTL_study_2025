@@ -13,8 +13,10 @@ def get_all_egene_perm_files():
 rule extract_unique_egenes:
     input:  perm_files = get_all_egene_perm_files()
     output: config["replication_bulk"]["extract_unique_egenes"]["out_file"]
-    params: cell_types = config["cell_types"],
-            geno_pc = config["tensorQTL"]["geno_pcs"],
+    params: cell_types  = config["cell_types"],
+            l1_types    = config["fetal_l1_types"],
+            eqtl_fdr    = config["eqtl_fdr"],
+            geno_pc     = config["tensorQTL"]["geno_pcs"],
             norm_method = config["tensorQTL"]["norm_methods"][0]
     singularity: config["containers"]["r_eqtl"]
     message: "Extract unique FDR-sig eGenes across all L1+L2+pseudotime cell types"
