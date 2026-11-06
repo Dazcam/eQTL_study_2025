@@ -19,7 +19,7 @@
 #      cell types relabelled Glu-UL/Glu-DL -> Glu-A/Glu-B.
 #
 # Independent of ctwas_report.Rmd (same reasoning as smr_sig_tbl vs
-# smr_report.Rmd): that report renders as part of 12ctwas.smk, which runs
+# smr_report.Rmd): that report renders as part of 14ctwas.smk, which runs
 # BEFORE the tables pipeline where this script lives, so it can't depend on
 # this script's output without inverting that ordering. Both compute the
 # same correction-factor / significance logic independently.
@@ -59,8 +59,8 @@ sig_out        <- snakemake@output[["sig_out"]]  # single xlsx, one sheet per tr
 
 # traits           <- c("scz", "bpd", "mdd", "adhd", "ocd")
 # cell_types       <- c("Glu-UL", "Glu-DL", ..., "NPC-to-Glu-UL-Q4-Bin4")
-# in_dir           <- "../results/12CTWAS/"
-# weights_dir      <- "../results/12CTWAS/weights"
+# in_dir           <- "../results/14CTWAS/"
+# weights_dir      <- "../results/14CTWAS/weights"
 # gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
 # pip_thresh       <- 0.8
 # bf_p_thresh      <- 0.05

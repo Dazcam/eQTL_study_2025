@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  11TWAS | Rule: prep_exp_data (one job per cell type)
+# Pipeline:  13TWAS-WEIGHTS | Rule: prep_exp_data (one job per cell type)
 #            Upstream:   05TENSORQTL prep_input (quantile-normalised expression bed)
 #            Downstream: compute_weights, make_pos_file
 #
@@ -44,7 +44,7 @@ library(tidyverse)
 library(biomaRt)
 
 # Load functions
-source(file.path(snakemake@scriptdir, "twas_functions.R"))
+source(file.path(snakemake@scriptdir, "twas_weights_functions.R"))
 
 # Input and output paths
 expr_in <- snakemake@input[[1]]

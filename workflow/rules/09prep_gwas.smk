@@ -4,14 +4,14 @@ localrules: get_gwas_sumstats
 
 #rule all:
 #    input:
-#        expand("../results/07PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz", gwas = config['gwas'])
+#        expand("../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz", gwas = config['gwas'])
 
 rule get_gwas_sumstats:
     # Download GWAS sumsatts files
     output:  config["prep_gwas"]["get_gwas_sumstats"]["output"]
     params:  lambda wildcards: config['gwas'][wildcards.gwas]
     message: "Download {wildcards.gwas} sumstats file"
-    benchmark: "reports/benchmarks/07prep_gwas.get_gwas_sumstats_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.get_gwas_sumstats_{gwas}.txt"
     log:     config["prep_gwas"]["get_gwas_sumstats"]["log"]
     run:
         
@@ -68,7 +68,7 @@ rule standardise_sumstats:
     input:   rules.get_gwas_sumstats.output
     output:  config["prep_gwas"]["standardise_sumstats"]["output"]
     message: "Standardising {input}"
-    benchmark: "reports/benchmarks/07prep_gwas.standardise_sumstats_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.standardise_sumstats_{gwas}.txt"
     params: config["prep_gwas"]["standardise_sumstats"]["temp"]
     log:    config["prep_gwas"]["standardise_sumstats"]["log"] 
     run:
@@ -151,7 +151,7 @@ rule add_z_score:
     input:   rules.standardise_sumstats.output
     output:  config["prep_gwas"]["add_z_score"]["output"]
     message: "Adding Z score to {input} if required"
-    benchmark: "reports/benchmarks/07prep_gwas.add_z_score_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.add_z_score_{gwas}.txt"
     log:     config["prep_gwas"]["add_z_score"]["log"]
     shell:
              """
@@ -165,7 +165,7 @@ rule add_N:
     input:   rules.add_z_score.output
     output:  config["prep_gwas"]["add_N"]["output"]
     message: "Adding N to {input} if required"
-    benchmark: "reports/benchmarks/07prep_gwas.add_N_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.add_N_{gwas}.txt"
     log:     config["prep_gwas"]["add_N"]["log"]
     run:
         if wildcards.gwas in ("mdd", "scz"):
@@ -197,7 +197,7 @@ rule make_gwas_bed_hg19:
     input:   rules.add_N.output
     output:  config["prep_gwas"]["make_gwas_bed_hg19"]["output"]
     message: "Create bed input file for {input} hg19 to hg38 LiftOver"
-    benchmark: "reports/benchmarks/07prep_gwas.make_gwas_bed_hg19_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.make_gwas_bed_hg19_{gwas}.txt"
     log: config["prep_gwas"]["make_gwas_bed_hg19"]["log"]
     run:
 
@@ -214,7 +214,7 @@ rule liftover_gwas_to_hg38:
     output:  config["prep_gwas"]["liftover_gwas_to_hg38"]["output"]
     singularity: config["containers"]["ubuntu"]
     params: config["prep_gwas"]["liftover_gwas_to_hg38"]["unlifted"]
-    benchmark: "reports/benchmarks/07prep_gwas.liftover_gwas_to_hg38_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.liftover_gwas_to_hg38_{gwas}.txt"
     message: "Lifting over {input} from hg19 to hg38"
     log: config["prep_gwas"]["liftover_gwas_to_hg38"]["log"]
     shell:
@@ -231,7 +231,7 @@ rule add_hg38_coords_to_gwas:
     output: config["prep_gwas"]["add_hg38_coords_to_gwas"]["output"]
     resources: threads = 5, mem_mb = 20000, time="5:00:00"
     message: "Adding hg38 coords to {input.sumstats} sumstats"
-    benchmark: "reports/benchmarks/07prep_gwas.add_hg38_coords_to_gwas_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.add_hg38_coords_to_gwas_{gwas}.txt"
     log: config["prep_gwas"]["add_hg38_coords_to_gwas"]["log"]
     script: "../scripts/gwas_add_hg38_coords_to_gwas.py"
 
@@ -243,7 +243,7 @@ rule munge_sumstats:
     output:  config["prep_gwas"]["munge_sumstats"]["output"]
 #    conda:   "../envs/ldsr.yml" # Struggling to get this to work, can create env, but snakemake can't
     message: "Munging sumstats for LDSR compatibility: {input.gwas}"
-    benchmark: "reports/benchmarks/07prep_gwas.munge_sumstats_{gwas}.txt"
+    benchmark: "reports/benchmarks/09prep_gwas.munge_sumstats_{gwas}.txt"
     params:  config["prep_gwas"]["munge_sumstats"]["prefix"]
     log:     config["prep_gwas"]["munge_sumstats"]["log"]
     shell:

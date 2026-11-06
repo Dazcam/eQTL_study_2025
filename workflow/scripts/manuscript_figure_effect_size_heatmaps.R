@@ -39,7 +39,7 @@ eqtl_effect_replication_file <- snakemake@params[["eqtl_effect_replication"]]
 fetal_vs_fetal_file <- snakemake@output[["fetal_vs_fetal"]]
 fetal_vs_jang_file  <- snakemake@output[["fetal_vs_jang"]]
 
-# eqtl_effect_replication_file <- "../results/19DEV-SPECIFICITY/eqtl_effect_replication/eqtl_effect_replication.rds"
+# eqtl_effect_replication_file <- "../results/15EQTL-SHARING/eqtl_effect_replication/eqtl_effect_replication.rds"
 
 # --- Read and unpack
 effect_repl <- read_rds(eqtl_effect_replication_file)
@@ -67,7 +67,7 @@ mat_to_long <- function(mat) {
 }
 
 # Shared heatmap builder, styled after plot_jang_heatmap()/plot_int_heatmap()
-# in manuscript_plot_replication.R -- same borders/labels/theme, diverging
+# in manuscript_figure_replication.R -- same borders/labels/theme, diverging
 # fill scale instead of pi1's sequential one.
 plot_corr_heatmap <- function(df, x_lab, y_lab, cell_text_size, axis_text_size,
                               base_size = 13) {

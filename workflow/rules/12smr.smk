@@ -4,7 +4,7 @@ configfile: "../config/config.yaml"
 rule get_smr_binary:
     output: config["smr"]["get_smr_binary"]["smr"]
     message: "Download the smr binary file"
-    benchmark: "reports/benchmarks/10smr.get_smr_binary.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.get_smr_binary.benchmark.txt"
     log: config["smr"]["get_smr_binary"]["log"]
     shell:
         """
@@ -26,7 +26,7 @@ rule cat_refs:
             bim = config["smr"]["cat_refs"]["cat_bim"],
             fam = config["smr"]["cat_refs"]["cat_fam"]
     message: "Cat hg38 refs into a single file"
-    benchmark: "reports/benchmarks/10smr.cat_refs.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.cat_refs.benchmark.txt"
     log: config["smr"]["cat_refs"]["log"]
     shell:
         """
@@ -58,7 +58,7 @@ rule cat_tensorqtl_nom_snps:
     params: dir = tensorqtl_nom_dir,
             norm_method = config['tensorQTL']['norm_methods'][0]
     message: "Cat TensorQTL parquet files into single file for SMR"
-    benchmark: "reports/benchmarks/10smr.cat_tensorqtl_nom_snps_{cell_type}.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.cat_tensorqtl_nom_snps_{cell_type}.benchmark.txt"
     log: config["smr"]["cat_tensorqtl_nom_snps"]["log"]
     shell:
         """
@@ -85,7 +85,7 @@ rule create_query:
     singularity: config["containers"]["R"]
     resources: mem_mb = 20000
     message: "Create query file for SMR"
-    benchmark: "reports/benchmarks/10smr.create_query_{cell_type}.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.create_query_{cell_type}.benchmark.txt"
     log: config["smr"]["create_query"]["log"]
     script: "../scripts/smr_create_query.R"
 
@@ -98,7 +98,7 @@ rule create_besd:
     resources: mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
     message: "Create besd file for SMR"
-    benchmark: "reports/benchmarks/10smr.create_besd_{cell_type}.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.create_besd_{cell_type}.benchmark.txt"
     log: config["smr"]["create_besd"]["log"]
     shell:
         """
@@ -112,7 +112,7 @@ rule format_gwas:
     resources: mem_mb = 20000
     singularity: config["containers"]["R"]
     message: "Prep GWAS into .ma format for SMR"
-    benchmark: "reports/benchmarks/10smr.format_gwas_{gwas}.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.format_gwas_{gwas}.benchmark.txt"
     log: config["smr"]["format_gwas"]["log"]
     script: "../scripts/smr_format_gwas.R"
 
@@ -131,7 +131,7 @@ rule smr:
     resources: mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
     message: "Run SMR"
-    benchmark: "reports/benchmarks/10smr.smr_{cell_type}_{gwas}.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.smr_{cell_type}_{gwas}.benchmark.txt"
     log:    config["smr"]["smr"]["log"]
     shell:  """
             {input.bin} --bfile {params.geno_prefix} \
@@ -158,7 +158,7 @@ rule smr_report:
     resources: mem_mb = 20000
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SMR report"
-    benchmark: "reports/benchmarks/10smr.smr_report.benchmark.txt"
+    benchmark: "reports/benchmarks/12smr.smr_report.benchmark.txt"
     log: config["smr"]["smr_report"]["log"]
     shell:
         """

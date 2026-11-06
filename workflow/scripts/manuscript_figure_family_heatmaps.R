@@ -41,7 +41,7 @@ out_files <- list(
   "NPC"   = snakemake@output[["npc"]]
 )
 
-# eqtl_effects_file <- "../results/19DEV-SPECIFICITY/eqtl_effects/eqtl_effect_sizes.rds"
+# eqtl_effects_file <- "../results/15EQTL-SHARING/eqtl_effects/eqtl_effect_sizes.rds"
 # gene_lookup_file  <- "../resources/sheets/gene_lookup_hg38.tsv"
 
 # --- Read and unpack

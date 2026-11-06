@@ -1,40 +1,35 @@
 configfile: '../config/config.yaml'
 
-#include: 'rules/00check_fastqs.smk'
-#include: 'rules/00check_sample_contamination.smk'
-#include: 'rules/01parse.smk' 
+#include: 'rules/01parse.smk'
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute.smk'
 #include: 'rules/04genotypes_post_impute.smk'
 #include: 'rules/05tensorQTL.smk'
-#include: 'rules/06qtl_replication.smk'
-#include: 'rules/07prep_gwas.smk'
-#include: 'rules/08susie.smk'
-#include: 'rules/09sldsr.smk'
-#include: 'rules/10smr.smk'
-#include: 'rules/11twas.smk'
-#include: 'rules/11plotting.smk'
-#include: 'rules/12ctwas.smk'
-#include: 'rules/17pseudotime.smk'
-#include:  'rules/19dev_specificity.smk'
-include: 'rules/21replication_bulk.smk'
+#include: 'rules/06pseudotime.smk'
+#include: 'rules/07replication_sc.smk'
+include:  'rules/08replication_bulk.smk'
+#include: 'rules/09prep_gwas.smk'
+#include: 'rules/10susie.smk'
+#include: 'rules/11sldsr.smk'
+#include: 'rules/12smr.smk'
+#include: 'rules/13twas_weights.smk'
+#include: 'rules/14ctwas.smk'
+#include: 'rules/15eqtl_sharing.smk'
 
 rule all:
     input:
 #        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
 #        config["scanpy"]["subclustering"]["output"],
 #        config["geno_pre_impute"]["geno_pre_report"]["html"],
-#        config["geno_post_impute"]["geno_post_report"]["html"]
-#        config["tensorQTL"]["tensorqtl_report"]["output"]
+#        config["geno_post_impute"]["geno_post_report"]["html"],
+#        config["tensorQTL"]["tensorqtl_report"]["output"],
 #        config["pseudotime"]["report"]["html"],
 #        PT_Q4_EXPORT_TARGETS,
-#         config["qtl_rep"]["report"]["html"],
+#        config["replication_sc"]["report"]["html"],
+        config["replication_bulk"]["report"]["html"],
 #        config["susie"]["susie_report"]["html"],
 #        config["sldsr"]["ldsr_report"]["html"],
 #        config["smr"]["smr_report"]["html"],
-#         config["twas"]["twas_weights_report"]["output"],
-#         config["ctwas"]["ctwas_report"]["output"]
-#        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
-#        config["scanpy"]["subclustering"]["output"],
-#         config["dev_specificity"]["report"]["html"]
-        config["replication_bulk"]["report"]["html"]
+#        config["twas_weights"]["twas_weights_report"]["output"],
+#        config["ctwas"]["ctwas_report"]["output"],
+#        config["eqtl_sharing"]["report"]["html"]

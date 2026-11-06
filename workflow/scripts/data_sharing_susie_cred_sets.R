@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  15DATA_SHARING | Rule: data_susie (one job per cell type)
-#            Upstream:   08SUSIE sort_susie (merged, sorted credible sets)
+# Pipeline:  18DATA-SHARING | Rule: data_susie (one job per cell type)
+#            Upstream:   10SUSIE sort_susie (merged, sorted credible sets)
 #            Downstream: data_susie_mk_tar
 #
 # Purpose:   For one cell type:

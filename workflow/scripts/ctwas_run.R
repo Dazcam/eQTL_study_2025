@@ -4,10 +4,10 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  12CTWAS | Rule: run_ctwas (one job per cell type x GWAS)
-#            Upstream:   07PREP-GWAS sumstats; copy_fusion_weights (11TWAS FUSION
+# Pipeline:  14CTWAS | Rule: run_ctwas (one job per cell type x GWAS)
+#            Upstream:   09PREP-GWAS sumstats; copy_fusion_weights (13TWAS-WEIGHTS FUSION
 #                        weights); create_ld_matrices
-#            Downstream: ctwas_report; 13MANUSCRIPT_TABLES ctwas_sig_tbl,
+#            Downstream: ctwas_report; 16MANUSCRIPT-TABLES ctwas_sig_tbl,
 #                        smr_ctwas_venn_tbl
 #
 # Purpose:   For one cell type x GWAS:
@@ -60,7 +60,7 @@ source(file.path(snakemake@scriptdir, "ctwas_functions.R"))
 
 
 # Input and output paths
-gwas <- snakemake@input[['gwas']] # From 07prep_gwas.smk
+gwas <- snakemake@input[['gwas']] # From 09prep_gwas.smk
 weights_dir <- snakemake@params[['weights_dir']] # Folder containing .wgt.RDat files
 ld_dir <- snakemake@params[['ld_dir']]
 bim_file <- snakemake@input[['bim_file']]
@@ -142,7 +142,7 @@ if (nrow(this_pair) > 0) {
 # cTWAS says: A1 is the alternate allele, and A2 is the reference allele
 # TensorQTL, input for FUSION prediction weights, has ALT allele as A1
 # In most GWAS, REF is A1 so will check and likely flip SNPs
-# Note we need to use ../results/07PREP-GWAS/scz_hg38.tsv not LDSR munged sumsats as we need the alleles
+# Note we need to use ../results/09PREP-GWAS/scz_hg38.tsv not LDSR munged sumsats as we need the alleles
 message('\nLoading GWAS ...')
 gwas_tbl <- read_tsv(gwas, show_col_types = FALSE)
 snp_tbl <- read_tsv(bim_file, col_names = c('Chr', 'SNP', 'CM', 'BP', 'A1', 'A2'),
@@ -172,7 +172,7 @@ LD_map <- res$LD_map  # Not directly used in preprocess_weights, but for ctwas()
 message('Preprocessing FUSION weights for cTWAS ...')
 
 message("\nFirst check if cTWAS processed weight file already exists ... ")
-weights_file <- str_glue('../results/12CTWAS/output/processed_weights/processed_weights_',
+weights_file <- str_glue('../results/14CTWAS/output/processed_weights/processed_weights_',
                          cell_type, '_', gwas_trait, '.rds')
 
 if (file.exists(weights_file)) {

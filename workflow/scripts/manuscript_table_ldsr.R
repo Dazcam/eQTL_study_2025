@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  13MANUSCRIPT_TABLES | Rule: sldsr_tbl
-#            Upstream:   09SLDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
+# Pipeline:  16MANUSCRIPT-TABLES | Rule: sldsr_tbl
+#            Upstream:   11SLDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
 #
 # Purpose:   Reproduce the table behind the MaxCPP S-LDSR figure (panels A-C):
 #            - Parse cell type and disorder from the annotation Category
@@ -51,8 +51,8 @@ in_file    <- snakemake@input[[1]]
 xlsx_out   <- snakemake@output[[1]]
 cell_types <- unlist(snakemake@params[["cell_types"]])
 
-# in_file    <- "../results/09SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv"
-# xlsx_out   <- "../results/13MANUSCRIPT_TABLES/supplementary_table_X.xlsx"
+# in_file    <- "../results/11SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv"
+# xlsx_out   <- "../results/16MANUSCRIPT-TABLES/supplementary_table_X.xlsx"
 # cell_types <- c("Glu-UL", "Glu-DL", "NPC", ...)   # config['cell_types']
 
 # Make a tibble showing what each variable is set to

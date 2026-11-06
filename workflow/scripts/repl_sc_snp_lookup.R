@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  06QTL-REPLICATION | Rule: snp_lookup (one job per cell type; localrule)
+# Pipeline:  07REPLICATION-SC | Rule: snp_lookup (one job per cell type; localrule)
 #            Upstream:   05TENSORQTL tensorqtl_perm
 #            Downstream: atac_enrich
 #

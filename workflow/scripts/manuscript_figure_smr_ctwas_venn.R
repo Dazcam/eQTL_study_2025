@@ -1,4 +1,4 @@
-# manuscript_plot_compare_smr_ctwas.R
+# manuscript_figure_smr_ctwas_venn.R
 #
 # Compare significant genes between SMR and cTWAS across all 5 GWAS traits in
 # a single run. Produces:
@@ -36,8 +36,8 @@ suppressMessages({
 # paths and settings are fixed here.
 traits           <- c("scz", "bpd", "mdd", "adhd", "ocd")
 smr_tbl_dir      <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/"
-ctwas_in_dir     <- "../results/12CTWAS/"
-weights_dir      <- "../results/12CTWAS/weights"
+ctwas_in_dir     <- "../results/14CTWAS/"
+weights_dir      <- "../results/14CTWAS/weights"
 cell_types       <- unlist(snakemake@params[["cell_types"]])
 gene_lookup_file <- snakemake@params[["gene_lookup"]]
 genes_out_tmpl   <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/venn_{gwas}_genes.tsv" # untracked by Snakemake, written silently
@@ -72,7 +72,7 @@ out_plot_grid <- if (exists("snakemake")) {
   "venn_grid_bpd_mdd_adhd_ocd.png"
 }
 
-message("=== compare_smr_ctwas: ", paste(traits, collapse = ", "), " ===")
+message("=== smr_ctwas_venn_fig: ", paste(traits, collapse = ", "), " ===")
 
 # ---- 1. SMR significant genes (union across cell types) ------------------
 # Reuses the tables smr_report.Rmd already writes: {tbl_dir}/{gwas}_smr.tsv

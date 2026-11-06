@@ -5,7 +5,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  06QTL-REPLICATION | Rule: cat_nom_qtl (one job per cell type)
+# Pipeline:  07REPLICATION-SC | Rule: cat_nom_qtl (one job per cell type)
 #            Upstream:   05TENSORQTL tensorqtl_nominal (chr 1-22 parquet files)
 #            Downstream: pi1_enrich_internal; pi1_enrich_jang (qtl_all)
 #

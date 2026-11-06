@@ -3,7 +3,7 @@ configfile: "../config/config.yaml"
 import re
 
 # Pseudotime bins (NPC-to-*) excluded from the tensorQTL pipeline: they are mapped in
-# 17PSEUDOTIME and exported into the 05TENSORQTL folders for downstream pipelines.
+# 06PSEUDOTIME and exported into the 05TENSORQTL folders for downstream pipelines.
 TQTL_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
 
 # Per-rule constraint so these rules never claim the pseudotime cell types; global

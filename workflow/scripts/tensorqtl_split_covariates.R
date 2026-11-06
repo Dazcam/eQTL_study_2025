@@ -5,7 +5,7 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  05TENSORQTL | Rule: split_covariates
-#            17PSEUDOTIME | Rule: pseudotime_split_covariates
+#            06PSEUDOTIME | Rule: pseudotime_split_covariates
 #            Upstream:   prep_tensorQTL_input / pseudotime_prep_tensorqtl
 #            Downstream: tensorqtl_nom, tensorqtl_perm, tensorqtl_independent;
 #                        pseudotime_tensorqtl_nom, pseudotime_tensorqtl_perm

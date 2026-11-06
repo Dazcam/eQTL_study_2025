@@ -24,7 +24,7 @@ library(kableExtra)
 library(gt)
 library(cowplot)
 
-source(file.path(dirname(knitr::current_input(dir = TRUE)), "twas_functions.R"))
+source(file.path(dirname(knitr::current_input(dir = TRUE)), "twas_weights_functions.R"))
 
 # Set variables from params
 # Path params are patterns containing {cell_type}, as in the config
@@ -99,7 +99,7 @@ ct_levels <- rev(cell_types)  # first cell type at the top of horizontal plots
 
 We used [FUSION](http://gusevlab.org/projects/fusion/) to compute gene expression
 prediction weights for each cell type. The weights are used by cTWAS (pipeline
-12CTWAS). FUSION is described in
+14CTWAS). FUSION is described in
 [Gusev et al. 2016 (DOI:10.1038/ng.3506)](https://www.nature.com/articles/ng.3506).
 
 **Pipeline rules**
@@ -116,7 +116,7 @@ prediction weights for each cell type. The weights are used by cTWAS (pipeline
    window, LD reference SNPs only) and run `FUSION.compute_weights.R`. Genes with no
    cis SNPs, non-significant heritability or a FUSION failure get an empty
    placeholder `.wgt.RDat` file.
-7. `make_pos_file`: list the genes with weights in a FUSION `.pos` file. 12CTWAS
+7. `make_pos_file`: list the genes with weights in a FUSION `.pos` file. 14CTWAS
    `copy_fusion_weights` uses it to copy only genuine weights for cTWAS.
 8. `twas_weights_report`: this report.
 
@@ -310,12 +310,12 @@ wgt_tbl |>
 rule_names <- c("get_gemma", "prep_exp_data", "convert_vcf", "get_ldref_snplist",
                 "prepare_covar", "compute_weights", "make_pos_file", "twas_weights_report")
 
-bmark_files <- list.files(params$bmark_dir, pattern = "^11twas\\..*\\.benchmark\\.txt$")
+bmark_files <- list.files(params$bmark_dir, pattern = "^13twas_weights\\..*\\.benchmark\\.txt$")
 
-# File names are 11twas.<rule>[_<cell_type>].benchmark.txt; match the known rule
+# File names are 13twas_weights.<rule>[_<cell_type>].benchmark.txt; match the known rule
 # names so rule names containing '_' are kept whole
 benchmarks <- tibble(file = bmark_files) |>
-  mutate(stem = str_remove_all(file, "^11twas\\.|\\.benchmark\\.txt$"),
+  mutate(stem = str_remove_all(file, "^13twas_weights\\.|\\.benchmark\\.txt$"),
          rule = map_chr(stem, function(s) {
            hit <- rule_names[s == rule_names | str_starts(s, paste0(rule_names, "_"))]
            if (length(hit) == 0) NA_character_ else hit[1]

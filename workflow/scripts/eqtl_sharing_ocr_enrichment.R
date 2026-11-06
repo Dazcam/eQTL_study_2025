@@ -6,7 +6,7 @@
 #
 # Pipeline:  EQTL-SHARING | Rule: ocr_enrich (single job)
 #            Upstream:   classify_eqtl_specificity; heterogeneity_test; parse_ld_clump;
-#                        06QTL-REPLICATION snp_lookup; Li et al. 2023 cCREs (S6, S7)
+#                        07REPLICATION-SC snp_lookup; Li et al. 2023 cCREs (S6, S7)
 #            Downstream: report (OCR enrichment tab)
 #
 # Purpose:   Test four LD-independent fetal SNP sets for overlap with the union of

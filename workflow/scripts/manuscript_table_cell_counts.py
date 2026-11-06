@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  13MANUSCRIPT_TABLES | Rule: cell_counts_tbl
-#            Upstream:   03SCANPY L1 / L2 objects; 17PSEUDOTIME pseudotime objects
+# Pipeline:  16MANUSCRIPT-TABLES | Rule: cell_counts_tbl
+#            Upstream:   03SCANPY L1 / L2 objects; 06PSEUDOTIME pseudotime objects
 #            Downstream: None (supplementary table / methods numbers)
 #
 # Purpose:   Count nuclei per L1 cluster, L2 subcluster and Q4 pseudotime bin,

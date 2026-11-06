@@ -12,7 +12,7 @@ set -euo pipefail
 
 # Directories and output file
 outdir=/scratch/c.c1477909/data_sharing
-nom_dir=/scratch/c.c1477909/eQTL_study_2025/results/10SMR/smr_input
+nom_dir=/scratch/c.c1477909/eQTL_study_2025/results/12SMR/smr_input
 perm_dir=/scratch/c.c1477909/eQTL_study_2025/results/05TENSORQTL/tensorqtl_perm
 out_tar=${outdir}/L2_nom_and_perm_eqtl.tar.gz
 

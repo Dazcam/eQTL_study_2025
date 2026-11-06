@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  15DATA_SHARING | Rule: data_perm
+# Pipeline:  18DATA-SHARING | Rule: data_perm
 #            Upstream:   05TENSORQTL tensorqtl_perm (final norm/PC settings per cell type)
 #            Downstream: mk_eqtl_tar
 #

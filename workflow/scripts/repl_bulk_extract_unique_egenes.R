@@ -4,10 +4,10 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  21REPLICATION-BULK | Rule: extract_unique_egenes (single job)
+# Pipeline:  08REPLICATION-BULK | Rule: extract_unique_egenes (single job)
 #            Upstream:   05TENSORQTL tensorqtl_perm (final expPC per cell type)
 #            Downstream: overlap_obrien; isoform_eqtl_comparison; repl_bulk_report;
-#                        14 bulk_egene_overlaps_plt (Supp Fig 9)
+#                        17 bulk_egene_overlaps_fig (Supp Fig 9)
 #
 # Purpose:   - Read the tensorQTL permutation output for every cell type in
 #              config (L1, L2 and pseudotime bins)

@@ -4,7 +4,7 @@ configfile: "../config/config.yaml"
 
 localrules: dwnld_ziffra, snp_lookup
 
-QR          = config["qtl_rep"]
+QR          = config["replication_sc"]
 NORM_METHOD = config["tensorQTL"]["norm_methods"][0]
 GENO_PC     = config["tensorQTL"]["geno_pcs"]
 
@@ -103,7 +103,7 @@ REP_BENCHMARKS = (
     + [("pi1_enrich_jang", QR["pi1_enrich_jang"]["benchmark"].format(cell_type=ct, jang_cell_type=jct))
        for ct in REP_FETAL_L1 for jct in config["jang_l1_types"]]
     + [("beta_correlation", QR["beta_correlation"]["benchmark"]),
-       ("pi1_enrichment_report", QR["report"]["benchmark"])]
+       ("repl_sc_report", QR["report"]["benchmark"])]
 )
 
 
@@ -210,7 +210,7 @@ rule beta_correlation:
     log:    QR["beta_correlation"]["log"]
     script: QR["beta_correlation"]["script"]
 
-rule pi1_enrichment_report:
+rule repl_sc_report:
     input:  ziffra_tbl       = rules.ziffra_summary.output[0],
             internal         = internal_inputs,
             jang_pi1         = jang_pi1_inputs,

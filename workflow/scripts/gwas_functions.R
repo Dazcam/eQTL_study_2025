@@ -9,7 +9,7 @@
 #
 # Packages:  dplyr and stringr must be loaded by the calling script
 #
-# Used in:   smr_format_gwas.R (10SMR), ctwas_run.R (12CTWAS),
+# Used in:   smr_format_gwas.R (12SMR), ctwas_run.R (14CTWAS),
 #            check_gwas_mismatched_snps.R (one-off check)
 #
 #--------------------------------------------------------------------------------------

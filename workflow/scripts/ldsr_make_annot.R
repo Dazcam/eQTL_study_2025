@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  09SLDSR | Rule: make_annot (one job per cell type and chromosome)
-#            Upstream:   08SUSIE sort_susie (credible sets); get_hg38_refs (.bim files)
+# Pipeline:  11SLDSR | Rule: make_annot (one job per cell type and chromosome)
+#            Upstream:   10SUSIE sort_susie (credible sets); get_hg38_refs (.bim files)
 #            Downstream: ldsr_ld_scores_hg38
 #
 # Purpose:   - Build two annotations from SuSiE credible set variants, one row per

@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  08SUSIE | Rule: run_susie (one job per cell type and gene batch)
+# Pipeline:  10SUSIE | Rule: run_susie (one job per cell type and gene batch)
 #            Upstream:   prep_susie_input, prep_susie_gene_meta, vcf_to_dosage,
 #                        05TENSORQTL (permutation output)
 #            Downstream: merge_susie -> sort_susie

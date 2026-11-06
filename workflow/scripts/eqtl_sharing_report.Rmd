@@ -159,7 +159,7 @@ full_order <- full_order[paste0("slope_", full_order) %in% names(effect_matrix)]
 6. `glm_enrich`: Compare adult OCR overlap of fetal-specific vs shared eQTL (logistic regression)
 7. `eqtl_effect_sizes`: Effect sizes across fetal and Jang L1 cell types; subcluster/supercluster-specific eQTL (Supp Table 3)
 8. `eqtl_effect_replication`: Discovery -> replication effect-size correlations (Supp Figs 7-8)
-9. `dev_specificity_report`: Generate this report
+9. `eqtl_sharing_report`: Generate this report
 
 Fetal-adult pi1 and effect-size concordance with matched Jang cell types are in the
 06 replication report.
@@ -513,7 +513,7 @@ For each fetal discovery cell type, its sig. lead eGene-eSNP pairs
 (qval < `r effect_repl$settings$fdr_thresh`) are looked up in every replication
 cell type with no significance cutoff there; Pearson r of the two slopes.
 Rows are discovery, columns replication, so A -> B can differ from B -> A.
-Same layout as Supp Figs 7-8 (manuscript_plot_effect_size_heatmaps.R), without
+Same layout as Supp Figs 7-8 (manuscript_figure_effect_size_heatmaps.R), without
 the Glu-A/Glu-B relabelling.
 
 ```{r effect-repl-setup}

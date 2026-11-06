@@ -14,7 +14,7 @@ script_dir <- get_script_dir()
 
 source(file.path(script_dir, "..", "scripts", "functions.R"))
 source(file.path(script_dir, "..", "scripts", "ctwas_functions.R"))
-source(file.path(script_dir, "..", "scripts", "twas_functions.R"))
+source(file.path(script_dir, "..", "scripts", "twas_weights_functions.R"))
 source(file.path(script_dir, "..", "scripts", "gwas_functions.R"))
 source(file.path(script_dir, "..", "scripts", "smr_functions.R"))
 source(file.path(script_dir, "..", "scripts", "susie_functions.R"))

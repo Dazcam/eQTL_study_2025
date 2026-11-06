@@ -4,9 +4,9 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  21REPLICATION-BULK | Rule: overlap_obrien (single job)
+# Pipeline:  08REPLICATION-BULK | Rule: overlap_obrien (single job)
 #            Upstream:   extract_unique_egenes
-#            Downstream: repl_bulk_report; 14 bulk_egene_overlaps_plt (Supp Fig 9)
+#            Downstream: repl_bulk_report; 17 bulk_egene_overlaps_fig (Supp Fig 9)
 #
 # Purpose:   - Take the unique fetal eGene set across all cell types
 #            - Read O'Brien et al. 2018 supplementary tables:

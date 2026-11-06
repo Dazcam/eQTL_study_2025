@@ -10,10 +10,10 @@
 # per trait and logs the full gene lists per category, not just counts.
 #
 # Gene-set/BF-correction logic is unchanged from
-# manuscript_plot_compare_smr_ctwas.R's steps 1-5 -- this script is the
+# manuscript_figure_smr_ctwas_venn.R's steps 1-5 -- this script is the
 # table-generation half, pulled out so it runs (and is tracked) as its own
 # tables-pipeline rule, ahead of and independent from the plotting rule.
-# manuscript_plot_compare_smr_ctwas.R should subsequently be updated to READ
+# manuscript_figure_smr_ctwas_venn.R should subsequently be updated to READ
 # these tables rather than recomputing the gene sets itself.
 
 ## Info  ------------------------------------------------------------------------------
@@ -54,8 +54,8 @@ genes_out_files <- snakemake@output
 
 # traits           <- c("scz", "bpd", "mdd", "adhd", "ocd")
 # smr_tbl_dir      <- "??? -- see note below"
-# ctwas_in_dir     <- "../results/12CTWAS/"
-# weights_dir      <- "../results/12CTWAS/weights"
+# ctwas_in_dir     <- "../results/14CTWAS/"
+# weights_dir      <- "../results/14CTWAS/weights"
 # gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
 # ctwas_pip_thresh <- 0.8
 # ctwas_use_bf     <- TRUE

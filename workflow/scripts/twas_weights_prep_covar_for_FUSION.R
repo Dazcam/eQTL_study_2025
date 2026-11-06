@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  11TWAS | Rule: prepare_covar (one job per cell type)
+# Pipeline:  13TWAS-WEIGHTS | Rule: prepare_covar (one job per cell type)
 #            Upstream:   05TENSORQTL split_covariates (final genotype and expression PC
 #                        settings for each cell type)
 #            Downstream: compute_weights
@@ -38,7 +38,7 @@ message("\n\nPreparing covariate file for FUSION weight calculation ...")
 library(tidyverse)
 
 # Load functions
-source(file.path(snakemake@scriptdir, "twas_functions.R"))
+source(file.path(snakemake@scriptdir, "twas_weights_functions.R"))
 
 # Input and output paths
 covar_in <- snakemake@input[[1]]

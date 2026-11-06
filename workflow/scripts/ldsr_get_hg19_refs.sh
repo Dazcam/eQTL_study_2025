@@ -5,7 +5,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  09SLDSR | Rule: get_hg19_refs
+# Pipeline:  11SLDSR | Rule: get_hg19_refs
 #            Upstream:   none (downloads from Zenodo)
 #            Downstream: lift_hapmap3_snps
 #

@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  15DATA_SHARING | Rule: data_nominal
-#            Upstream:   10SMR smr_input (per-cell-type tensorQTL nominal pairs)
+# Pipeline:  18DATA-SHARING | Rule: data_nominal
+#            Upstream:   12SMR smr_input (per-cell-type tensorQTL nominal pairs)
 #            Downstream: mk_eqtl_tar
 #
 # Purpose:   For each cell type, take all nominal cis gene-SNP associations, then:
@@ -53,7 +53,7 @@ out_file         <- snakemake@output[[1]]
 out_dir          <- paste0(dirname(out_file), '/')
 
 # allele_file      <- "../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar"
-# in_dir           <- "../results/10SMR/smr_input/"
+# in_dir           <- "../results/12SMR/smr_input/"
 # cell_types       <- c("Glu-UL", "Glu-DL", "NPC", ...)   # config['cell_types']
 # gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
 

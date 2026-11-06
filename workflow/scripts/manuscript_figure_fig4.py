@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  14MANUSCRIPT_PLOTS | Rule: fig4_plt
-#            Upstream:   17PSEUDOTIME (palantir object and per-bin tensorQTL perm
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: fig4
+#            Upstream:   06PSEUDOTIME (palantir object and per-bin tensorQTL perm
 #                        results); 05TENSORQTL perm (L1 + L2 eGenes)
 #            Downstream: None (manuscript figure)
 #

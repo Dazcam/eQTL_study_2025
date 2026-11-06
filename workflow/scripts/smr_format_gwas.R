@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  10SMR | Rule: format_gwas (one job per GWAS)
-#            Upstream:   07PREP-GWAS ({gwas}_hg38.tsv); cat_refs (1000G EUR hg38 .frq)
+# Pipeline:  12SMR | Rule: format_gwas (one job per GWAS)
+#            Upstream:   09PREP-GWAS ({gwas}_hg38.tsv); cat_refs (1000G EUR hg38 .frq)
 #            Downstream: smr
 #
 # Purpose:   Convert one GWAS to SMR .ma format (SNP A1 A2 freq b se p N):

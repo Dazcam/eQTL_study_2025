@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------------------
 #
-#    Functions for the TWAS weights pipeline (11TWAS)
+#    Functions for the TWAS weights pipeline (13TWAS-WEIGHTS)
 #
 #--------------------------------------------------------------------------------------
 #
@@ -12,7 +12,7 @@
 # Packages:  dplyr, tidyr, tibble, stringr (called with ::, so they must be installed
 #            but not loaded)
 #
-# Used in:   twas_prep_expr_for_FUSION.R, twas_prep_covar_for_FUSION.R,
+# Used in:   twas_weights_prep_expr_for_FUSION.R, twas_weights_prep_covar_for_FUSION.R,
 #            twas_weights_summary.Rmd
 #
 #--------------------------------------------------------------------------------------

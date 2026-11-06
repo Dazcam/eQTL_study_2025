@@ -5,7 +5,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  10SMR | Rule: cat_tensorqtl_nom_snps (one job per cell type)
+# Pipeline:  12SMR | Rule: cat_tensorqtl_nom_snps (one job per cell type)
 #            Upstream:   05TENSORQTL tensorqtl_nom (per-chromosome parquet files)
 #            Downstream: create_query
 #

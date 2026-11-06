@@ -4,11 +4,11 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  06QTL-REPLICATION | Rules: pi1_enrich_internal (cell type x cell type),
+# Pipeline:  07REPLICATION-SC | Rules: pi1_enrich_internal (cell type x cell type),
 #                                       pi1_enrich_jang (cell type x Jang L1 type)
 #            Upstream:   05TENSORQTL tensorqtl_perm; cat_nom_qtl;
 #                        Jang et al. 2026 SingleBrain L1 full + top association files
-#            Downstream: 06 report (internal and Jang pi1 tabs; Fig 3D)
+#            Downstream: 07 report (internal and Jang pi1 tabs; Fig 3D)
 #
 # Purpose:   For one query cell type and one reference, run compute_pi1() both ways:
 #            - Forward: sig. eQTL of our cell type (qval < 0.05) looked up in the

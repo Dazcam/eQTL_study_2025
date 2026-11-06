@@ -200,9 +200,9 @@ rule_names <- c("pseudotime_subset", "pseudotime_palantir", "pseudotime_pseudobu
                 "pseudotime_tensorqtl_perm", "pseudotime_export_smr_twas_inputs",
                 "pseudotime_report")
 
-bmark_files <- list.files(params$bmark_dir, pattern = "^17pseudotime\\..*\\.benchmark\\.txt$")
+bmark_files <- list.files(params$bmark_dir, pattern = "^06pseudotime\\..*\\.benchmark\\.txt$")
 
-# File names are 17pseudotime.<rule>[_<trajectory>[_Q<n>_bin<b>[_genPC<g>_expPC<e>]]]
+# File names are 06pseudotime.<rule>[_<trajectory>[_Q<n>_bin<b>[_genPC<g>_expPC<e>]]]
 # .benchmark.txt; match the known rule names so rule names containing '_' stay whole
 match_rule <- function(stem) {
   hit <- rule_names[stem == rule_names | str_starts(stem, paste0(rule_names, "_"))]
@@ -220,7 +220,7 @@ is_current <- function(wc) {
 }
 
 benchmarks <- tibble(file = bmark_files) |>
-  mutate(stem = str_remove_all(file, "^17pseudotime\\.|\\.benchmark\\.txt$"),
+  mutate(stem = str_remove_all(file, "^06pseudotime\\.|\\.benchmark\\.txt$"),
          rule = map_chr(stem, match_rule),
          wc   = if_else(is.na(rule), NA_character_,
                         str_remove(stem, paste0("^", rule, "_?"))))

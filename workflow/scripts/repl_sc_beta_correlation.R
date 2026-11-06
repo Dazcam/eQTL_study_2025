@@ -4,11 +4,11 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  06QTL-REPLICATION | Rule: beta_correlation (single job)
+# Pipeline:  07REPLICATION-SC | Rule: beta_correlation (single job)
 #            Upstream:   05TENSORQTL tensorqtl_perm (final expPC per cell type, set
 #                        in the rule from exp_pc_map);
 #                        Jang et al. 2026 SingleBrain L1 full + top association files
-#            Downstream: 06 report (effect-size concordance tab; Fig 3F)
+#            Downstream: 07 report (effect-size concordance tab; Fig 3F)
 #
 # Purpose:   - Join each fetal cell type's sig. eGene-eSNP pairs (qval < 0.05) to the
 #              matched Jang adult betas, for each fetal-adult comparison in

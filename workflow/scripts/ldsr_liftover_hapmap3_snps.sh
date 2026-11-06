@@ -5,7 +5,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  09SLDSR | Rule: lift_hapmap3_snps
+# Pipeline:  11SLDSR | Rule: lift_hapmap3_snps
 #            Upstream:   get_hg19_refs, get_hg38_refs
 #            Downstream: ldsr_ld_scores_hg38 (--print-snps)
 #

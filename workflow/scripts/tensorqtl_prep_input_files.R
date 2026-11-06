@@ -5,7 +5,7 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  05TENSORQTL | Rule: prep_tensorQTL_input
-#            17PSEUDOTIME | Rule: pseudotime_prep_tensorqtl (quantile only)
+#            06PSEUDOTIME | Rule: pseudotime_prep_tensorqtl (quantile only)
 #            Upstream:   03SCANPY pseudobulk counts or pseudotime_pseudobulk bins;
 #                        04 genotype PCs
 #            Downstream: zip_pblk_cnts / pseudotime_zip_bed (expression BED),

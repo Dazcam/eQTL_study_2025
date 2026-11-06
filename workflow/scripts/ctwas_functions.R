@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  12CTWAS | Sourced by: ctwas_run.R
+# Pipeline:  14CTWAS | Sourced by: ctwas_run.R
 #
 # Purpose:   Helper functions for preparing cTWAS inputs and checking weights
 #            (GWAS cleaning, clean_gwas(), is in gwas_functions.R):

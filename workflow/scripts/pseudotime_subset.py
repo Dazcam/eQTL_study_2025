@@ -4,7 +4,7 @@
 #
 # --------------------------------------------------------------------------------------
 #
-# Pipeline:  17PSEUDOTIME | Rule: pseudotime_subset (one job per trajectory)
+# Pipeline:  06PSEUDOTIME | Rule: pseudotime_subset (one job per trajectory)
 #            Upstream:   02SCANPY clustering (adata_clusters_v3.h5ad)
 #            Downstream: pseudotime_palantir
 #

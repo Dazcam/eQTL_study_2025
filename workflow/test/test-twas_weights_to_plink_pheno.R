@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# - Used in twas_prep_expr_for_FUSION.R and twas_prep_covar_for_FUSION.R
+# - Used in twas_weights_prep_expr_for_FUSION.R and twas_weights_prep_covar_for_FUSION.R
 #
 #--------------------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ expr_toy <- tibble(
   S2 = c(0.2, -0.2)
 )
 
-# 2 covariates x 2 samples, as read by twas_prep_covar_for_FUSION.R
+# 2 covariates x 2 samples, as read by twas_weights_prep_covar_for_FUSION.R
 covar_toy <- tibble(
   covariate = c("PC1", "sex"),
   S1 = c(0.5, 1),

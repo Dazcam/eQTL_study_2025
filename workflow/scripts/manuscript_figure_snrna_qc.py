@@ -1,6 +1,6 @@
 # --------------------------------------------------------------------------------------
 #
-#    manuscript_plot_snrna_qc.py
+#    manuscript_figure_snrna_qc.py
 #
 #    Reviewer request (line 473): snRNA-seq QC summaries.
 #
@@ -19,7 +19,7 @@
 #    scaled log-normalised values, and obs['n_counts'/'n_genes'] may pre-date later QC).
 #    Only obs and layers['counts'] are read from the h5ad, so the dense X is never loaded.
 #
-#    Usage: called via Snakemake rule snrna_qc_plt
+#    Usage: called via Snakemake rule snrna_qc_fig
 #
 #    Layout: everything between the EXPORTABLE BLOCK markers has no Snakemake dependency
 #    and takes plain pandas/numpy/scipy objects, so it can be moved into scanpy_utils.py
@@ -50,7 +50,7 @@ MIN_GENES_PER_CELL = 1000
 MAX_GENES_PER_CELL = 5000
 
 # Summary tables are written here by hand, not tracked by Snakemake
-TABLE_DIR = "../results/13MANUSCRIPT_TABLES/"
+TABLE_DIR = "../results/16MANUSCRIPT-TABLES/"
 TABLE_FILE = "snrna_qc_summary.xlsx"
 
 # Glutamatergic populations were renamed after annotation; colours are retained

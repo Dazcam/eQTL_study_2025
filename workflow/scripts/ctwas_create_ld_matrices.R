@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  12CTWAS | Rule: create_ld_matrices
+# Pipeline:  14CTWAS | Rule: create_ld_matrices
 #            Upstream:   1000G EUR hg38 PLINK reference (resources/ldsr)
 #            Downstream: run_ctwas (LD matrices and SNP info per LD region)
 #
@@ -42,7 +42,7 @@ out_name <- "1000G_EUR_Phase3_hg38"
 
 # For testing locally
 # ld_ref_dir <- "../resources/ldsr/ldsr_hg38_refs/plink_files/"
-# out_dir    <- "../results/12CTWAS/ld_mats/"
+# out_dir    <- "../results/14CTWAS/ld_mats/"
 
 # Print what each variable is set to
 message("\nVariables")

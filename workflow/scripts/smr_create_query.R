@@ -4,9 +4,9 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  10SMR | Rule: create_query (one job per cell type)
+# Pipeline:  12SMR | Rule: create_query (one job per cell type)
 #            Upstream:   cat_tensorqtl_nom_snps (tensorQTL nominal pairs); cat_refs
-#                        (1000G EUR hg38 .bim / .frq); 08SUSIE prep_susie_gene_meta
+#                        (1000G EUR hg38 .bim / .frq); 10SUSIE prep_susie_gene_meta
 #            Downstream: create_besd
 #
 # Purpose:   Build the SMR query file for one cell type:

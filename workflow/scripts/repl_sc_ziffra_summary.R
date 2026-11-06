@@ -4,9 +4,9 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  06QTL-REPLICATION | Rule: ziffra_summary (single job)
+# Pipeline:  07REPLICATION-SC | Rule: ziffra_summary (single job)
 #            Upstream:   atac_enrich
-#            Downstream: 06 report (Ziffra tab); 14 eqtl_qc_plt (Fig 2E)
+#            Downstream: 07 report (Ziffra tab); 17 eqtl_qc_fig (Fig 2E)
 #
 # Purpose:   - Read the per-cell-type Ziffra enrichment tables
 #            - Bind them into one table, one row per cell type x peak set

@@ -4,10 +4,10 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  11TWAS | Rule: make_pos_file (one job per cell type)
+# Pipeline:  13TWAS-WEIGHTS | Rule: make_pos_file (one job per cell type)
 #            Upstream:   compute_weights (one .wgt.RDat per gene),
 #                        prep_exp_data (gene coordinate file)
-#            Downstream: twas_weights_report; 12CTWAS copy_fusion_weights
+#            Downstream: twas_weights_report; 14CTWAS copy_fusion_weights
 #
 # Purpose:   - List every non-empty .wgt.RDat file for the cell type in a FUSION
 #              .pos file, with gene ID, chromosome, P0, P1 and sample size

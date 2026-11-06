@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  08SUSIE | Rule: prep_susie_input (one job per cell type)
+# Pipeline:  10SUSIE | Rule: prep_susie_input (one job per cell type)
 #            Upstream:   05TENSORQTL (prep_input expression bed and split covariates)
 #            Downstream: run_susie
 #

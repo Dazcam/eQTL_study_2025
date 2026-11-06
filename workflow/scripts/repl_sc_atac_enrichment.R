@@ -4,9 +4,9 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  06QTL-REPLICATION | Rule: atac_enrich (one job per cell type)
+# Pipeline:  07REPLICATION-SC | Rule: atac_enrich (one job per cell type)
 #            Upstream:   05TENSORQTL tensorqtl_perm; snp_lookup; dwnld_ziffra
-#            Downstream: 06 report (Ziffra tab); 13 eqtl_tbl / 14 eqtl_qc_plt (Fig 2E)
+#            Downstream: 07 report (Ziffra tab); 16 eqtl_tbl / 17 eqtl_qc_fig (Fig 2E)
 #
 # Purpose:   - Take the cell type's sig. eQTL (qval < 0.05) and their hg38
 #              coordinates from the SNP lookup

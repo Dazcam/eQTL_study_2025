@@ -5,11 +5,11 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  EQTL-SHARING | Rule: eqtl_effect_sizes (single job)
-#            Upstream:   extract_eqtl_universe; 10SMR nominal export ({ct}_nom.cis_qtl_pairs);
+#            Upstream:   extract_eqtl_universe; 12SMR nominal export ({ct}_nom.cis_qtl_pairs);
 #                        Jang et al. 2026 L1 full-association files
 #            Downstream: report (effect-size and subcluster tabs);
-#                        13 subcluster_specific_tbl (Supp Table 3);
-#                        14 family_heatmaps_plt (Supp Figs 3-6)
+#                        16 subcluster_specific_tbl (Supp Table 3);
+#                        17 family_heatmaps_fig (Supp Figs 3-6)
 #
 # Purpose:   For every unique fetal eGene-eSNP pair:
 #            - Get the nominal slope and P in each fetal cell type (L1 + L2) and in

@@ -5,7 +5,7 @@ venn_gene_tbls = expand(config['tables']['smr_ctwas_venn_tbl']['genes_out'], gwa
 smr_sig_tbls = expand(config['tables']['smr_sig_tbl']['out_file'], gwas = GWAS_TRAITS)
 
 smr_raw_files = expand(
-    "../results/10SMR/smr/{cell_type}/{cell_type}_{gwas}.smr",
+    "../results/12SMR/smr/{cell_type}/{cell_type}_{gwas}.smr",
     cell_type = config['cell_types'], gwas = GWAS_TRAITS
 )
 
@@ -119,7 +119,7 @@ rule ctwas_sig_tbl:
 rule subcluster_specific_tbl:
     # Supp Table 3
     output: config['tables']['subcluster_specific_tbl']['out_file']
-    params: eqtl_effects = config['dev_specificity']['eqtl_effects']['out_file']
+    params: eqtl_effects = config['eqtl_sharing']['eqtl_effects']['out_file']
     singularity: config["containers"]["r_eqtl"]
     resources: time="0:20:00"
     log:    config['tables']['subcluster_specific_tbl']['log']
@@ -142,11 +142,11 @@ rule susie_diag_tbl:
 
 rule ldsr_tbl:
     # MaxCPP S-LDSR supplementary table (one sheet per disorder)
-    input:  "../results/09SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv"
-    output: "../results/13MANUSCRIPT_TABLES/supplementary_table_ldsr.xlsx"
+    input:  "../results/11SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv"
+    output: "../results/16MANUSCRIPT-TABLES/supplementary_table_ldsr.xlsx"
     params: cell_types = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
-    log:    "../results/00LOG/13MANUSCRIPT_TABLES/ldsr_tbl.log"
+    log:    "../results/00LOG/16MANUSCRIPT-TABLES/ldsr_tbl.log"
     script: "../scripts/manuscript_table_ldsr.R"
 
 rule cell_counts_tbl:
@@ -154,9 +154,9 @@ rule cell_counts_tbl:
     input:  l1 = "../results/02SCANPY/adata_clusters_v3.h5ad",
             l2 = expand("../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad",
                         l1_pop = ["Glu-UL", "Glu-DL", "NPC", "GABA"]),
-            pt = expand("../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad",
+            pt = expand("../results/06PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad",
                         trajectory = config["trajectories"])
-    output: "../results/13MANUSCRIPT_TABLES/nuclei_counts_tbl.xlsx"
+    output: "../results/16MANUSCRIPT-TABLES/nuclei_counts_tbl.xlsx"
     conda:  config["scanpy"]["env"]
-    log:    "../results/00LOG/13MANUSCRIPT_TABLES/cell_counts_tbl.log"
+    log:    "../results/00LOG/16MANUSCRIPT-TABLES/cell_counts_tbl.log"
     script: "../scripts/manuscript_table_cell_counts.py"

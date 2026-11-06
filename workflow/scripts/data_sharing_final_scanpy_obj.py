@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  15DATA_SHARING | Rule: final_scanpy_obj
+# Pipeline:  18DATA-SHARING | Rule: final_scanpy_obj
 #            Upstream:   03SCANPY L1 clustering, L2 subclustering and palantir
 #                        pseudotime objects
 #            Downstream: None (final data-sharing output; in rule all)

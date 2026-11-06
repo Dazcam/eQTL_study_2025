@@ -43,7 +43,7 @@ def get_pseudotime_tensorqtl(wildcards=None):
 
 
 def pt_export_paths(trajectory, bin):
-    """Source (17PSEUDOTIME) and destination (05TENSORQTL) paths for one Q4 bin.
+    """Source (06PSEUDOTIME) and destination (05TENSORQTL) paths for one Q4 bin.
 
     The bin is exported as the pseudo cell type {trajectory}-Q4-Bin{bin}, using its
     expression PCs from config["exp_pc_map"] and the tensorQTL path patterns, so the
@@ -80,7 +80,7 @@ rule pseudotime_subset:
     resources: threads = 2, mem_mb = 180000, time = "00:30:00"
     threads: 2
     log:    config["pseudotime"]["subset"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_subset_{trajectory}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_subset_{trajectory}.benchmark.txt"
     message: "Subsetting trajectory: {wildcards.trajectory}"
     script: config["pseudotime"]["subset"]["script"]
 
@@ -97,7 +97,7 @@ rule pseudotime_palantir:
     resources: threads = 4, mem_mb = 96000, time = "01:00:00"
     threads: 4
     log:    config["pseudotime"]["palantir"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_palantir_{trajectory}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_palantir_{trajectory}.benchmark.txt"
     message: "Running Palantir pseudotime for trajectory: {wildcards.trajectory}"
     script: config["pseudotime"]["palantir"]["script"]
 
@@ -111,7 +111,7 @@ rule pseudotime_pseudobulk:
     resources: threads = 2, mem_mb = 90000, time = "00:15:00"
     threads: 2
     log:    config["pseudotime"]["pseudobulk"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_pseudobulk_{trajectory}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_pseudobulk_{trajectory}.benchmark.txt"
     message: "Generating pseudobulk quantile bins for trajectory: {wildcards.trajectory}"
     script: config["pseudotime"]["pseudobulk"]["script"]
 
@@ -128,7 +128,7 @@ rule pseudotime_prep_tensorqtl:
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time = "2:00:00"
     log:    config["pseudotime"]["prep_tensorqtl"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_prep_tensorqtl_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_prep_tensorqtl_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt"
     message: "Prepping tensorQTL inputs for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin}"
     script: config["pseudotime"]["prep_tensorqtl"]["script"]
 
@@ -139,7 +139,7 @@ rule pseudotime_split_covariates:
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time = "1:00:00"
     log:    config["pseudotime"]["split_covariates"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_split_covariates_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_split_covariates_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
     message: "Splitting covariates for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} genPC {wildcards.geno_pc} expPC {wildcards.exp_pc}"
     script: config["pseudotime"]["split_covariates"]["script"]
 
@@ -149,7 +149,7 @@ rule pseudotime_zip_bed:
     envmodules: "HTSlib/1.21-GCC-13.3.0"
     resources: threads = 1, mem_mb = 2000, time = "15:00"
     log:    config["pseudotime"]["zip_bed"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_zip_bed_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_zip_bed_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt"
     message: "bgzip and tabix BED for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin}"
     shell:
             """
@@ -169,7 +169,7 @@ rule pseudotime_tensorqtl_nom:
     resources: threads = 4, mem_mb = 20000, time = "30:00"
     threads: 4
     log:    config["pseudotime"]["tensorqtl_nom"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_tensorqtl_nom_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_tensorqtl_nom_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
     message: "tensorQTL nominal for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} expPC {wildcards.exp_pc}"
     shell:
             """
@@ -191,7 +191,7 @@ rule pseudotime_tensorqtl_perm:
     resources: threads = 4, mem_mb = 20000, time = "2:00:00"
     threads: 4
     log:    config["pseudotime"]["tensorqtl_perm"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_tensorqtl_perm_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_tensorqtl_perm_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
     message: "tensorQTL permutation for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} expPC {wildcards.exp_pc}"
     shell:
             """
@@ -205,7 +205,7 @@ rule pseudotime_export_smr_twas_inputs:
     input:  unpack(pt_export_inputs)
     output: touch(config["pseudotime"]["export"]["sentinel"])
     log:    config["pseudotime"]["export"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_export_smr_twas_inputs_{trajectory}_Q4_bin{bin}.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_export_smr_twas_inputs_{trajectory}_Q4_bin{bin}.benchmark.txt"
     wildcard_constraints:
         trajectory = "|".join(config["trajectories"]),
         bin = "[1-4]"
@@ -258,7 +258,7 @@ rule pseudotime_report:
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 8000, time = "1:00:00"
     log:    config["pseudotime"]["report"]["log"]
-    benchmark: "reports/benchmarks/17pseudotime.pseudotime_report.benchmark.txt"
+    benchmark: "reports/benchmarks/06pseudotime.pseudotime_report.benchmark.txt"
     message: "Generating pseudotime eQTL report"
     shell:
         """

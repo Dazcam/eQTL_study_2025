@@ -40,8 +40,8 @@ cell_types <- snakemake@params[["cell_types"]]
 disorders <- snakemake@params[["disorders"]]
 out_file <- snakemake@output[[1]]
 
-# smr_dir <- "../results/13MANUSCRIPT_TABLES/"
-# eqtl_nom_dir <- "../results/10SMR/smr_input/"
+# smr_dir <- "../results/16MANUSCRIPT-TABLES/"
+# eqtl_nom_dir <- "../results/12SMR/smr_input/"
 # cell_types <- c("Glu-UL", "Glu-DL", "NPC", "GABA", "Endo-Peri", "OPC", "MG", ...)
 # disorders <- c("scz", "bpd", "mdd", "adhd", "ocd")
 

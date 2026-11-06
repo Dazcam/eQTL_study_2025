@@ -6,7 +6,7 @@
 #
 # Pipeline:  EQTL-SHARING | Rule: glm_enrich (single job)
 #            Upstream:   classify_eqtl_specificity; parse_ld_clump;
-#                        06QTL-REPLICATION snp_lookup; Li et al. 2023 cCREs (S6, S7)
+#                        07REPLICATION-SC snp_lookup; Li et al. 2023 cCREs (S6, S7)
 #            Downstream: report (GLM tab)
 #
 # Purpose:   - Flag whether each LD-independent fetal-specific and shared SNP

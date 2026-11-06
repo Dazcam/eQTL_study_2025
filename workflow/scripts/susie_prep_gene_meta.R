@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  08SUSIE | Rule: prep_susie_gene_meta (one job per cell type; localrule,
+# Pipeline:  10SUSIE | Rule: prep_susie_gene_meta (one job per cell type; localrule,
 #            needs internet access for biomaRt)
 #            Upstream:   05TENSORQTL (prep_input expression bed)
 #            Downstream: run_susie, susie_report

@@ -153,7 +153,7 @@ meta-analysis (Jang et al. 2026). pi1 is estimated with qvalue
 6. `pi1_enrich_internal`: pi1 between our level 1 cell types (Fig 3C)
 7. `pi1_enrich_jang`: pi1 between our level 1 cell types and Jang et al. 2026 level 1 cell types (Fig 3D)
 8. `beta_correlation`: Fetal vs adult (Jang) eQTL effect-size concordance (Fig 3F)
-9. `pi1_enrichment_report`: Generate this report
+9. `repl_sc_report`: Generate this report
 
 ***
 
@@ -321,7 +321,7 @@ combinations <- expand.grid(cell_type = heatmap_order, ref_cell_type = heatmap_o
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
 
 # Full 7x7 square of forward pi1 (discovery -> replication is not symmetric);
-# diagonal set to 1. Same layout as Fig 3C (manuscript_plot_replication.R),
+# diagonal set to 1. Same layout as Fig 3C (manuscript_figure_replication.R),
 # without the Glu-A/Glu-B relabelling.
 pi1_int_tbl <- pi1_result_tbl %>%
   mutate(pi1_final = ifelse(cell_type == ref_cell_type, 1.0, pi1_forward)) %>%

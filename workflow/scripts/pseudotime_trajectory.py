@@ -4,7 +4,7 @@
 #
 # --------------------------------------------------------------------------------------
 #
-# Pipeline:  17PSEUDOTIME | Rule: pseudotime_palantir (one job per trajectory)
+# Pipeline:  06PSEUDOTIME | Rule: pseudotime_palantir (one job per trajectory)
 #            Upstream:   pseudotime_subset
 #            Downstream: pseudotime_pseudobulk
 #

@@ -4,8 +4,8 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  14MANUSCRIPT_PLOTS | Rule: ldsr_plt
-#            Upstream:   09SLDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: ldsr_fig
+#            Upstream:   11SLDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
 #            Downstream: None. Same processing as manuscript_table_sldsr.R; keep in sync.
 #
 # Purpose:   S-LDSR enrichment bar charts, one facet per disorder:

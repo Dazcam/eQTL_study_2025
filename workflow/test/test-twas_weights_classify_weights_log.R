@@ -25,24 +25,24 @@ toy_log <- c(
   "Heritability (se): 0.21 0.08 LRT P-value: 0.001",
   "0 variants removed due to missing genotype data",  # PLINK-style line with spaces
   "Computing full-sample weights",
-  "../results/11TWAS/fusion_input/Glu-UL/G1 removed",
+  "../results/13TWAS-WEIGHTS/fusion_input/Glu-UL/G1 removed",
   # G2: heritability not significant
   "Processing G2",
   "Loaded 46 covariates",
   "### Estimating heritability",
-  "../results/11TWAS/weights/Glu-UL/G2.tmp : heritability 0.02; LRT P-value 0.31 : skipping gene",
-  "../results/11TWAS/fusion_input/Glu-UL/G2 removed",
+  "../results/13TWAS-WEIGHTS/weights/Glu-UL/G2.tmp : heritability 0.02; LRT P-value 0.31 : skipping gene",
+  "../results/13TWAS-WEIGHTS/fusion_input/Glu-UL/G2 removed",
   # G3: GCTA failed
   "Processing G3",
   "Loaded 46 covariates",
-  "../results/11TWAS/weights/Glu-UL/G3.tmp does not exist, likely GCTA could not converge, skipping gene",
-  "../results/11TWAS/fusion_input/Glu-UL/G3 removed",
+  "../results/13TWAS-WEIGHTS/weights/Glu-UL/G3.tmp does not exist, likely GCTA could not converge, skipping gene",
+  "../results/13TWAS-WEIGHTS/fusion_input/Glu-UL/G3 removed",
   # G4: no cis SNPs, so FUSION never ran
   "Processing G4",
-  "../results/11TWAS/fusion_input/Glu-UL/G4 removed",
+  "../results/13TWAS-WEIGHTS/fusion_input/Glu-UL/G4 removed",
   # G5: no cis SNPs and the clean-up failed
   "Processing G5",
-  "WARNING: Failed to remove ../results/11TWAS/fusion_input/Glu-UL/G5",
+  "WARNING: Failed to remove ../results/13TWAS-WEIGHTS/fusion_input/Glu-UL/G5",
   "All genes completed"
 )
 

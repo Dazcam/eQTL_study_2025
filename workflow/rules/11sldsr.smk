@@ -34,7 +34,7 @@ rule get_hg38_refs:
             bim = expand(HG38_REFS["bim"], chr=range(1, 23)),
             snps = HG38_REFS["snps"]
     params: out_dir = ref_dir("hg38")
-    benchmark: "reports/benchmarks/09sldsr.get_hg38_refs.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.get_hg38_refs.benchmark.txt"
     log:    HG38_REFS["log"]
     shell: "scripts/ldsr_get_hg38_refs.sh {params.out_dir} > {log} 2>&1"
 
@@ -45,7 +45,7 @@ rule get_hg19_refs:
             bim = expand(HG19_REFS["bim"], chr=range(1, 23)),
             snps = HG19_REFS["snps"]
     params: out_dir = ref_dir("hg19")
-    benchmark: "reports/benchmarks/09sldsr.get_hg19_refs.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.get_hg19_refs.benchmark.txt"
     log:    HG19_REFS["log"]
     shell: "scripts/ldsr_get_hg19_refs.sh {params.out_dir} > {log} 2>&1"
 
@@ -56,7 +56,7 @@ rule make_annot:
             cs95 = config["sldsr"]["make_annot"]["cs95"]
     log:    config["sldsr"]["make_annot"]["log"]
     singularity: config["containers"]["r_eqtl"]
-    benchmark: "reports/benchmarks/09sldsr.make_annot_{cell_type}_{chr}.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.make_annot_{cell_type}_{chr}.benchmark.txt"
     message: "Generating maxCPP and CS95 annotations for {wildcards.cell_type}, chr {wildcards.chr}"
     script: "../scripts/ldsr_make_annot.R"
 
@@ -69,7 +69,7 @@ rule lift_hapmap3_snps:
     params: hg19_dir = os.path.dirname(HG19_REFS["bim"]),
             hg38_dir = os.path.dirname(HG38_REFS["bim"])
     singularity: config["containers"]["ubuntu"]
-    benchmark: "reports/benchmarks/09sldsr.lift_hapmap3_snps.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.lift_hapmap3_snps.benchmark.txt"
     log:    config["sldsr"]["lift_hapmap3_snps"]["log"]
     shell:
         """
@@ -85,7 +85,7 @@ rule ldsr_ld_scores_hg38:
     params: bfile = strip_suffix(HG38_REFS["bim"], ".bim"),
             ldscores = strip_suffix(config["sldsr"]["ldsr_ld_scores_hg38"]["output"],
                                     ".l2.ldscore.gz")
-    benchmark: "reports/benchmarks/09sldsr.ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.benchmark.txt"
     message: "Generating LD scores on hg38 for {wildcards.cell_type}, {wildcards.annot_type}, chr {wildcards.chr}"
     log:    config["sldsr"]["ldsr_ld_scores_hg38"]["log"]
     shell:
@@ -112,7 +112,7 @@ rule ldsr_strat_hg38_bl_v12:
             out_prefix = strip_suffix(config["sldsr"]["ldsr_strat_hg38_bl_v12"]["output"],
                                       ".results")
     message: "Running stratified LDSR with {wildcards.cell_type} using hg38 refs, baseline 1.2, {wildcards.annot_type} and {wildcards.gwas} GWAS"
-    benchmark: "reports/benchmarks/09sldsr.ldsr_strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.ldsr_strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.benchmark.txt"
     log:    config["sldsr"]["ldsr_strat_hg38_bl_v12"]["log"]
     shell:
         """
@@ -133,7 +133,7 @@ rule ldsr_strat_hg38_bl_v12:
 rule ldsr_strat_summary:
     input:  expand(rules.ldsr_strat_hg38_bl_v12.output, cell_type=config["cell_types"], gwas=config["gwas"], allow_missing=True)
     output: config["sldsr"]["ldsr_strat_summary"]["output"]
-    benchmark: "reports/benchmarks/09sldsr.ldsr_strat_summary_{annot_type}.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.ldsr_strat_summary_{annot_type}.benchmark.txt"
     log:    config["sldsr"]["ldsr_strat_summary"]["log"]
     shell:
         """
@@ -157,7 +157,7 @@ rule ldsr_report:
             ld_snps = config["sldsr"]["lift_hapmap3_snps"]["output"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SLDSR report"
-    benchmark: "reports/benchmarks/09sldsr.ldsr_report.benchmark.txt"
+    benchmark: "reports/benchmarks/11sldsr.ldsr_report.benchmark.txt"
     log:    config["sldsr"]["ldsr_report"]["log"]
     shell:
         """

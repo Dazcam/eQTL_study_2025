@@ -5,11 +5,11 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  EQTL-SHARING | Rule: eqtl_effect_replication (single job)
-#            Upstream:   05TENSORQTL tensorqtl_perm; 10SMR nominal export
+#            Upstream:   05TENSORQTL tensorqtl_perm; 12SMR nominal export
 #                        ({ct}_nom.cis_qtl_pairs); Jang et al. 2026 L1 full-association
 #                        files; 05TENSORQTL convert_genotypes (pvar)
 #            Downstream: report (effect replication tab);
-#                        14 effect_size_heatmaps_plt (Supp Figs 7-8)
+#                        17 effect_size_heatmaps_fig (Supp Figs 7-8)
 #
 # Purpose:   For each fetal discovery cell type, take its sig. lead eGene-eSNP pairs
 #            (qval < 0.05) and look up the same pairs' effect sizes in each

@@ -4,7 +4,7 @@
 #
 # --------------------------------------------------------------------------------------
 #
-# Pipeline:  21REPLICATION-BULK | Rule: isoform_eqtl_comparison (single job)
+# Pipeline:  08REPLICATION-BULK | Rule: isoform_eqtl_comparison (single job)
 #            Upstream:   extract_unique_egenes; 00setup get_refs (GTF)
 #            Downstream: repl_bulk_report
 #

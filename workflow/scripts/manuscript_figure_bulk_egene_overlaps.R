@@ -4,7 +4,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  14MANUSCRIPT_PLOTS | Rule: bulk_egene_overlaps_plt
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: bulk_egene_overlaps_fig
 #            Upstream:   extract_unique_egenes (per-cell-type eGenes and their
 #                        overlap with O'Brien 2018 bulk eQTL)
 #            Downstream: None (supplementary figure)
@@ -53,7 +53,7 @@ out_file                 <- snakemake@output[[1]]
 # egenes_per_celltype_file <- "../results/.../egenes_per_celltype.tsv"
 # overlap_file             <- "../results/.../overlap.tsv"
 # cell_types               <- c("Glu-UL", "Glu-DL", "NPC", ...)   # config['cell_types']
-# out_file                 <- "../results/14MANUSCRIPT_PLOTS/bulk_egene_overlaps.tiff"
+# out_file                 <- "../results/17MANUSCRIPT-FIGURES/bulk_egene_overlaps.tiff"
 
 # Make a tibble showing what each variable is set to
 message("\nVariables")

@@ -57,8 +57,8 @@ gene_meta_files <- snakemake@input[["gene_meta_files"]]
 xlsx_out        <- snakemake@output[["xlsx"]]
 
 # cell_types      <- c("Glu-UL", "Glu-DL", "NPC", ...)
-# susie_files     <- "../results/08SUSIE/susie/{cell_type}/{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz"
-# gene_meta_files <- "../results/08SUSIE/susie_input/{cell_type}_gene_meta.tsv"
+# susie_files     <- "../results/10SUSIE/susie/{cell_type}/{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz"
+# gene_meta_files <- "../results/10SUSIE/susie_input/{cell_type}_gene_meta.tsv"
 
 message("=== SuSiE diagnostics table: ", length(cell_types), " cell types ===")
 

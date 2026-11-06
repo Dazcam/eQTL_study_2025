@@ -605,8 +605,8 @@ ldsr_tbl |>
 ***
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
-# Benchmark files: 09sldsr.<rule>[_<wildcards>].benchmark.txt
-files <- list.files(bmark_dir, pattern = "^09sldsr\\..*\\.benchmark\\.txt$", full.names = TRUE)
+# Benchmark files: 11sldsr.<rule>[_<wildcards>].benchmark.txt
+files <- list.files(bmark_dir, pattern = "^11sldsr\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
 # Rules with a benchmark: directive. Matched longest name first, as some rule
 # names share a prefix with each other or with another rule's wildcards.
@@ -641,7 +641,7 @@ is_current <- function(rule, wc) {
 }
 
 benchmarks <- map_dfr(files, function(f) {
-  rule_full <- str_remove(basename(f), "^09sldsr\\.") |> str_remove("\\.benchmark\\.txt$")
+  rule_full <- str_remove(basename(f), "^11sldsr\\.") |> str_remove("\\.benchmark\\.txt$")
   rule <- match_rule(rule_full, known_rules)
   if (is.na(rule)) return(NULL)
   wc <- str_remove(rule_full, paste0("^", rule, "_?"))

@@ -49,8 +49,8 @@ suppressMessages({
 eqtl_effects_file <- snakemake@params[["eqtl_effects"]]
 out_file           <- snakemake@output[[1]]
 
-# eqtl_effects_file <- "../results/19DEV-SPECIFICITY/eqtl_effects/eqtl_effect_sizes.rds"
-# out_file           <- "../results/13MANUSCRIPT_TABLES/subcluster_specific_eqtl_tbl.xlsx"
+# eqtl_effects_file <- "../results/15EQTL-SHARING/eqtl_effects/eqtl_effect_sizes.rds"
+# out_file           <- "../results/16MANUSCRIPT-TABLES/subcluster_specific_eqtl_tbl.xlsx"
 
 # --- Relabel cell type names for display: Glu-UL -> Glu-A, Glu-DL -> Glu-B
 relabel_cell_type <- function(x) {

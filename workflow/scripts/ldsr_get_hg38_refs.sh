@@ -5,7 +5,7 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  09SLDSR | Rule: get_hg38_refs
+# Pipeline:  11SLDSR | Rule: get_hg38_refs
 #            Upstream:   none (downloads from Zenodo)
 #            Downstream: make_annot, lift_hapmap3_snps, ldsr_ld_scores_hg38,
 #                        ldsr_strat_hg38_bl_v12

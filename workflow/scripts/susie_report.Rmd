@@ -556,12 +556,12 @@ been written to `r paste0(in_dir, "susie_credible_set_summary.tsv")`.
 rule_names <- c("prep_susie_gene_meta", "vcf_to_dosage", "prep_susie_input", "run_susie",
                 "merge_susie", "sort_susie", "susie_report")
 
-bmark_files <- list.files(params$bmark_dir, pattern = "^08susie\\..*\\.benchmark\\.txt$")
+bmark_files <- list.files(params$bmark_dir, pattern = "^10susie\\..*\\.benchmark\\.txt$")
 
-# File names are 08susie.<rule>[_<cell_type>[_<batch>_<n_batches>]].benchmark.txt; match
+# File names are 10susie.<rule>[_<cell_type>[_<batch>_<n_batches>]].benchmark.txt; match
 # the known rule names so rule names containing '_' are kept whole
 benchmarks <- tibble(file = bmark_files) |>
-  mutate(stem = str_remove_all(file, "^08susie\\.|\\.benchmark\\.txt$"),
+  mutate(stem = str_remove_all(file, "^10susie\\.|\\.benchmark\\.txt$"),
          rule = map_chr(stem, function(s) {
            hit <- rule_names[s == rule_names | str_starts(s, paste0(rule_names, "_"))]
            if (length(hit) == 0) NA_character_ else hit[1]

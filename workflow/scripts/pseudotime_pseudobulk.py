@@ -4,7 +4,7 @@
 #
 # --------------------------------------------------------------------------------------
 #
-# Pipeline:  17PSEUDOTIME | Rule: pseudotime_pseudobulk (one job per trajectory)
+# Pipeline:  06PSEUDOTIME | Rule: pseudotime_pseudobulk (one job per trajectory)
 #            Upstream:   pseudotime_palantir
 #            Downstream: pseudotime_prep_tensorqtl (one job per Q value x bin)
 #
@@ -25,7 +25,7 @@
 #            csvs      Q{n}/Q{n}_bin{b}_{trajectory}_pseudobulk.csv
 #            (undeclared) pseudobulk_qc.png, pseudobulk_summary.csv
 #
-# Notes:     Q values come from PT_Q_VALUES in 17pseudotime.smk. The QC figure has
+# Notes:     Q values come from PT_Q_VALUES in 06pseudotime.smk. The QC figure has
 #            five panels, so it assumes three Q values. Each bin's subset is deleted
 #            and gc.collect() called to limit memory use.
 #
@@ -70,7 +70,7 @@ sentinel_file    = str(snakemake.output.sentinel)
 output_dir       = Path(sentinel_file).parent
 output_figure    = str(output_dir / "pseudobulk_qc.png")
 output_summary   = str(output_dir / "pseudobulk_summary.csv")
-Q_VALUES         = [int(n) for n in snakemake.params.q_values]  # PT_Q_VALUES in 17pseudotime.smk
+Q_VALUES         = [int(n) for n in snakemake.params.q_values]  # PT_Q_VALUES in 06pseudotime.smk
 
 variables = {
     "input_h5ad":       input_h5ad,
