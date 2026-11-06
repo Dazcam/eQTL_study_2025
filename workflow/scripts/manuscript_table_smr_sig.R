@@ -107,7 +107,7 @@ empty_final_tbl <- tibble(
 
 # --- Relabel helper (display only, xlsx output): Glu-UL -> Glu-A,
 # Glu-DL -> Glu-B, and strip "-Q4-" from pseudotime bin names, e.g.
-# "NPC-to-Glu-DL-Q4-Bin1" -> "NPC-to-Glu-B-Bin1". Matches the convention used
+# "NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1". Matches the convention used
 # across the rest of the manuscript pipeline (bulk_egene_overlaps_plt.R,
 # manuscript_plots_fig4.py, manuscript_table_ctwas_sig.R, etc.) The per-trait
 # TSVs above are left untouched -- this only affects the new xlsx.

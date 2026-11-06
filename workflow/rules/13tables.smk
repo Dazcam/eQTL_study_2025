@@ -38,19 +38,19 @@ rule eqtl_tbl:
 rule diff_exp_tbl:
     input:
         nb      = config["tables"]["diff_exp_tbl"]["nb"],
-        pt_h5ad = expand(
-            "../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad",
-            trajectory=config["trajectories"]
-        )
+        pt_h5ad = expand(config["pseudotime"]["palantir"]["h5ad"],
+                         trajectory = config["trajectories"])
     output:  html = config["tables"]["diff_exp_tbl"]["html_out"],
              xlsx = config["tables"]["diff_exp_tbl"]["xlsx_out"]
     conda:     config["scanpy"]["env"]
     resources: threads = 16, mem_mb = 360000, time = "2:00:00"
-    params:    nb_out = config["tables"]["diff_exp_tbl"]["nb_out"]
+    params:    nb_out       = config["tables"]["diff_exp_tbl"]["nb_out"],
+               trajectories = ",".join(config["trajectories"])
     message: "Computing L1/L2/pseudotime bin differential expression tables"
     log:     config["tables"]["diff_exp_tbl"]["log"]
     shell:
-        "papermill {input.nb} {params.nb_out} -p plate extra >> {log} 2>&1 && "
+        "papermill {input.nb} {params.nb_out} -p plate extra "
+        "-p trajectories {params.trajectories} >> {log} 2>&1 && "
         "jupyter nbconvert --to html {params.nb_out} "
         "--output-dir=$(dirname {output.html}) "
         "--output=$(basename {output.html}) >> {log} 2>&1"

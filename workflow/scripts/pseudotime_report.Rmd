@@ -25,6 +25,8 @@ params:
   n_dcs: null
   num_waypoints: null
   root_gene: null
+  terminal_markers: null
+  subset_logs: null
 ---
 
 ***
@@ -46,6 +48,16 @@ geno_pc      <- as.integer(params$geno_pc)
 window_kb    <- as.numeric(params$window) / 1000
 norm_method  <- "quantile"
 
+# e.g. "two neurogenic trajectories", for the overview text
+traj_text <- sprintf("%s neurogenic %s",
+                     c("one", "two", "three", "four", "five")[length(trajectories)],
+                     if (length(trajectories) == 1) "trajectory" else "trajectories")
+
+# Terminal marker gene per terminal cell type, e.g. "Glu-UL=SATB2"
+terminal_markers <- split_param(params$terminal_markers) |>
+  str_split_fixed("=", 2)
+terminal_markers <- setNames(terminal_markers[, 2], terminal_markers[, 1])
+
 # Original (non-pseudotime) cell types and their selected expression PCs
 orig_exppc_map <- setNames(as.integer(split_param(params$orig_exp_pcs)),
                            split_param(params$orig_cell_types))
@@ -66,13 +78,38 @@ get_symbol <- function(ensembl_ids) {
   syms <- gene_lookup$symbol[match(ensembl_ids, gene_lookup$ensembl_gene_id)]
   ifelse(is.na(syms) | syms == "", ensembl_ids, syms)
 }
+
+# Cell counts from the pseudotime_subset logs: atlas size ("Loaded: N cells") and
+# the per-cell-type block after "Subset cell type distribution:". Logs append on
+# rerun, so the last occurrence of each is used.
+read_subset_counts <- function(log_file) {
+  if (!file.exists(log_file)) { message("Not found: ", log_file); return(NULL) }
+  lines   <- readLines(log_file, warn = FALSE)
+  n_atlas <- str_match(lines, "Loaded: ([0-9,]+) cells")[, 2] |> na.omit() |> tail(1)
+  start   <- tail(which(str_detect(lines, "Subset cell type distribution:")), 1)
+  if (length(start) == 0 || length(n_atlas) == 0) return(NULL)
+  block <- lines[-seq_len(start)]
+  if (length(block) > 0 && str_detect(block[1], "^\\S+$")) block <- block[-1]  # index name
+  hits  <- str_match(block, "^(\\S+)\\s+([0-9]+)$")
+  n_run <- which(is.na(hits[, 1]))[1]
+  n_run <- if (is.na(n_run)) nrow(hits) else n_run - 1
+  tibble(cell_type = hits[seq_len(n_run), 2],
+         n         = as.integer(hits[seq_len(n_run), 3]),
+         n_atlas   = as.integer(str_remove_all(n_atlas, ",")))
+}
+
+subset_counts <- map2_dfr(split_param(params$subset_logs), trajectories, function(f, traj) {
+  counts <- read_subset_counts(f)
+  if (is.null(counts)) return(NULL)
+  mutate(counts, trajectory = traj)
+})
 ```
 
 ## 1. Pipeline Overview {.tabset}
 
 ***
 
-This report summarises the pseudotime eQTL analysis for two neurogenic trajectories
+This report summarises the pseudotime eQTL analysis for `r traj_text`
 derived from the prenatal human cerebral cortex snRNA-seq atlas (Cameron et al.).
 
 ***
@@ -81,15 +118,30 @@ derived from the prenatal human cerebral cortex snRNA-seq atlas (Cameron et al.)
 
 **Pseudotime analysis**
 
-Cells were subsetted to two neurogenic trajectories from the full 679,738-cell atlas:
-
-- **NPC-to-Glu-DL**: NPC (n=103,598) + Glu-DL (n=136,070) = 239,668 cells
-- **NPC-to-Glu-UL**: NPC (n=103,598) + Glu-UL (n=271,180) = 374,778 cells
+```{r subset_counts_text, echo=FALSE, results='asis'}
+n_atlas <- unique(subset_counts$n_atlas)
+cat(sprintf("Cells were subsetted to %s from the full %s-cell atlas:\n\n", traj_text,
+            if (length(n_atlas) == 1) format(n_atlas, big.mark = ",") else "?"))
+for (traj in trajectories) {
+  parts  <- str_split_1(traj, "-to-")
+  counts <- subset_counts |> filter(trajectory == traj)
+  n_of   <- function(ct) counts$n[match(ct, counts$cell_type)]
+  if (nrow(counts) == 0 || any(is.na(n_of(parts)))) {
+    cat(sprintf("- **%s**: %s + %s (cell counts not found in the subset log)\n", traj, parts[1], parts[2]))
+  } else {
+    cat(sprintf("- **%s**: %s (n=%s) + %s (n=%s) = %s cells\n", traj,
+                parts[1], format(n_of(parts[1]), big.mark = ","),
+                parts[2], format(n_of(parts[2]), big.mark = ","),
+                format(sum(n_of(parts)), big.mark = ",")))
+  }
+}
+cat("\n")
+```
 
 Pseudotime was computed using [Palantir](https://github.com/dpeerlab/Palantir) with:
 
 - Root cell: cell with highest `r params$root_gene` expression in NPC population
-- Terminal cell: cell with highest TLE4 (Glu-DL) or SATB2 (Glu-UL) expression
+- Terminal cell: cell with highest `r terminal_types <- map_chr(trajectories, ~ str_split_1(.x, "-to-")[2]); paste(sprintf("%s (%s)", terminal_markers[terminal_types], terminal_types), collapse = " or ")` expression
 - Diffusion map on the Harmony-corrected PCA embedding (`r params$n_dcs` diffusion components)
 - `r format(as.integer(params$num_waypoints), big.mark = ",")` waypoints
 - UMAP from a `r params$n_neighbors`-nearest-neighbour graph on `r params$n_pcs` Harmony PCs (visualisation only)
@@ -879,17 +931,20 @@ cat("\n\n### Combined — Q4 novel eGenes {.tabset}\n\n***\n\n")
 q4_novel_combined <- novel_union |>
   filter(quantile_n == 4)
 
+n_novel_q4 <- function(traj) {
+  n <- novel_summary |> filter(trajectory == traj, quantile_n == 4) |> pull(novel_egene_union)
+  if (length(n) == 0) 0L else n
+}
+
 combined_summary <- tibble(
   metric = c(
     "Paper eGenes (L1 + L2 reference)",
-    sprintf("%s — unique Q4 novel eGenes", trajectories[1]),
-    sprintf("%s — unique Q4 novel eGenes", trajectories[2]),
+    sprintf("%s — unique Q4 novel eGenes", trajectories),
     "Combined — unique Q4 novel eGenes (union across trajectories)"
   ),
   n = c(
     length(paper_egene_set),
-    novel_summary |> filter(trajectory == trajectories[1], quantile_n == 4) |> pull(novel_egene_union),
-    novel_summary |> filter(trajectory == trajectories[2], quantile_n == 4) |> pull(novel_egene_union),
+    map_int(trajectories, n_novel_q4),
     n_distinct(q4_novel_combined$phenotype_id)
   )
 )
@@ -971,82 +1026,30 @@ q4_slope <- map_dfr(trajectories, function(traj) {
 })
 ```
 
-### NPC-to-Glu-DL {.tabset}
+```{r upset_plots, echo=FALSE, message=FALSE, warning=FALSE, results='asis', fig.dim=c(12, 5)}
+for (traj in trajectories) {
+  cat(sprintf("\n\n### %s {.tabset}\n\n***\n\n", traj))
 
-***
+  gene_by_bin <- q4_slope |>
+    filter(trajectory == traj) |>
+    distinct(phenotype_id, bin) |>
+    mutate(present = 1, bin_label = paste0("Bin_", bin)) |>
+    pivot_wider(names_from = bin_label, values_from = present, values_fill = 0) |>
+    group_by(phenotype_id) |>
+    summarise(across(everything(), max), .groups = "drop") |>
+    column_to_rownames("phenotype_id")
 
-```{r upset_dl_data, echo=FALSE, message=FALSE, warning=FALSE}
-traj <- "NPC-to-Glu-DL"
-gene_by_bin_dl <- q4_slope |>
-  filter(trajectory == traj) |>
-  distinct(phenotype_id, bin) |>
-  mutate(present = 1, bin_label = paste0("Bin_", bin)) |>
-  pivot_wider(names_from = bin_label, values_from = present, values_fill = 0)
+  for (b in paste0("Bin_", 1:4)) {
+    if (!b %in% colnames(gene_by_bin)) gene_by_bin[[b]] <- 0
+  }
+  gene_by_bin <- gene_by_bin[, paste0("Bin_", 1:4)]
 
-dups <- gene_by_bin_dl |> filter(duplicated(phenotype_id))
-message("Duplicate phenotype_ids after pivot_wider: ", nrow(dups))
-
-gene_by_bin_dl <- gene_by_bin_dl |>
-  group_by(phenotype_id) |>
-  summarise(across(everything(), max), .groups = "drop") |>
-  column_to_rownames("phenotype_id")
-
-for (b in paste0("Bin_", 1:4)) {
-  if (!b %in% colnames(gene_by_bin_dl)) gene_by_bin_dl[[b]] <- 0
+  cat("#### UpSet plot\n\n***\n\n")
+  print(upset(gene_by_bin, nsets = 4, order.by = "freq",
+              sets = paste0("Bin_", 1:4), keep.order = TRUE,
+              mainbar.y.label = "eGene intersection size",
+              sets.x.label    = "eGenes per bin",
+              text.scale      = 1.3))
+  cat("\n\n***\n\n")
 }
-gene_by_bin_dl <- gene_by_bin_dl[, paste0("Bin_", 1:4)]
 ```
-
-#### UpSet plot
-
-***
-
-```{r upset_dl_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.dim=c(12, 5)}
-upset(gene_by_bin_dl, nsets = 4, order.by = "freq",
-      sets = paste0("Bin_", 1:4), keep.order = TRUE,
-      mainbar.y.label = "eGene intersection size",
-      sets.x.label    = "eGenes per bin",
-      text.scale      = 1.3)
-```
-
-***
-
-### NPC-to-Glu-UL {.tabset}
-
-***
-
-```{r upset_ul_data, echo=FALSE, message=FALSE, warning=FALSE}
-traj <- "NPC-to-Glu-UL"
-gene_by_bin_ul <- q4_slope |>
-  filter(trajectory == traj) |>
-  distinct(phenotype_id, bin) |>
-  mutate(present = 1, bin_label = paste0("Bin_", bin)) |>
-  pivot_wider(names_from = bin_label, values_from = present, values_fill = 0)
-
-dups <- gene_by_bin_ul |> filter(duplicated(phenotype_id))
-message("Duplicate phenotype_ids after pivot_wider: ", nrow(dups))
-
-gene_by_bin_ul <- gene_by_bin_ul |>
-  group_by(phenotype_id) |>
-  summarise(across(everything(), max), .groups = "drop") |>
-  column_to_rownames("phenotype_id")
-
-for (b in paste0("Bin_", 1:4)) {
-  if (!b %in% colnames(gene_by_bin_ul)) gene_by_bin_ul[[b]] <- 0
-}
-gene_by_bin_ul <- gene_by_bin_ul[, paste0("Bin_", 1:4)]
-```
-
-#### UpSet plot
-
-***
-
-```{r upset_ul_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.dim=c(12, 5)}
-upset(gene_by_bin_ul, nsets = 4, order.by = "freq",
-      sets = paste0("Bin_", 1:4), keep.order = TRUE,
-      mainbar.y.label = "eGene intersection size",
-      sets.x.label    = "eGenes per bin",
-      text.scale      = 1.3)
-```
-
-***

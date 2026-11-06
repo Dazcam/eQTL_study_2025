@@ -1,24 +1,26 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate Figure 4: NPC-to-Glu-A pseudotime trajectory
+#    Generate Figure 4: pseudotime trajectory eQTL
 #
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  14MANUSCRIPT_PLOTS | Rule: fig4_plt
-#            Upstream:   17PSEUDOTIME (NPC-to-Glu-UL palantir object and per-bin
-#                        tensorQTL perm results); 05TENSORQTL perm (L1 + L2 eGenes)
+#            Upstream:   17PSEUDOTIME (palantir object and per-bin tensorQTL perm
+#                        results); 05TENSORQTL perm (L1 + L2 eGenes)
 #            Downstream: None (manuscript figure)
 #
-# Purpose:   A: Glu-A trajectory -- pseudotime UMAP | PAX6 | SATB2 feature plots
-#            B: Glu-A trajectory -- per Q4 bin, proportion of eGenes (qval < 0.05)
-#               shared with vs novel to the L1 + L2 eGene set
-#            C: Glu-A trajectory -- distance-to-TSS density of significant eQTL
-#               (qval < 0.05), one line per Q4 bin. Previously Supplementary
-#               Figure 9 (manuscript_plot_tss_density.R, now retired).
-#            The Glu-B (NPC-to-Glu-DL) trajectory is no longer shown.
+# Purpose:   For one trajectory (NPC to Glu-A in the manuscript):
+#            A: pseudotime UMAP | root gene | terminal marker feature plots
+#            B: per Q4 bin, proportion of eGenes (qval < 0.05) shared with vs
+#               novel to the L1 + L2 eGene set
+#            C: distance-to-TSS density of significant eQTL (qval < 0.05), one
+#               line per Q4 bin
 #
-# Inputs:    glu_a_h5ad      NPC-to-Glu-UL pseudotime object (palantir_pseudotime,
+# Inputs:    h5ad            Trajectory pseudotime object (palantir_pseudotime,
 #                            X_umap)
+#            trajectory      Pipeline name of the trajectory to plot
+#            root_gene       Root marker (feature plot)
+#            terminal_markers Terminal marker per terminal cell type
 #            perm_dir        L1 / L2 tensorQTL perm results
 #            pseudotime_dir  Per-bin tensorQTL perm results per trajectory
 #            cell_types      config['cell_types']; L1 + L2 define the reference
@@ -66,15 +68,16 @@ sys.excepthook = lambda *exc: log.error("Uncaught exception", exc_info=exc)
 log.info("Generating Figure 4 (panels A/B/C) ...")
 
 # Input and output paths
-h5ad_path      = str(snakemake.input.glu_a_h5ad)
+h5ad_path      = str(snakemake.input.h5ad)
 perm_dir       = str(snakemake.params.perm_dir)
 pseudotime_dir = str(snakemake.params.pseudotime_dir)
 cell_types     = list(snakemake.params.cell_types)
 exp_pc_map     = dict(snakemake.params.exp_pc_map)
 out_file       = str(snakemake.output[0])
 
-trajectory    = "NPC-to-Glu-UL"   # pipeline label; shown as "NPC to Glu-A"
-terminal_gene = "SATB2"
+trajectory    = str(snakemake.params.trajectory)   # pipeline label, e.g. NPC-to-Glu-UL
+root_gene     = str(snakemake.params.root_gene)
+terminal_gene = dict(snakemake.params.terminal_markers)[trajectory.split("-to-")[1]]
 geno_pc       = 4
 norm_method   = "quantile"
 quantile_n    = 4
@@ -88,6 +91,7 @@ variables = {
     "cell_types":     ", ".join(cell_types),
     "out_file":       out_file,
     "trajectory":     trajectory,
+    "root_gene":      root_gene,
     "terminal_gene":  terminal_gene,
     "geno_pc":        geno_pc,
     "norm_method":    norm_method,
@@ -262,8 +266,8 @@ ax0.axis("off")
 ax0.text(PANEL_LABEL_X, PANEL_LABEL_Y, "A", transform=ax0.transAxes,
          fontsize=PANEL_LABEL_SIZE, fontweight="bold")
 
-# Feature plots: progenitor (PAX6) and terminal marker
-for col_start, gene_name in zip([2, 4], ["PAX6", terminal_gene]):
+# Feature plots: root (progenitor) and terminal marker
+for col_start, gene_name in zip([2, 4], [root_gene, terminal_gene]):
     ax = fig.add_subplot(gs[0, col_start:col_start + 2])
     expr = get_expr(gene_name)
     if expr is not None:

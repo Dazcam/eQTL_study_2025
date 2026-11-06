@@ -30,10 +30,6 @@ cell_types:
   - "NPC-0"
   - "NPC-1"
   - "NPC-2"
-  - "NPC-to-Glu-DL-Q4-Bin1"
-  - "NPC-to-Glu-DL-Q4-Bin2"
-  - "NPC-to-Glu-DL-Q4-Bin3"
-  - "NPC-to-Glu-DL-Q4-Bin4"
   - "NPC-to-Glu-UL-Q4-Bin1"
   - "NPC-to-Glu-UL-Q4-Bin2"
   - "NPC-to-Glu-UL-Q4-Bin3"
@@ -59,10 +55,6 @@ exp_pc_map:
   NPC-0: 50
   NPC-1: 30
   NPC-2: 20
-  NPC-to-Glu-DL-Q4-Bin1: 30
-  NPC-to-Glu-DL-Q4-Bin2: 30
-  NPC-to-Glu-DL-Q4-Bin3: 30
-  NPC-to-Glu-DL-Q4-Bin4: 40
   NPC-to-Glu-UL-Q4-Bin1: 30
   NPC-to-Glu-UL-Q4-Bin2: 40
   NPC-to-Glu-UL-Q4-Bin3: 50
@@ -547,7 +539,6 @@ tensorQTL:
 # ------  Pseudotime  -------
 
 trajectories:
-  - 'NPC-to-Glu-DL'
   - 'NPC-to-Glu-UL'
 
 pseudotime:
@@ -567,6 +558,9 @@ pseudotime:
     n_dcs:         15
     num_waypoints: 1000
     root_gene:     "PAX6"
+    terminal_markers:            # terminal cell = max expression of this gene in the terminal type
+      Glu-DL: TLE4
+      Glu-UL: SATB2
 
   pseudobulk:
     sentinel:         ../results/17PSEUDOTIME/{trajectory}/pseudobulk/pseudobulk_complete.txt
@@ -1065,6 +1059,7 @@ plotting:
     log: ../results/00LOG/14MANUSCRIPT_PLOTS/replication_plt.log
 
   fig4_plt:
+    trajectory: NPC-to-Glu-UL
     pseudotime_dir: ../results/17PSEUDOTIME/
     out_file: ../results/14MANUSCRIPT_PLOTS/figure4.tiff
     log: ../results/00LOG/14MANUSCRIPT_PLOTS/fig4_plt.log
@@ -1163,7 +1158,7 @@ data_sharing:
     log: ../results/00LOG/15DATA_SHARING/data_weights.log
 
   data_susie:
-    # {cell_type} here is the manuscript label (Glu-A, Glu-B, NPC-to-Glu-B-Bin1, ...)
+    # {cell_type} here is the manuscript label (Glu-A, Glu-B, NPC-to-Glu-A-Bin1, ...)
     out_file: ../results/15DATA_SHARING/{cell_type}.susie.cred.hp.tsv.gz
     log: ../results/00LOG/15DATA_SHARING/data_susie_{cell_type}.log
 
@@ -1178,8 +1173,6 @@ data_sharing:
     l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # TODO: subcluster_dir + ...
     l2_populations: [Glu-UL, Glu-DL, NPC, GABA]
     l1_without_l2: [MG, Endo-Peri, OPC]                             # script asserts these are exactly the L1 pops with no L2
-    pt_h5ad: ../results/17PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad
-    pt_trajectories: [NPC-to-Glu-DL, NPC-to-Glu-UL]                 # pipeline names
     pt_n_bins: 4
     l1_cluster_col: leiden_harmony_0.2
     keep_obs: [sample]                                              # extend with any other per-cell columns you want to share

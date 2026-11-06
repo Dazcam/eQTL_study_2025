@@ -10,7 +10,7 @@
 #
 # Purpose:   - Assign L1 cell type labels from leiden_harmony_0.2
 #            - Keep only the two cell types named in the trajectory wildcard,
-#              split on '-to-' (e.g. NPC-to-Glu-DL -> NPC, Glu-DL)
+#              split on '-to-' (e.g. NPC-to-Glu-UL -> NPC, Glu-UL)
 #            - Check the raw counts layer is present for pseudobulk
 #            - Store trajectory metadata in adata.uns['trajectory']
 #

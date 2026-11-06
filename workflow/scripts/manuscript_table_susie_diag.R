@@ -135,8 +135,8 @@ final_tbl <- cs_per_gene |>
   left_join(dist_to_tss, by = "cell_type")
 
 # --- Relabel helper (display only): Glu-UL -> Glu-A, Glu-DL -> Glu-B, and strip
-# "-Q4-" from pseudotime bin names, e.g. "NPC-to-Glu-DL-Q4-Bin1" ->
-# "NPC-to-Glu-B-Bin1". Same convention as manuscript_table_smr_sig.R.
+# "-Q4-" from pseudotime bin names, e.g. "NPC-to-Glu-UL-Q4-Bin1" ->
+# "NPC-to-Glu-A-Bin1". Same convention as manuscript_table_smr_sig.R.
 relabel_cell_type <- function(x) {
   x <- str_replace(x, "Glu-UL", "Glu-A")
   x <- str_replace(x, "Glu-DL", "Glu-B")

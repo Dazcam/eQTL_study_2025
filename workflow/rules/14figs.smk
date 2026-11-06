@@ -75,13 +75,15 @@ rule replication_plt:
 
 rule fig4_plt:
     # Fig 4 -- full figure: A/B (pseudotime UMAP + features) + C/D (overlap barplots)
-    input:  glu_a_h5ad = config['pseudotime']['palantair']['h5ad'].format(trajectory="NPC-to-Glu-UL"),
-#            glu_b_h5ad = config['pseudotime']['palantair']['h5ad'].format(trajectory="NPC-to-Glu-DL")
+    input:  h5ad = config['pseudotime']['palantir']['h5ad'].format(trajectory=config['plotting']['fig4_plt']['trajectory'])
     output: config['plotting']['fig4_plt']['out_file']
-    params: perm_dir       = config['dev_specificity']['extract_universe']['qtl_dir'],
-            pseudotime_dir = config['plotting']['fig4_plt']['pseudotime_dir'],
-            cell_types     = config['cell_types'],
-            exp_pc_map     = config['exp_pc_map']
+    params: trajectory       = config['plotting']['fig4_plt']['trajectory'],
+            root_gene        = config['pseudotime']['palantir']['root_gene'],
+            terminal_markers = config['pseudotime']['palantir']['terminal_markers'],
+            perm_dir         = config['tensorQTL']['tensorqtl_perm']['output'].split('{cell_type}')[0],
+            pseudotime_dir   = config['plotting']['fig4_plt']['pseudotime_dir'],
+            cell_types       = config['cell_types'],
+            exp_pc_map       = config['exp_pc_map']
     conda:  config["scanpy"]["env"]
     resources: threads = 8, mem_mb = 120000, time = "1:00:00"
     log:    config['plotting']['fig4_plt']['log']
@@ -100,6 +102,8 @@ rule ldsr_plt:
 rule compare_smr_ctwas:
     # Fig 6 and Supp Fig X
     output: plot_grid = config['plotting']['smr_ctwas_venn']['out_file_grid']
+    params: cell_types  = config['cell_types'],
+            gene_lookup = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources: time="3:30:00"
     log: config['plotting']['smr_ctwas_venn']['log']

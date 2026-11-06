@@ -13,7 +13,7 @@
 #            3. Recompute the neighbour graph on the Harmony PCA embedding
 #            4. Palantir diffusion map and multi-scale space
 #            5. Root cell: max root_gene expression in the root type, centroid fallback
-#            6. Terminal cell: max TERMINAL_MARKERS gene in the terminal type, same
+#            6. Terminal cell: max terminal_markers gene in the terminal type, same
 #               fallback
 #            7. Run Palantir pseudotime with the explicit root and terminal cells
 #            8. Recompute UMAP on the subset
@@ -28,8 +28,9 @@
 #            (undeclared, written next to the h5ad)
 #            pseudotime_umap.png, pseudotime_markers.png, pseudotime_summary.csv
 #
-# Notes:     TERMINAL_MARKERS, MARKER_GENES and the overlay genes are set below and
-#            can be changed without touching the rest of the script. The Harmony
+# Notes:     Terminal marker genes come from config (terminal_markers). MARKER_GENES
+#            and the overlay genes are set below and can be changed without
+#            touching the rest of the script. The Harmony
 #            embedding from the full atlas is reused to keep the batch correction.
 #
 # --------------------------------------------------------------------------------------
@@ -56,13 +57,6 @@ warnings.filterwarnings("ignore", category=UserWarning)
 RANDOM_SEED = 1234
 np.random.seed(RANDOM_SEED)
 
-# Terminal marker genes for each Glu population — used to select the terminal
-# cell for Palantir. Modify here if markers change.
-TERMINAL_MARKERS = {
-    'Glu-DL': 'TLE4',
-    'Glu-UL': 'SATB2',
-}
-
 # Marker genes for feature plot — upper and deep layer cortical markers.
 # Genes absent from adata.var_names are shown as blank panels with a warning.
 MARKER_GENES = [
@@ -76,7 +70,7 @@ MARKER_GENES = [
 
 # Genes to mark terminal cell positions on the overlay panel.
 # Shows where the max-expression cell for each gene sits on the UMAP.
-# Does not affect Palantir terminal selection — TLE4/SATB2 are still used for that.
+# Does not affect Palantir terminal selection, which uses terminal_markers.
 TERMINAL_OVERLAY_GENES   = ['TLE4', 'FEZF2', 'BCL11B', 'FOXP2', 'HS3ST4']
 TERMINAL_OVERLAY_COLOURS = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#fce205']
 
@@ -100,6 +94,7 @@ n_pcs         = snakemake.params.n_pcs
 n_dcs         = snakemake.params.n_dcs
 num_waypoints = snakemake.params.num_waypoints
 root_gene     = snakemake.params.root_gene
+TERMINAL_MARKERS = dict(snakemake.params.terminal_markers)
 
 output_figure  = str(output_dir / "pseudotime_umap.png")
 output_markers = str(output_dir / "pseudotime_markers.png")
@@ -116,6 +111,7 @@ variables = {
     "n_dcs":          n_dcs,
     "num_waypoints":  num_waypoints,
     "root_gene":      root_gene,
+    "terminal_markers": ", ".join(f"{k}: {v}" for k, v in TERMINAL_MARKERS.items()),
 }
 width = max(map(len, variables))
 log.info("Variables")
@@ -227,7 +223,7 @@ log.info(f"Root selection method: {root_method}")
 terminal_gene = TERMINAL_MARKERS.get(term_type)
 if terminal_gene is None:
     raise ValueError(
-        f"No terminal marker defined for '{term_type}' in TERMINAL_MARKERS. "
+        f"No terminal marker defined for '{term_type}' in config terminal_markers. "
         f"Available: {list(TERMINAL_MARKERS.keys())}"
     )
 

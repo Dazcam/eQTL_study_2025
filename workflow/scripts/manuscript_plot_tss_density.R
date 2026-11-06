@@ -11,8 +11,7 @@
 # Purpose:   Distance-to-TSS density of significant eQTL (qval < 0.05) for the
 #            NPC to Glu-A trajectory, one line per Q4 pseudotime bin.
 #            Logic and styling as in pseudotime_report.Rmd Section 4
-#            "TSS distance -- combined". The Glu-B (NPC-to-Glu-DL) trajectory is
-#            no longer shown.
+#            "TSS distance -- combined".
 #
 # Inputs:    pseudotime_dir  Per-bin tensorQTL perm results per trajectory
 #            exp_pc_map      Final expression PC count per bin

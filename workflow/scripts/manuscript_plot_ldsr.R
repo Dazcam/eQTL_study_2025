@@ -125,7 +125,6 @@ cell_order_main <- c(
 ) |> unique()
 
 # Plot C: trajectory bins, Glu-A before Glu-B, each in Bin1-4 order
-# (Glu-B entries match nothing unless that trajectory is in config['cell_types'])
 cell_order_traj <- c(
   sort(grep("^NPC-to-Glu-A-Bin[0-9]+$", ldsr_tbl$cell_type, value = TRUE)),
   sort(grep("^NPC-to-Glu-B-Bin[0-9]+$", ldsr_tbl$cell_type, value = TRUE))

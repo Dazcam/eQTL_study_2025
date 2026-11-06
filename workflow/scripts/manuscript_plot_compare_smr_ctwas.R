@@ -8,8 +8,7 @@
 #   - one gene-membership TSV per trait (Ensembl ID + symbol + region),
 #     unchanged from the per-gwas version
 #
-# Runs either as a Snakemake `script:` (uses the snakemake@ object) or
-# standalone from the command line / RStudio (edit the ELSE block below).
+# Runs as a Snakemake `script:` (cell types and gene lookup come from the rule).
 #
 # CHANGE FROM PREVIOUS VERSION: no longer driven by a per-gwas Snakemake
 # wildcard - all 5 traits are processed in this single script invocation,
@@ -33,25 +32,14 @@ suppressMessages({
 })
 
 # ---- Parameters ------------------------------------------------------------
-# Fixed paths/settings for this script, hardcoded directly rather than routed
-# through Snakemake params: this rule is a pipeline dead-end (final
-# manuscript figures - nothing downstream reads these files) and none of
-# these values vary between runs, so there's no need for config-driven
-# flexibility here. Edit these directly if a path changes.
+# Cell types and the gene lookup come from the rule (config); the remaining
+# paths and settings are fixed here.
 traits           <- c("scz", "bpd", "mdd", "adhd", "ocd")
 smr_tbl_dir      <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/"
 ctwas_in_dir     <- "../results/12CTWAS/"
 weights_dir      <- "../results/12CTWAS/weights"
-cell_types       <- c(
-  "Glu-UL", "Glu-DL", "NPC", "GABA", "Endo-Peri", "OPC", "MG",
-  "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-  "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-  "GABA-0", "GABA-1", "GABA-2",
-  "NPC-0", "NPC-1", "NPC-2",
-  "NPC-to-Glu-DL-Q4-Bin1", "NPC-to-Glu-DL-Q4-Bin2", "NPC-to-Glu-DL-Q4-Bin3", "NPC-to-Glu-DL-Q4-Bin4",
-  "NPC-to-Glu-UL-Q4-Bin1", "NPC-to-Glu-UL-Q4-Bin2", "NPC-to-Glu-UL-Q4-Bin3", "NPC-to-Glu-UL-Q4-Bin4"
-)
-gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
+cell_types       <- unlist(snakemake@params[["cell_types"]])
+gene_lookup_file <- snakemake@params[["gene_lookup"]]
 genes_out_tmpl   <- "../results/13MANUSCRIPT_PLOTS_TABLES/tables/venn_{gwas}_genes.tsv" # untracked by Snakemake, written silently
 out_plot_scz     <- "../results/13MANUSCRIPT_PLOTS_TABLES/plots/venn_scz.png"           # untracked by Snakemake, written silently
 ctwas_pip_thresh <- 0.8

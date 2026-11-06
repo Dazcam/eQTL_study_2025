@@ -91,7 +91,8 @@ rule pseudotime_palantir:
             n_pcs         = config["pseudotime"]["palantir"]["n_pcs"],
             n_dcs         = config["pseudotime"]["palantir"]["n_dcs"],
             num_waypoints = config["pseudotime"]["palantir"]["num_waypoints"],
-            root_gene     = config["pseudotime"]["palantir"]["root_gene"]
+            root_gene     = config["pseudotime"]["palantir"]["root_gene"],
+            terminal_markers = config["pseudotime"]["palantir"]["terminal_markers"]
     conda:  config["pseudotime"]["env"]
     resources: threads = 4, mem_mb = 96000, time = "01:00:00"
     threads: 4
@@ -251,7 +252,9 @@ rule pseudotime_report:
             n_pcs               = config["pseudotime"]["palantir"]["n_pcs"],
             n_dcs               = config["pseudotime"]["palantir"]["n_dcs"],
             num_waypoints       = config["pseudotime"]["palantir"]["num_waypoints"],
-            root_gene           = config["pseudotime"]["palantir"]["root_gene"]
+            root_gene           = config["pseudotime"]["palantir"]["root_gene"],
+            terminal_markers    = ",".join(f"{k}={v}" for k, v in config["pseudotime"]["palantir"]["terminal_markers"].items()),
+            subset_logs         = ",".join("../" + config["pseudotime"]["subset"]["log"].format(trajectory=t) for t in config["trajectories"])
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 8000, time = "1:00:00"
     log:    config["pseudotime"]["report"]["log"]
@@ -277,7 +280,9 @@ rule pseudotime_report:
                 n_pcs              = '{params.n_pcs}',
                 n_dcs              = '{params.n_dcs}',
                 num_waypoints      = '{params.num_waypoints}',
-                root_gene          = '{params.root_gene}'
+                root_gene          = '{params.root_gene}',
+                terminal_markers   = '{params.terminal_markers}',
+                subset_logs        = '{params.subset_logs}'
             ))" > {log} 2>&1
         """
 

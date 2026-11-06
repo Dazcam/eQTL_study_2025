@@ -85,8 +85,8 @@ message("============================\n")
 message("=== eQTL permutation export: ", length(cell_types), " cell types ===")
 
 # --- Relabel helper (display only, output filenames): Glu-UL -> Glu-A, Glu-DL -> Glu-B,
-# and strip "-Q4-" from pseudotime bin names, e.g. "NPC-to-Glu-DL-Q4-Bin1" ->
-# "NPC-to-Glu-B-Bin1". Same convention as data_sharing_susie_cred_sets.R.
+# and strip "-Q4-" from pseudotime bin names, e.g. "NPC-to-Glu-UL-Q4-Bin1" ->
+# "NPC-to-Glu-A-Bin1". Same convention as data_sharing_susie_cred_sets.R.
 relabel_cell_type <- function(x) {
   x <- str_replace(x, "Glu-UL", "Glu-A")
   x <- str_replace(x, "Glu-DL", "Glu-B")

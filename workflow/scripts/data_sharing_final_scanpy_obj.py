@@ -159,8 +159,8 @@ for traj, path in zip(p.pt_trajectories, snakemake.input.pt):
     if f"quantile_Q{n}" in obs.columns:
         assert (obs[f"quantile_Q{n}"].astype(int) == q.astype(int)).all(), \
             f"{traj}: re-derived bins differ from stored quantile_Q{n}"
-    bin_old = q.astype(object).map(lambda v: f"{traj}-Q{n}-Bin{v}" if pd.notna(v) else pd.NA)  # e.g. NPC-to-Glu-DL-Q4-Bin1
-    bin_new = bin_old.map(lambda x: relabel_cell_type(x) if isinstance(x, str) else pd.NA)      # e.g. NPC-to-Glu-B-Bin1
+    bin_old = q.astype(object).map(lambda v: f"{traj}-Q{n}-Bin{v}" if pd.notna(v) else pd.NA)  # e.g. NPC-to-Glu-UL-Q4-Bin1
+    bin_new = bin_old.map(lambda x: relabel_cell_type(x) if isinstance(x, str) else pd.NA)      # e.g. NPC-to-Glu-A-Bin1
 
     new_traj = relabel_cell_type(traj)
     pt_cols[f"{new_traj}_pseudotime"] = pt.reindex(cells)
