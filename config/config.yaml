@@ -323,6 +323,8 @@ scanpy:
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
   clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad   # written by the clustering notebooks
+  metadata_per_sample: reports/02SCANPY/02_metadata_per_sample.tsv   # sex and PCW per sample (notebooks)
+  pseudobulk: ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv   # scanpy_pseudobulk notebook
 
   lisi:
     csv:           ../results/02SCANPY/batch_correction/lisi_results.csv
@@ -500,46 +502,51 @@ tensorQTL:
   norm_methods: ["quantile", "bryois", "fujita", "xue"]
 
   prep_tensorQTL_input:
-    cov_file:      ../results/04GENOTYPES-POST/covariates/pca.eigenvec
-    sex_file:      reports/02SCANPY/02_metadata_per_sample.tsv
     exp_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed
     cov_out:       ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_base_covariates.txt
-    pseudobulk:    ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv
     report_rds:    reports/05TENSORQTL/gene_exp_matrix_report_{cell_type}_{norm_method}.rds
-    log:          ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
+    log:           ../results/00LOG/05TENSORQTL/prep_tensorQTL_input_{cell_type}_{norm_method}.log
+    benchmark:     reports/benchmarks/05tensorQTL.prep_tensorQTL_input_{cell_type}_{norm_method}.benchmark.txt
+    script:        ../scripts/tensorqtl_prep_input_files.R
 
   zip_pblk_cnts:
     output:        ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}.bed.gz
     log:           ../results/00LOG/05TENSORQTL/zip_pblk_cnts_{cell_type}_{norm_method}.log
+    benchmark:     reports/benchmarks/05tensorQTL.zip_pblk_cnts_{cell_type}_{norm_method}.benchmark.txt
 
   convert_genotypes:
-    input:         ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     output:        ../results/05TENSORQTL/prep_input/chrALL_final.filt.pgen
     pvar:          ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
     prefix_out:    ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log:           ../results/00LOG/05TENSORQTL/convert_genotypes.log
+    benchmark:     reports/benchmarks/05tensorQTL.convert_genotypes.benchmark.txt
 
   split_covariates:
     output: ../results/05TENSORQTL/prep_input/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt
     log:    ../results/00LOG/05TENSORQTL/split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.log
+    benchmark: reports/benchmarks/05tensorQTL.split_covariates_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
+    script: ../scripts/tensorqtl_split_covariates.R
 
   tensorqtl_nom:
     output:     ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom.cis_qtl_pairs.4.parquet
     prefix_out: ../results/05TENSORQTL/tensorqtl_nom/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_nom
     prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_nom.log
+    benchmark:  reports/benchmarks/05tensorQTL.tensorqtl_nom_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
 
   tensorqtl_perm:
     output:     ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm.cis_qtl.txt.gz
     prefix_out: ../results/05TENSORQTL/tensorqtl_perm/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_perm
     prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_perm.log
+    benchmark:  reports/benchmarks/05tensorQTL.tensorqtl_perm_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
 
   tensorqtl_independent:
     output:     ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent.cis_independent_qtl.txt.gz
     prefix_out: ../results/05TENSORQTL/tensorqtl_independent/{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/{cell_type}_{norm_method}_independent
     prefix_in:  ../results/05TENSORQTL/prep_input/chrALL_final.filt
     log:        ../results/00LOG/05TENSORQTL/tensorqtl_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_independent.log
+    benchmark:  reports/benchmarks/05tensorQTL.tensorqtl_independent_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
 
   tensorqtl_report:
     rmd_script:  scripts/tensorQTL_report.Rmd
@@ -548,6 +555,7 @@ tensorQTL:
     bmark_dir:   ../reports/benchmarks/
     output_file: ../reports/05TENSORQTL/05tensorqtl_report.html
     log:         ../results/00LOG/05TENSORQTL/tensorqtl_report.log
+    benchmark:   reports/benchmarks/05tensorQTL.tensorqtl_report.benchmark.txt
 
 # ------------  Pipeline 06: Pseudotime  ------------
 
@@ -587,8 +595,6 @@ pseudotime:
     report_rds:   reports/06PSEUDOTIME/prep_input/gene_exp_matrix_report_{trajectory}_Q{quantile_n}_bin{bin}_quantile.rds
     log:          ../results/00LOG/06PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.log
     script:       ../scripts/tensorqtl_prep_input_files.R
-    cov_file:     ../results/04GENOTYPES-POST/covariates/pca.eigenvec
-    sex_file:     reports/02SCANPY/02_metadata_per_sample.tsv
 
   split_covariates:
     output: ../results/06PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.txt

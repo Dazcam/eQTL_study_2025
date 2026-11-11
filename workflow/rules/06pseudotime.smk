@@ -116,8 +116,8 @@ rule pseudotime_pseudobulk:
     script: config["pseudotime"]["pseudobulk"]["script"]
 
 rule pseudotime_prep_tensorqtl:
-    input:  cov_file    = config["pseudotime"]["prep_tensorqtl"]["cov_file"],
-            sex_file    = config["pseudotime"]["prep_tensorqtl"]["sex_file"],
+    input:  cov_file    = config["geno_post_impute"]["calc_genotype_pcs"]["output"],
+            sex_file    = config["scanpy"]["metadata_per_sample"],
             gene_lookup = config["gene_lookup"],
             pseudobulk  = config["pseudotime"]["pseudobulk"]["csv"]
     output: exp_out     = config["pseudotime"]["prep_tensorqtl"]["exp_out"],
