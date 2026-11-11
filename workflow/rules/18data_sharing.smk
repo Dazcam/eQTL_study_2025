@@ -14,17 +14,8 @@ susie_data_files = expand(config['data_sharing']['data_susie']['out_file'],
                           cell_type = list(CT_NEW2OLD))
 
 
-
 # ----
 
-
-rule all:
-    input:
-#        config['data_sharing']['data_mk_eqtl_tar']['out_file'],
-#        config['data_sharing']['data_susie_mk_tar']['out_file'],
-#        config['data_sharing']['final_scanpy_obj']['out_h5ad'],
-#        config['data_sharing']['final_scanpy_obj']['out_mapping'],
-        config['data_sharing']['final_genotypes']['out_file']
 
 rule data_perm:
     output: config['data_sharing']['data_perm']['out_file']
@@ -136,3 +127,11 @@ rule data_susie_mk_tar:
             tar --list --file {output} | wc -l >> {log}
             echo "Done" >> {log}
             """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["18data_sharing"] = [rules.mk_eqtl_tar.output,
+                             rules.data_susie_mk_tar.output,
+                             rules.data_weights.output,
+                             rules.final_genotypes.output]

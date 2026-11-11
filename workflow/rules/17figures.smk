@@ -1,32 +1,5 @@
 configfile: '../config/config.yaml'
 
-rule all:
-    input:
-#        config['figures']['eqtl_boxplots_py']['output'],
-#        config['figures']['eqtl_qc_fig']['out_file'],
-#        config['figures']['ldsr_fig']['out_file'],
-#        config['figures']['rep_fig']['out_file'],
-#        config['figures']['supp_fig']['out_file'],
-#        config['figures']['data_perm']['out_file'],
-#        config['figures']['data_nominal']['out_file'],
-#        config['figures']['data_mk_eqtl_tar']['out_file']
-#        config['figures']['data_weights']['out_file']
-#        config['data_sharing']['final_genotypes']['out_file']
-#       config['figures']['smr_ctwas_venn']['out_file_grid']
-#       config["figures"]["diff_exp_tbl"]["html_out"],
-#       config["figures"]["diff_exp_tbl"]["xlsx_out"] 
-#       config['figures']['eqtl_boxplots_py']['output'],
-#       config['figures']['bulk_egene_overlaps_fig']['out_file'],
-#       config['figures']['family_heatmaps_fig']['glu_a'],
-#       config['figures']['family_heatmaps_fig']['glu_b'],
-#       config['figures']['family_heatmaps_fig']['gaba'],
-#       config['figures']['family_heatmaps_fig']['npc'],
-#       config['figures']['effect_size_heatmaps_fig']['fetal_vs_fetal'],
-#       config['figures']['effect_size_heatmaps_fig']['fetal_vs_jang'],
-       config['figures']['fig4']['out_file']
-#       config['figures']['snrna_qc_fig']['out_file_sample'],
-#       config['figures']['snrna_qc_fig']['out_file_celltype'],
-
 
 # F1 is the infographic
 
@@ -175,3 +148,17 @@ rule snrna_qc_fig:
     log:    config['figures']['snrna_qc_fig']['log']
     script: "../scripts/manuscript_figure_snrna_qc.py"
 
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["17figures"] = [rules.eqtl_qc_fig.output,
+                        rules.replication_fig.output,
+                        rules.fig4.output,
+                        rules.ldsr_fig.output,
+                        rules.smr_ctwas_venn_fig.output,
+                        rules.supplementary_fig.output,
+                        rules.snrna_qc_fig.output,
+                        rules.eqtl_boxplots_py.output,
+                        rules.bulk_egene_overlaps_fig.output,
+                        rules.family_heatmaps_fig.output,
+                        rules.effect_size_heatmaps_fig.output]

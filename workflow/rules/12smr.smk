@@ -176,3 +176,8 @@ rule smr_report:
                           peqtl_smr = '{params.peqtl_smr}', \
                           smr_n_samples = '{params.smr_n_samples}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["12smr"] = [config["smr"]["smr_report"]["html"]]

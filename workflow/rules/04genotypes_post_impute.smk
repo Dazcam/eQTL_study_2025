@@ -298,3 +298,8 @@ rule geno_post_report:
             output_file = '{params.output_file}', \
             params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["04genotypes_post_impute"] = [config["geno_post_impute"]["geno_post_report"]["html"]]

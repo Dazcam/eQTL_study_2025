@@ -286,3 +286,7 @@ rule pseudotime_report:
             ))" > {log} 2>&1
         """
 
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["06pseudotime"] = [config["pseudotime"]["report"]["html"], PT_Q4_EXPORT_TARGETS]

@@ -173,3 +173,8 @@ rule susie_report:
                               n_batches = {params.n_batches}, \
                               eqtl_fdr = {params.eqtl_fdr}))" > {log} 2>&1
             """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["10susie"] = [config["susie"]["susie_report"]["html"]]

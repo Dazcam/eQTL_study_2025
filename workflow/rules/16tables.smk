@@ -9,17 +9,6 @@ smr_raw_files = expand(
     cell_type = config['cell_types'], gwas = GWAS_TRAITS
 )
 
-rule all:
-    input:
-#        config['tables']['eqtl_tbl']['out_file'],
-#        config['tables']['smr_tbl']['out_file'],
-#        config['tables']['ctwas_sig_tbl']['sig_out'],
-#        config["tables"]["diff_exp_tbl"]["html_out"],
-#        config["tables"]["diff_exp_tbl"]["xlsx_out"],
-#        venn_gene_tbls
-#        config['tables']['subcluster_specific_tbl']['out_file'],
-#       config['tables']['smr_sig_tbl']['xlsx_out'],
-       config['tables']['susie_diag_tbl']['out_file'], 
         
 
 rule eqtl_tbl:
@@ -160,3 +149,17 @@ rule cell_counts_tbl:
     conda:  config["scanpy"]["env"]
     log:    "../results/00LOG/16MANUSCRIPT-TABLES/cell_counts_tbl.log"
     script: "../scripts/manuscript_table_cell_counts.py"
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["16tables"] = [rules.eqtl_tbl.output,
+                       rules.cell_counts_tbl.output,
+                       rules.diff_exp_tbl.output,
+                       rules.ldsr_tbl.output,
+                       rules.smr_tbl.output,
+                       rules.smr_sig_tbl.output,
+                       rules.smr_ctwas_venn_tbl.output,
+                       rules.ctwas_sig_tbl.output,
+                       rules.subcluster_specific_tbl.output,
+                       rules.susie_diag_tbl.output]

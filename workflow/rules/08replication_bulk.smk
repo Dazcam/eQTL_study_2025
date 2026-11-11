@@ -86,3 +86,8 @@ rule repl_bulk_report:
                           nominal_threshold = '{params.nominal_threshold}', \
                           benchmarks = '{params.benchmarks}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["08replication_bulk"] = [RB["report"]["html"]]

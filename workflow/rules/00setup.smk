@@ -4,15 +4,6 @@ localrules: create_parse_json, setup_liftover
 
 PLATES = list(config["fastq"].keys())
 
-rule all:
-    input:
-#        config["setup"]["get_containers"]["output"],
-#        expand(config["setup"]["create_parse_json"]["output"], plate=PLATES),
-#        config["setup"]["liftover"]["output"],
-#        config["setup"]["get_fugita_data"]["output"],
-#        config["setup"]["get_jang_singlebrain"]["output"]
-#        config["setup"]["get_obrien_supp"]["output"]
-        config["setup"]["liftover_nott_hg38"]["output"]
 
 rule get_containers:
     output:  config["setup"]["get_containers"]["output"],
@@ -121,4 +112,15 @@ rule get_obrien_supp:
     params: web_link = config["setup"]["get_obrien_supp"]["web_link"],
     message: "Download bulk eQTL supp tables for from O'Brien 2018, PMID:30419947"
     log:    config["setup"]["get_obrien_supp"]["log"]
-    shell:   "wget -O {output} {params.web_link}"  
+    shell:   "wget -O {output} {params.web_link}"
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["00setup"] = [rules.get_containers.output,
+                      expand(rules.create_parse_json.output, plate = PLATES),
+                      rules.setup_liftover.output,
+                      rules.get_fugita_data.output,
+                      rules.get_jang_singlebrain.output,
+                      rules.get_obrien_supp.output,
+                      rules.liftover_nott_peaks.output]

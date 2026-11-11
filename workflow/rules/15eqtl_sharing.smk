@@ -302,3 +302,8 @@ rule eqtl_sharing_report:
                           seed = '{params.seed}', \
                           benchmarks = '{params.benchmarks}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["15eqtl_sharing"] = [config["eqtl_sharing"]["report"]["html"]]

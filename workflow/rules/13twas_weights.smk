@@ -206,3 +206,8 @@ rule twas_weights_report:
                           crossval = '{params.crossval}', \
                           models = '{params.models}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["13twas_weights"] = [config["twas_weights"]["twas_weights_report"]["output"]]

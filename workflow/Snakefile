@@ -1,5 +1,10 @@
 configfile: '../config/config.yaml'
 
+# Each rule file adds its final outputs as TARGETS["<pipeline>"]. Switch a pipeline
+# on or off with its include line; rule all then builds everything that is included.
+TARGETS = {}
+
+#include: 'rules/00setup.smk'
 #include: 'rules/01parse.smk'
 #include: 'rules/02scanpy.smk'
 #include: 'rules/03genotypes_pre_impute.smk'
@@ -15,21 +20,29 @@ include:  'rules/08replication_bulk.smk'
 #include: 'rules/13twas_weights.smk'
 #include: 'rules/14ctwas.smk'
 #include: 'rules/15eqtl_sharing.smk'
+#include: 'rules/16tables.smk'
+#include: 'rules/17figures.smk'
+#include: 'rules/18data_sharing.smk'
 
 rule all:
+    default_target: True
     input:
-#        expand(config["parse"]["run_parse_combine"]["outfile"], plate=config["plate"]),
-#        config["scanpy"]["subclustering"]["output"],
-#        config["geno_pre_impute"]["geno_pre_report"]["html"],
-#        config["geno_post_impute"]["geno_post_report"]["html"],
-#        config["tensorQTL"]["tensorqtl_report"]["output"],
-#        config["pseudotime"]["report"]["html"],
-#        PT_Q4_EXPORT_TARGETS,
-#        config["replication_sc"]["report"]["html"],
-        config["replication_bulk"]["report"]["html"],
-#        config["susie"]["susie_report"]["html"],
-#        config["sldsr"]["ldsr_report"]["html"],
-#        config["smr"]["smr_report"]["html"],
-#        config["twas_weights"]["twas_weights_report"]["output"],
-#        config["ctwas"]["ctwas_report"]["output"],
-#        config["eqtl_sharing"]["report"]["html"]
+        TARGETS.get("00setup", []),
+        TARGETS.get("01parse", []),
+        TARGETS.get("02scanpy", []),
+        TARGETS.get("03genotypes_pre_impute", []),
+        TARGETS.get("04genotypes_post_impute", []),
+        TARGETS.get("05tensorQTL", []),
+        TARGETS.get("06pseudotime", []),
+        TARGETS.get("07replication_sc", []),
+        TARGETS.get("08replication_bulk", []),
+        TARGETS.get("09prep_gwas", []),
+        TARGETS.get("10susie", []),
+        TARGETS.get("11sldsr", []),
+        TARGETS.get("12smr", []),
+        TARGETS.get("13twas_weights", []),
+        TARGETS.get("14ctwas", []),
+        TARGETS.get("15eqtl_sharing", []),
+        TARGETS.get("16tables", []),
+        TARGETS.get("17figures", []),
+        TARGETS.get("18data_sharing", []),

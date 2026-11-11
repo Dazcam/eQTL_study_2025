@@ -157,3 +157,8 @@ rule tensorqtl_report:
             output_file = '{params.output_file}', \
             params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["05tensorQTL"] = [config["tensorQTL"]["tensorqtl_report"]["output"]]

@@ -134,3 +134,13 @@ rule scanpy_lisi:
     benchmark: config["scanpy"]["lisi"]["benchmark"]
     log:       config["scanpy"]["lisi"]["log"]
     script:    config["scanpy"]["lisi"]["script"]
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["02scanpy"] = [expand(rules.scanpy_qc.output, plate = config["plate"]),
+                       rules.scanpy_annotation.output,
+                       rules.scanpy_extra.output,
+                       rules.scanpy_pseudobulk.output,
+                       rules.scanpy_subclustering.output,
+                       rules.scanpy_lisi.output]

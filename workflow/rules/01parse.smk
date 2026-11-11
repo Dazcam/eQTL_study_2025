@@ -124,3 +124,8 @@ rule run_parse_combine:
         touch {output}
 	"""
 
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["01parse"] = [rules.mk_ref.output,
+                      expand(rules.run_parse_combine.output, plate = config["plate"])]

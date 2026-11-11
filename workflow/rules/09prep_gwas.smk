@@ -2,10 +2,6 @@ configfile: '../config/config.yaml'
 
 localrules: get_gwas_sumstats
 
-#rule all:
-#    input:
-#        expand("../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz", gwas = config['gwas'])
-
 rule get_gwas_sumstats:
     # Download GWAS sumsatts files
     output:  config["prep_gwas"]["get_gwas_sumstats"]["output"]
@@ -261,3 +257,6 @@ rule munge_sumstats:
         """
 
 
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["09prep_gwas"] = [expand(rules.munge_sumstats.output, gwas = config["gwas"])]

@@ -87,3 +87,6 @@ rule ctwas_report:
         """
 
 
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["14ctwas"] = [config["ctwas"]["ctwas_report"]["output"]]

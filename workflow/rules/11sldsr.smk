@@ -173,3 +173,8 @@ rule ldsr_report:
                           ld_frq = '{params.ld_frq}', \
                           ld_snps = '{params.ld_snps}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["11sldsr"] = [config["sldsr"]["ldsr_report"]["html"]]

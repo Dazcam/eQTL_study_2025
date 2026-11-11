@@ -271,3 +271,8 @@ rule geno_pre_report:
             output_file = '{params.output_file}', \
             params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
+
+
+##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
+TARGETS = globals().setdefault("TARGETS", {})
+TARGETS["03genotypes_pre_impute"] = [config["geno_pre_impute"]["geno_pre_report"]["html"]]
