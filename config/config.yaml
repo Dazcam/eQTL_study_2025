@@ -154,8 +154,8 @@ containers:
   susie: ../resources/containers/susier.sif
   ubuntu: ../resources/containers/ubuntu_22.04.sif
   twas: ../resources/containers/twas.sif
-  singler: ../resources/containers/singler.sif
-  mashr: ../resources/containers/mashr.sif
+#  singler: ../resources/containers/singler.sif   # retired
+#  mashr: ../resources/containers/mashr.sif   # retired
   tensorqtl: ../resources/containers/tensorqtl.sif
 
 # ------------  Pipeline 00: Setup  ------------
@@ -1304,74 +1304,75 @@ data_sharing:
     top_dir: susie_credible_sets   # directory name inside the tarball
     log: ../results/00LOG/18DATA-SHARING/data_susie_mk_tar.log
 
-  data_final_scanpy_obj:
-    # {l1_pop} is the PIPELINE name (Glu-UL, Glu-DL, ...), not the manuscript label
-    l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # TODO: subcluster_dir + ...
-    l2_populations: [Glu-UL, Glu-DL, NPC, GABA]
-    l1_without_l2: [MG, Endo-Peri, OPC]                             # script asserts these are exactly the L1 pops with no L2
-    pt_n_bins: 4
-    l1_cluster_col: leiden_harmony_0.2
-    keep_obs: [sample]                                              # extend with any other per-cell columns you want to share
-    keep_obsm: [X_umap, X_pca_harmony]
-    x_from_counts: true                                             # X = raw counts (layers['counts']) instead of scaled values
-    out_h5ad: ../results/18DATA-SHARING/eqtl_atlas_snRNAseq.h5ad
-    out_mapping: ../results/18DATA-SHARING/eqtl_atlas_cell_annotations.tsv.gz
-    log: ../results/00LOG/18DATA-SHARING/final_scanpy_obj.log
+  # Retired: final_scanpy_obj rule moved to rules/test_rules
+#  data_final_scanpy_obj:
+#    # {l1_pop} is the PIPELINE name (Glu-UL, Glu-DL, ...), not the manuscript label
+#    l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # TODO: subcluster_dir + ...
+#    l2_populations: [Glu-UL, Glu-DL, NPC, GABA]
+#    l1_without_l2: [MG, Endo-Peri, OPC]                             # script asserts these are exactly the L1 pops with no L2
+#    pt_n_bins: 4
+#    l1_cluster_col: leiden_harmony_0.2
+#    keep_obs: [sample]                                              # extend with any other per-cell columns you want to share
+#    keep_obsm: [X_umap, X_pca_harmony]
+#    x_from_counts: true                                             # X = raw counts (layers['counts']) instead of scaled values
+#    out_h5ad: ../results/18DATA-SHARING/eqtl_atlas_snRNAseq.h5ad
+#    out_mapping: ../results/18DATA-SHARING/eqtl_atlas_cell_annotations.tsv.gz
+#    log: ../results/00LOG/18DATA-SHARING/final_scanpy_obj.log
 
 # ------------  Retired: review (rules in rules/test_rules; LISI now in pipeline 02)  ------------
 
-review:
-  dwnld_qian:
-    output: ../resources/public_datasets/qian_2025/merscope_integrated_855.h5ad
-    web_link: https://zenodo.org/records/14422018/files/merscope_integrated_855.h5ad?download=1 
-    log: ../results/00LOG/15REVIEW/dwnld_qian.log
+#review:
+#  dwnld_qian:
+#    output: ../resources/public_datasets/qian_2025/merscope_integrated_855.h5ad
+#    web_link: https://zenodo.org/records/14422018/files/merscope_integrated_855.h5ad?download=1 
+#    log: ../results/00LOG/15REVIEW/dwnld_qian.log
 
-  prep_qian_ref:
-    output: ../results/15REVIEW/qian_ref_subsampled.h5ad
-    log: ../results/00LOG/15REVIEW/prep_qian_ref.log
-    script: ../scripts/review_prep_qian_ref.py
+#  prep_qian_ref:
+#    output: ../results/15REVIEW/qian_ref_subsampled.h5ad
+#    log: ../results/00LOG/15REVIEW/prep_qian_ref.log
+#    script: ../scripts/review_prep_qian_ref.py
 
-  prep_singler_query:
-    query_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
-    h5ad: ../results/15REVIEW/adata_clusters_v3_query_prepped.h5ad
-    umap_csv: ../results/15REVIEW/umap_coords.csv
-    log: ../results/00LOG/15REVIEW/prep_singler_query.log
-    script: ../scripts/review_prep_singler_query.py
+#  prep_singler_query:
+#    query_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
+#    h5ad: ../results/15REVIEW/adata_clusters_v3_query_prepped.h5ad
+#    umap_csv: ../results/15REVIEW/umap_coords.csv
+#    log: ../results/00LOG/15REVIEW/prep_singler_query.log
+#    script: ../scripts/review_prep_singler_query.py
 
-  singler_classify:
-    csv: ../results/15REVIEW/singler_results.csv
-    pred_rds: ../results/15REVIEW/singler_pred.rds
-    sce_rds:  ../results/15REVIEW/singler_sce_sub.rds
-    log: ../results/00LOG/15REVIEW/singler_classify.log
-    script: ../scripts/review_singler_classify.R
+#  singler_classify:
+#    csv: ../results/15REVIEW/singler_results.csv
+#    pred_rds: ../results/15REVIEW/singler_pred.rds
+#    sce_rds:  ../results/15REVIEW/singler_sce_sub.rds
+#    log: ../results/00LOG/15REVIEW/singler_classify.log
+#    script: ../scripts/review_singler_classify.R
 
-  batch_correction_kbet:
-    csv:        ../results/15REVIEW/batch_correction/kbet_results.csv
-    plot:       ../results/15REVIEW/batch_correction/kbet_rejection_rates.png
-    log:        ../results/00LOG/15REVIEW/batch_correction_kbet.log
-    script:     ../scripts/review_kbet.py
-    n_subsample: 10000   # cells to subsample (stratified by cell type)
-    random_seed: 1234
-    k0:          30      # neighbourhood size for chi-squared test
+#  batch_correction_kbet:
+#    csv:        ../results/15REVIEW/batch_correction/kbet_results.csv
+#    plot:       ../results/15REVIEW/batch_correction/kbet_rejection_rates.png
+#    log:        ../results/00LOG/15REVIEW/batch_correction_kbet.log
+#    script:     ../scripts/review_kbet.py
+#    n_subsample: 10000   # cells to subsample (stratified by cell type)
+#    random_seed: 1234
+#    k0:          30      # neighbourhood size for chi-squared test
 
-  singler_report:
-    html: reports/15REVIEW/15singler_report.html
-    log:  ../results/00LOG/15REVIEW/singler_report.log
+#  singler_report:
+#    html: reports/15REVIEW/15singler_report.html
+#    log:  ../results/00LOG/15REVIEW/singler_report.log
 
-  batch_corr_report:
-    html:   reports/15REVIEW/batch_correction_report.html
-    log:    ../results/00LOG/15REVIEW/batch_corr_report.log
-    script: ../scripts/review_batch_corr_report.py
+#  batch_corr_report:
+#    html:   reports/15REVIEW/batch_correction_report.html
+#    log:    ../results/00LOG/15REVIEW/batch_corr_report.log
+#    script: ../scripts/review_batch_corr_report.py
 
-  isoform_eqtl:
-    bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
-    tensorqtl_dir:    ../results/05TENSORQTL/tensorqtl_perm
-    enst_ensg_map:    ../results/15REVIEW/isoform_eqtl/enst_ensg_map.tsv
-    egenes_combined:  ../results/15REVIEW/isoform_eqtl/egenes_all_celltypes.tsv
-    bulk_hits:        ../results/15REVIEW/isoform_eqtl/bulk_transcript_hits.tsv
-    summary:          ../results/15REVIEW/isoform_eqtl/isoform_comparison_summary.tsv
-    detail:           ../results/15REVIEW/isoform_eqtl/isoform_comparison_detail.tsv
-    log:              ../results/00LOG/15REVIEW/isoform_eqtl_comparison.log
-    script:           ../scripts/review_isoform_eqtl.py
-    fdr_threshold:    0.05
-    nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
+#  isoform_eqtl:
+#    bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
+#    tensorqtl_dir:    ../results/05TENSORQTL/tensorqtl_perm
+#    enst_ensg_map:    ../results/15REVIEW/isoform_eqtl/enst_ensg_map.tsv
+#    egenes_combined:  ../results/15REVIEW/isoform_eqtl/egenes_all_celltypes.tsv
+#    bulk_hits:        ../results/15REVIEW/isoform_eqtl/bulk_transcript_hits.tsv
+#    summary:          ../results/15REVIEW/isoform_eqtl/isoform_comparison_summary.tsv
+#    detail:           ../results/15REVIEW/isoform_eqtl/isoform_comparison_detail.tsv
+#    log:              ../results/00LOG/15REVIEW/isoform_eqtl_comparison.log
+#    script:           ../scripts/review_isoform_eqtl.py
+#    fdr_threshold:    0.05
+#    nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
