@@ -19,6 +19,7 @@
 #            plot_egene_counts()         eGenes per cell type (bar chart)
 #            indep_counts_gt()           independent eQTL counts per rank
 #            indep_tss_gt()              median TSS distance per rank
+#            inputs_gt()                 genes, samples, variants of the runs used
 #
 # Packages:  the caller must have dplyr, tidyr, purrr, readr, stringr, tibble,
 #            ggplot2, cowplot and gt installed. The read and summarise functions
@@ -312,6 +313,29 @@ indep_tss_gt <- function(all_eqtls, title) {
     ) |>
     gt::fmt_number(columns = c(primary, secondary, tertiary), decimals = 0, use_seps = TRUE) |>
     gt_style()
+}
+
+# Genes tested, samples and variants per cell type, from the logs of the runs used
+# for results (final norm method, expPC from exp_pc_map).
+inputs_gt <- function(summary_tbl, exp_pc_map, final_norm, title) {
+  exp_pc_tbl <- tibble::tibble(cell_type = names(exp_pc_map), expPC = as.numeric(exp_pc_map))
+
+  summary_tbl |>
+    dplyr::filter(norm_methods == final_norm) |>
+    dplyr::inner_join(exp_pc_tbl, by = c("cell_type", "expPC")) |>
+    dplyr::select(cell_type, genes_tested, samples, variants) |>
+    dplyr::distinct(cell_type, .keep_all = TRUE) |>
+    dplyr::arrange(cell_type) |>
+    gt::gt() |>
+    gt::tab_header(title = title) |>
+    gt::cols_label(
+      cell_type = "Cell Type",
+      genes_tested = "Genes Tested",
+      samples = "Samples",
+      variants = "Variants"
+    ) |>
+    gt::fmt_number(columns = c(genes_tested, samples, variants), decimals = 0, use_seps = TRUE) |>
+    gt_style(subtitle = TRUE)
 }
 
 #--------------------------------------------------------------------------------------

@@ -8,7 +8,6 @@ output:
 params:
   in_dir: null
   ind_dir: null
-  bmark_dir: null
   l1_types: null
   l2_types: null
   exp_pcs: null
@@ -17,6 +16,7 @@ params:
   window: null
   exp_pc_map: null
   eqtl_fdr: null
+  benchmarks: null
 ---
 
 ***
@@ -35,7 +35,6 @@ library(ggrepel)
 source(file.path(dirname(knitr::current_input(dir = TRUE)), "tensorqtl_functions.R"))
 in_dir       <- params$in_dir
 ind_dir      <- params$ind_dir
-bmark_dir    <- params$bmark_dir
 l1_types     <- strsplit(params$l1_types, ",")[[1]]
 l2_types     <- strsplit(params$l2_types, ",")[[1]]
 exp_pcs      <- as.numeric(strsplit(params$exp_pcs, ",")[[1]])
@@ -65,15 +64,6 @@ The citation for tensorQTL is [Taylor-Weiner et al. 2019 (DOI:10.1186/s13059-019
 6. `tensorqtl_perm`: Run TensorQTL to detect cis-eQTL via permutations
 7. `tensorqtl_independent`: Run TensorQTL to detect conditionally independent variants
 
-
-Sensitivity settings:
-
-+ cis-window: $\pm$ `r window_kb`kb
-+ Expression PC covariates tested: `r paste(exp_pcs, collapse = ", ")`
-+ Meta data covariates: PCW, sex
-+ Genotype PCs: `r geno_pc` (see genotyping_post_impute_report.html)
-+ Norm methods tested: `r paste(sort(norm_methods), collapse = ", ")`
-
 ***
 
 ### Level 1 {.tabset}
@@ -84,8 +74,8 @@ Sensitivity settings:
 cell_types <- l1_types
 
 # Sensitivity runs: every norm method (alphabetical, as plotted)
-summary_tbl <- summarise_logs(cell_types, in_dir, exp_pcs = exp_pcs, geno_pc = geno_pc,
-                              norm_methods = sort(norm_methods))
+summary_L1 <- summarise_logs(cell_types, in_dir, exp_pcs = exp_pcs, geno_pc = geno_pc,
+                             norm_methods = sort(norm_methods))
 ```
 
 ***
@@ -110,7 +100,7 @@ custom_palette <- c(
   'OPC' = '#FDE725FF'
 )
 
-print(plot_sensitivity(summary_tbl, custom_palette, y_max = 2100))
+print(plot_sensitivity(summary_L1, custom_palette, y_max = 2100))
 ```
 
 ***
@@ -120,7 +110,7 @@ print(plot_sensitivity(summary_tbl, custom_palette, y_max = 2100))
 ***
 
 ```{r, sensitivity_table_best_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-print(sensitivity_best_gt(summary_tbl))
+print(sensitivity_best_gt(summary_L1))
 ```
 
 ***
@@ -130,7 +120,7 @@ print(sensitivity_best_gt(summary_tbl))
 ***
 
 ```{r, sensitivity_table_all_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-print(sensitivity_all_gt(summary_tbl))
+print(sensitivity_all_gt(summary_L1))
 ```
 
 ***
@@ -292,49 +282,6 @@ ggplot(scatter_dat, aes(x=n_cells, y=n, label=cell_type, color=cell_type)) +
   theme(legend.position = "none")
 ```
 
-#### Settings
-
-+ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
-
-***
-
-```{r, variables, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-# Select one row per cell type, keeping only cell_type, genes_tested, samples, and variants
-expPC_tbl <- tibble(
-  cell_type = names(expPC_map),
-  expPC = as.numeric(expPC_map)
-)
-
-summary_table <- summary_tbl %>%
-  filter(norm_methods == final_norm) %>%
-  inner_join(expPC_tbl, by = c("cell_type", "expPC")) %>%
-  select(cell_type, genes_tested, samples, variants) %>%
-  distinct(cell_type, .keep_all = TRUE) %>%
-  arrange(cell_type)
-
-table <- summary_table %>%
-  gt() %>%
-  tab_header(
-    title = "Table 3. TensorQTL, inputs per cell type"
-  ) %>%
-  cols_label(
-    cell_type = "Cell Type",
-    genes_tested = "Genes Tested",
-    samples = "Samples",
-    variants = "Variants"
-  ) %>%
-  fmt_number(
-    columns = c(genes_tested, samples, variants),
-    decimals = 0,
-    use_seps = TRUE
-  ) %>%
-  gt_style(subtitle = TRUE)
-
-print(table)
-```
-
-***
-
 #### Independent {.tabset}
 
 ***
@@ -348,7 +295,7 @@ print(table)
 ```{r, eQTL_independent_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
 all_eqtls <- read_indep(cell_types, ind_dir, expPC_map, final_norm, geno_pc)
 
-print(indep_counts_gt(all_eqtls, "Table 4. Independent eQTL counts per cell type"))
+print(indep_counts_gt(all_eqtls, "Table 3. Independent eQTL counts per cell type"))
 ```
 
 ***
@@ -360,7 +307,7 @@ print(indep_counts_gt(all_eqtls, "Table 4. Independent eQTL counts per cell type
 ***
 
 ```{r, eQTL_independent_distance_from_TSS, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-print(indep_tss_gt(all_eqtls, "Table 5. Median TSS distances (kb) for independent eQTLs per cell type"))
+print(indep_tss_gt(all_eqtls, "Table 4. Median TSS distances (kb) for independent eQTLs per cell type"))
 ```
 
 
@@ -399,7 +346,7 @@ multi_eqtls_tbl <- multi_eqtls %>%
     gsub("<U\\+2212>", "−", ., perl = TRUE))) %>%
   gt() %>%
   tab_header(
-    title = "Table 6. Genes with multiple independent eQTL per cell type"
+    title = "Table 5. Genes with multiple independent eQTL per cell type"
   ) %>%
   cols_label(
     cell_type          = "Cell Type",
@@ -440,122 +387,6 @@ print(multi_eqtls_tbl)
 
 ***
 
-#### Benchmarking {.tabset}
-
-***
-
-##### Table
-
-```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
-# List all benchmark files for the pipeline
-known_rules <- c("prep_tensorQTL_input", "zip_pblk_cnts", "convert_genotypes", "split_covariates",
-                 "tensorqtl_nom", "tensorqtl_perm", "tensorqtl_independent", "tensorqtl_report")
-files <- list.files(bmark_dir, pattern = "^05tensorQTL\\..*\\.benchmark\\.txt$", full.names = TRUE)
-
-benchmarks <- map_dfr(files, function(f) {
-  df <- read.table(f, header = TRUE, sep = "\t")
-  fname <- basename(f)
-  parts <- strsplit(fname, "\\.")[[1]]
-
-  # rule name followed by optional wildcards, e.g. "tensorqtl_perm_NPC_quantile_genPC_4_expPC_30"
-  rule_full <- parts[2]
-
-  # match the longest known rule name so rule names containing "_" stay whole
-  hit  <- known_rules[rule_full == known_rules | str_starts(rule_full, paste0(known_rules, "_"))]
-  rule <- if (length(hit) == 0) rule_full else hit[which.max(nchar(hit))]
-
-  tibble(
-    file = f,
-    rule = rule,
-    runtime_sec = df$s,
-    runtime_hms = df$h.m.s.,
-    max_rss = df$max_rss
-  )
-})
-
-
-
-# Summarise by rule
-summary <- benchmarks %>%
-  group_by(rule) %>%
-  summarise(
-    n = n(),
-    mean_runtime_min = mean(runtime_sec) / 60,
-    sd_runtime_min = sd(runtime_sec) / 60,
-    mean_ram_gb = mean(max_rss) / 1024,
-    sd_ram_gb = sd(max_rss) / 1024,
-    .groups = "drop"
-  ) %>%
-  mutate(
-    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
-    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
-  ) %>%
-  mutate(across(where(is.numeric), ~round(., 3))) %>%
-  arrange(rule)
-
-# Table
-datatable(
-  summary,
-  caption = 'Table 7. Rule benchmarking. Means and SD across replicates.',
-  options = list(
-    pageLength = 25,
-    autoWidth = TRUE,
-    columnDefs = list(list(className = 'dt-center', targets = "_all"))
-  )
-)
-
-```
-
-***
-
-##### Plot
-
-***
-
-```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
-runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
-                                 y = mean_runtime_min)) +
-  geom_col(fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
-                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
-                width = 0.3, colour = "black", linewidth = 0.6) +
-  coord_flip() +
-  labs(x = "Rule", y = "Runtime (minutes)",
-       title = "Mean runtime per rule") +
-  theme_classic(base_size = 16) +
-  theme(
-    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
-    axis.text = element_text(size = 14),
-    axis.title = element_text(size = 16),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-
-
-
-mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
-                                y = mean_ram_gb)) +
-  geom_col(fill = "darkorange") +
-  geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
-                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
-                width = 0.3, colour = "black", linewidth = 0.6) +
-  coord_flip() +
-  labs(x = "Rule", y = "RAM (GB)",
-       title = "Mean RAM usage per rule") +
-  theme_classic(base_size = 16) +
-  theme(
-    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
-    axis.text = element_text(size = 14),
-    axis.title = element_text(size = 16),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank()
-  )
-
-plot_grid(runtime_plt, mem_plt)
-```
-
-***
-
 ### Level 2 {.tabset}
 
 ***
@@ -579,8 +410,8 @@ custom_palette <- c(
 )
 
 # Sensitivity runs: final norm method only
-summary_tbl <- summarise_logs(cell_types, in_dir, exp_pcs = exp_pcs, geno_pc = geno_pc,
-                              norm_methods = final_norm)
+summary_L2 <- summarise_logs(cell_types, in_dir, exp_pcs = exp_pcs, geno_pc = geno_pc,
+                             norm_methods = final_norm)
 ```
 
 ***
@@ -592,7 +423,7 @@ summary_tbl <- summarise_logs(cell_types, in_dir, exp_pcs = exp_pcs, geno_pc = g
 ***
 
 ```{r, eQTL_by_exp_PC_plot_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,5)}
-print(plot_sensitivity(summary_tbl, custom_palette, y_max = 2100))
+print(plot_sensitivity(summary_L2, custom_palette, y_max = 2100))
 ```
 
 ***
@@ -602,7 +433,7 @@ print(plot_sensitivity(summary_tbl, custom_palette, y_max = 2100))
 ***
 
 ```{r, sensitivity_table_best_L2, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-print(sensitivity_best_gt(summary_tbl))
+print(sensitivity_best_gt(summary_L2))
 ```
 
 ***
@@ -612,7 +443,7 @@ print(sensitivity_best_gt(summary_tbl))
 ***
 
 ```{r, sensitivity_table_all_L2, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-print(sensitivity_all_gt(summary_tbl))
+print(sensitivity_all_gt(summary_L2))
 ```
 
 ***
@@ -650,8 +481,6 @@ cowplot::plot_grid(plotlist = plt_list)
 ```{r, density_combined_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 plot_density_combined(eqtls_all, custom_palette)
 ```
-
-***
 
 ***
 
@@ -908,6 +737,202 @@ summary_tbl <- tibble(
 )
 
 summary_tbl
+```
+
+***
+
+### Settings {.tabset}
+
+***
+
+#### General
+
+```{r, settings, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(
+  Setting = c("cis-window", "Expression PCs tested", "Genotype PCs", "Metadata covariates",
+              "Normalisation methods tested", "Normalisation method for results",
+              "eGene FDR (qval)", "Cell types"),
+  Value   = c(paste(window_kb, "kb either side of the TSS"),
+              paste(exp_pcs, collapse = ", "),
+              paste(geno_pc, "(see genotyping_post_impute_report.html)"),
+              "PCW, sex",
+              paste0(paste(sort(norm_methods), collapse = ", "), " (Level 1); ", final_norm, " (Level 2)"),
+              final_norm,
+              eqtl_fdr,
+              sprintf("%d (Level 1 %d, Level 2 %d)", length(l1_types) + length(l2_types),
+                      length(l1_types), length(l2_types)))) |>
+  gt() |>
+  tab_header(title = "Settings") |>
+  gt_style()
+```
+
+***
+
+#### Expression PCs
+
+```{r, settings_exp_pcs, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(level     = rep(c("Level 1", "Level 2"), c(length(l1_types), length(l2_types))),
+       cell_type = c(l1_types, l2_types),
+       exp_pc    = exp_pc_map[c(l1_types, l2_types)]) |>
+  gt(groupname_col = "level") |>
+  tab_header(title = "Expression PCs used for results (exp_pc_map)") |>
+  cols_label(cell_type = "Cell Type", exp_pc = "Expression PCs") |>
+  gt_style()
+```
+
+***
+
+#### Inputs (Level 1)
+
++ Runs used for results: geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
+
+***
+
+```{r, settings_inputs_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+print(inputs_gt(summary_L1, exp_pc_map, final_norm, "TensorQTL inputs per cell type (Level 1)"))
+```
+
+***
+
+#### Inputs (Level 2)
+
++ Runs used for results: geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
+
+***
+
+```{r, settings_inputs_L2, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
+print(inputs_gt(summary_L2, exp_pc_map, final_norm, "TensorQTL inputs per cell type (Level 2)"))
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+***
+
+```{r, benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+# Benchmark templates passed by the rule as rule=template pairs; expanded over the
+# current cell types and settings so files from old runs are left out
+bench_pairs <- strsplit(params$benchmarks, ",")[[1]]
+wc_grid <- expand_grid(cell_type = c(l1_types, l2_types), norm_method = norm_methods,
+                       geno_pc = geno_pc, exp_pc = exp_pcs)
+
+benchmark_files <- tibble(rule     = sub("=.*", "", bench_pairs),
+                          template = sub("^[^=]*=", "", bench_pairs)) |>
+  mutate(file = map(template, ~ unique(as.character(glue::glue_data(wc_grid, .x))))) |>
+  select(rule, file) |>
+  unnest(file) |>
+  filter(file.exists(file))   # rules not yet run are skipped
+
+benchmarks <- benchmark_files |>
+  pmap_dfr(function(rule, file) {
+    df <- read.table(file, header = TRUE, sep = "\t")
+    tibble(
+      file = file,
+      rule = rule,
+      runtime_sec = df$s,
+      runtime_hms = df$h.m.s.,
+      max_rss = df$max_rss
+    )
+  })
+
+summary <- benchmarks |>
+  group_by(rule) |>
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) |>
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) |>
+  mutate(across(where(is.numeric), ~round(., 3))) |>
+  arrange(rule)
+
+summary |>
+  gt() |>
+  tab_header(
+    title = "Benchmarking",
+    subtitle = "Means and SD across replicates"
+  ) |>
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) |>
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) |>
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+***
+
+#### Plot
+
+***
+
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = pmax(mean_runtime_min - sd_runtime_min, 0),
+                    ymax = mean_runtime_min + sd_runtime_min),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = pmax(mean_ram_gb - sd_ram_gb, 0),
+                    ymax = mean_ram_gb + sd_ram_gb),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
 ```
 
 ***

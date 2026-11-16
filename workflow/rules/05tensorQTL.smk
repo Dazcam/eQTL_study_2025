@@ -10,6 +10,10 @@ TQTL_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
 # constraints would also apply to downstream pipelines using {cell_type}
 TQTL_CELL_TYPE_REGEX = "|".join(map(re.escape, TQTL_CELL_TYPES))
 
+# Rules whose benchmarks the report summarises; templates are expanded in the report
+TQTL_BENCHMARK_RULES = ["prep_tensorQTL_input", "zip_pblk_cnts", "convert_genotypes", "split_covariates",
+                        "tensorqtl_nom", "tensorqtl_perm", "tensorqtl_independent", "tensorqtl_report"]
+
 TQTL_WILDCARDS = dict(
     cell_type   = TQTL_CELL_TYPES,
     geno_pc     = config["tensorQTL"]["geno_pcs"],
@@ -147,7 +151,6 @@ rule tensorqtl_report:
     output: config["tensorQTL"]["tensorqtl_report"]["output"]
     params: in_dir       = config["tensorQTL"]["tensorqtl_report"]["in_dir"],
             ind_dir      = config["tensorQTL"]["tensorqtl_report"]["ind_dir"],
-            bmark_dir    = config["tensorQTL"]["tensorqtl_report"]["bmark_dir"],
             output_file  = config["tensorQTL"]["tensorqtl_report"]["output_file"],
             l1_types     = ",".join(config["fetal_l1_types"]),
             l2_types     = ",".join(ct for ct in TQTL_CELL_TYPES if ct not in config["fetal_l1_types"]),
@@ -156,7 +159,8 @@ rule tensorqtl_report:
             norm_methods = ",".join(config["tensorQTL"]["norm_methods"]),
             window       = config["tensorQTL"]["window"],
             exp_pc_map   = ",".join(f"{ct}:{config['exp_pc_map'][ct]}" for ct in TQTL_CELL_TYPES),
-            eqtl_fdr     = config["eqtl_fdr"]
+            eqtl_fdr     = config["eqtl_fdr"],
+            benchmarks   = lambda w: ",".join(f"{r}=../{config['tensorQTL'][r]['benchmark']}" for r in TQTL_BENCHMARK_RULES)
     singularity: config["containers"]["r_eqtl"]
     message: "Generate tensorQTL report"
     benchmark: config["tensorQTL"]["tensorqtl_report"]["benchmark"]
@@ -166,11 +170,11 @@ rule tensorqtl_report:
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
             params = list(in_dir = '{params.in_dir}', ind_dir = '{params.ind_dir}', \
-                          bmark_dir = '{params.bmark_dir}', l1_types = '{params.l1_types}', \
+                          l1_types = '{params.l1_types}', \
                           l2_types = '{params.l2_types}', exp_pcs = '{params.exp_pcs}', \
                           geno_pc = '{params.geno_pc}', norm_methods = '{params.norm_methods}', \
                           window = '{params.window}', exp_pc_map = '{params.exp_pc_map}', \
-                          eqtl_fdr = '{params.eqtl_fdr}'))" > {log} 2>&1
+                          eqtl_fdr = '{params.eqtl_fdr}', benchmarks = '{params.benchmarks}'))" > {log} 2>&1
         """
 
 
