@@ -325,6 +325,7 @@ scanpy:
   clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad   # written by the clustering notebooks
   metadata_per_sample: reports/02SCANPY/02_metadata_per_sample.tsv   # sex and PCW per sample (notebooks)
   pseudobulk: ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv   # scanpy_pseudobulk notebook
+  l1_cell_counts: reports/02SCANPY/scanpy_L1_cell_type_counts.tsv   # nuclei per L1 cell type (annotation notebook)
 
   lisi:
     csv:           ../results/02SCANPY/batch_correction/lisi_results.csv

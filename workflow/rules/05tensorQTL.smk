@@ -147,10 +147,12 @@ rule tensorqtl_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  perm  = expand(rules.tensorqtl_perm.output, **TQTL_WILDCARDS),
             indep = expand(rules.tensorqtl_independent.output, **TQTL_WILDCARDS),
+            cell_counts = config["scanpy"]["l1_cell_counts"],
             rmd_script = config["tensorQTL"]["tensorqtl_report"]["rmd_script"]
     output: config["tensorQTL"]["tensorqtl_report"]["output"]
     params: in_dir       = config["tensorQTL"]["tensorqtl_report"]["in_dir"],
             ind_dir      = config["tensorQTL"]["tensorqtl_report"]["ind_dir"],
+            cell_counts  = "../" + config["scanpy"]["l1_cell_counts"],   # the Rmd knits in scripts/
             output_file  = config["tensorQTL"]["tensorqtl_report"]["output_file"],
             l1_types     = ",".join(config["fetal_l1_types"]),
             l2_types     = ",".join(ct for ct in TQTL_CELL_TYPES if ct not in config["fetal_l1_types"]),
@@ -170,6 +172,7 @@ rule tensorqtl_report:
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
             params = list(in_dir = '{params.in_dir}', ind_dir = '{params.ind_dir}', \
+                          cell_counts = '{params.cell_counts}', \
                           l1_types = '{params.l1_types}', \
                           l2_types = '{params.l2_types}', exp_pcs = '{params.exp_pcs}', \
                           geno_pc = '{params.geno_pc}', norm_methods = '{params.norm_methods}', \

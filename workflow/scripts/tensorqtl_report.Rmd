@@ -8,6 +8,7 @@ output:
 params:
   in_dir: null
   ind_dir: null
+  cell_counts: null
   l1_types: null
   l2_types: null
   exp_pcs: null
@@ -35,6 +36,7 @@ library(ggrepel)
 source(file.path(dirname(knitr::current_input(dir = TRUE)), "tensorqtl_functions.R"))
 in_dir       <- params$in_dir
 ind_dir      <- params$ind_dir
+cell_counts_file <- params$cell_counts
 l1_types     <- strsplit(params$l1_types, ",")[[1]]
 l2_types     <- strsplit(params$l2_types, ",")[[1]]
 exp_pcs      <- as.numeric(strsplit(params$exp_pcs, ",")[[1]])
@@ -221,10 +223,11 @@ ggplot(pie_dat, aes(ymax = ymax, ymin = ymin, xmax = 1, xmin = 0, fill = label))
 ***
 
 ```{r, counts, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
-cell_counts <- tibble(
-  cell_type = c("Glu-UL","Glu-DL","NPC","GABA","Endo-Peri","OPC","MG"),
-  n_cells   = c(271180, 136070, 128017, 103598, 19842, 13794, 7297)
-)
+# Nuclei per L1 cell type, written by the 02 annotation notebook
+cell_counts <- read_tsv(cell_counts_file, show_col_types = FALSE) |>
+  select(cell_type, n_cells = count)
+missing_cts <- setdiff(cell_types, cell_counts$cell_type)
+if (length(missing_cts) > 0) stop("No nuclei count for: ", paste(missing_cts, collapse = ", "))
 egene_per_cell <- gene_cell %>% count(cell_type)
 
 plot_egene_counts(gene_cell, custom_palette)
