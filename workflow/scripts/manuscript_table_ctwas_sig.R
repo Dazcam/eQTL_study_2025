@@ -84,11 +84,9 @@ if (length(missing_labels) > 0) {
 
 # Relabel cell type names for display: Glu-UL -> Glu-A, Glu-DL -> Glu-B
 # (covers L2 subtypes too, e.g. Glu-UL-0 -> Glu-A-0)
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 gene_lookup <- suppressMessages(read_tsv(gene_lookup_file, show_col_types = FALSE)) |>
   select(chr = chromosome_name, start = start_position, end = end_position,
@@ -193,7 +191,7 @@ empty_sig_tbl <- tibble(
 # (including the empty-result case, so every sheet has the same header)
 format_sig_tbl <- function(tbl) {
   tbl |>
-    mutate(cell_type = relabel_cell_type(cell_type)) |>
+    mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels)) |>
     rename(
       `Cell type`        = cell_type,
       `Gene symbol`      = symbol,

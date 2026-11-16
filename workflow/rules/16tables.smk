@@ -14,6 +14,7 @@ smr_raw_files = expand(
 rule eqtl_tbl:
     output: config['tables']['eqtl_tbl']['out_file']
     params: in_dir = config['tables']['eqtl_tbl']['in_dir'],
+            labels = config['manuscript_labels'],
             allele_file = config['tables']['eqtl_tbl']['allele_file'],
             peak_dir = config['tables']['eqtl_tbl']['peak_dir'],
             cell_types = config['cell_types'],
@@ -50,6 +51,7 @@ rule smr_sig_tbl:
     output: tsv  = smr_sig_tbls,
             xlsx = config['tables']['smr_sig_tbl']['xlsx_out']
     params: traits           = GWAS_TRAITS,
+            labels = config['manuscript_labels'],
             cell_types       = config['cell_types'],
             in_dir           = config['tables']['smr_sig_tbl']['in_dir'],
             gene_lookup_file = config['gene_lookup'],
@@ -82,6 +84,7 @@ rule ctwas_sig_tbl:
     output: correction = config['tables']['ctwas_sig_tbl']['correction_out'],
             sig_out     = config['tables']['ctwas_sig_tbl']['sig_out']
     params: traits           = GWAS_TRAITS,
+            labels = config['manuscript_labels'],
             cell_types       = config['cell_types'],
             in_dir           = config['tables']['ctwas_sig_tbl']['in_dir'],
             weights_dir      = config['tables']['ctwas_sig_tbl']['weights_dir'],
@@ -96,7 +99,8 @@ rule ctwas_sig_tbl:
 rule subcluster_specific_tbl:
     # Supp Table 3
     output: config['tables']['subcluster_specific_tbl']['out_file']
-    params: eqtl_effects = config['eqtl_sharing']['eqtl_effects']['out_file']
+    params: eqtl_effects = config['eqtl_sharing']['eqtl_effects']['out_file'],
+            labels = config['manuscript_labels']
     singularity: config["containers"]["r_eqtl"]
     resources: time="0:20:00"
     log:    config['tables']['subcluster_specific_tbl']['log']
@@ -110,7 +114,8 @@ rule susie_diag_tbl:
         gene_meta_files = expand(config["susie"]["prep_susie_gene_meta"]["output"],
                                  cell_type = config["cell_types"])
     output: xlsx = config['tables']['susie_diag_tbl']['out_file']
-    params: cell_types = config['cell_types']
+    params: cell_types = config['cell_types'],
+            labels = config['manuscript_labels']
     singularity: config["containers"]["r_eqtl"]
     resources: time="0:30:00", threads=2, mem_mb=16000
     message: "SuSiE fine-mapping diagnostics table (Supp Table 9)"
@@ -121,7 +126,8 @@ rule ldsr_tbl:
     # MaxCPP S-LDSR supplementary table (one sheet per disorder)
     input:  "../results/11SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv"
     output: "../results/16MANUSCRIPT-TABLES/supplementary_table_ldsr.xlsx"
-    params: cell_types = config['cell_types']
+    params: cell_types = config['cell_types'],
+            labels = config['manuscript_labels']
     singularity: config["containers"]["r_eqtl"]
     log:    "../results/00LOG/16MANUSCRIPT-TABLES/ldsr_tbl.log"
     script: "../scripts/manuscript_table_ldsr.R"
@@ -134,6 +140,7 @@ rule cell_counts_tbl:
             pt = expand("../results/06PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad",
                         trajectory = config["trajectories"])
     output: "../results/16MANUSCRIPT-TABLES/nuclei_counts_tbl.xlsx"
+    params: labels = config['manuscript_labels']
     conda:  config["scanpy"]["env"]
     log:    "../results/00LOG/16MANUSCRIPT-TABLES/cell_counts_tbl.log"
     script: "../scripts/manuscript_table_cell_counts.py"

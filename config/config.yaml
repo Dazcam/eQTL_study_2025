@@ -60,6 +60,12 @@ exp_pc_map:
   NPC-to-Glu-UL-Q4-Bin3: 50
   NPC-to-Glu-UL-Q4-Bin4: 50
 
+# Pipeline -> manuscript cell type labels, applied in order (pipelines 16-18 only)
+manuscript_labels:
+  "Glu-UL": "Glu-A"
+  "Glu-DL": "Glu-B"
+  "-Q4-": "-"
+
 jang_cell_types:
   - "Ast"
   - "Ast1"

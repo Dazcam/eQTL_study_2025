@@ -82,12 +82,9 @@ custom_palette <- c(
 
 # Relabel helper: Glu-UL -> Glu-A, Glu-DL -> Glu-B, strip "-Q4-" from bin names,
 # e.g. "NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1"
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x <- str_replace(x, "-Q4-", "-")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 # Dependency-free lighten (base R), avoids needing colorspace for one plot
 lighten_colour <- function(hex, amount = 0.55) {
@@ -142,7 +139,7 @@ celltype_overlap <- joined |>
     n_transcript_bulk_overlap = sum(in_transcript_bulk, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  mutate(cell_type = relabel_cell_type(cell_type))
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 message("\neGene counts per cell type:")
 celltype_overlap |> knitr::kable(format = "simple", align = "l") |> print()

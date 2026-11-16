@@ -55,7 +55,7 @@ out_file <- snakemake@output[[1]]
 # NOTE: these old-format names (Glu-UL / Glu-DL) drive file paths for the eQTL
 # input files (Panel A) and the internal Pi1 comparison (Panel C), which are
 # still stored under the old naming on disk. Do not rename these - the
-# relabel_cell_type() helper below handles renaming for display only.
+# relabel_cell_types() helper below handles renaming for display only.
 cell_types <- c("Glu-UL", "Glu-DL", "NPC", "GABA", "Endo-Peri", "OPC", "MG")
 
 # Exp PC map (old names - keys file paths for Panels A and C)
@@ -70,13 +70,11 @@ expPC_map <- c(
 )
 
 # --- Relabel map for cell type name changes, for display/plotting only
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
-cell_types_new <- relabel_cell_type(cell_types)
+cell_types_new <- relabel_cell_types(cell_types, manuscript_labels)
 
 # Define custom color palette (new Glu-A/Glu-B keys, since this is applied
 # only to already-relabelled data downstream)
@@ -127,7 +125,7 @@ eqtls_all <- bind_rows(eqtl_list)
 # and Panel B's set names, which do need the new labels)
 gene_cell <- eqtls_all %>%
   distinct(phenotype_id, cell_type) %>%
-  mutate(cell_type = relabel_cell_type(cell_type))
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 gene_counts <- gene_cell %>%
   count(phenotype_id) %>%  
@@ -317,8 +315,8 @@ pi1_square_tbl <- pi1_result_tbl %>%
   ) %>%
   select(ref = cell_type, query = ref_cell_type, pi1 = pi1_final) %>%
   mutate(
-    ref = relabel_cell_type(ref),
-    query = relabel_cell_type(query),
+    ref = relabel_cell_types(ref, manuscript_labels),
+    query = relabel_cell_types(query, manuscript_labels),
     # rev() ensures the first cell type is at the top (standard matrix view)
     query = factor(query, levels = rev(cell_types_new)), 
     ref = factor(ref, levels = cell_types_new)
@@ -381,9 +379,9 @@ pi1_jang_tbl <- map2_dfr(jang_combinations$cell_type, jang_combinations$ref_cell
 pi1_jang_square_tbl <- pi1_jang_tbl %>%
   select(cell_type, ref_cell_type, pi1 = pi1_forward) %>%
   mutate(
-    cell_type = relabel_cell_type(cell_type),
+    cell_type = relabel_cell_types(cell_type, manuscript_labels),
     # rev() so Glu-A appears at the top (standard matrix view)
-    cell_type = factor(cell_type, levels = rev(relabel_cell_type(jang_L1_cell_types))),
+    cell_type = factor(cell_type, levels = rev(relabel_cell_types(jang_L1_cell_types, manuscript_labels))),
     ref_cell_type = factor(ref_cell_type, levels = jang_adult_cell_types)
   )
 

@@ -53,11 +53,9 @@ out_file           <- snakemake@output[[1]]
 # out_file           <- "../results/16MANUSCRIPT-TABLES/subcluster_specific_eqtl_tbl.xlsx"
 
 # --- Relabel cell type names for display: Glu-UL -> Glu-A, Glu-DL -> Glu-B
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 # --- Read and select/rename, exactly matching the Rmd's chunk
 message("Reading: ", eqtl_effects_file)
@@ -72,8 +70,8 @@ final_tbl <- subcluster_tbl |>
          cell_type_L1 = parent_L1, Slope_L1 = slope_parent, SE_L1 = se_parent, Pval_L1 = pval_nom_parent,
          cell_type_L2 = cell_type_L2, Slope_L2 = slope_L2, SE_L2 = se_L2, Pval_L2 = pval_nom_L2) |>
   mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
-  mutate(cell_type_L1 = relabel_cell_type(cell_type_L1),
-         cell_type_L2 = relabel_cell_type(cell_type_L2))
+  mutate(cell_type_L1 = relabel_cell_types(cell_type_L1, manuscript_labels),
+         cell_type_L2 = relabel_cell_types(cell_type_L2, manuscript_labels))
 
 # --- Deduplicate on the natural key: (gene, eSNP, subcluster). A gene can
 # legitimately have more than one significant eSNP, or be specific in more

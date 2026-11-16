@@ -54,18 +54,16 @@ gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
   distinct(ensembl_gene_id, .keep_all = TRUE)
 
 # --- Relabel cell type names for plotting: Glu-UL -> Glu-A, Glu-DL -> Glu-B
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 subcluster_tbl <- subcluster_tbl |>
-  mutate(parent_L1    = relabel_cell_type(parent_L1),
-         cell_type_L2 = relabel_cell_type(cell_type_L2))
+  mutate(parent_L1    = relabel_cell_types(parent_L1, manuscript_labels),
+         cell_type_L2 = relabel_cell_types(cell_type_L2, manuscript_labels))
 
 effect_long <- effect_long |>
-  mutate(cell_type = relabel_cell_type(cell_type))
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 # --- Family definitions (new Glu-A/Glu-B names)
 family_order <- list(

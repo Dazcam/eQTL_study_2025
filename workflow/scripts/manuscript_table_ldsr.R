@@ -69,12 +69,9 @@ alpha <- 0.05
 
 # Relabel helper: Glu-UL -> Glu-A, Glu-DL -> Glu-B, strip "-Q4-" from bin names
 # (same convention as the rest of the manuscript pipeline)
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x <- str_replace(x, "-Q4-", "-")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 # Full disorder names for xlsx sheets (same mapping as manuscript_table_smr_sig.R)
 disorder_labels <- c(
@@ -106,7 +103,7 @@ if (length(not_in_file) > 0) {
 
 ldsr_tbl <- ldsr_tbl |>
   filter(cell_type %in% cell_types) |>
-  mutate(cell_type = relabel_cell_type(cell_type))
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 # Trajectory rows are flagged before the digit-based L1/L2 split, since bin
 # names contain digits and would otherwise be classed as L2 subclusters

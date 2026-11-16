@@ -59,9 +59,14 @@ log.info("Variables\n============================\n"
          "============================")
 
 
+LABELS = dict(snakemake.params.labels)
+
+
 def relabel(x):
-    """Pipeline label -> manuscript label."""
-    return x.replace("Glu-UL", "Glu-A").replace("Glu-DL", "Glu-B").replace("-Q4-", "-")
+    """Pipeline -> manuscript label, applying config manuscript_labels in order."""
+    for old, new in LABELS.items():
+        x = x.replace(old, new)
+    return x
 
 
 def read_obs(path):

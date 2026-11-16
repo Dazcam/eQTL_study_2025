@@ -50,11 +50,9 @@ message("Fetal L1 cell types: ", paste(effect_repl$settings$fetal_l1, collapse =
 message("Jang cell types: ", paste(effect_repl$settings$jang_cell_types, collapse = ", "))
 
 # --- Relabel cell type names for plotting: Glu-UL -> Glu-A, Glu-DL -> Glu-B
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 # Diverging red-white-blue scale, r in [-1, 1] -- kept from the previous
 # version of this script (ComplexHeatmap's colorRamp2 equivalent for ggplot)
@@ -106,8 +104,8 @@ fetal_family_order <- c(
 )
 
 fetal_long <- mat_to_long(effect_repl$fetal_vs_fetal$pearson) |>
-  mutate(discovery = relabel_cell_type(discovery),
-         replication = relabel_cell_type(replication))
+  mutate(discovery = relabel_cell_types(discovery, manuscript_labels),
+         replication = relabel_cell_types(replication, manuscript_labels))
 
 fetal_order_present <- fetal_family_order[fetal_family_order %in% unique(fetal_long$discovery)]
 message("Fetal cell types present (expected 19): ", length(fetal_order_present))
@@ -146,7 +144,7 @@ fetal_l1_order <- c("Glu-A", "Glu-B", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 jang_l1_order  <- effect_repl$settings$jang_cell_types  # already unprefixed: Ext, IN, MG, OPC, End, Ast, OD
 
 adult_long <- mat_to_long(effect_repl$fetal_vs_adult$pearson) |>
-  mutate(discovery = relabel_cell_type(discovery))
+  mutate(discovery = relabel_cell_types(discovery, manuscript_labels))
 
 adult_order_present <- fetal_l1_order[fetal_l1_order %in% unique(adult_long$discovery)]
 jang_order_present  <- jang_l1_order[jang_l1_order %in% unique(adult_long$replication)]

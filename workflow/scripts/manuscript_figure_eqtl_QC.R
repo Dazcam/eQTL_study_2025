@@ -112,16 +112,14 @@ cell_order <- c(
 # file I/O, which must keep using the old Glu-UL / Glu-DL names to match pipeline output)
 relabel_map <- c("Glu-UL" = "Glu-A", "Glu-DL" = "Glu-B")
 
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 # Relabelled versions of the order/palette vectors, for use in plots only
-cell_order_new <- relabel_cell_type(cell_order)
+cell_order_new <- relabel_cell_types(cell_order, manuscript_labels)
 custom_palette_new <- custom_palette
-names(custom_palette_new) <- relabel_cell_type(names(custom_palette_new))
+names(custom_palette_new) <- relabel_cell_types(names(custom_palette_new), manuscript_labels)
 
 # --- Base theme
 base_theme <- theme_minimal(base_size = 14) +
@@ -181,10 +179,10 @@ eqtls_all <- eqtls_all |>
 
 # --- Relabel Glu-UL/Glu-DL -> Glu-A/Glu-B for plotting (cell_type + main_type)
 eqtls_all <- eqtls_all |>
-  mutate(cell_type = relabel_cell_type(as.character(cell_type)),
+  mutate(cell_type = relabel_cell_types(as.character(cell_type), manuscript_labels),
          cell_type = fct_relevel(cell_type, cell_order_new),
          cell_type = fct_rev(cell_type),
-         main_type = relabel_cell_type(main_type))
+         main_type = relabel_cell_types(main_type, manuscript_labels))
 
 density_plt <- ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
   geom_density() +
@@ -235,7 +233,7 @@ eqtl_cnt_plt <- ggplot(egene_per_cell, aes(x=cell_type, y=n, fill=main_type)) +
 # cell_counts (file-path/original names) is relabelled at join time so it matches
 # egene_per_cell (already relabelled) on cell_type
 scatter_dat <- egene_per_cell %>%
-  left_join(cell_counts %>% mutate(cell_type = relabel_cell_type(cell_type)), by="cell_type") |>
+  left_join(cell_counts %>% mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels)), by="cell_type") |>
   mutate(level = if_else(str_detect(cell_type, "\\d"), 2L, 1L))
 
 # Correlation
@@ -315,8 +313,8 @@ comparison_tbl <- map_dfr(cell_types_L1, function(ct) {
 # --- Relabel Glu-UL/Glu-DL -> Glu-A/Glu-B for plotting, with an explicit factor
 # order (Glu-A, Glu-B, GABA, NPC)
 comparison_tbl <- comparison_tbl %>%
-  mutate(cell_type = relabel_cell_type(cell_type),
-         cell_type = factor(cell_type, levels = relabel_cell_type(cell_types_L1)))
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels),
+         cell_type = factor(cell_type, levels = relabel_cell_types(cell_types_L1, manuscript_labels)))
 
 # Plot
 comparison_long <- comparison_tbl %>%
@@ -353,8 +351,8 @@ combined_plt <- ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fi
 # compound `test` label, so `test` reflects the new names throughout
 ziffra_tbl <- read_tsv(ziffra_tbl_file) |>
   mutate(clean_peak = str_replace_all(peak_cell_type, "_MACSpeaks", ""),
-         eqtl_cell_type = relabel_cell_type(eqtl_cell_type),
-         clean_peak = relabel_cell_type(clean_peak),
+         eqtl_cell_type = relabel_cell_types(eqtl_cell_type, manuscript_labels),
+         clean_peak = relabel_cell_types(clean_peak, manuscript_labels),
          test = paste(eqtl_cell_type, clean_peak, sep = ' in '))
   
 # --- Specify y-axis order (patterns updated to match relabelled `test` strings)

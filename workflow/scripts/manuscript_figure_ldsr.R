@@ -71,12 +71,9 @@ custom_palette <- c(
 
 # Relabel helper: Glu-UL -> Glu-A, Glu-DL -> Glu-B, strip "-Q4-" from bin names,
 # e.g. "NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1"
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x <- str_replace(x, "-Q4-", "-")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 ## Read and prepare table  -------------------------------------------------------------
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv'),
@@ -111,7 +108,7 @@ if (length(not_in_file) > 0) {
 }
 
 ldsr_tbl <- ldsr_tbl |>
-  mutate(cell_type = relabel_cell_type(cell_type))
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 ## Cell type order and colour groups  --------------------------------------------------
 # Plots A/B: main clusters + subclusters. Patterns are anchored ("-[0-9]+$") so

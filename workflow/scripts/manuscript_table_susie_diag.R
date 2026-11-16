@@ -137,15 +137,12 @@ final_tbl <- cs_per_gene |>
 # --- Relabel helper (display only): Glu-UL -> Glu-A, Glu-DL -> Glu-B, and strip
 # "-Q4-" from pseudotime bin names, e.g. "NPC-to-Glu-UL-Q4-Bin1" ->
 # "NPC-to-Glu-A-Bin1". Same convention as manuscript_table_smr_sig.R.
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x <- str_replace(x, "-Q4-", "-")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 final_tbl <- final_tbl |>
-  mutate(cell_type = relabel_cell_type(cell_type))
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 old_names <- str_detect(final_tbl$cell_type, "UL|DL|Q4")
 if (any(old_names)) {

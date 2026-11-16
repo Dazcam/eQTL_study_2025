@@ -43,7 +43,7 @@ message('  out_file (tracked by snakemake): ', out_file)
 
 # NOTE: these old-format names (Glu-UL / Glu-DL) drive the log file paths read
 # by summarise_logs() below, which are still stored under the old naming on
-# disk. Do not rename these - relabel_cell_type() handles renaming for
+# disk. Do not rename these - relabel_cell_types() handles renaming for
 # display only, applied to the summary tables after they're built.
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
@@ -55,11 +55,9 @@ gen_PCs <- 4
 norm_methods <- 'quantile'
 
 # --- Relabel map for cell type name changes, for display/plotting only
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 custom_palette <- c(
   'Glu-A' = '#4363d8',
@@ -250,22 +248,22 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
 # --- Legend order (matches the Glu-A, Glu-B, GABA, NPC, OPC, MG, Endo-Peri
 # convention used in the other manuscript figures) - applied via explicit
 # factor levels, since ggplot otherwise falls back to alphabetical order
-cell_order_L1 <- relabel_cell_type(c("Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"))
-cell_order_L2 <- relabel_cell_type(c(
+cell_order_L1 <- relabel_cell_types(c("Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"), manuscript_labels)
+cell_order_L2 <- relabel_cell_types(c(
   "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
   "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
   "GABA-0", "GABA-1", "GABA-2",
   "NPC-0", "NPC-1", "NPC-2"
-))
+), manuscript_labels)
 
 summary_L1_list <- summarise_logs(cell_types, expr_dir)
 summary_L1_tbl <- bind_rows(summary_L1_list) |>
-  mutate(cell_type = relabel_cell_type(cell_type),
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels),
          cell_type = factor(cell_type, levels = cell_order_L1))
 
 summary_L2_list <- summarise_logs(cell_types_L2, expr_dir)
 summary_L2_tbl <- bind_rows(summary_L2_list) |>
-  mutate(cell_type = relabel_cell_type(cell_type),
+  mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels),
          cell_type = factor(cell_type, levels = cell_order_L2))
 
 # Plot

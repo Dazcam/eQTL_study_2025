@@ -31,6 +31,10 @@ library(readxl)
 library(GenomicRanges)
 library(openxlsx)
 
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
+
 peak_dir <- snakemake@params[["peak_dir"]]
 allele_file <- snakemake@params[["allele_file"]]
 in_dir <- snakemake@params[["in_dir"]]
@@ -130,7 +134,7 @@ for (cell_type in names(expPC_map)) {
   message('Mungingfi tbl ...')
   n_before <- nrow(eqtl_tbl)
   eqtl_enriched <- eqtl_enriched %>%
-    mutate(cell_type = !!cell_type) %>%
+    mutate(cell_type = relabel_cell_types(!!cell_type, manuscript_labels)) %>%
     inner_join(gene_lookup_tbl, by = join_by(ensembl_id == ensembl_gene_id)) |>
     mutate(CHROM = str_remove(CHROM, "^chr")) |>
     dplyr::select(cell_type, ensembl_id, symbol = external_gene_name, CHROM, 
@@ -143,7 +147,7 @@ for (cell_type in names(expPC_map)) {
  
   message('Any NAs in final tbl?', anyNA(eqtl_enriched))
   
-  final_excel_list[[cell_type]] <- eqtl_enriched
+  final_excel_list[[relabel_cell_types(cell_type, manuscript_labels)]] <- eqtl_enriched
   message("Processed ", cell_type, ": ", nrow(eqtl_enriched), " eQTLs")
 }
 

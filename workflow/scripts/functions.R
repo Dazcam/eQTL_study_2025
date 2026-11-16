@@ -6,12 +6,14 @@
 #
 # Functions: normalise_counts()  Normalise / filter a CPM matrix by one of four methods
 #            get_mhc_genes()     Gene IDs overlapping the extended MHC (or any region)
+#            relabel_cell_types() Pipeline -> manuscript cell type labels
 #
 # Packages:  Base R only; limma must be installed (not loaded) for
 #            normalise_counts(norm_method = "quantile")
 #
 # Used in:   tensorqtl_prep_input_files.R (normalise_counts);
-#            smr_create_query.R, ctwas_run.R (get_mhc_genes)
+#            smr_create_query.R, ctwas_run.R (get_mhc_genes);
+#            16 tables and 17 figures scripts (relabel_cell_types)
 #
 #--------------------------------------------------------------------------------------
 
@@ -99,6 +101,28 @@ get_mhc_genes <- function(gene_lookup, chr, start, end,
   unique(as.character(gene_lookup[[id_col]][in_region %in% TRUE]))
 }
 
-#--------------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------------
+#' Relabel pipeline cell type names with manuscript names.
+#' Used in 16 tables and 17 figures scripts
+#'
+#' Applies each substitution in config manuscript_labels, in order, to every
+#' occurrence in each string, so it works on plain cell types
+#' ("Glu-UL-0" -> "Glu-A-0") and on strings that contain them
+#' ("NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1").
+#'
+#' @param x Character (or factor) vector of labels.
+#' @param labels Named list or vector: pipeline text -> manuscript text.
+#' @return Character vector of relabelled strings (NA kept as NA).
+relabel_cell_types <- function(x, labels) {
+  labels <- unlist(labels)
+  if (is.null(names(labels)) || any(names(labels) == "")) {
+    stop("relabel_cell_types: labels must be a named list or vector")
+  }
+  x <- as.character(x)
+  for (old in names(labels)) {
+    x <- gsub(old, labels[[old]], x, fixed = TRUE)
+  }
+  x
+}
 
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

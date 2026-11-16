@@ -53,8 +53,13 @@ MAX_GENES_PER_CELL = 5000
 TABLE_DIR = "../results/16MANUSCRIPT-TABLES/"
 TABLE_FILE = "snrna_qc_summary.xlsx"
 
-# Glutamatergic populations were renamed after annotation; colours are retained
-CELLTYPE_RENAME = {"Glu-UL": "Glu-A", "Glu-DL": "Glu-B"}
+
+
+def relabel(x, labels):
+    """Pipeline -> manuscript cell type label, applying config manuscript_labels in order."""
+    for old, new in labels.items():
+        x = x.replace(old, new)
+    return x
 
 # Display order of cell types (legend, x-axis, table)
 CELLTYPE_ORDER = ["Glu-A", "Glu-B", "GABA", "NPC", "OPC", "MG", "Endo-Peri"]
@@ -292,7 +297,7 @@ def plot_qc_per_celltype(qc, celltype_col="cell_type", figsize=(6.5, 4.8)):
 # ======================================================================================
 
 
-def main(h5ad_path, out_sample, out_celltype, scripts_dir,
+def main(h5ad_path, out_sample, out_celltype, scripts_dir, labels,
          celltype_col="cell_type", leiden_col="leiden_harmony_0.2", sample_col="sample"):
 
     logger.info(f"Reading obs and layers['counts'] from {h5ad_path} ...")
@@ -306,7 +311,7 @@ def main(h5ad_path, out_sample, out_celltype, scripts_dir,
         import scanpy_gene_lists as gl
         palette = getattr(gl, "custom_palette", None)
         if isinstance(palette, dict):   # same colours under the new names
-            palette = {CELLTYPE_RENAME.get(k, k): v for k, v in palette.items()}
+            palette = {relabel(k, labels): v for k, v in palette.items()}
     except ImportError:
         gl = None
         logger.warning("scanpy_gene_lists not importable; default palette used")
@@ -316,7 +321,8 @@ def main(h5ad_path, out_sample, out_celltype, scripts_dir,
             raise KeyError(f"'{celltype_col}' missing and cannot be rebuilt from '{leiden_col}'")
         logger.info(f"Building '{celltype_col}' from {leiden_col} via cluster_anns ...")
         obs[celltype_col] = obs[leiden_col].astype(str).map(gl.cluster_anns)
-    obs[celltype_col] = obs[celltype_col].astype(object).replace(CELLTYPE_RENAME)
+    obs[celltype_col] = obs[celltype_col].astype(object).map(
+        lambda v: relabel(v, labels) if isinstance(v, str) else v)
     n_unmapped = int(obs[celltype_col].isna().sum())
     logger.info(f"Nuclei without a cell type: {n_unmapped}")
 
@@ -384,5 +390,6 @@ if "snakemake" in globals():
         out_sample=str(snakemake.output.per_sample),
         out_celltype=str(snakemake.output.per_celltype),
         scripts_dir=str(snakemake.scriptdir),
+        labels=dict(snakemake.params.labels),
     )
     logger.info("Done.")

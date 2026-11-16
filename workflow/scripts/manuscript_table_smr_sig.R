@@ -111,12 +111,9 @@ empty_final_tbl <- tibble(
 # across the rest of the manuscript pipeline (manuscript_figure_bulk_egene_overlaps.R,
 # manuscript_figure_fig4.py, manuscript_table_ctwas_sig.R, etc.) The per-trait
 # TSVs above are left untouched -- this only affects the new xlsx.
-relabel_cell_type <- function(x) {
-  x <- str_replace(x, "Glu-UL", "Glu-A")
-  x <- str_replace(x, "Glu-DL", "Glu-B")
-  x <- str_replace(x, "-Q4-", "-")
-  x
-}
+# Pipeline -> manuscript cell type labels (config manuscript_labels)
+source(file.path(snakemake@scriptdir, "functions.R"))
+manuscript_labels <- snakemake@params[["labels"]]
 
 # --- Full disorder names for xlsx sheet names (same mapping used in
 # manuscript_table_ctwas_sig.R)
@@ -179,7 +176,7 @@ for (i in seq_along(traits)) {
   # names). Blank gene symbols become NA, consistent with the cTWAS xlsx.
   sheet_tbl <- final_tbl |>
     mutate(
-      `Cell Type` = relabel_cell_type(`Cell Type`),
+      `Cell Type` = relabel_cell_types(`Cell Type`, manuscript_labels),
       Symbol      = na_if(Symbol, "")
     )
 

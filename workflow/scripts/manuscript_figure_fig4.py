@@ -133,9 +133,14 @@ DENSITY_LINEWIDTH = 1.4        # ~ ggplot linewidth 0.5 mm
 DENSITY_N         = 512        # ggplot geom_density default
 
 
+LABELS = dict(snakemake.params.labels)
+
+
 def relabel(x):
-    """Pipeline label -> figure label, e.g. NPC-to-Glu-UL -> NPC to Glu-A."""
-    return x.replace("Glu-UL", "Glu-A").replace("Glu-DL", "Glu-B").replace("-to-", " to ")
+    """Pipeline label -> figure label (config manuscript_labels), e.g. NPC-to-Glu-UL -> NPC to Glu-A."""
+    for old, new in LABELS.items():
+        x = x.replace(old, new)
+    return x.replace("-to-", " to ")
 
 
 def read_sig(perm_file):
