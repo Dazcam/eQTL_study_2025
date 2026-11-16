@@ -14,12 +14,24 @@ TQTL_CELL_TYPE_REGEX = "|".join(map(re.escape, TQTL_CELL_TYPES))
 TQTL_BENCHMARK_RULES = ["prep_tensorQTL_input", "zip_pblk_cnts", "convert_genotypes", "split_covariates",
                         "tensorqtl_nom", "tensorqtl_perm", "tensorqtl_independent", "tensorqtl_report"]
 
-TQTL_WILDCARDS = dict(
-    cell_type   = TQTL_CELL_TYPES,
-    geno_pc     = config["tensorQTL"]["geno_pcs"],
-    exp_pc      = config["tensorQTL"]["exp_pcs"],
-    norm_method = config["tensorQTL"]["norm_methods"],
-)
+TQTL_FINAL_NORM = config["tensorQTL"]["norm_methods"][0]
+TQTL_L1_TYPES   = [ct for ct in TQTL_CELL_TYPES if ct in config["fetal_l1_types"]]
+TQTL_L2_TYPES   = [ct for ct in TQTL_CELL_TYPES if ct not in config["fetal_l1_types"]]
+
+# Runs the report needs. Sensitivity (perm): L1 cell types with every norm method,
+# L2 with the final norm method only; both over every expPC. Independent: final
+# norm method at each cell type's exp_pc_map value.
+TQTL_PERM_RUNS = (
+    expand(config["tensorQTL"]["tensorqtl_perm"]["output"], cell_type = TQTL_L1_TYPES,
+           norm_method = config["tensorQTL"]["norm_methods"],
+           geno_pc = config["tensorQTL"]["geno_pcs"], exp_pc = config["tensorQTL"]["exp_pcs"]) +
+    expand(config["tensorQTL"]["tensorqtl_perm"]["output"], cell_type = TQTL_L2_TYPES,
+           norm_method = TQTL_FINAL_NORM,
+           geno_pc = config["tensorQTL"]["geno_pcs"], exp_pc = config["tensorQTL"]["exp_pcs"]))
+TQTL_INDEP_RUNS = [config["tensorQTL"]["tensorqtl_independent"]["output"].format(
+                       cell_type = ct, norm_method = TQTL_FINAL_NORM,
+                       geno_pc = config["tensorQTL"]["geno_pcs"], exp_pc = config["exp_pc_map"][ct])
+                   for ct in TQTL_CELL_TYPES]
 
 rule prep_tensorQTL_input:
     input:  cov_file    = config["geno_post_impute"]["calc_genotype_pcs"]["output"],
@@ -145,8 +157,8 @@ rule tensorqtl_independent:
 
 rule tensorqtl_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
-    input:  perm  = expand(rules.tensorqtl_perm.output, **TQTL_WILDCARDS),
-            indep = expand(rules.tensorqtl_independent.output, **TQTL_WILDCARDS),
+    input:  perm  = TQTL_PERM_RUNS,
+            indep = TQTL_INDEP_RUNS,
             cell_counts = config["scanpy"]["l1_cell_counts"],
             rmd_script = config["tensorQTL"]["tensorqtl_report"]["rmd_script"]
     output: config["tensorQTL"]["tensorqtl_report"]["output"]
@@ -155,7 +167,7 @@ rule tensorqtl_report:
             cell_counts  = "../" + config["scanpy"]["l1_cell_counts"],   # the Rmd knits in scripts/
             output_file  = config["tensorQTL"]["tensorqtl_report"]["output_file"],
             l1_types     = ",".join(config["fetal_l1_types"]),
-            l2_types     = ",".join(ct for ct in TQTL_CELL_TYPES if ct not in config["fetal_l1_types"]),
+            l2_types     = ",".join(TQTL_L2_TYPES),
             exp_pcs      = ",".join(map(str, config["tensorQTL"]["exp_pcs"])),
             geno_pc      = config["tensorQTL"]["geno_pcs"],
             norm_methods = ",".join(config["tensorQTL"]["norm_methods"]),
