@@ -33,6 +33,13 @@ TQTL_INDEP_RUNS = [config["tensorQTL"]["tensorqtl_independent"]["output"].format
                        geno_pc = config["tensorQTL"]["geno_pcs"], exp_pc = config["exp_pc_map"][ct])
                    for ct in TQTL_CELL_TYPES]
 
+# Nominal results used downstream (SMR, replication, SuSiE, TWAS): final norm method at
+# each cell type's exp_pc_map value
+TQTL_NOM_RUNS = [config["tensorQTL"]["tensorqtl_nom"]["output"].format(
+                     cell_type = ct, norm_method = TQTL_FINAL_NORM,
+                     geno_pc = config["tensorQTL"]["geno_pcs"], exp_pc = config["exp_pc_map"][ct])
+                 for ct in TQTL_CELL_TYPES]
+
 rule prep_tensorQTL_input:
     input:  cov_file    = config["geno_post_impute"]["calc_genotype_pcs"]["output"],
             sex_file    = config["scanpy"]["metadata_per_sample"],
@@ -195,4 +202,4 @@ rule tensorqtl_report:
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["05tensorQTL"] = [config["tensorQTL"]["tensorqtl_report"]["output"]]
+TARGETS["05tensorQTL"] = TQTL_NOM_RUNS + [config["tensorQTL"]["tensorqtl_report"]["output"]]
