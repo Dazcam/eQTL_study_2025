@@ -7,7 +7,16 @@ output:
     df_print: paged
 params:
   in_dir: null
+  ind_dir: null
   bmark_dir: null
+  l1_types: null
+  l2_types: null
+  exp_pcs: null
+  geno_pc: null
+  norm_methods: null
+  window: null
+  exp_pc_map: null
+  eqtl_fdr: null
 ---
 
 ***
@@ -24,8 +33,19 @@ library(UpSetR)
 library(patchwork)
 library(ggrepel)
 source(file.path(dirname(knitr::current_input(dir = TRUE)), "tensorqtl_functions.R"))
-in_dir <- params$in_dir
-bmark_dir <- params$bmark_dir
+in_dir       <- params$in_dir
+ind_dir      <- params$ind_dir
+bmark_dir    <- params$bmark_dir
+l1_types     <- strsplit(params$l1_types, ",")[[1]]
+l2_types     <- strsplit(params$l2_types, ",")[[1]]
+exp_pcs      <- as.numeric(strsplit(params$exp_pcs, ",")[[1]])
+geno_pc      <- as.numeric(params$geno_pc)
+norm_methods <- strsplit(params$norm_methods, ",")[[1]]
+final_norm   <- norm_methods[1]   # results use the first norm method in config
+window_kb    <- as.numeric(params$window) / 1000
+eqtl_fdr     <- as.numeric(params$eqtl_fdr)
+pc_pairs     <- strsplit(strsplit(params$exp_pc_map, ",")[[1]], ":")
+exp_pc_map   <- setNames(as.numeric(map_chr(pc_pairs, 2)), map_chr(pc_pairs, 1))
 ```
 
 ## TensorQTL pipeline steps {.tabset}
@@ -48,11 +68,11 @@ The citation for tensorQTL is [Taylor-Weiner et al. 2019 (DOI:10.1186/s13059-019
 
 Sensitivity settings:
 
-+ cis-window: $\pm$ 500kb
-+ Expression PC covariates tested: 10, 20, 30, 40, 50
++ cis-window: $\pm$ `r window_kb`kb
++ Expression PC covariates tested: `r paste(exp_pcs, collapse = ", ")`
 + Meta data covariates: PCW, sex
-+ Genotype PCs: 4 (see genotyping_post_impute_report.html)
-+ Norm methods tested: bryois, fujita, quantile, xue
++ Genotype PCs: `r geno_pc` (see genotyping_post_impute_report.html)
++ Norm methods tested: `r paste(sort(norm_methods), collapse = ", ")`
 
 ***
 
@@ -61,13 +81,11 @@ Sensitivity settings:
 ***
 
 ```{r, summary_table_L1, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-exp_PCs <- c(10, 20, 30, 40, 50)
-gen_PCs <- 4
-norm_methods <- c('bryois', 'fujita', 'quantile', 'xue')
+cell_types <- l1_types
 
-summary_tbl <- summarise_logs(cell_types, in_dir, exp_pcs = exp_PCs, geno_pc = gen_PCs,
-                              norm_methods = norm_methods)
+# Sensitivity runs: every norm method (alphabetical, as plotted)
+summary_tbl <- summarise_logs(cell_types, in_dir, exp_pcs = exp_pcs, geno_pc = geno_pc,
+                              norm_methods = sort(norm_methods))
 ```
 
 ***
@@ -123,24 +141,14 @@ print(sensitivity_all_gt(summary_tbl))
 
 ***
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
 ```{r, eQTL_density_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,7.5)}
-genPC <- 4
-expPC_map <- c(
-  "Glu-UL"     = 50,
-  "Glu-DL"     = 40,
-  "GABA"       = 30,
-  "NPC"        = 30,
-  "MG"         = 30,
-  "OPC"        = 30,
-  "Endo-Peri"  = 30
-)
-norm_method <- 'quantile'
+expPC_map <- exp_pc_map[cell_types]
 
-eqtls_all <- read_sig_eqtls(cell_types, in_dir, expPC_map, norm_method, genPC, fdr = 0.05)
+eqtls_all <- read_sig_eqtls(cell_types, in_dir, expPC_map, final_norm, geno_pc, fdr = eqtl_fdr)
 
 plt_list <- list()
 for (ct in cell_types) {
@@ -155,7 +163,7 @@ cowplot::plot_grid(plotlist = plt_list)
 
 ##### Combined
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ```{r, density_combined, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 plot_density_combined(eqtls_all, custom_palette)
@@ -165,7 +173,7 @@ plot_density_combined(eqtls_all, custom_palette)
 
 #### Pie Chart
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ```{r, pie_chart, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(7.5,7.5) }
 gene_cell <- eqtls_all %>%
@@ -218,7 +226,7 @@ ggplot(pie_dat, aes(ymax = ymax, ymin = ymin, xmax = 1, xmin = 0, fill = label))
 
 #### Counts
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -236,7 +244,7 @@ plot_egene_counts(gene_cell, custom_palette)
 
 #### Upset
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -253,7 +261,7 @@ upset(gene_by_cell, nsets = length(cell_types), order.by = "freq")
 
 #### Scatter
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -271,7 +279,7 @@ ggplot(scatter_dat, aes(x=n_cells, y=n, label=cell_type, color=cell_type)) +
                   nudge_y=100,  # pushes labels up a bit
   ) +
   scale_color_manual(values=custom_palette)+
-  labs(x="Cell count", y="cis-eQTL (FDR < 0.05)") +
+  labs(x="Cell count", y=paste0("cis-eQTL (FDR < ", eqtl_fdr, ")")) +
   theme_minimal() +
   theme(
     plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"),
@@ -286,7 +294,7 @@ ggplot(scatter_dat, aes(x=n_cells, y=n, label=cell_type, color=cell_type)) +
 
 #### Settings
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -298,7 +306,7 @@ expPC_tbl <- tibble(
 )
 
 summary_table <- summary_tbl %>%
-  filter(norm_methods == "quantile") %>%
+  filter(norm_methods == final_norm) %>%
   inner_join(expPC_tbl, by = c("cell_type", "expPC")) %>%
   select(cell_type, genes_tested, samples, variants) %>%
   distinct(cell_type, .keep_all = TRUE) %>%
@@ -333,13 +341,12 @@ print(table)
 
 ##### Counts
 
-+ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing tables for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
 ```{r, eQTL_independent_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-ind_dir <- '../../results/05TENSORQTL/tensorqtl_independent/'
-all_eqtls <- read_indep(cell_types, ind_dir, expPC_map, norm_method, genPC)
+all_eqtls <- read_indep(cell_types, ind_dir, expPC_map, final_norm, geno_pc)
 
 print(indep_counts_gt(all_eqtls, "Table 4. Independent eQTL counts per cell type"))
 ```
@@ -348,7 +355,7 @@ print(indep_counts_gt(all_eqtls, "Table 4. Independent eQTL counts per cell type
 
 ##### Distance from TSS
 
-+ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing tables for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -361,7 +368,7 @@ print(indep_tss_gt(all_eqtls, "Table 5. Median TSS distances (kb) for independen
 
 ##### SNPs
 
-+ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing tables for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -554,10 +561,7 @@ plot_grid(runtime_plt, mem_plt)
 ***
 
 ```{r, summary_table_L2, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-cell_types <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                "GABA-0", "GABA-1", "GABA-2",
-                "NPC-0", "NPC-1", "NPC-2")
+cell_types <- l2_types
 
 custom_palette <- c(
   "NPC-0" = '#FF5959',
@@ -574,12 +578,9 @@ custom_palette <- c(
   "GABA-2" = '#3CBB75FF'
 )
 
-exp_PCs <- c(10, 20, 30, 40, 50)
-gen_PCs <- 4
-norm_methods <- 'quantile'
-
-summary_tbl <- summarise_logs(cell_types, in_dir, exp_pcs = exp_PCs, geno_pc = gen_PCs,
-                              norm_methods = norm_methods)
+# Sensitivity runs: final norm method only
+summary_tbl <- summarise_logs(cell_types, in_dir, exp_pcs = exp_pcs, geno_pc = geno_pc,
+                              norm_methods = final_norm)
 ```
 
 ***
@@ -622,29 +623,14 @@ print(sensitivity_all_gt(summary_tbl))
 
 ***
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
 ```{r, eQTL_density_plt_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(20,15)}
-genPC <- 4
-expPC_map <- c(
-  "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,
-  "Glu-UL-2"     = 40,
-  "Glu-DL-0"     = 40,
-  "Glu-DL-1"     = 40,
-  "Glu-DL-2"     = 30,
-  "GABA-0"       = 30,
-  "GABA-1"       = 40,
-  "GABA-2"       = 40,
-  "NPC-0"        = 50,
-  "NPC-1"        = 30,
-  "NPC-2"        = 20
-)
-norm_method <- 'quantile'
+expPC_map <- exp_pc_map[cell_types]
 
-eqtls_all <- read_sig_eqtls(cell_types, in_dir, expPC_map, norm_method, genPC, fdr = 0.05)
+eqtls_all <- read_sig_eqtls(cell_types, in_dir, expPC_map, final_norm, geno_pc, fdr = eqtl_fdr)
 
 plt_list <- list()
 for (ct in cell_types) {
@@ -659,7 +645,7 @@ cowplot::plot_grid(plotlist = plt_list)
 
 ##### Combined
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ```{r, density_combined_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 plot_density_combined(eqtls_all, custom_palette)
@@ -671,7 +657,7 @@ plot_density_combined(eqtls_all, custom_palette)
 
 #### Counts
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -690,12 +676,12 @@ plot_egene_counts(gene_cell, custom_palette)
 
 ##### Counts
 
-+ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing tables for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
 ```{r, eQTL_independent_L2_cnts, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-all_eqtls <- read_indep(cell_types, ind_dir, expPC_map, norm_method, genPC)
+all_eqtls <- read_indep(cell_types, ind_dir, expPC_map, final_norm, geno_pc)
 
 print(indep_counts_gt(all_eqtls, "Table 3. Independent eQTL counts per cell type"))
 ```
@@ -704,7 +690,7 @@ print(indep_counts_gt(all_eqtls, "Table 3. Independent eQTL counts per cell type
 
 ##### Distance from TSS
 
-+ Showing tables for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
++ Showing tables for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
@@ -720,51 +706,24 @@ print(indep_tss_gt(all_eqtls, "Table 4. Median TSS distances (kb) for independen
 
 #### Shared
 
-+ Showing plots for geno PCs = 4, Exp PCs = `expPC_map_L1` or `expPC_map_L2`, norm method = 'quantile'
++ Showing plots for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
 ```{r, eqtl_combined_plt, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(6,4)}
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC")
-cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                   "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                   "GABA-0", "GABA-1", "GABA-2",
-                   "NPC-0", "NPC-1", "NPC-2")
-
-expPC_map_L1 <- c(
-  "Glu-UL"     = 50,
-  "Glu-DL"     = 40,
-  "GABA"       = 30,
-  "NPC"        = 30,
-  "MG"         = 30,
-  "OPC"        = 30,
-  "Endo-Peri"  = 30
-)
-
-expPC_map_L2 <- c(
-  "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,
-  "Glu-UL-2"     = 40,
-  "Glu-DL-0"     = 40,
-  "Glu-DL-1"     = 40,
-  "Glu-DL-2"     = 30,
-  "GABA-0"       = 30,
-  "GABA-1"       = 40,
-  "GABA-2"       = 40,
-  "NPC-0"        = 50,
-  "NPC-1"        = 30,
-  "NPC-2"        = 20
-)
+# L1 cell types with L2 subclusters
+cell_types_L2 <- l2_types
+cell_types_L1 <- l1_types[l1_types %in% sub("-[^-]+$", "", cell_types_L2)]
 
 eqtl_L1 <- map_dfr(
   cell_types_L1,
   ~ read_egenes(
       cell_type   = .x,
       in_dir      = in_dir,
-      norm_method = norm_method,
-      geno_pc     = genPC,
-      exp_pc      = expPC_map_L1[[.x]],
-      fdr         = 0.05
+      norm_method = final_norm,
+      geno_pc     = geno_pc,
+      exp_pc      = exp_pc_map[[.x]],
+      fdr         = eqtl_fdr
     )
 )
 
@@ -773,10 +732,10 @@ eqtl_L2 <- map_dfr(
   ~ read_egenes(
       cell_type   = .x,
       in_dir      = in_dir,
-      norm_method = norm_method,
-      geno_pc     = genPC,
-      exp_pc      = expPC_map_L2[[.x]],
-      fdr         = 0.05
+      norm_method = final_norm,
+      geno_pc     = geno_pc,
+      exp_pc      = exp_pc_map[[.x]],
+      fdr         = eqtl_fdr
     )
 )
 
@@ -843,47 +802,20 @@ ggplot(comparison_long, aes(x = prop, y = fct_rev(cell_type), fill = category)) 
 
 #### Counts CT {.tabset}
 
-+ Showing counts for geno PCs = 4, Exp PCs = `expPC_map_all`, norm method = 'quantile'
++ Showing counts for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
 ```{r, cnts_cell_tpe, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
-cell_types_all <- c("Glu-UL", "Glu-DL", "GABA", "NPC",
-                    "MG", "OPC", "Endo-Peri",
-                    "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                    "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                    "GABA-0", "GABA-1", "GABA-2",
-                    "NPC-0", "NPC-1", "NPC-2")
-
-expPC_map_all <- c(
-  "Glu-UL"     = 50,
-  "Glu-DL"     = 40,
-  "GABA"       = 30,
-  "NPC"        = 30,
-  "MG"         = 30,
-  "OPC"        = 30,
-  "Endo-Peri"  = 30,
-  "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,
-  "Glu-UL-2"     = 40,
-  "Glu-DL-0"     = 40,
-  "Glu-DL-1"     = 40,
-  "Glu-DL-2"     = 30,
-  "GABA-0"       = 30,
-  "GABA-1"       = 40,
-  "GABA-2"       = 40,
-  "NPC-0"        = 50,
-  "NPC-1"        = 30,
-  "NPC-2"        = 20
-)
+cell_types_all <- c(l1_types, l2_types)
 
 # Build all file paths
 summary_tbl <- map_dfr(cell_types_all, function(ct) {
 
-  expPC <- expPC_map_all[[ct]]
+  expPC <- exp_pc_map[[ct]]
 
-  log_file <- paste0(tqtl_dir(in_dir, ct, norm_method, genPC, expPC),
-                     ct, '_', norm_method, '_perm.cis_qtl.txt.gz')
+  log_file <- paste0(tqtl_dir(in_dir, ct, final_norm, geno_pc, expPC),
+                     ct, '_', final_norm, '_perm.cis_qtl.txt.gz')
 
   if (!file.exists(log_file)) {
     message("File missing: ", log_file)
@@ -897,7 +829,7 @@ summary_tbl <- map_dfr(cell_types_all, function(ct) {
   }
 
   df <- read_tsv(log_file, show_col_types = FALSE) %>%
-    filter(qval < 0.05)
+    filter(qval < eqtl_fdr)
 
   # Total significant eQTLs
   total_sig_eqtl <- nrow(df)
@@ -942,16 +874,16 @@ tbl_totals
 
 #### Counts All
 
-+ Showing counts for geno PCs = 4, Exp PCs = `expPC_map_all`, norm method = 'quantile'
++ Showing counts for geno PCs = `r geno_pc`, Exp PCs = `exp_pc_map`, norm method = '`r final_norm`'
 
 ***
 
 ```{r, cnts_total, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 # Build all file paths
 perm_files <- expand_grid(cell_type = cell_types_all,
-                          norm_method = norm_method,
-                          genPC = genPC) %>%
-  mutate(expPC = expPC_map_all[cell_type],
+                          norm_method = final_norm,
+                          genPC = geno_pc) %>%
+  mutate(expPC = exp_pc_map[cell_type],
          log_file = paste0(tqtl_dir(in_dir, cell_type, norm_method, genPC, expPC),
                            cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz"))
 
@@ -966,7 +898,7 @@ perm_results <- perm_files %>%
   bind_rows()
 
 # Filter significant results
-sig_eqtl <- perm_results %>% filter(qval < 0.05)
+sig_eqtl <- perm_results %>% filter(qval < eqtl_fdr)
 
 # Summaries
 summary_tbl <- tibble(

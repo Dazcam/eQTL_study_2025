@@ -552,6 +552,7 @@ tensorQTL:
     rmd_script:  scripts/tensorqtl_report.Rmd
     output:      reports/05TENSORQTL/05tensorqtl_report.html
     in_dir:      ../../results/05TENSORQTL/tensorqtl_perm/
+    ind_dir:     ../../results/05TENSORQTL/tensorqtl_independent/
     bmark_dir:   ../reports/benchmarks/
     output_file: ../reports/05TENSORQTL/05tensorqtl_report.html
     log:         ../results/00LOG/05TENSORQTL/tensorqtl_report.log

@@ -145,9 +145,18 @@ rule tensorqtl_report:
             indep = expand(rules.tensorqtl_independent.output, **TQTL_WILDCARDS),
             rmd_script = config["tensorQTL"]["tensorqtl_report"]["rmd_script"]
     output: config["tensorQTL"]["tensorqtl_report"]["output"]
-    params: in_dir = config["tensorQTL"]["tensorqtl_report"]["in_dir"],
-            bmark_dir = config["tensorQTL"]["tensorqtl_report"]["bmark_dir"],
-            output_file = config["tensorQTL"]["tensorqtl_report"]["output_file"]
+    params: in_dir       = config["tensorQTL"]["tensorqtl_report"]["in_dir"],
+            ind_dir      = config["tensorQTL"]["tensorqtl_report"]["ind_dir"],
+            bmark_dir    = config["tensorQTL"]["tensorqtl_report"]["bmark_dir"],
+            output_file  = config["tensorQTL"]["tensorqtl_report"]["output_file"],
+            l1_types     = ",".join(config["fetal_l1_types"]),
+            l2_types     = ",".join(ct for ct in TQTL_CELL_TYPES if ct not in config["fetal_l1_types"]),
+            exp_pcs      = ",".join(map(str, config["tensorQTL"]["exp_pcs"])),
+            geno_pc      = config["tensorQTL"]["geno_pcs"],
+            norm_methods = ",".join(config["tensorQTL"]["norm_methods"]),
+            window       = config["tensorQTL"]["window"],
+            exp_pc_map   = ",".join(f"{ct}:{config['exp_pc_map'][ct]}" for ct in TQTL_CELL_TYPES),
+            eqtl_fdr     = config["eqtl_fdr"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate tensorQTL report"
     benchmark: config["tensorQTL"]["tensorqtl_report"]["benchmark"]
@@ -156,7 +165,12 @@ rule tensorqtl_report:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
             output_file = '{params.output_file}', \
-            params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+            params = list(in_dir = '{params.in_dir}', ind_dir = '{params.ind_dir}', \
+                          bmark_dir = '{params.bmark_dir}', l1_types = '{params.l1_types}', \
+                          l2_types = '{params.l2_types}', exp_pcs = '{params.exp_pcs}', \
+                          geno_pc = '{params.geno_pc}', norm_methods = '{params.norm_methods}', \
+                          window = '{params.window}', exp_pc_map = '{params.exp_pc_map}', \
+                          eqtl_fdr = '{params.eqtl_fdr}'))" > {log} 2>&1
         """
 
 
