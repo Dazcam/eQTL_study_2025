@@ -549,7 +549,7 @@ tensorQTL:
     benchmark:  reports/benchmarks/05tensorQTL.tensorqtl_independent_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
 
   tensorqtl_report:
-    rmd_script:  scripts/tensorQTL_report.Rmd
+    rmd_script:  scripts/tensorqtl_report.Rmd
     output:      reports/05TENSORQTL/05tensorqtl_report.html
     in_dir:      ../../results/05TENSORQTL/tensorqtl_perm/
     bmark_dir:   ../reports/benchmarks/

@@ -16,16 +16,13 @@ params:
 library(tidyverse)
 library(knitr)
 library(kableExtra)
-library(stringr)
 library(cowplot)
 library(DT)
 library(glue)
 library(gt)
-library(tidyverse)
 library(UpSetR)
 library(patchwork)
 library(ggrepel)
-library(cowplot)
 in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 ```
@@ -34,19 +31,18 @@ bmark_dir <- params$bmark_dir
 
 ***
 
-We used [tensorQTL](https://github.com/broadinstitute/tensorqtl) to generate eQTL. 
+We used [tensorQTL](https://github.com/broadinstitute/tensorqtl) to generate eQTL.
 The citation for tensorQTL is [Taylor-Weiner et al. 2019 (DOI:10.1186/s13059-019-1836-7)](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1836-7).
 
 ***
 
-1. `prep_tensorQTL_input`: Munge cell-specific pseudobulk gExp and covaraiate data into TensorQTL-ready format
+1. `prep_tensorQTL_input`: Munge cell-specific pseudobulk gExp and covariate data into TensorQTL-ready format
 2. `zip_pblk_cnts`: bgzip and index pseudobulk gExp data
-3. `convert_genotypes`: Convert genotypes into into TensorQTL-ready plink 2 format 
-4. `split_covariates`: Generate covaraiate files for gene_pc and exp_pc combinations
+3. `convert_genotypes`: Convert genotypes into TensorQTL-ready plink 2 format
+4. `split_covariates`: Generate covariate files for geno_pc and exp_pc combinations
 5. `tensorqtl_nom`: Run TensorQTL to detect cis-eQTL nominal p-values
-6. `tensorqtl_perm`: Run TensorQTL to detect cis-eQTL via permutations 
+6. `tensorqtl_perm`: Run TensorQTL to detect cis-eQTL via permutations
 7. `tensorqtl_independent`: Run TensorQTL to detect conditionally independent variants
-8. `tensorqtl_trans`: Run TensorQTL to detect trans-eQTL
 
 
 Sensitivity settings:
@@ -55,7 +51,7 @@ Sensitivity settings:
 + Expression PC covariates tested: 10, 20, 30, 40, 50
 + Meta data covariates: PCW, sex
 + Genotype PCs: 4 (see genotyping_post_impute_report.html)
-+ Norm methods tested: bryois, fugita, quantile, xue
++ Norm methods tested: bryois, fujita, quantile, xue
 
 ***
 
@@ -69,17 +65,17 @@ exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- c('bryois', 'fujita', 'quantile', 'xue')
 
-summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs, 
+summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
                            genPC = gen_PCs, norm_method = norm_methods) {
   # Generate all combinations of cell types and expPC values
   params_grid <- expand.grid(cell_type = cell_types, expPC = expPCs, norm_method = norm_methods,
                              stringsAsFactors = FALSE)
-  
+
   # Function to process a single log file
   process_log <- function(cell_type, expPC, norm_method) {
-    message('Reading eQTL log file for: ', cell_type, ', ', norm_method , 
+    message('Reading eQTL log file for: ', cell_type, ', ', norm_method ,
             ', with genPC_', genPC, ' expPC_', expPC)
-    
+
     # Construct the log file path
     log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
     log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.tensorQTL.cis.log')
@@ -89,13 +85,13 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
       message('Log file not found: ', log_file)
       return(NULL)
     }
-    
+
     # Read and process the log file
     lines <- readLines(log_file, warn = FALSE)
-    
+
     gene_line <- str_subset(lines, 'phenotypes tested:')
     sample_line <- str_subset(lines, 'samples')
-    covariate_line <- tail(str_subset(lines, 'covariates'), 1) # need to fix this
+    covariate_line <- tail(str_subset(lines, 'covariates'), 1)
     variants_line <- str_subset(lines, 'variants')
     qtl_line <- str_subset(lines, 'QTL phenotypes @ FDR 0.05:')
     window_line <- str_subset(lines, 'cis-window:')
@@ -103,7 +99,7 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
     beta_line <- str_subset(lines, 'Correlation between Beta-approximated and empirical p-values:')
     min_p_line <- str_subset(lines, 'min p-value threshold @ FDR 0.05:')
     prop_sig_line <- str_subset(lines, 'Proportion of significant phenotypes')
-    
+
     # Extract numbers
     num_genes <- as.integer(str_extract(gene_line, '\\d+$'))
     num_samples <- as.integer(str_extract(sample_line, '\\d+'))
@@ -115,9 +111,9 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
     beta_cor <- as.numeric(str_extract(beta_line, '[0-9\\.eE-]+$'))
     min_p <- as.numeric(str_extract(min_p_line, '[0-9\\.eE-]+$'))
     prop_sig <- as.integer(str_extract(prop_sig_line, '\\d+$'))
-    
+
     message('Collating sumstats for: ', cell_type, ' with genPC_', genPC, ' expPC_', expPC, ' ...')
-    
+
     # Create tibble with all relevant fields
     tibble(
       cell_type = cell_type,
@@ -136,28 +132,25 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
       run_time_min = run_time
     )
   }
-  
+
   # Apply the processing function to all combinations
   summary_list <- pmap(params_grid, function(cell_type, expPC, norm_method) {
     process_log(cell_type, expPC, norm_method)
   })
-  
+
   # Identify which elements are non-null
   valid_idx <- !sapply(summary_list, is.null)
-  table(valid_idx)  # how many TRUE vs FALSE
-  length(summary_list)
-  sum(valid_idx)
 
   # Keep only valid entries
   summary_list <- summary_list[valid_idx]
 
   # Name the list elements for clarity
   names(summary_list) <- paste0(
-    params_grid$cell_type, '_', 
-    params_grid$norm_method, '_genPC_', genPC, 
+    params_grid$cell_type, '_',
+    params_grid$norm_method, '_genPC_', genPC,
     '_expPC_', params_grid$expPC
     )[valid_idx]
-  
+
   # Return the list of summary tibbles
   return(summary_list)
 }
@@ -226,9 +219,6 @@ combined_plot <- plot_grid(plotlist = plots, ncol = 2)
 
 # Show the combined plot
 print(combined_plot)
-
-# Optionally save
-# ggsave("qtl_fdr_by_expPC_all_norms.png", combined_plot, width = 12, height = 10, dpi = 300)
 ```
 
 ***
@@ -238,7 +228,7 @@ print(combined_plot)
 ***
 
 ```{r, sensitivity_table_best_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-best_tbl <- summary_tbl |> 
+best_tbl <- summary_tbl |>
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   group_by(cell_type) |>
   slice_max(qtl_fdr_0.05, n = 1, with_ties = FALSE) |>
@@ -275,10 +265,6 @@ table <- best_tbl %>%
     table_body.border.bottom.color = "black"
   )
 
-# Save the table as a LaTeX file for publication
-#gtsave(table, filename = "summary_table.tex")
-
-# Optionally, display the table
 print(table)
 ```
 
@@ -289,14 +275,14 @@ print(table)
 ***
 
 ```{r, sensitivity_table_all_L1, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-all_tbl <- summary_tbl |> 
+all_tbl <- summary_tbl |>
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   pivot_wider(
-    id_cols     = c(expPC, norm_methods),        
+    id_cols     = c(expPC, norm_methods),
     names_from  = cell_type,
     values_from = qtl_fdr_0.05,
     names_sort  = TRUE) |>
-  arrange(desc(expPC)) 
+  arrange(desc(expPC))
 
 table <- all_tbl %>%
   gt() %>%
@@ -326,10 +312,6 @@ table <- all_tbl %>%
     table_body.border.bottom.color = "black"
   )
 
-# Save the table as a LaTeX file for publication
-#gtsave(table, filename = "summary_table.tex")
-
-# Optionally, display the table
 print(table)
 ```
 
@@ -360,9 +342,9 @@ expPC_map <- c(
 norm_method <- 'quantile'
 
 for (cell_type in cell_types) {
-  
+
   expPC <- expPC_map[[cell_type]]
-  
+
   message('Reading eQTL data for: ', cell_type)
   log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
   log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
@@ -370,23 +352,23 @@ for (cell_type in cell_types) {
     dplyr::filter(!is.na(start_distance)) %>%
     mutate(distance_kb = start_distance / 1000) %>%
     dplyr::filter(qval < 0.05)
-  
+
   message('eQTL detected at FDR < 0.05: ', nrow(eqtl_tbl))
-  
+
   if (nrow(eqtl_tbl) > 0) {
-    
+
     message('Plotting ...')
-    
+
     eqtl_count <- nrow(eqtl_tbl)
-    
+
     eqtl_density_plt <- eqtl_tbl  %>%
       ggplot(aes(x = distance_kb)) +
       geom_density() +
       geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-      annotate("text", x = 100, y = Inf, 
-               label = paste("eQTLs:", eqtl_count), 
+      annotate("text", x = 100, y = Inf,
+               label = paste("eQTLs:", eqtl_count),
                hjust = 0, vjust = 1.5, size = 4, fontface = "bold") +
-      scale_x_continuous(limits = c(-600, 600), 
+      scale_x_continuous(limits = c(-600, 600),
                          breaks = seq(-600, 600, by = 200),
                          labels = seq(-600, 600, by = 200)) +
       labs(x = "Distance to TSS (kb)",
@@ -401,15 +383,15 @@ for (cell_type in cell_types) {
         axis.text = element_text(color = "black"),
         axis.title = element_text(face = "bold")
       )
-    
+
     plt_list[[cell_type]] <- eqtl_density_plt
-    
+
   } else {
-    
+
     message('Skipped plotting.')
-    
+
   }
-  
+
 }
 
 combined_plot <- cowplot::plot_grid(plotlist = plt_list)
@@ -422,27 +404,27 @@ combined_plot
 
 + Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
-```{r, denisty_combined, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+```{r, density_combined, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 eqtl_list <- list()
 genPC <- 4
 norm_method <- 'quantile'
 
 for (cell_type in cell_types) {
-  
+
   expPC <- expPC_map[[cell_type]]
-  
+
   f <- file.path(
     in_dir,
     paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC),
-    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")  
+    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")
   )
-  
+
   if (file.exists(f)) {
     dat <- read_tsv(f, show_col_types = FALSE) %>%
       filter(!is.na(start_distance)) %>%
       mutate(distance_kb = start_distance / 1000) %>%
       filter(qval < 0.05)   # significance cutoff
-    
+
     if (nrow(dat) > 0) {
       eqtl_list[[cell_type]] <- dat %>% mutate(cell_type = cell_type)
     }
@@ -455,7 +437,6 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
   geom_density() +
   geom_vline(xintercept = 0, linetype="dashed", color = "black") +
   scale_color_manual(values=custom_palette) +
-  #scale_fill_manual(values=custom_palette) +
   scale_x_continuous(limits=c(-600,600), breaks=seq(-600,600,200)) +
   labs(x="Distance to TSS (kb)", y="Density") +
   theme_minimal() +
@@ -501,8 +482,8 @@ ggplot(pie_dat, aes(ymax = ymax, ymin = ymin, xmax = 1, xmin = 0, fill = label))
   geom_rect(color = "white") +
   coord_polar(theta = "y") +
   geom_text_repel(aes(
-    x = 1.1, 
-    y = midpoint, 
+    x = 1.1,
+    y = midpoint,
     label = count
   ),
   nudge_x = 0.05,
@@ -585,10 +566,10 @@ scatter_dat <- egene_per_cell %>%
 
 ggplot(scatter_dat, aes(x=n_cells, y=n, label=cell_type, color=cell_type)) +
   geom_point(size = 3) +
-  geom_text_repel(aes(label=cell_type, color=cell_type), 
-                  size=4, 
+  geom_text_repel(aes(label=cell_type, color=cell_type),
+                  size=4,
                   show.legend=FALSE,
-                  max.overlaps=20, 
+                  max.overlaps=20,
                   force=2,      # pushes labels apart
                   nudge_y=100,  # pushes labels up a bit
   ) +
@@ -672,10 +653,6 @@ table <- summary_table %>%
     table_body.border.bottom.color = "black"
   )
 
-# Save the table as a LaTeX file for publication
-#gtsave(table, filename = "summary_table.tex")
-
-# Optionally, display the table
 print(table)
 ```
 
@@ -698,14 +675,14 @@ norm_method <- 'quantile'
 ind_dir <- '../../results/05TENSORQTL/tensorqtl_independent/'
 
 read_indep <- function(cell_type) {
-  
+
   expPC <- expPC_map[[cell_type]]
-  
+
   log_dir <- paste0(ind_dir, cell_type, "_", norm_method,
                     "_genPC_", genPC, "_expPC_", expPC, "/")
   log_file <- paste0(log_dir, cell_type, "_", norm_method,
                      "_independent.cis_independent_qtl.txt.gz")
-  
+
   read_tsv(log_file, show_col_types = FALSE) %>%
     mutate(cell_type = cell_type)
 }
@@ -766,7 +743,7 @@ median_distances <- all_eqtls %>%
   pivot_wider(names_from = rank, values_from = median_tss_distance, values_fill = 0) %>%
   rename(
     primary = `1`,
-    secondary = `2`, 
+    secondary = `2`,
     tertiary = `3`
   ) %>%
   gt() %>%
@@ -781,7 +758,7 @@ median_distances <- all_eqtls %>%
   ) %>%
   fmt_number(
     columns = c(primary, secondary, tertiary),
-    decimals = 0, 
+    decimals = 0,
     use_seps = TRUE
   ) %>%
   tab_style(
@@ -894,106 +871,6 @@ print(multi_eqtls_tbl)
 
 ***
 
-#### Trans {.tabset}
-
-***
-
-```{r, trans_table, echo = FALSE, message = FALSE, warning = FALSE, , results='asis', eval=FALSE}
-lookup <- read_tsv('../../resources/sheets/gene_lookup_hg38.tsv')
-
-for(cell_type in cell_types) {
-
-  cat("  \n##### ", cell_type, "\n", sep = "")
-  
-  expPC <- expPC_map[[cell_type]]
-  
-  trans_dir <- str_glue('../../results/05TENSORQTL/post_trans/', cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
-  trans_file <- str_glue(trans_dir, cell_type, '_', norm_method, '_post_trans.tsv')
-  
-  cis_dir <- str_glue(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
-  cis_file <- str_glue(cis_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
-  
-  trans_ann <- read_tsv(trans_file) |>
-  left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
-  select(variant_id, trans_ens_id = phenotype_id, trans_smbl = external_gene_name, 
-         trans_biotype = gene_biotype, trans_chr = chromosome_name, pval, b, b_se, af) |>
-  filter(variant_id != '.') 
-
-  cis_tbl <- read_tsv(cis_file)
-  cis_ann <- cis_tbl |>
-    filter(qval < 0.05) |>
-    left_join(lookup, by = join_by(phenotype_id == ensembl_gene_id)) |>
-    select(variant_id, cis_ens_id = phenotype_id, cis_smbl = external_gene_name, 
-           cis_biotype = gene_biotype, cis_chr = chromosome_name)
-
-
-  trans_final <- trans_ann |>
-    inner_join(cis_ann, by = join_by(variant_id)) |>
-    distinct() |>
-    mutate(trans_biotype = str_remove(trans_biotype, "transcribed_unprocessed_")) |>
-    mutate(trans_biotype = str_remove(cis_biotype, "transcribed_unprocessed_"))
-
-  cis_tbl |> count(variant_id) |> arrange(desc(n))
-  trans_ann |> count(variant_id) |> arrange(desc(n))
-
-  lead_variants <- cis_ann %>%
-    pull(variant_id)
-  n_sig_cis <- length(lead_variants)
-  bf_p <- 0.05 / (n_sig_cis * length(lead_variants))
-  
-  gt_tbl <- trans_final |>
-  arrange(trans_chr == "17", trans_chr) |>
-  select(rsID              = variant_id,
-         `Trans Gene`      = trans_smbl,
-         `Trans ENSG`      = trans_ens_id,
-         `Trans Biotype`   = trans_biotype,
-         `Trans Chr`       = trans_chr,
-         `Cis Gene`        = cis_smbl,
-         `Cis ENSG`        = cis_ens_id,
-         `Cis Biotype`     = cis_biotype,
-         `Cis Chr`         = cis_chr,
-         P                 = pval,
-         `β`               = b,
-         SE                = b_se,
-         AF                = af) |>
-  gt() |>
-  tab_header(
-    title = md(paste(cell_type, " trans eQTL")),
-    subtitle = md(paste('Boneferonni P: ', bf_p))
-  ) |>
-  fmt_number(columns = c(P, `β`, SE, AF), decimals = 2) |>
-  fmt_markdown(columns = everything()) |> 
-  cols_align(align = "center", columns = everything()) |>
-  
-  # ─── Vertical borders for visual breathing room ───
-  tab_style(
-    style = cell_borders(sides = "right", weight = px(2), color = "gray70"),
-    locations = cells_body(columns = c(rsID, `Trans Chr`, `Cis Chr`))
-  ) |>
-  
-  tab_style(
-    style = cell_borders(sides = "bottom", color = "black", weight = px(3)),
-    locations = cells_body(
-      rows = which(`Trans Chr` != "17")[sum(`Trans Chr` != "17")]   # last non-17 row
-    )
-  ) |>
-    
-  tab_options(
-    table.font.size = px(13),
-    column_labels.font.weight = "bold",
-    heading.title.font.size = px(18),
-    heading.subtitle.font.size = px(14)
-  )
-  
-  # Print the gt table
-  print(gt_tbl)
-  
-  cat("\n\n")
-}
-```
-
-***
-
 #### Benchmarking {.tabset}
 
 ***
@@ -1067,14 +944,14 @@ datatable(
 ***
 
 ```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
-runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
                                  y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
   geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
                     ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "Runtime (minutes)", 
+  labs(x = "Rule", y = "Runtime (minutes)",
        title = "Mean runtime per rule") +
   theme_classic(base_size = 16) +
   theme(
@@ -1087,14 +964,14 @@ runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
 
 
 
-mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
                                 y = mean_ram_gb)) +
   geom_col(fill = "darkorange") +
   geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
                     ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "RAM (GB)", 
+  labs(x = "Rule", y = "RAM (GB)",
        title = "Mean RAM usage per rule") +
   theme_classic(base_size = 16) +
   theme(
@@ -1106,8 +983,6 @@ mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
   )
 
 plot_grid(runtime_plt, mem_plt)
-
-# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
 
 ***
@@ -1141,17 +1016,17 @@ exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- 'quantile'
 
-summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs, 
+summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
                            genPC = gen_PCs, norm_method = norm_methods) {
   # Generate all combinations of cell types and expPC values
   params_grid <- expand.grid(cell_type = cell_types, expPC = expPCs, norm_method = norm_methods,
                              stringsAsFactors = FALSE)
-  
+
   # Function to process a single log file
   process_log <- function(cell_type, expPC, norm_method) {
-    message('Reading eQTL log file for: ', cell_type, ', ', norm_method , 
+    message('Reading eQTL log file for: ', cell_type, ', ', norm_method ,
             ', with genPC_', genPC, ' expPC_', expPC)
-    
+
     # Construct the log file path
     log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
     log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.tensorQTL.cis.log')
@@ -1161,13 +1036,13 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
       message('Log file not found: ', log_file)
       return(NULL)
     }
-    
+
     # Read and process the log file
     lines <- readLines(log_file, warn = FALSE)
-    
+
     gene_line <- str_subset(lines, 'phenotypes tested:')
     sample_line <- str_subset(lines, 'samples')
-    covariate_line <- tail(str_subset(lines, 'covariates'), 1) # need to fix this
+    covariate_line <- tail(str_subset(lines, 'covariates'), 1)
     variants_line <- str_subset(lines, 'variants')
     qtl_line <- str_subset(lines, 'QTL phenotypes @ FDR 0.05:')
     window_line <- str_subset(lines, 'cis-window:')
@@ -1175,7 +1050,7 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
     beta_line <- str_subset(lines, 'Correlation between Beta-approximated and empirical p-values:')
     min_p_line <- str_subset(lines, 'min p-value threshold @ FDR 0.05:')
     prop_sig_line <- str_subset(lines, 'Proportion of significant phenotypes')
-    
+
     # Extract numbers
     num_genes <- as.integer(str_extract(gene_line, '\\d+$'))
     num_samples <- as.integer(str_extract(sample_line, '\\d+'))
@@ -1187,9 +1062,9 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
     beta_cor <- as.numeric(str_extract(beta_line, '[0-9\\.eE-]+$'))
     min_p <- as.numeric(str_extract(min_p_line, '[0-9\\.eE-]+$'))
     prop_sig <- as.integer(str_extract(prop_sig_line, '\\d+$'))
-    
+
     message('Collating sumstats for: ', cell_type, ' with genPC_', genPC, ' expPC_', expPC, ' ...')
-    
+
     # Create tibble with all relevant fields
     tibble(
       cell_type = cell_type,
@@ -1208,28 +1083,25 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
       run_time_min = run_time
     )
   }
-  
+
   # Apply the processing function to all combinations
   summary_list <- pmap(params_grid, function(cell_type, expPC, norm_method) {
     process_log(cell_type, expPC, norm_method)
   })
-  
+
   # Identify which elements are non-null
   valid_idx <- !sapply(summary_list, is.null)
-  table(valid_idx)  # how many TRUE vs FALSE
-  length(summary_list)
-  sum(valid_idx)
 
   # Keep only valid entries
   summary_list <- summary_list[valid_idx]
 
   # Name the list elements for clarity
   names(summary_list) <- paste0(
-    params_grid$cell_type, '_', 
-    params_grid$norm_method, '_genPC_', genPC, 
+    params_grid$cell_type, '_',
+    params_grid$norm_method, '_genPC_', genPC,
     '_expPC_', params_grid$expPC
     )[valid_idx]
-  
+
   # Return the list of summary tibbles
   return(summary_list)
 }
@@ -1285,9 +1157,6 @@ combined_plot <- plot_grid(plotlist = plots, ncol = 2)
 
 # Show the combined plot
 print(combined_plot)
-
-# Optionally save
-# ggsave("qtl_fdr_by_expPC_all_norms.png", combined_plot, width = 12, height = 10, dpi = 300)
 ```
 
 ***
@@ -1297,7 +1166,7 @@ print(combined_plot)
 ***
 
 ```{r, sensitivity_table_best_L2, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-best_tbl <- summary_tbl |> 
+best_tbl <- summary_tbl |>
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   group_by(cell_type) |>
   slice_max(qtl_fdr_0.05, n = 1, with_ties = FALSE) |>
@@ -1334,10 +1203,6 @@ table <- best_tbl %>%
     table_body.border.bottom.color = "black"
   )
 
-# Save the table as a LaTeX file for publication
-#gtsave(table, filename = "summary_table.tex")
-
-# Optionally, display the table
 print(table)
 ```
 
@@ -1348,14 +1213,14 @@ print(table)
 ***
 
 ```{r, sensitivity_table_all_L2, results='asis', echo = FALSE, message = FALSE, warning = FALSE}
-all_tbl <- summary_tbl |> 
+all_tbl <- summary_tbl |>
   select(cell_type, expPC, norm_methods, qtl_fdr_0.05) |>
   pivot_wider(
-    id_cols     = c(expPC, norm_methods),        
+    id_cols     = c(expPC, norm_methods),
     names_from  = cell_type,
     values_from = qtl_fdr_0.05,
     names_sort  = TRUE) |>
-  arrange(desc(expPC)) 
+  arrange(desc(expPC))
 
 table <- all_tbl %>%
   gt() %>%
@@ -1385,10 +1250,6 @@ table <- all_tbl %>%
     table_body.border.bottom.color = "black"
   )
 
-# Save the table as a LaTeX file for publication
-#gtsave(table, filename = "summary_table.tex")
-
-# Optionally, display the table
 print(table)
 ```
 
@@ -1420,9 +1281,9 @@ expPC_map <- c(
   "NPC-2"        = 20
 )
 for (cell_type in cell_types) {
-  
+
   expPC <- expPC_map[[cell_type]]
-  
+
   message('Reading eQTL data for: ', cell_type)
   log_dir <- paste0(in_dir, cell_type, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
   log_file <- paste0(log_dir, cell_type, '_', norm_method, '_perm.cis_qtl.txt.gz')
@@ -1430,23 +1291,23 @@ for (cell_type in cell_types) {
     dplyr::filter(!is.na(start_distance)) %>%
     mutate(distance_kb = start_distance / 1000) %>%
     dplyr::filter(qval < 0.05)
-  
+
   message('eQTL detected at FDR < 0.05: ', nrow(eqtl_tbl))
-  
+
   if (nrow(eqtl_tbl) > 0) {
-    
+
     message('Plotting ...')
-    
+
     eqtl_count <- nrow(eqtl_tbl)
-    
+
     eqtl_density_plt <- eqtl_tbl  %>%
       ggplot(aes(x = distance_kb)) +
       geom_density() +
       geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
-      annotate("text", x = 100, y = Inf, 
-               label = paste("eQTLs:", eqtl_count), 
+      annotate("text", x = 100, y = Inf,
+               label = paste("eQTLs:", eqtl_count),
                hjust = 0, vjust = 1.5, size = 4, fontface = "bold") +
-      scale_x_continuous(limits = c(-600, 600), 
+      scale_x_continuous(limits = c(-600, 600),
                          breaks = seq(-600, 600, by = 200),
                          labels = seq(-600, 600, by = 200)) +
       labs(x = "Distance to TSS (kb)",
@@ -1461,15 +1322,15 @@ for (cell_type in cell_types) {
         axis.text = element_text(color = "black"),
         axis.title = element_text(face = "bold")
       )
-    
+
     plt_list[[cell_type]] <- eqtl_density_plt
-    
+
   } else {
-    
+
     message('Skipped plotting.')
-    
+
   }
-  
+
 }
 
 combined_plot <- cowplot::plot_grid(plotlist = plt_list)
@@ -1482,24 +1343,24 @@ combined_plot
 
 + Showing plots for geno PCs = 4, Exp PCs = `expPC_map`, norm method = 'quantile'
 
-```{r, denisty_combined_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
+```{r, density_combined_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,3) }
 eqtl_list <- list()
 for (cell_type in cell_types) {
-  
+
   expPC <- expPC_map[[cell_type]]
-  
+
   f <- file.path(
     in_dir,
     paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC),
-    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")  # adjust filename
+    paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz")
   )
-  
+
   if (file.exists(f)) {
     dat <- read_tsv(f, show_col_types = FALSE) %>%
       filter(!is.na(start_distance)) %>%
       mutate(distance_kb = start_distance / 1000) %>%
       filter(qval < 0.05)   # significance cutoff
-    
+
     if (nrow(dat) > 0) {
       eqtl_list[[cell_type]] <- dat %>% mutate(cell_type = cell_type)
     }
@@ -1512,7 +1373,6 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
   geom_density() +
   geom_vline(xintercept = 0, linetype="dashed", color = "black") +
   scale_color_manual(values=custom_palette) +
-  #scale_fill_manual(values=custom_palette) +
   scale_x_continuous(limits=c(-600,600), breaks=seq(-600,600,200)) +
   labs(x="Distance to TSS (kb)", y="Density") +
   theme_minimal() +
@@ -1537,11 +1397,6 @@ ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
 ***
 
 ```{r, counts_subclust, results='asis', echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(5,5) }
-cell_counts <- tibble(
-  cell_type = cell_types,
-  n_cells   = c(123028, 87340, 60812, 49120, 44808, 42142, 59350, 47255, 20371, 33789, 32047, 17799)
-)
-
 gene_cell <- eqtls_all %>%
   distinct(phenotype_id, cell_type)
 
@@ -1581,14 +1436,14 @@ plt_list <- list()
 ind_dir <- '../../results/05TENSORQTL/tensorqtl_independent/'
 
 read_indep <- function(cell_type) {
-  
+
   expPC <- expPC_map[[cell_type]]
-  
+
   log_dir <- paste0(ind_dir, cell_type, "_", norm_method,
                     "_genPC_", genPC, "_expPC_", expPC, "/")
   log_file <- paste0(log_dir, cell_type, "_", norm_method,
                      "_independent.cis_independent_qtl.txt.gz")
-  
+
   read_tsv(log_file, show_col_types = FALSE) %>%
     mutate(cell_type = cell_type)
 }
@@ -1649,7 +1504,7 @@ median_distances <- all_eqtls %>%
   pivot_wider(names_from = rank, values_from = median_tss_distance, values_fill = 0) %>%
   rename(
     primary = `1`,
-    secondary = `2`, 
+    secondary = `2`,
     tertiary = `3`
   ) %>%
   gt() %>%
@@ -1664,7 +1519,7 @@ median_distances <- all_eqtls %>%
   ) %>%
   fmt_number(
     columns = c(primary, secondary, tertiary),
-    decimals = 0, 
+    decimals = 0,
     use_seps = TRUE
   ) %>%
   tab_style(
@@ -1732,12 +1587,12 @@ expPC_map_L2 <- c(
 
 # Function to extract eGenes for a cell type
 read_eGenes <- function(cell_type, in_dir, norm_method, genPC, expPC) {
-  
-  
+
+
 log_dir  <- file.path(in_dir, paste0(cell_type, "_", norm_method, "_genPC_", genPC, "_expPC_", expPC))
   log_file <- file.path(log_dir, paste0(cell_type, "_", norm_method, "_perm.cis_qtl.txt.gz"))
   if (!file.exists(log_file)) return(tibble(cell_type = cell_type, eGene = character(0)))
-  
+
   read_tsv(log_file, show_col_types = FALSE) %>%
     filter(!is.na(qval) & qval < 0.05) %>%
     distinct(phenotype_id) %>%
@@ -1780,11 +1635,11 @@ egenes_L2 <- egenes_L2 %>%
 comparison_tbl <- map_dfr(cell_types_L1, function(ct) {
   egenes_ct_L1 <- egenes_L1 %>% filter(cell_type == ct) %>% pull(phenotype_id) %>% unique()
   egenes_ct_L2 <- egenes_L2 %>% filter(parent == ct) %>% pull(phenotype_id) %>% unique()
-  
+
   shared     <- intersect(egenes_ct_L1, egenes_ct_L2)
   unique_L1  <- setdiff(egenes_ct_L1, egenes_ct_L2)
   unique_L2  <- setdiff(egenes_ct_L2, egenes_ct_L1)
-  
+
   tibble(
     cell_type = ct,
     unique_L1 = length(unique_L1),
@@ -1798,7 +1653,7 @@ comparison_long <- comparison_tbl %>%
   pivot_longer(cols = c(unique_L1, shared, unique_L2),
              names_to = "category",
              values_to = "count") %>%
-  mutate(category = factor(category, 
+  mutate(category = factor(category,
                            levels = c("unique_L2", "shared", "unique_L1"))) %>%  # <-- set order
   group_by(cell_type) %>%
   mutate(prop = count / sum(count))
@@ -1865,12 +1720,12 @@ expPC_map_all <- c(
 
 # Build all file paths
 summary_tbl <- map_dfr(cell_types_all, function(ct) {
-  
+
   expPC <- expPC_map_all[[ct]]
-  
+
   log_dir <- paste0(in_dir, ct, '_', norm_method, '_genPC_', genPC, '_expPC_', expPC, '/')
   log_file <- paste0(log_dir, ct, '_', norm_method, '_perm.cis_qtl.txt.gz')
-  
+
   if (!file.exists(log_file)) {
     message("File missing: ", log_file)
     return(tibble(
@@ -1881,33 +1736,33 @@ summary_tbl <- map_dfr(cell_types_all, function(ct) {
       top_eQTL = NA_integer_
     ))
   }
-  
+
   df <- read_tsv(log_file, show_col_types = FALSE) %>%
     filter(qval < 0.05)
-  
+
   # Total significant eQTLs
   total_sig_eqtl <- nrow(df)
-  
+
   # Unique variant-gene pairs
   unique_eQTL <- df %>% distinct(variant_id, phenotype_id) %>% nrow()
-  
+
   # Unique eGenes
   unique_eGenes <- df %>% distinct(phenotype_id) %>% nrow()
-  
+
   # Top eQTL per gene (smallest qval per phenotype_id)
   top_eQTL <- df %>%
     group_by(phenotype_id) %>%
     slice_min(qval, n = 1, with_ties = FALSE) %>%
     ungroup() %>%
     nrow()
-  
+
   tibble(
     cell_type = ct,
     total_sig_eqtl = total_sig_eqtl,
     unique_eQTL = unique_eQTL,
     unique_eGenes = unique_eGenes,
     top_eQTL = top_eQTL
-  ) 
+  )
 })
 
 total_row <- tibble(
