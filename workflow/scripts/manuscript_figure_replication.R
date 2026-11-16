@@ -41,7 +41,9 @@ internal_dir <- snakemake@params[['internal_dir']]
 jang_pi1_dir <- snakemake@params[['jang_pi1_dir']]
 gene_lookup_file <- snakemake@params[['gene_lookup']]
 jang_beta_file <- snakemake@input[['beta_file']]
-boxplot_dir <- dirname(snakemake@input[['eqtl_boxplots_output']])
+boxplot_e_file <- snakemake@input[['boxplot_e']]
+boxplot_g_file <- snakemake@input[['boxplot_g']]
+boxplot_pairs <- snakemake@params[['boxplot_pairs']]
 out_file <- snakemake@output[[1]]
 
 # in_dir <- '../results/05TENSORQTL/tensorqtl_perm/'
@@ -598,13 +600,15 @@ glu_b_colour <- custom_palette[["Glu-B"]]
 
 # File paths use the OLD Glu-DL naming on disk (see make_eqtl_boxplot note above)
 plbd2_boxplot_plt <- make_eqtl_boxplot(
-  csv_file = file.path(boxplot_dir, "eqtl_data_Glu-UL_rs12825284_PLBD2.csv"),
-  gene = "PLBD2", rsid = "rs12825284", cell_type_label = "Glu-A", fill_colour = glu_a_colour
+  csv_file = boxplot_g_file,
+  gene = boxplot_pairs$fig3g$gene, rsid = boxplot_pairs$fig3g$snp,
+  cell_type_label = "Glu-A", fill_colour = glu_a_colour
 )
 
 neurod1_boxplot_plt <- make_eqtl_boxplot(
-  csv_file = file.path(boxplot_dir, "eqtl_data_Glu-DL_rs115583150_NEUROD1.csv"),
-  gene = "NEUROD1", rsid = "rs115583150", cell_type_label = "Glu-B", fill_colour = glu_b_colour
+  csv_file = boxplot_e_file,
+  gene = boxplot_pairs$fig3e$gene, rsid = boxplot_pairs$fig3e$snp,
+  cell_type_label = "Glu-B", fill_colour = glu_b_colour
 )
 
 ### --- plot -----

@@ -1170,11 +1170,12 @@ figures:
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/eqtl_qc_plt.log
 
   eqtl_boxplots_py:
-    # Prep script for eQTL plots - feeds Fig 3
-    pairs_csv: ../resources/sheets/pairs.csv
-    exp_dir: ../results/05TENSORQTL/prep_input/
-    out_dir: ../results/17MANUSCRIPT-FIGURES/eqtl_boxplots/
-    output: ../results/17MANUSCRIPT-FIGURES/eqtl_boxplots/plot_qtl.done
+    # Fig 3E and 3G eQTL boxplot data, one pair per panel (pipeline cell type labels)
+    pairs:
+      fig3e: {cell_type: Glu-DL, snp: rs115583150, gene_id: ENSG00000162992, gene: NEUROD1}
+      fig3g: {cell_type: Glu-UL, snp: rs12825284, gene_id: ENSG00000151176, gene: PLBD2}
+    out_csv: ../results/17MANUSCRIPT-FIGURES/eqtl_boxplots/eqtl_data_{cell_type}_{snp}_{gene}.csv
+    plot_checks: False   # True writes a seaborn check plot next to each CSV
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/eqtl_boxplots_py.log
 
   rep_fig:

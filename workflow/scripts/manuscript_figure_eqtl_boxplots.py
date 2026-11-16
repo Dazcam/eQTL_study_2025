@@ -1,11 +1,50 @@
-import argparse
-import subprocess
-import pandas as pd
-import io
-import seaborn as sns
-import matplotlib.pyplot as plt
-import os
+#--------------------------------------------------------------------------------------
+#
+#    Extract genotype and expression data for the Fig 3 eQTL boxplots
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: eqtl_boxplots_py (single job)
+#            Upstream:   04 exclude_SNPs (genotype VCF); 05 tensorqtl_prep_input
+#                        (normalised expression BED per cell type)
+#            Downstream: replication_fig (Fig 3E and 3G)
+#
+# Purpose:   For each SNP-gene pair in config (one per figure panel):
+#            - Extract genotypes (GT, DS) for the SNP from the VCF with bcftools
+#            - Extract the gene's normalised expression for the cell type
+#            - Merge on sample and write one CSV per pair
+#            - Optionally draw a seaborn check plot next to the CSV (not
+#              publication quality; off by default)
+#
+# Inputs:    vcf          Genotype VCF
+#            exp_<panel>  Expression BED for the pair's cell type
+#
+# Outputs:   <panel>      eqtl_data_{cell_type}_{snp}_{gene}.csv
+#
+# Notes:     Cell types use pipeline labels. Check plots are written as
+#            eqtl_plot_{cell_type}_{snp}_{gene}_categorical.png and are not
+#            tracked by Snakemake.
+#
+#--------------------------------------------------------------------------------------
 
+import io
+import logging
+import os
+import subprocess
+import sys
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+logging.basicConfig(filename=snakemake.log[0], level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger()
+sys.excepthook = lambda *exc: log.error("Uncaught exception", exc_info=exc)
+
+log.info("Extracting eQTL boxplot data for Fig 3 ...")
+
+##  Load functions and variables  -----------------------------------------------------
 
 def extract_genotypes(genotype_file, snp_id):
     """Extract genotype data for a specific SNP from a VCF file using bcftools."""
@@ -17,7 +56,7 @@ def extract_genotypes(genotype_file, snp_id):
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"Error running bcftools for {snp_id}: {result.stderr}")
+        log.error(f"Error running bcftools for {snp_id}: {result.stderr}")
         return None
     genotypes_df = pd.read_csv(io.StringIO(result.stdout), sep="\t", header=None,
                                names=["Sample", "Chr", "rsID", "REF", "ALT", "GT", "DS"])
@@ -27,12 +66,12 @@ def extract_genotypes(genotype_file, snp_id):
 def extract_expression(expression_file, gene_ensembl):
     """Extract expression data for a specific gene from a BED file."""
     if not os.path.exists(expression_file):
-        print(f"Expression file not found: {expression_file}")
+        log.error(f"Expression file not found: {expression_file}")
         return None
     expression_df = pd.read_csv(expression_file, sep="\t")
     gene_row = expression_df[expression_df['TargetID'] == gene_ensembl]
     if gene_row.empty:
-        print(f"Gene {gene_ensembl} not found in {expression_file}.")
+        log.error(f"Gene {gene_ensembl} not found in {expression_file}.")
         return None
     sample_columns = expression_df.columns[4:]
     expression_values = gene_row.iloc[0, 4:].values
@@ -49,7 +88,7 @@ def merge_data(genotypes_df, expression_data):
     expression_data['Sample'] = expression_data['Sample'].astype(str)
     merged_df = pd.merge(genotypes_df, expression_data, on="Sample", how="inner")
     if merged_df.empty:
-        print("No overlapping samples between genotype and expression data.")
+        log.error("No overlapping samples between genotype and expression data.")
         return None
     return merged_df
 
@@ -102,66 +141,54 @@ def plot_eqtl(merged_df, cell_type, snp_id, gene_symbol, output_file):
     plt.close()
 
 
-def main():
-    """Main function to generate eQTL plots from a pairs CSV file."""
-    parser = argparse.ArgumentParser(description="Generate eQTL plots from a pairs CSV file.")
-    parser.add_argument("--pairs_file", required=True, help="Path to CSV file with cell_type, variant, ensembl_id, symbol")
-    parser.add_argument("--genotype_file", required=True, help="Path to VCF genotype file")
-    parser.add_argument("--expression_dir", required=True, help="Directory containing {cell_type}_tmm.bed files")
-    parser.add_argument("--output_dir", required=True, help="Directory to save the plots")
-    
-    args = parser.parse_args()
+# Pairs, inputs and outputs
+pairs       = snakemake.params.pairs
+plot_checks = bool(snakemake.params.plot_checks)
+vcf_file    = snakemake.input.vcf
 
-    # Ensure output directory exists
-    os.makedirs(args.output_dir, exist_ok=True)
+variables = {"pairs": ", ".join(pairs), "plot_checks": plot_checks, "vcf_file": vcf_file}
+for panel in pairs:
+    variables[f"exp_{panel}"] = snakemake.input[f"exp_{panel}"]
+    variables[f"out_{panel}"] = snakemake.output[panel]
+width = max(len(k) for k in variables)
+log.info("Variables")
+log.info("============================")
+for k, v in variables.items():
+    log.info(f"{k:<{width}}  {v}")
+log.info("============================")
 
-    # Read pairs CSV
-    pairs_df = pd.read_csv(args.pairs_file)
-    required_columns = {'cell_type', 'variant', 'ensembl_id'}  # symbol is now optional
-    if not required_columns.issubset(pairs_df.columns):
-        raise ValueError("CSV must contain columns: cell_type, variant, ensembl_id (symbol is optional)")
+##  Extract, merge and write each pair  -----------------------------------------------
+for panel, pair in pairs.items():
+    cell_type    = pair["cell_type"]
+    snp_id       = pair["snp"]
+    gene_ensembl = pair["gene_id"]
+    gene_symbol  = pair["gene"]
+    log.info(f"{panel}: {cell_type} {snp_id} {gene_symbol} ({gene_ensembl})")
 
-    # Generate plots for each row
-    for _, row in pairs_df.iterrows():
-        cell_type = row['cell_type']
-        snp_id = row['variant']
-        gene_ensembl = row['ensembl_id']
-        # Use symbol if present and non-empty, otherwise fall back to ensembl_id
-        gene_symbol = row.get('symbol', gene_ensembl) if pd.notna(row.get('symbol')) else gene_ensembl
-        
-        # Construct expression file path using cell_type and expression_dir
-        expression_file = os.path.join(args.expression_dir, f"{cell_type}_quantile.bed")
-        
-        # Extract and process data
-        genotypes_df = extract_genotypes(args.genotype_file, snp_id)
-        if genotypes_df is None:
-            continue
-        
-        expression_data = extract_expression(expression_file, gene_ensembl)
-        if expression_data is None:
-            continue
-        
-        merged_df = merge_data(genotypes_df, expression_data)
-        if merged_df is None:
-            continue
-        
-        # Save merged data to file in output directory
-        merged_data_file = os.path.join(args.output_dir, f"eqtl_data_{cell_type}_{snp_id}_{gene_symbol}.csv")
-        merged_df.to_csv(merged_data_file, index=False)
-        print(f"Saved merged data: {merged_data_file}")
+    genotypes_df = extract_genotypes(vcf_file, snp_id)
+    if genotypes_df is None:
+        sys.exit(f"No genotypes extracted for {snp_id}")
 
-        # Generate plot with cell_type in filename
-        output_file = os.path.join(args.output_dir, f"eqtl_plot_{cell_type}_{snp_id}_{gene_symbol}_categorical.png")
+    expression_data = extract_expression(snakemake.input[f"exp_{panel}"], gene_ensembl)
+    if expression_data is None:
+        sys.exit(f"No expression extracted for {gene_ensembl} in {cell_type}")
+
+    merged_df = merge_data(genotypes_df, expression_data)
+    if merged_df is None:
+        sys.exit(f"No overlapping samples for {panel}")
+
+    merged_data_file = snakemake.output[panel]
+    os.makedirs(os.path.dirname(merged_data_file), exist_ok=True)
+    merged_df.to_csv(merged_data_file, index=False)
+    log.info(f"Saved merged data ({len(merged_df)} samples): {merged_data_file}")
+
+    if plot_checks:
+        output_file = os.path.join(os.path.dirname(merged_data_file),
+                                   f"eqtl_plot_{cell_type}_{snp_id}_{gene_symbol}_categorical.png")
         plot_eqtl(merged_df, cell_type, snp_id, gene_symbol, output_file)
-        print(f"Generated plot: {output_file}")
+        log.info(f"Generated check plot: {output_file}")
 
-    # Create empty done file for Snakemake
-    done_file = os.path.join(args.output_dir, "plot_qtl.done")
-    with open(done_file, 'w') as f:
-        pass
-    print(f"Created done file: {done_file}")
+log.info("Done.")
 
-
-if __name__ == "__main__":
-    main()
-
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

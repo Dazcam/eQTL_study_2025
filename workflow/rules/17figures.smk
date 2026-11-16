@@ -13,33 +13,37 @@ rule eqtl_qc_fig:
     log:  config['figures']['eqtl_qc_fig']['log']
     script: "../scripts/manuscript_figure_eqtl_QC.R"
 
+BOXPLOT_PAIRS = config['figures']['eqtl_boxplots_py']['pairs']
+BOXPLOT_EXP = {f"exp_{panel}": config['tensorQTL']['prep_tensorQTL_input']['exp_out'].format(
+                   cell_type = pair['cell_type'], norm_method = config['tensorQTL']['norm_methods'][0])
+               for panel, pair in BOXPLOT_PAIRS.items()}
+BOXPLOT_CSV = {panel: config['figures']['eqtl_boxplots_py']['out_csv'].format(**pair)
+               for panel, pair in BOXPLOT_PAIRS.items()}
+
 rule eqtl_boxplots_py:
-    # Prep script for eQTL plots - Feeds Fig 3
-    input:  pairs_csv = config['figures']['eqtl_boxplots_py']['pairs_csv'],
-            geno = config['geno_post_impute']['exclude_SNPs']['output'],
-    output: config['figures']['eqtl_boxplots_py']['output']
-    params: exp_dir = config['figures']['eqtl_boxplots_py']['exp_dir'],
-            out_dir = config['figures']['eqtl_boxplots_py']['out_dir'],
+    # Fig 3E and 3G: genotype and expression data for the eQTL boxplots
+    input:  vcf = config['geno_post_impute']['exclude_SNPs']['output'],
+            **BOXPLOT_EXP
+    output: **BOXPLOT_CSV
+    params: pairs       = BOXPLOT_PAIRS,
+            plot_checks = config['figures']['eqtl_boxplots_py']['plot_checks']
     envmodules: "BCFtools"
     conda:  config["scanpy"]["env"]
     resources: threads = 4, mem_mb = 20000
     log:    config['figures']['eqtl_boxplots_py']['log']
-    shell:  """
-            python3 scripts/manuscript_figure_eqtl_boxplots.py --pairs_file {input.pairs_csv} \
-              --genotype_file {input.geno} \
-              --expression_dir {params.exp_dir} \
-              --output_dir {params.out_dir} >> {log} 2>&1
-            """
+    script: "../scripts/manuscript_figure_eqtl_boxplots.py"
 
 rule replication_fig:
     # Fig 3
     input:  beta_file = config['figures']['rep_fig']['jang_beta_file'],
-            eqtl_boxplots_output  = config['figures']['eqtl_boxplots_py']['output']
+            boxplot_e = rules.eqtl_boxplots_py.output.fig3e,
+            boxplot_g = rules.eqtl_boxplots_py.output.fig3g
     output: config['figures']['rep_fig']['out_file']
     params: in_dir = config['figures']['rep_fig']['in_dir'],
             internal_dir = config['figures']['rep_fig']['internal_dir'],
             jang_pi1_dir = config['figures']['rep_fig']['jang_pi1_dir'],
-            gene_lookup  = config['gene_lookup']
+            gene_lookup  = config['gene_lookup'],
+            boxplot_pairs = BOXPLOT_PAIRS
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['figures']['rep_fig']['log']
