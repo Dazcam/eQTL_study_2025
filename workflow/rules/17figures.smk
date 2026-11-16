@@ -73,16 +73,10 @@ rule ldsr_fig:
 
 rule smr_ctwas_venn_fig:
     # Fig 6 and Supp Fig X
-    input:  smr_sig_tbls = expand(config['tables']['smr_sig_tbl']['out_file'], gwas = list(config['gwas'].keys()))
+    input:  genes_tbls = expand(config['tables']['smr_ctwas_venn_tbl']['genes_out'], gwas = list(config['gwas'].keys()))
     output: plot_scz  = config['figures']['smr_ctwas_venn']['out_file_scz'],
             plot_grid = config['figures']['smr_ctwas_venn']['out_file_grid']
-    params: traits       = list(config['gwas'].keys()),
-            smr_tbl_dir  = config['figures']['smr_ctwas_venn']['smr_tbl_dir'],
-            ctwas_in_dir = config['figures']['smr_ctwas_venn']['ctwas_in_dir'],
-            weights_dir  = config['figures']['smr_ctwas_venn']['weights_dir'],
-            genes_out    = lambda wc: config['figures']['smr_ctwas_venn']['genes_out'],
-            cell_types   = config['cell_types'],
-            gene_lookup  = config['gene_lookup']
+    params: traits = list(config['gwas'].keys())
     singularity: config["containers"]["r_eqtl"]
     resources: time="3:30:00"
     log: config['figures']['smr_ctwas_venn']['log']

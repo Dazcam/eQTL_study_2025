@@ -60,18 +60,6 @@ rule smr_sig_tbl:
     log:    config['tables']['smr_sig_tbl']['log']
     script: "../scripts/manuscript_table_smr_sig.R"
 
-rule smr_tbl:
-    input:  smr_sig_tbls = smr_sig_tbls
-    output: config['tables']['smr_tbl']['out_file']
-    params: smr_dir      = config['tables']['smr_tbl']['smr_dir'],
-            eqtl_nom_dir = config['tables']['smr_tbl']['eqtl_nom_dir'],
-            cell_types   = config['cell_types'],
-            disorders    = GWAS_TRAITS
-    singularity: config["containers"]["r_eqtl"]
-    resources: time="2:00:00",threads = 10, mem_mb = 80000
-    log:  config['tables']['smr_tbl']['log']
-    script: "../scripts/manuscript_table_smr.R"
-
 rule smr_ctwas_venn_tbl:
     input:  smr_sig_tbls = smr_sig_tbls    # <-- same
     output: venn_gene_tbls
@@ -157,7 +145,6 @@ TARGETS["16tables"] = [rules.eqtl_tbl.output,
                        rules.cell_counts_tbl.output,
                        rules.diff_exp_tbl.output,
                        rules.ldsr_tbl.output,
-                       rules.smr_tbl.output,
                        rules.smr_sig_tbl.output,
                        rules.smr_ctwas_venn_tbl.output,
                        rules.ctwas_sig_tbl.output,

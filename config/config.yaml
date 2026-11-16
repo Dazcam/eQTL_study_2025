@@ -1142,12 +1142,6 @@ tables:
     out_file: ../results/16MANUSCRIPT-TABLES/supplementary_table_9.xlsx
     log: ../results/00LOG/16MANUSCRIPT-TABLES/susie_diag_tbl.log
 
-  smr_tbl:
-    smr_dir: ../results/16MANUSCRIPT-TABLES/
-    eqtl_nom_dir: ../results/12SMR/smr_input/
-    out_file: ../results/16MANUSCRIPT-TABLES/all_smr_tbl.xlsx
-    log: ../results/00LOG/16MANUSCRIPT-TABLES/all_smr_tbl.log
-
   smr_ctwas_venn_tbl:
     smr_tbl_dir: ../results/16MANUSCRIPT-TABLES/
     ctwas_in_dir: ../results/14CTWAS/
@@ -1169,16 +1163,6 @@ tables:
 # ------------  Pipeline 17: Manuscript figures  ------------
 
 figures:
-  # Unused: the R boxplot rule was removed (see eqtl_boxplots_py)
-#  eqtl_boxplots:
-#    exp_dir: ../results/05TENSORQTL/prep_input/
-#    pval_dir: ../results/12SMR/smr_input/
-#    geno_prefix: ../results/05TENSORQTL/prep_input/chrALL_final.filt
-#    gene_id: ENSG00000214435
-#    snp_id: rs11191424
-#    output: reports/11PLOTTING/boxplots_r/eqtl_boxplots.rds
-#    log: ../results/00LOG/11PLOTTING/eqtl_boxplots_r.log
-
   eqtl_qc_fig:
     # Fig 2
     in_dir: ../results/05TENSORQTL/tensorqtl_perm/
@@ -1189,8 +1173,8 @@ figures:
     # Prep script for eQTL plots - feeds Fig 3
     pairs_csv: ../resources/sheets/pairs.csv
     exp_dir: ../results/05TENSORQTL/prep_input/
-    out_dir: reports/17MANUSCRIPT-FIGURES/eqtl_boxplots/
-    output: reports/17MANUSCRIPT-FIGURES/eqtl_boxplots/plot_qtl.done
+    out_dir: ../results/17MANUSCRIPT-FIGURES/eqtl_boxplots/
+    output: ../results/17MANUSCRIPT-FIGURES/eqtl_boxplots/plot_qtl.done
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/eqtl_boxplots_py.log
 
   rep_fig:
@@ -1216,18 +1200,12 @@ figures:
 
   smr_ctwas_venn:
     # Fig 6 and Supp Fig X
-    smr_tbl_dir: ../results/16MANUSCRIPT-TABLES/  # cross-pipeline: reads a tables-pipeline output
-    ctwas_in_dir: ../results/14CTWAS/
-    weights_dir: ../results/14CTWAS/weights
-#    gene_lookup_file: ../resources/sheets/gene_lookup_hg38.tsv   # unused: top-level gene_lookup
     out_file_scz: ../results/17MANUSCRIPT-FIGURES/venn_scz.png
     out_file_grid: ../results/17MANUSCRIPT-FIGURES/venn_grid_bpd_mdd_adhd_ocd.png
-    genes_out: ../results/17MANUSCRIPT-FIGURES/venn_{gwas}_genes.tsv
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/smr_ctwas_venn.log
 
   supp_fig:
     # Supp Fig 1
-#    geno_dir: ../results/04GENOTYPES/covariates/   # replaced by the 04 calc_genotype_pcs output
     expr_dir: ../results/05TENSORQTL/tensorqtl_perm/
     out_file: ../results/17MANUSCRIPT-FIGURES/expression_PC_plt.pdf
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/supplementary_plt.log
@@ -1325,61 +1303,3 @@ data_sharing:
 #    out_h5ad: ../results/18DATA-SHARING/eqtl_atlas_snRNAseq.h5ad
 #    out_mapping: ../results/18DATA-SHARING/eqtl_atlas_cell_annotations.tsv.gz
 #    log: ../results/00LOG/18DATA-SHARING/final_scanpy_obj.log
-
-# ------------  Retired: review (rules in rules/test_rules; LISI now in pipeline 02)  ------------
-
-#review:
-#  dwnld_qian:
-#    output: ../resources/public_datasets/qian_2025/merscope_integrated_855.h5ad
-#    web_link: https://zenodo.org/records/14422018/files/merscope_integrated_855.h5ad?download=1 
-#    log: ../results/00LOG/15REVIEW/dwnld_qian.log
-
-#  prep_qian_ref:
-#    output: ../results/15REVIEW/qian_ref_subsampled.h5ad
-#    log: ../results/00LOG/15REVIEW/prep_qian_ref.log
-#    script: ../scripts/review_prep_qian_ref.py
-
-#  prep_singler_query:
-#    query_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad
-#    h5ad: ../results/15REVIEW/adata_clusters_v3_query_prepped.h5ad
-#    umap_csv: ../results/15REVIEW/umap_coords.csv
-#    log: ../results/00LOG/15REVIEW/prep_singler_query.log
-#    script: ../scripts/review_prep_singler_query.py
-
-#  singler_classify:
-#    csv: ../results/15REVIEW/singler_results.csv
-#    pred_rds: ../results/15REVIEW/singler_pred.rds
-#    sce_rds:  ../results/15REVIEW/singler_sce_sub.rds
-#    log: ../results/00LOG/15REVIEW/singler_classify.log
-#    script: ../scripts/review_singler_classify.R
-
-#  batch_correction_kbet:
-#    csv:        ../results/15REVIEW/batch_correction/kbet_results.csv
-#    plot:       ../results/15REVIEW/batch_correction/kbet_rejection_rates.png
-#    log:        ../results/00LOG/15REVIEW/batch_correction_kbet.log
-#    script:     ../scripts/review_kbet.py
-#    n_subsample: 10000   # cells to subsample (stratified by cell type)
-#    random_seed: 1234
-#    k0:          30      # neighbourhood size for chi-squared test
-
-#  singler_report:
-#    html: reports/15REVIEW/15singler_report.html
-#    log:  ../results/00LOG/15REVIEW/singler_report.log
-
-#  batch_corr_report:
-#    html:   reports/15REVIEW/batch_correction_report.html
-#    log:    ../results/00LOG/15REVIEW/batch_corr_report.log
-#    script: ../scripts/review_batch_corr_report.py
-
-#  isoform_eqtl:
-#    bulk_eqtl:        ../resources/public_datasets/obrien_2018/all_eqtls_transcript.txt.gz
-#    tensorqtl_dir:    ../results/05TENSORQTL/tensorqtl_perm
-#    enst_ensg_map:    ../results/15REVIEW/isoform_eqtl/enst_ensg_map.tsv
-#    egenes_combined:  ../results/15REVIEW/isoform_eqtl/egenes_all_celltypes.tsv
-#    bulk_hits:        ../results/15REVIEW/isoform_eqtl/bulk_transcript_hits.tsv
-#    summary:          ../results/15REVIEW/isoform_eqtl/isoform_comparison_summary.tsv
-#    detail:           ../results/15REVIEW/isoform_eqtl/isoform_comparison_detail.tsv
-#    log:              ../results/00LOG/15REVIEW/isoform_eqtl_comparison.log
-#    script:           ../scripts/review_isoform_eqtl.py
-#    fdr_threshold:    0.05
-#    nominal_threshold: 0.05   # p-value threshold for bulk transcript significance
