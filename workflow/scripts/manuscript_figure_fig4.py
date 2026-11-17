@@ -26,13 +26,12 @@
 #            cell_types      config['cell_types']; L1 + L2 define the reference
 #                            eGene set (trajectory bins excluded)
 #            exp_pc_map      Final expression PC count per cell type / bin
+#            geno_pc, norm_method  Final tensorQTL settings (config)
 #            labels          config['manuscript_labels'] ("-to-" shown as " to ")
 #
 # Outputs:   out_file        Figure 4 (TIFF, 600 dpi, LZW)
 #
-# Notes:     geno_pc (4) and norm_method (quantile) are fixed to the final eQTL
-#            settings used throughout the manuscript.
-#            Panel C uses ggplot2::geom_density() defaults: Gaussian kernel,
+# Notes:     Panel C uses ggplot2::geom_density() defaults: Gaussian kernel,
 #            bw.nrd0 bandwidth and 512 points across the x-axis limits; eQTL
 #            beyond +/-600 kb are dropped before the density is estimated.
 #
@@ -78,8 +77,8 @@ out_file       = str(snakemake.output[0])
 trajectory    = str(snakemake.params.trajectory)   # pipeline label, e.g. NPC-to-Glu-UL
 root_gene     = str(snakemake.params.root_gene)
 terminal_gene = dict(snakemake.params.terminal_markers)[trajectory.split("-to-")[1]]
-geno_pc       = 4
-norm_method   = "quantile"
+geno_pc       = snakemake.params.geno_pc
+norm_method   = str(snakemake.params.norm_method)
 quantile_n    = 4
 tss_limit_kb  = 600               # panel C x-axis limits (+/- kb)
 LABELS        = dict(snakemake.params.labels)

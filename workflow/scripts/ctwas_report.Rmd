@@ -11,6 +11,8 @@ params:
   gene_lookup: null
   cell_types: null
   gwas: null
+  pip_thresh: null
+  bf_thresh: null
 ---
 
 ***
@@ -23,6 +25,9 @@ in_dir <- params$in_dir
 bmark_dir <- params$bmark_dir
 cell_types <- strsplit(params$cell_types, ",")[[1]]   # config['cell_types']
 gwas <- strsplit(params$gwas, ",")[[1]]               # names of config['gwas']
+pip_thresh <- as.numeric(params$pip_thresh)           # config ctwas sig_pip_thresh
+bf_thresh <- as.numeric(params$bf_thresh)             # config ctwas sig_bf_thresh
+sig_text <- paste0("PIP > ", pip_thresh, ", in a credible set, BF-corrected P < ", bf_thresh)
 gene_lookup <- read_tsv(params$gene_lookup) |>
   dplyr::select(chr = chromosome_name, start = start_position, end = end_position,
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name)
@@ -164,7 +169,7 @@ for (g in gwas) {
     dplyr::pull(n_sig_genes)
 
   finemap_res <- as_tibble(ctw_res$finemap_res) |>
-    dplyr::filter(group != 'SNP' & susie_pip > 0.8 & !is.na(cs)) |>
+    dplyr::filter(group != 'SNP' & susie_pip > pip_thresh & !is.na(cs)) |>
     separate(id, into = c('gene', 'id'), sep = "\\|") |>
     separate(id, into = c('cell_type', 'id'), sep = "_") |>
     left_join(gene_lookup, by = join_by(gene == ensembl_id )) |>
@@ -172,13 +177,13 @@ for (g in gwas) {
            pval_bf = pval * bf_factor) |>
     mutate(pval_bf = pmin(pval_bf, 1)) |>
     arrange(pval_bf) |>
-    filter(pval_bf < 0.05) |>
+    filter(pval_bf < bf_thresh) |>
     mutate(across(c(pval, pval_bf, susie_pip), ~ signif(.x, 2)),
            z = round(z, 2)) |>
     dplyr::select(cell_type, symbol, gene, z, pval, pval_bf, susie_pip, cs, gene_biotype, chr)
 
   if (nrow(finemap_res) == 0) {
-    cat("**No genes with SuSiE PIP > 0.8 (in credible set) and BF-corrected P < 0.05**\n\n")
+    cat("**No genes with SuSiE PIP > ", pip_thresh, " (in credible set) and BF-corrected P < ", bf_thresh, "**\n\n", sep = "")
 } else {
   finemap_tbl <- finemap_res |>
     mutate(across(everything(), ~ str_replace_all(., "\U2212", "-"))) |>
@@ -187,7 +192,7 @@ for (g in gwas) {
   gt() |>
   tab_header(
     title = md(paste0("**", toupper(g), "**")),
-    subtitle = md(paste0("Finemapped genes (SuSiE PIP > 0.8, in credible set, BF-corrected P < 0.05): **", nrow(finemap_res), "**"))
+    subtitle = md(paste0("Finemapped genes (SuSiE PIP > ", pip_thresh, ", in credible set, BF-corrected P < ", bf_thresh, "): **", nrow(finemap_res), "**"))
   ) |>
   cols_label(
     cell_type = "Cell", symbol = "Symbol", gene = "ENSG", z = "Z",
@@ -261,7 +266,7 @@ by_cell_type |>
   gt() |>
   tab_header(
     title = "Table 2. cTWAS significant genes per cell type",
-    subtitle = "PIP > 0.8, in a credible set, BF-corrected P < 0.05"
+    subtitle = sig_text
   ) |>
   cols_label(cell_type = "Cell type") |>
   tab_options(
@@ -300,7 +305,7 @@ by_disorder |>
   gt() |>
   tab_header(
     title = "Table 3. cTWAS significant genes per disorder",
-    subtitle = "PIP > 0.8, in a credible set, BF-corrected P < 0.05, deduplicated across cell types"
+    subtitle = paste0(sig_text, ", deduplicated across cell types")
   ) |>
   tab_options(
     table.font.names = "Arial",

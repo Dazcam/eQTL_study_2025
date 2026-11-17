@@ -5,7 +5,7 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  17MANUSCRIPT-FIGURES | Rule: replication_fig
-#            Upstream:   05 tensorqtl_perm (quantile, genPC 4); 07 internal pi1;
+#            Upstream:   05 tensorqtl_perm (final norm method, genPC, expPCs); 07 internal pi1;
 #                        15 pi1_jang and beta correlation (Jang et al. adult eQTL);
 #                        eqtl_boxplots_py (17)
 #            Downstream: Fig 3
@@ -34,8 +34,8 @@
 #
 # Outputs:   out_file       Fig 3 (PDF)
 #
-# Notes:     Cell types, expPC values and the Jang cell type lists are set in
-#            this script.
+# Notes:     Cell types, expPC values, genPC, norm method and the Jang adult cell
+#            types come from config; the panel D discovery rows are set here.
 #
 #--------------------------------------------------------------------------------------
 
@@ -73,21 +73,22 @@ boxplot_pairs     <- snakemake@params[['boxplot_pairs']]
 jang_beta_file    <- snakemake@input[['beta_file']]
 boxplot_e_file    <- snakemake@input[['boxplot_e']]
 boxplot_g_file    <- snakemake@input[['boxplot_g']]
+expPC_map         <- unlist(snakemake@params[["exp_pc_map"]])
+genPC             <- snakemake@params[["geno_pc"]]
+norm_method       <- snakemake@params[["norm_method"]]
+eqtl_fdr          <- as.numeric(snakemake@params[["eqtl_fdr"]])
 out_file          <- snakemake@output[[1]]
 
-# L1 cell types (pipeline labels: these build the input file paths)
-cell_types <- c("Glu-UL", "Glu-DL", "NPC", "GABA", "Endo-Peri", "OPC", "MG")
+# L1 cell types (pipeline labels, config order: these build the input file
+# paths and set the heatmap order)
+l1_types   <- unlist(snakemake@params[["l1_types"]])
+cell_types <- unlist(snakemake@params[["cell_types"]])
+cell_types <- cell_types[cell_types %in% l1_types]
 
-# Expression PCs (pipeline labels)
-expPC_map <- c(
-  "Glu-UL"     = 50,
-  "Glu-DL"     = 40,
-  "GABA"       = 30,
-  "NPC"        = 30,
-  "MG"         = 30,
-  "OPC"        = 30,
-  "Endo-Peri"  = 30
-)
+# Panel D: prenatal discovery rows (NPC and developing neurons) and the Jang
+# adult L1 replication columns (config jang_l1_types)
+jang_L1_cell_types    <- c("Glu-UL", "Glu-DL", "GABA", "NPC")
+jang_adult_cell_types <- unlist(snakemake@params[["jang_types"]])
 
 cell_types_new <- relabel_cell_types(cell_types, manuscript_labels)
 
@@ -103,8 +104,6 @@ custom_palette <- c(
 )
 
 eqtl_list <- list()
-genPC <- 4
-norm_method <- 'quantile'
 
 # Print what each variable is set to
 message("\nVariables")
@@ -112,14 +111,16 @@ message("============================")
 tibble(
   variable = c("in_dir", "internal_dir", "jang_pi1_dir", "gene_lookup_file", "labels",
                "jang_beta_file", "boxplot_e_file", "boxplot_g_file", "boxplot_pairs",
-               "cell_types", "expPC_map", "norm_method", "genPC", "out_file"),
+               "cell_types", "jang_L1_cell_types", "jang_adult_cell_types",
+               "expPC_map", "norm_method", "genPC", "eqtl_fdr", "out_file"),
   value    = c(in_dir, internal_dir, jang_pi1_dir, gene_lookup_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
                jang_beta_file, boxplot_e_file, boxplot_g_file,
                paste(names(boxplot_pairs), map_chr(boxplot_pairs, ~ paste(unlist(.x), collapse = " ")),
                      sep = ": ", collapse = "; "),
-               paste(cell_types, collapse = ", "),
-               paste(names(expPC_map), expPC_map, sep = ":", collapse = ", "),
-               norm_method, genPC, out_file)) |>
+               paste(cell_types, collapse = ", "), paste(jang_L1_cell_types, collapse = ", "),
+               paste(jang_adult_cell_types, collapse = ", "),
+               paste(names(expPC_map[cell_types]), expPC_map[cell_types], sep = ":", collapse = ", "),
+               norm_method, genPC, eqtl_fdr, out_file)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -142,7 +143,7 @@ for (cell_type in cell_types) {
     dat <- read_tsv(f, show_col_types = FALSE) %>%
       filter(!is.na(start_distance)) %>%
       mutate(distance_kb = start_distance / 1000) %>%
-      filter(qval < 0.05)   # significance cutoff
+      filter(qval < eqtl_fdr)
     
     if (nrow(dat) > 0) {
       eqtl_list[[cell_type]] <- dat %>% mutate(cell_type = cell_type)
@@ -285,7 +286,7 @@ read_pi1_results <- function(ct, ref_ct) {
   expPC <- expPC_map[[ct]]
   ref_expPC <- expPC_map[[ref_ct]]
   
-  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_quantile_genPC_4_expPC_", 
+  file_path <- paste0(internal_dir, ct, "_vs_", ref_ct, "_", norm_method, "_genPC_", genPC, "_expPC_",
                       expPC, "_expPCref_", ref_expPC,"_pi1_results_tbl.rds")
   if (file.exists(file_path)) {
     pi1_list <- read_rds(file_path)
@@ -351,10 +352,6 @@ pi1_int_heatmap <- plot_int_heatmap(pi1_square_tbl)
 
 
 ##  Panel D: prenatal vs adult (Jang) pi1 heatmap  ------------------------------------
-# Rows: Glu-A, Glu-B, GABA, NPC (pipeline labels, for the file paths);
-# columns: the 7 Jang adult cell types
-jang_L1_cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC")
-jang_adult_cell_types <- c("Ast", "End", "Ext", "IN", "MG", "OD", "OPC")
 
 read_jang_pi1_results <- function(ct, ref_ct, jang_dir) {
   file_path <- paste0(jang_dir, ct, "_vs_", ref_ct, "_pi1_results_tbl.rds")

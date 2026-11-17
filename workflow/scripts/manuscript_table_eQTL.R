@@ -5,7 +5,7 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  16MANUSCRIPT-TABLES | Rule: eqtl_tbl
-#            Upstream:   05 tensorqtl_perm (quantile, genPC 4, expPC from exp_pc_map);
+#            Upstream:   05 tensorqtl_perm (final norm method, genPC, exp_pc_map);
 #                        05 convert_genotypes (pvar); Ziffra 2021 snATAC-seq peaks
 #            Downstream: Supp Table 2
 #
@@ -20,6 +20,7 @@
 #            allele_file       Genotype pvar (CHROM, POS, ID, REF, ALT)
 #            peak_dir          Ziffra 2021 supplementary tables directory
 #            exp_pc_map        Expression PCs per cell type
+#            geno_pc, norm_method  Final tensorQTL settings (config)
 #            gene_lookup_file  Ensembl ID to gene symbol lookup
 #
 # Outputs:   out_file          xlsx, one sheet per cell type
@@ -60,10 +61,9 @@ peak_dir          <- snakemake@params[["peak_dir"]]
 gene_lookup_file  <- snakemake@params[["gene_lookup_file"]]
 manuscript_labels <- snakemake@params[["labels"]]
 expPC_map         <- unlist(snakemake@params[["exp_pc_map"]])
+genPC             <- snakemake@params[["geno_pc"]]
+norm_method       <- snakemake@params[["norm_method"]]
 out_file          <- snakemake@output[[1]]
-
-norm_method <- 'quantile'
-genPC <- 4
 
 # Print what each variable is set to
 message("\nVariables")

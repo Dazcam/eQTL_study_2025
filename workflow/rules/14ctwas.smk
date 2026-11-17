@@ -70,6 +70,8 @@ rule ctwas_report:
             gene_lookup = lambda wc, input: "../" + input.gene_lookup,
             cell_types  = ",".join(config["cell_types"]),
             gwas        = ",".join(config["gwas"].keys()),
+            pip_thresh  = config["ctwas"]["sig_pip_thresh"],
+            bf_thresh   = config["ctwas"]["sig_bf_thresh"],
             output_file = config["ctwas"]["ctwas_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message:     "Generate cTWAS report"
@@ -83,7 +85,9 @@ rule ctwas_report:
                           bmark_dir = '{params.bmark_dir}', \
                           gene_lookup = '{params.gene_lookup}', \
                           cell_types = '{params.cell_types}', \
-                          gwas = '{params.gwas}'))" > {log} 2>&1
+                          gwas = '{params.gwas}', \
+                          pip_thresh = {params.pip_thresh}, \
+                          bf_thresh = {params.bf_thresh}))" > {log} 2>&1
         """
 
 

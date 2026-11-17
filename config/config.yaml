@@ -990,6 +990,12 @@ twas_weights:
 # ------------  Pipeline 14: cTWAS  ------------
 
 ctwas:
+  # Significant cTWAS genes (ctwas_report, 16 ctwas_sig_tbl and smr_ctwas_venn_tbl):
+  # PIP > sig_pip_thresh, in a credible set, Bonferroni P < sig_bf_thresh
+  # (factor: testable genes per cell type)
+  sig_pip_thresh: 0.8
+  sig_bf_thresh: 0.05
+
   create_ld_matrices:
     script:     ../scripts/ctwas_create_ld_matrices.R
     output:     ../results/14CTWAS/ld_mats/create_ctwas_ld_matrices.done
@@ -1165,6 +1171,10 @@ tables:
   subcluster_specific_tbl:
     out_file: ../results/16MANUSCRIPT-TABLES/subcluster_specific_eqtl_tbl.xlsx
     log: ../results/00LOG/16MANUSCRIPT-TABLES/subcluster_specific_tbl.log
+
+  cell_counts_tbl:
+    out_file: ../results/16MANUSCRIPT-TABLES/nuclei_counts_tbl.xlsx
+    log: ../results/00LOG/16MANUSCRIPT-TABLES/cell_counts_tbl.log
 
 # ------------  Pipeline 17: Manuscript figures  ------------
 

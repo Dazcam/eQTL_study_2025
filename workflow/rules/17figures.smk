@@ -5,10 +5,17 @@ configfile: '../config/config.yaml'
 
 rule eqtl_qc_fig:
     # Fig 2
-    input:  ziffra_tbl = config['replication_sc']['ziffra_summary']['out_file']
+    input:  ziffra_tbl    = config['replication_sc']['ziffra_summary']['out_file'],
+            nuclei_counts = config['tables']['cell_counts_tbl']['out_file']
     output: config['figures']['eqtl_qc_fig']['out_file']
-    params: in_dir = config['figures']['eqtl_qc_fig']['in_dir'],
-            labels = config['manuscript_labels']
+    params: in_dir      = config['figures']['eqtl_qc_fig']['in_dir'],
+            labels      = config['manuscript_labels'],
+            cell_types  = config['cell_types'],
+            l1_types    = config['fetal_l1_types'],
+            exp_pc_map  = config['exp_pc_map'],
+            geno_pc     = config['tensorQTL']['geno_pcs'],
+            norm_method = config['tensorQTL']['norm_methods'][0],
+            eqtl_fdr    = config['eqtl_fdr']
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['figures']['eqtl_qc_fig']['log']
@@ -45,7 +52,14 @@ rule replication_fig:
             internal_dir = config['figures']['rep_fig']['internal_dir'],
             jang_pi1_dir = config['figures']['rep_fig']['jang_pi1_dir'],
             gene_lookup  = config['gene_lookup'],
-            boxplot_pairs = BOXPLOT_PAIRS
+            boxplot_pairs = BOXPLOT_PAIRS,
+            cell_types   = config['cell_types'],
+            l1_types     = config['fetal_l1_types'],
+            jang_types   = config['jang_l1_types'],
+            exp_pc_map   = config['exp_pc_map'],
+            geno_pc      = config['tensorQTL']['geno_pcs'],
+            norm_method  = config['tensorQTL']['norm_methods'][0],
+            eqtl_fdr     = config['eqtl_fdr']
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     log:  config['figures']['rep_fig']['log']
@@ -62,7 +76,9 @@ rule fig4:
             perm_dir         = config['tensorQTL']['tensorqtl_perm']['output'].split('{cell_type}')[0],
             pseudotime_dir   = config['figures']['fig4']['pseudotime_dir'],
             cell_types       = config['cell_types'],
-            exp_pc_map       = config['exp_pc_map']
+            exp_pc_map       = config['exp_pc_map'],
+            geno_pc          = config['tensorQTL']['geno_pcs'],
+            norm_method      = config['tensorQTL']['norm_methods'][0]
     conda:  config["scanpy"]["env"]
     resources: threads = 8, mem_mb = 120000, time = "1:00:00"
     log:    config['figures']['fig4']['log']
@@ -96,6 +112,11 @@ rule supplementary_fig:
     params: geno_dir = config['geno_post_impute']['calc_genotype_pcs']['params'].rsplit('/', 1)[0] + '/',
             labels = config['manuscript_labels'],
             expr_dir = config['figures']['supp_fig']['expr_dir'],
+            cell_types  = config['cell_types'],
+            l1_types    = config['fetal_l1_types'],
+            exp_pcs     = config['tensorQTL']['exp_pcs'],
+            geno_pc     = config['tensorQTL']['geno_pcs'],
+            norm_method = config['tensorQTL']['norm_methods'][0]
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00"
     resources: threads = 4, mem_mb = 20000

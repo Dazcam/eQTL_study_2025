@@ -6,24 +6,23 @@
 #
 # Pipeline:  17MANUSCRIPT-FIGURES | Rule: supplementary_fig
 #            Upstream:   04 calc_genotype_pcs (pca.eigenval);
-#                        05 tensorqtl_perm (tensorQTL logs, quantile, genPC 4,
-#                        expPC 10-50)
+#                        05 tensorqtl_perm (tensorQTL logs at the final norm
+#                        method and genPC, every tested expPC)
 #            Downstream: Supp Figs 2 and 11
 #
 # Purpose:   - Supp Fig 11: % variance explained by each genotype PC (elbow plot)
 #            - Supp Fig 2: eGenes (FDR < 0.05, from the tensorQTL permutation
-#              logs) against the number of expression PCs (10-50) for each L1
-#              cell type (A) and L2 subcluster (B)
+#              logs) against the number of expression PCs (config tensorQTL
+#              exp_pcs) for each L1 cell type (A) and L2 subcluster (B)
 #            Manuscript cell type labels (config manuscript_labels)
 #
 # Inputs:    geno_dir    Directory with pca.eigenval (04 calc_genotype_pcs)
 #            expr_dir    tensorQTL permutation results directory
+#            cell_types, l1_types, exp_pcs, geno_pc, norm_method  (config)
 #
 # Outputs:   out_file    Supp Fig 2 (PDF)
 #            genotype_elbow_plt.pdf, Supp Fig 11, written next to out_file
 #            (not a declared rule output)
-#
-# Notes:     Cell types, expPC values, genPC and norm method are set in this script.
 #
 #--------------------------------------------------------------------------------------
 
@@ -55,15 +54,17 @@ manuscript_labels <- snakemake@params[["labels"]]
 out_file          <- snakemake@output[[1]]
 out_dir           <- dirname(out_file)
 
-# Cell types (pipeline labels: these build the log file paths)
-cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
-cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                   "Glu-DL-0", "Glu-DL-1", "Glu-DL-2", 
-                   "NPC-0", "NPC-1", "NPC-2", 
-                   "GABA-0", "GABA-1", "GABA-2")
-exp_PCs <- c(10, 20, 30, 40, 50)
-gen_PCs <- 4
-norm_methods <- 'quantile'
+# L1 and L2 cell types (pipeline labels: these build the log file paths);
+# pseudotime bins excluded
+all_cell_types <- unlist(snakemake@params[["cell_types"]])
+all_cell_types <- all_cell_types[!str_detect(all_cell_types, "-to-")]
+cell_types     <- unlist(snakemake@params[["l1_types"]])
+cell_types_L2  <- setdiff(all_cell_types, cell_types)
+# L2 grouped by parent in config cell_types order (sets the plotting order)
+cell_types_L2  <- cell_types_L2[order(match(sub("-[^-]+$", "", cell_types_L2), all_cell_types))]
+exp_PCs        <- unlist(snakemake@params[["exp_pcs"]])
+gen_PCs        <- snakemake@params[["geno_pc"]]
+norm_methods   <- snakemake@params[["norm_method"]]
 
 # Print what each variable is set to
 message("\nVariables")

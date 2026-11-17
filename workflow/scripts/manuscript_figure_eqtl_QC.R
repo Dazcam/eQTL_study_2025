@@ -5,8 +5,9 @@
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  17MANUSCRIPT-FIGURES | Rule: eqtl_qc_fig
-#            Upstream:   05 tensorqtl_perm (quantile, genPC 4);
-#                        07 ziffra_summary (OCR enrichment of lead eQTL)
+#            Upstream:   05 tensorqtl_perm (final norm method, genPC and expPCs);
+#                        07 ziffra_summary (OCR enrichment of lead eQTL);
+#                        16 cell_counts_tbl (nuclei counts)
 #            Downstream: Fig 2
 #
 # Purpose:   Panels for the 19 L1 and L2 cell populations:
@@ -18,15 +19,15 @@
 #            E  Fold enrichment of lead eQTL in Ziffra 2021 snATAC-seq peaks
 #            Manuscript cell type labels (config manuscript_labels)
 #
-# Inputs:    in_dir      tensorQTL permutation results directory
-#            ziffra_tbl  07 Ziffra OCR enrichment summary
+# Inputs:    in_dir         tensorQTL permutation results directory
+#            ziffra_tbl     07 Ziffra OCR enrichment summary
+#            nuclei_counts  16 cell_counts_tbl (nuclei per L1 and L2 cell type)
+#            cell_types, l1_types, exp_pc_map, geno_pc, norm_method, eqtl_fdr  (config)
 #
-# Outputs:   out_file    Fig 2 (PDF)
+# Outputs:   out_file       Fig 2 (PDF)
 #
-# Notes:     A, B and D read each cell type's permutation results at its
-#            exp_pc_map value. C reads every cell type at the expPC value left
-#            over from the panel D loop (NPC-2's, 20), not its exp_pc_map value.
-#            Cell types, nuclei counts and expPC values are set in this script.
+# Notes:     Every panel reads each cell type's permutation results at its
+#            exp_pc_map value.
 #
 #--------------------------------------------------------------------------------------
 
@@ -46,70 +47,43 @@ message("\n\nPlotting eQTL QC figure ...")
 
 ##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
+library(readxl)
 library(cowplot)
 
 # Load functions (relabel_cell_types)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
-in_dir            <- snakemake@params[['in_dir']]
-ziffra_tbl_file   <- snakemake@input[['ziffra_tbl']]
-manuscript_labels <- snakemake@params[["labels"]]
-out_file          <- snakemake@output[[1]]
+in_dir             <- snakemake@params[['in_dir']]
+ziffra_tbl_file    <- snakemake@input[['ziffra_tbl']]
+nuclei_counts_file <- snakemake@input[['nuclei_counts']]
+manuscript_labels  <- snakemake@params[["labels"]]
+expPC_map          <- unlist(snakemake@params[["exp_pc_map"]])
+genPC              <- snakemake@params[["geno_pc"]]
+norm_method        <- snakemake@params[["norm_method"]]
+eqtl_fdr           <- as.numeric(snakemake@params[["eqtl_fdr"]])
+out_file           <- snakemake@output[[1]]
+
+# L1 and L2 cell types (pipeline labels, config order); pseudotime bins excluded
+cell_types    <- unlist(snakemake@params[["cell_types"]])
+cell_types    <- cell_types[!str_detect(cell_types, "-to-")]
+l1_types      <- unlist(snakemake@params[["l1_types"]])
+cell_types_L2 <- setdiff(cell_types, l1_types)
+# L1 types with L2 subclusters (panel C)
+cell_types_L1 <- l1_types[l1_types %in% sub("-[^-]+$", "", cell_types_L2)]
 
 eqtl_list <- list()
-genPC <- 4
-norm_method <- 'quantile'
-
-# Cell types (pipeline labels), nuclei counts and expression PCs
-cell_types <- c("Glu-UL", "Glu-DL", "NPC", "GABA",
-                "Endo-Peri", "OPC", "MG",
-                "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                "GABA-0", "GABA-1", "GABA-2",
-                "NPC-0", "NPC-1", "NPC-2")
-
-cell_counts <-  c(271180, 136070, 128017, 103598, 19842, 13794, 
-                  7297, 123028, 87340, 60812, 49120, 44808, 42142, 
-                  59350, 47255, 20371, 33789, 32047, 17799)
-
-expPC_map <- c(
-  "Glu-UL"     = 50,
-  "Glu-DL"     = 40,
-  "GABA"       = 30,
-  "NPC"        = 30,
-  "MG"         = 30,
-  "OPC"        = 30,
-  "Endo-Peri"  = 30,
-  "Glu-UL-0"     = 30,
-  "Glu-UL-1"     = 50,
-  "Glu-UL-2"     = 40,
-  "Glu-DL-0"     = 40,
-  "Glu-DL-1"     = 40,
-  "Glu-DL-2"     = 30,
-  "GABA-0"       = 30,
-  "GABA-1"       = 40,
-  "GABA-2"       = 40,
-  "NPC-0"        = 50,
-  "NPC-1"        = 30,
-  "NPC-2"        = 20
-)
-
-cell_types_L1 <- c("Glu-UL", "Glu-DL", "GABA", "NPC")
-cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-                   "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-                   "NPC-0", "NPC-1", "NPC-2",
-                   "GABA-0", "GABA-1", "GABA-2")
 
 # Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("in_dir", "ziffra_tbl_file", "labels", "norm_method", "genPC",
-               "cell_types", "cell_counts", "expPC_map", "out_file"),
-  value    = c(in_dir, ziffra_tbl_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
-               norm_method, genPC, paste(cell_types, collapse = ", "),
-               paste(cell_types, cell_counts, sep = ":", collapse = ", "),
+  variable = c("in_dir", "ziffra_tbl_file", "nuclei_counts_file", "labels", "norm_method",
+               "genPC", "eqtl_fdr", "cell_types", "cell_types_L1 (panel C)",
+               "cell_types_L2", "expPC_map", "out_file"),
+  value    = c(in_dir, ziffra_tbl_file, nuclei_counts_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               norm_method, genPC, eqtl_fdr, paste(cell_types, collapse = ", "),
+               paste(cell_types_L1, collapse = ", "), paste(cell_types_L2, collapse = ", "),
                paste(names(expPC_map), expPC_map, sep = ":", collapse = ", "), out_file)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
@@ -166,7 +140,7 @@ for (cell_type in cell_types) {
     dat <- read_tsv(f, show_col_types = FALSE) |>
       filter(!is.na(start_distance)) |>
       mutate(distance_kb = start_distance / 1000) |>
-      filter(qval < 0.05)   # significance cutoff
+      filter(qval < eqtl_fdr)
     
     if (nrow(dat) > 0) {
       eqtl_list[[cell_type]] <- dat |> mutate(cell_type = cell_type)
@@ -210,10 +184,25 @@ density_plt <- ggplot(eqtls_all, aes(x=distance_kb, color=cell_type)) +
   theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
 
 ##  Panel A: eGenes per cell population  ----------------------------------------------
+# Nuclei per cell type from 16 cell_counts_tbl (manuscript labels; L2 names are
+# prefixed with their L1 cluster if the sheet does not already include it)
+nuclei_l1 <- read_excel(nuclei_counts_file, sheet = "L1") |>
+  transmute(label = `L1 cluster`, n_cells = Nuclei)
+nuclei_l2 <- read_excel(nuclei_counts_file, sheet = "L2") |>
+  transmute(label = if_else(str_starts(`L2 subcluster`, fixed(paste0(`L1 cluster`, "-"))),
+                            `L2 subcluster`, paste0(`L1 cluster`, "-", `L2 subcluster`)),
+            n_cells = Nuclei)
+nuclei_lookup <- deframe(bind_rows(nuclei_l1, nuclei_l2))
+
 cell_counts <- tibble(
   cell_type = cell_types,
-  n_cells   = cell_counts
+  n_cells   = unname(nuclei_lookup[relabel_cell_types(cell_types, manuscript_labels)])
 )
+if (anyNA(cell_counts$n_cells)) {
+  stop("No nuclei count for: ", paste(cell_counts$cell_type[is.na(cell_counts$n_cells)], collapse = ", "))
+}
+message("Nuclei counts per cell type:")
+cell_counts |> knitr::kable(format = "simple") |> cat(sep = "\n")
 
 gene_cell <- eqtls_all |>
   distinct(phenotype_id, cell_type)
@@ -278,17 +267,15 @@ read_eGenes <- function(cell_type, in_dir, norm_method, genPC, expPC) {
   if (!file.exists(log_file)) return(tibble(cell_type = cell_type, eGene = character(0)))
   
   read_tsv(log_file, show_col_types = FALSE) |>
-    filter(!is.na(qval) & qval < 0.05) |>
+    filter(!is.na(qval) & qval < eqtl_fdr) |>
     distinct(phenotype_id) |>
     mutate(cell_type = cell_type)
 }
 
+# Each cell type at its own exp_pc_map value
 eqtl_all <- map_dfr(c(cell_types_L1, cell_types_L2),
-                    read_eGenes,
-                    in_dir = in_dir,
-                    norm_method = norm_method,
-                    genPC = genPC,
-                    expPC = expPC)
+                    ~ read_eGenes(.x, in_dir = in_dir, norm_method = norm_method,
+                                  genPC = genPC, expPC = expPC_map[[.x]]))
 
 # Separate into lists
 egenes_L1 <- eqtl_all |> filter(cell_type %in% cell_types_L1)

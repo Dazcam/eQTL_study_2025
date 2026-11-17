@@ -19,6 +19,8 @@ rule eqtl_tbl:
             peak_dir = config['tables']['eqtl_tbl']['peak_dir'],
             cell_types = config['cell_types'],
             exp_pc_map = config['exp_pc_map'],
+            geno_pc = config['tensorQTL']['geno_pcs'],
+            norm_method = config['tensorQTL']['norm_methods'][0],
             gene_lookup_file = config['gene_lookup']
     singularity: config["containers"]["r_eqtl"]
     resources: time="2:00:00"
@@ -74,9 +76,9 @@ rule smr_ctwas_venn_tbl:
             weights_dir      = config['tables']['smr_ctwas_venn_tbl']['weights_dir'],
             cell_types       = config['cell_types'],
             gene_lookup_file = config['gene_lookup'],
-            ctwas_pip_thresh = 0.8,
+            ctwas_pip_thresh = config['ctwas']['sig_pip_thresh'],
             ctwas_use_bf     = True,
-            ctwas_bf_thresh  = 0.05,
+            ctwas_bf_thresh  = config['ctwas']['sig_bf_thresh'],
             use_symbols      = True
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00", threads=4, mem_mb=32000
@@ -92,8 +94,8 @@ rule ctwas_sig_tbl:
             in_dir           = config['tables']['ctwas_sig_tbl']['in_dir'],
             weights_dir      = config['tables']['ctwas_sig_tbl']['weights_dir'],
             gene_lookup_file = config['gene_lookup'],
-            pip_thresh       = 0.8,
-            bf_p_thresh      = 0.05
+            pip_thresh       = config['ctwas']['sig_pip_thresh'],
+            bf_p_thresh      = config['ctwas']['sig_bf_thresh']
     singularity: config["containers"]["r_eqtl"]
     resources: time="1:00:00", threads=4, mem_mb=32000
     log:    config['tables']['ctwas_sig_tbl']['log']
@@ -142,10 +144,10 @@ rule cell_counts_tbl:
                         l1_pop = ["Glu-UL", "Glu-DL", "NPC", "GABA"]),
             pt = expand("../results/06PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad",
                         trajectory = config["trajectories"])
-    output: "../results/16MANUSCRIPT-TABLES/nuclei_counts_tbl.xlsx"
+    output: config['tables']['cell_counts_tbl']['out_file']
     params: labels = config['manuscript_labels']
     conda:  config["scanpy"]["env"]
-    log:    "../results/00LOG/16MANUSCRIPT-TABLES/cell_counts_tbl.log"
+    log:    config['tables']['cell_counts_tbl']['log']
     script: "../scripts/manuscript_table_cell_counts.py"
 
 
