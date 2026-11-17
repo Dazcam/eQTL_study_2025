@@ -6,13 +6,15 @@
 #
 # Pipeline:  16MANUSCRIPT-TABLES | Rule: smr_sig_tbl
 #            Upstream:   12 SMR (.smr results per cell type and GWAS)
-#            Downstream: smr_ctwas_venn_tbl (16); 17 smr_ctwas_venn_fig (Fig 6);
-#                        12 smr_report.Rmd; Supp Table 9
+#            Downstream: smr_ctwas_venn_tbl (16) -> 17 smr_ctwas_venn_fig (Fig 6);
+#                        Supp Table 9
 #
 # Purpose:   For each GWAS trait:
-#            - Keep SMR + HEIDI significant results in every cell type
-#              (Bonferroni over probes tested in that cell type, HEIDI P > p_heidi)
-#            - Add gene symbols and write {gwas}_smr.tsv (pipeline labels)
+#            - In each cell type, keep results with SMR P < p_smr / probes tested
+#              in that cell type (Bonferroni) and HEIDI P > p_heidi (missing
+#              HEIDI P excluded); cell types without a .smr file are skipped
+#            - Stack the cell types (one row per SNP, gene and cell type), add
+#              gene symbols and write {gwas}_smr.tsv (pipeline labels)
 #            - Add one sheet per trait to a combined xlsx (manuscript labels)
 #
 # Inputs:    in_dir            12 SMR results directory ({cell_type}/{cell_type}_{gwas}.smr)

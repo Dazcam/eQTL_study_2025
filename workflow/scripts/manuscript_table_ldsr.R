@@ -8,8 +8,9 @@
 #            Upstream:   11 S-LDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
 #            Downstream: Supp Table 8
 #
-# Purpose:   Reproduce the table behind the MaxCPP S-LDSR figure (panels A-C):
-#            - Parse cell type and disorder from the annotation Category
+# Purpose:   Reproduce the table behind the MaxCPP S-LDSR figure (Fig 5A-C):
+#            - Parse cell type and disorder from the annotation Category; rows for
+#              other traits (e.g. PTSD) are dropped
 #            - Keep only cell types listed in config['cell_types']
 #            - Manuscript cell type labels (config manuscript_labels)
 #            - Add the plotted -log10(P), level (L1 / L2 / Pseudotime), main cell

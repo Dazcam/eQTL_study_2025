@@ -6,7 +6,7 @@
 #
 # Pipeline:  16MANUSCRIPT-TABLES | Rule: cell_counts_tbl
 #            Upstream:   02 scanpy L1 / L2 objects; 06 pseudotime objects
-#            Downstream: Methods and text numbers
+#            Downstream: none in the pipeline
 #
 # Purpose:   Count nuclei per L1 cluster, L2 subcluster and Q4 pseudotime bin,
 #            using manuscript labels (config manuscript_labels). Bins are
@@ -17,7 +17,8 @@
 #            pt   {trajectory}/adata_pseudotime.h5ad, one per trajectory
 #            labels  config manuscript_labels
 #
-# Outputs:   xlsx Sheets: L1, L2, Pseudotime bins
+# Outputs:   xlsx Sheets: L1 (% of all nuclei), L2 (% of L1 cluster),
+#                 Pseudotime bins (% of trajectory)
 #
 # Notes:     Only .obs is read from each object. L2 population and trajectory
 #            names are taken from the file paths.

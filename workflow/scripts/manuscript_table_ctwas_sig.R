@@ -9,16 +9,21 @@
 #            Downstream: Supp Table 10
 #
 # Purpose:   - Bonferroni factor per cell type: the number of testable genes
-#              (non-empty FUSION .wgt.RDat files), as in ctwas_report.Rmd
-#            - For each GWAS trait, fine-mapped genes (PIP > pip_thresh, in a
-#              credible set) with Bonferroni P < bf_p_thresh, unioned across
-#              cell types; one xlsx sheet per disorder, manuscript labels
+#              (non-empty FUSION .wgt.RDat files), as in ctwas_report.Rmd;
+#              cell types without weights are skipped
+#            - For each GWAS trait and cell type, fine-mapped genes (PIP >
+#              pip_thresh, in a credible set) with Bonferroni P < bf_p_thresh,
+#              using that cell type's factor (P = 2 * pnorm(-|z|))
+#            - Stack the cell types (one row per gene and cell type); one xlsx
+#              sheet per disorder, manuscript labels
 #
 # Inputs:    in_dir            14 cTWAS results directory (output/ctwas_{ct}_{gwas}_ctwas.rds)
 #            weights_dir       14 FUSION weights directory ({ct}/*.wgt.RDat)
 #            gene_lookup_file  Ensembl ID to gene symbol, position and biotype
 #
-# Outputs:   correction        Bonferroni factor per cell type (TSV)
+# Outputs:   correction        Bonferroni factor per cell type, plus the number of
+#                              unique testable genes across all cell types (TSV;
+#                              the all-cell-types count is not used for correction)
 #            sig_out           Significant genes, one sheet per disorder (xlsx)
 #
 # Notes:     ctwas_report.Rmd (14) computes the same factors independently,

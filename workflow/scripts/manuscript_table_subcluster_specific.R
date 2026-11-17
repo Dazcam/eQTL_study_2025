@@ -8,9 +8,10 @@
 #            Upstream:   15 eqtl_effects (eqtl_effect_sizes.rds)
 #            Downstream: Supp Table 3
 #
-# Purpose:   - eGenes significant (FDR) in an L2 subcluster but not in its L1
-#              parent, with L1 and L2 slope, SE and P side by side, as in the
-#              eqtl_sharing_report.Rmd subcluster-specific table
+# Purpose:   - Read the subcluster-specific eGenes computed by 15 (FDR < 0.05 in an
+#              L2 subcluster but not in its L1 parent), with L1 and L2 slope, SE
+#              and nominal P side by side, as in eqtl_sharing_report.Rmd
+#            - Round numeric columns to 3 significant figures
 #            - Remove exact repeats of (ENSG, eSNP, cell_type_L2)
 #            - Log how many genes are specific to one subcluster vs more
 #            - Manuscript cell type labels

@@ -9,12 +9,15 @@
 #            Downstream: 17 smr_ctwas_venn_fig (Fig 6)
 #
 # Purpose:   For each GWAS trait:
-#            - SMR genes: union across cell types of the smr_sig_tbl genes
+#            - SMR genes: unique genes in {gwas}_smr.tsv (smr_sig_tbl), i.e. the
+#              union across cell types
 #            - cTWAS genes: union across cell types of fine-mapped genes
-#              (PIP > ctwas_pip_thresh, in a credible set), optionally with
-#              Bonferroni P < ctwas_bf_thresh (factor = testable genes per cell type)
+#              (PIP > ctwas_pip_thresh, in a credible set) that, when ctwas_use_bf
+#              is TRUE, also have Bonferroni P < ctwas_bf_thresh using that cell
+#              type's factor (testable genes); cell types without FUSION
+#              weights then contribute no genes
 #            - Write a membership table (both / SMR_only / cTWAS_only) and log
-#              the gene lists per category
+#              the gene lists per category; symbols fall back to the Ensembl ID
 #
 # Inputs:    smr_tbl_dir       Directory with {gwas}_smr.tsv (smr_sig_tbl)
 #            ctwas_in_dir      14 cTWAS results directory (output/ctwas_{ct}_{gwas}_ctwas.rds)

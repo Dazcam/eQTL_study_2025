@@ -6,11 +6,12 @@
 #
 # Pipeline:  16MANUSCRIPT-TABLES | Rule: eqtl_tbl
 #            Upstream:   05 tensorqtl_perm (quantile, genPC 4, expPC from exp_pc_map);
-#                        05 prep_tensorQTL_input (pvar); Ziffra 2021 snATAC-seq peaks
+#                        05 convert_genotypes (pvar); Ziffra 2021 snATAC-seq peaks
 #            Downstream: Supp Table 2
 #
-# Purpose:   For each cell type in exp_pc_map:
-#            - Read significant eGenes (qval < 0.05) from the permutation results
+# Purpose:   For each cell type in exp_pc_map (skipped if its permutation file is missing):
+#            - Read significant eGenes (qval < 0.05) and their lead SNP from the
+#              permutation results
 #            - Add chromosome, position and alleles from the genotype pvar
 #            - Flag lead SNPs inside a Ziffra 2021 primary peak (In_Peak)
 #            - Add gene symbols; one sheet per cell type, manuscript labels
@@ -22,6 +23,10 @@
 #            gene_lookup_file  Ensembl ID to gene symbol lookup
 #
 # Outputs:   out_file          xlsx, one sheet per cell type
+#
+# Notes:     The pvar and gene lookup joins are inner joins: lead SNPs missing
+#            from the pvar, and genes missing from the lookup, are dropped (the
+#            log reports any change in row count).
 #
 #--------------------------------------------------------------------------------------
 
