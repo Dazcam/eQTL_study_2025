@@ -1,18 +1,18 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate Figure 4: pseudotime trajectory eQTL
+#    eQTL across the NPC to Glu-A pseudotime trajectory (Fig 4)
 #
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  17MANUSCRIPT-FIGURES | Rule: fig4
-#            Upstream:   06PSEUDOTIME (palantir object and per-bin tensorQTL perm
-#                        results); 05TENSORQTL perm (L1 + L2 eGenes)
-#            Downstream: None (manuscript figure)
+#            Upstream:   06 pseudotime (palantir object and per-bin tensorQTL perm
+#                        results); 05 tensorqtl_perm (L1 + L2 eGenes)
+#            Downstream: Fig 4
 #
 # Purpose:   For one trajectory (NPC to Glu-A in the manuscript):
 #            A: pseudotime UMAP | root gene | terminal marker feature plots
 #            B: per Q4 bin, proportion of eGenes (qval < 0.05) shared with vs
-#               novel to the L1 + L2 eGene set
+#               novel to the L1 + L2 eGene set (counts labelled on the bars)
 #            C: distance-to-TSS density of significant eQTL (qval < 0.05), one
 #               line per Q4 bin
 #
@@ -26,15 +26,15 @@
 #            cell_types      config['cell_types']; L1 + L2 define the reference
 #                            eGene set (trajectory bins excluded)
 #            exp_pc_map      Final expression PC count per cell type / bin
+#            labels          config['manuscript_labels'] ("-to-" shown as " to ")
 #
 # Outputs:   out_file        Figure 4 (TIFF, 600 dpi, LZW)
 #
 # Notes:     geno_pc (4) and norm_method (quantile) are fixed to the final eQTL
 #            settings used throughout the manuscript.
-#            Panel C reproduces ggplot2::geom_density() defaults: Gaussian kernel,
-#            bw.nrd0 bandwidth, 512 points across the x-axis limits, and eQTL
-#            beyond +/-600 kb dropped before the density is estimated (as
-#            scale_x_continuous(limits = ...) did in the R version).
+#            Panel C uses ggplot2::geom_density() defaults: Gaussian kernel,
+#            bw.nrd0 bandwidth and 512 points across the x-axis limits; eQTL
+#            beyond +/-600 kb are dropped before the density is estimated.
 #
 #--------------------------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ logging.basicConfig(filename=snakemake.log[0], level=logging.INFO,
 log = logging.getLogger()
 sys.excepthook = lambda *exc: log.error("Uncaught exception", exc_info=exc)
 
-log.info("Generating Figure 4 (panels A/B/C) ...")
+log.info("Plotting Figure 4 (panels A/B/C) ...")
 
 # Input and output paths
 h5ad_path      = str(snakemake.input.h5ad)
@@ -82,6 +82,7 @@ geno_pc       = 4
 norm_method   = "quantile"
 quantile_n    = 4
 tss_limit_kb  = 600               # panel C x-axis limits (+/- kb)
+LABELS        = dict(snakemake.params.labels)
 
 # Report what each variable is set to
 variables = {
@@ -97,6 +98,7 @@ variables = {
     "norm_method":    norm_method,
     "quantile_n":     quantile_n,
     "tss_limit_kb":   tss_limit_kb,
+    "labels":         ", ".join(f"{k} -> {v}" for k, v in LABELS.items()),
 }
 width = max(map(len, variables))
 log.info("Variables\n============================\n" +
@@ -131,9 +133,6 @@ _ramp = LinearSegmentedColormap.from_list("bin_ramp", ["#FDE725", "#21908C", "#4
 BIN_PALETTE = {b: to_hex(_ramp(x)) for b, x in zip(range(1, 7), np.linspace(0, 1, 6))}
 DENSITY_LINEWIDTH = 1.4        # ~ ggplot linewidth 0.5 mm
 DENSITY_N         = 512        # ggplot geom_density default
-
-
-LABELS = dict(snakemake.params.labels)
 
 
 def relabel(x):

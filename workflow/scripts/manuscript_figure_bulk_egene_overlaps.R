@@ -1,26 +1,28 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate bulk eGene overlap supplementary figure for manuscript
+#    eGene overlap with O'Brien 2018 bulk fetal brain eQTL (Supp Fig 9)
 #
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  17MANUSCRIPT-FIGURES | Rule: bulk_egene_overlaps_fig
-#            Upstream:   extract_unique_egenes (per-cell-type eGenes and their
-#                        overlap with O'Brien 2018 bulk eQTL)
-#            Downstream: None (supplementary figure)
+#            Upstream:   08 extract_unique_egenes (eGenes per cell type);
+#                        08 overlap_obrien (bulk gene and transcript overlap per eGene)
+#            Downstream: Supp Fig 9
 #
 # Purpose:   Per cell type, total eGenes (dark bar) and the number also significant
 #            in O'Brien 2018 bulk fetal brain eQTL (light bar), grouped in three
-#            blocks: L1, L2, pseudotime bins.
+#            blocks: L1, L2, pseudotime bins. eGenes with no overlap record count
+#            as not overlapping.
 #            A: gene-level bulk eQTL overlap
 #            B: transcript-level bulk eQTL overlap
 #            - Keeps only cell types in config['cell_types']
-#            - Relabels cell types (Glu-UL -> Glu-A, Glu-DL -> Glu-B, drop "-Q4-")
+#            - Manuscript cell type labels (config manuscript_labels)
 #
 # Inputs:    egenes_per_celltype  One row per (cell_type, eGene), with level
 #            overlap              One row per unique eGene: in_gene_bulk,
 #                                 in_transcript_bulk
 #            cell_types           config['cell_types'] (pipeline labels)
+#            labels               config['manuscript_labels']
 #
 # Outputs:   out_file             Two-panel figure (TIFF, 600 dpi, LZW)
 #
@@ -38,32 +40,31 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating bulk eGene overlap plot for the manuscript ...")
+message("\n\nPlotting bulk eGene overlaps ...")
 
 ##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(cowplot)
 
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
+
 # Input and output paths
 egenes_per_celltype_file <- snakemake@params[["egenes_per_celltype"]]
 overlap_file             <- snakemake@params[["overlap"]]
 cell_types               <- unlist(snakemake@params[["cell_types"]])
+manuscript_labels        <- snakemake@params[["labels"]]
 out_file                 <- snakemake@output[[1]]
 
-# egenes_per_celltype_file <- "../results/.../egenes_per_celltype.tsv"
-# overlap_file             <- "../results/.../overlap.tsv"
-# cell_types               <- c("Glu-UL", "Glu-DL", "NPC", ...)   # config['cell_types']
-# out_file                 <- "../results/17MANUSCRIPT-FIGURES/bulk_egene_overlaps.tiff"
-
-# Make a tibble showing what each variable is set to
+# Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("egenes_per_celltype_file", "overlap_file", "cell_types", "out_file"),
+  variable = c("egenes_per_celltype_file", "overlap_file", "cell_types", "labels", "out_file"),
   value    = c(egenes_per_celltype_file, overlap_file,
-               paste(cell_types, collapse = ", "), out_file)) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
+               paste(cell_types, collapse = ", "), paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "), out_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
 message("============================\n")
 
 # Custom colour palette: identical to the LDSR figure so cell types share colours
@@ -79,12 +80,6 @@ custom_palette <- c(
   'Trajectory-to-Glu-A' = '#E91E8C',
   'Trajectory-to-Glu-B' = '#2F4F4F'
 )
-
-# Relabel helper: Glu-UL -> Glu-A, Glu-DL -> Glu-B, strip "-Q4-" from bin names,
-# e.g. "NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1"
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
 
 # Dependency-free lighten (base R), avoids needing colorspace for one plot
 lighten_colour <- function(hex, amount = 0.55) {
@@ -142,7 +137,7 @@ celltype_overlap <- joined |>
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 message("\neGene counts per cell type:")
-celltype_overlap |> knitr::kable(format = "simple", align = "l") |> print()
+celltype_overlap |> knitr::kable(format = "simple", align = "l") |> cat(sep = "\n")
 
 ## Colour groups and x-axis order  ------------------------------------------------------
 # Trajectory check comes first, since "NPC-to-Glu-A-Bin1" contains "Glu-A" and "NPC"

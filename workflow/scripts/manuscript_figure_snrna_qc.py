@@ -1,32 +1,34 @@
-# --------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
 #
-#    manuscript_figure_snrna_qc.py
+#    snRNA-seq QC per sample and per cell type (Supp Fig 12)
 #
-#    Reviewer request (line 473): snRNA-seq QC summaries.
+#--------------------------------------------------------------------------------------
 #
-#    Figure 1 (per sample), rows top -> bottom:
-#      - Number of nuclei per sample, stacked by cell type (bar)   [A: nuclei per sample]
-#      - UMIs per nucleus (boxplot per sample)                     [B: UMI distributions]
-#      - Genes detected per nucleus (boxplot per sample)           [C: genes per sample]
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: snrna_qc_fig
+#            Upstream:   02 scanpy final clustered object (adata_clusters_v3.h5ad)
+#            Downstream: Supp Fig 12 (per sample)
 #
-#    Figure 2 (per cell type):
-#      - Genes detected per nucleus (boxplot per cell type)        [D: genes per cell type]
+# Purpose:   QC metrics recomputed from layers['counts'] (adata.X holds scaled
+#            values, and obs n_counts / n_genes may pre-date later QC); only obs
+#            and the counts layer are read:
+#            - Per sample (Supp Fig 12), top to bottom: nuclei per sample stacked
+#              by cell type; UMIs per nucleus; genes detected per nucleus
+#            - Per cell type: genes detected per nucleus
+#            - Summary table: nuclei, median UMIs and median genes per nucleus,
+#              per sample and per cell type
+#            Cell types come from obs['cell_type'], or are rebuilt from
+#            leiden_harmony_0.2 with cluster_anns; manuscript labels (config
+#            manuscript_labels); colours from scanpy_gene_lists.custom_palette
 #
-#    Table (Excel, not tracked by Snakemake): nuclei, median UMIs and median genes per
-#    nucleus, per sample and per cell type.
+# Inputs:    h5ad          Final clustered object
+#            labels        config['manuscript_labels']
 #
-#    All metrics are recomputed from layers['counts'] of the final object (adata.X holds
-#    scaled log-normalised values, and obs['n_counts'/'n_genes'] may pre-date later QC).
-#    Only obs and layers['counts'] are read from the h5ad, so the dense X is never loaded.
+# Outputs:   per_sample    Supp Fig 12 (PDF)
+#            per_celltype  Genes per nucleus by cell type (PDF)
+#            ../results/16MANUSCRIPT-TABLES/snrna_qc_summary.xlsx (summary
+#            table; path set in this script, not a declared rule output)
 #
-#    Usage: called via Snakemake rule snrna_qc_fig
-#
-#    Layout: everything between the EXPORTABLE BLOCK markers has no Snakemake dependency
-#    and takes plain pandas/numpy/scipy objects, so it can be moved into scanpy_utils.py
-#    unchanged (needs numpy, pandas, scipy.sparse as sp, matplotlib.pyplot as plt, seaborn
-#    as sns, plus the CELLTYPE_ORDER constant).
-#
-# --------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
 
 import sys
 import os
@@ -43,16 +45,23 @@ import seaborn as sns
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-logger = logging.getLogger("snrna_qc")
+# Set up logging for Snakemake (uncaught errors also go to the log)
+logging.basicConfig(filename=snakemake.log[0], level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger()
+sys.excepthook = lambda *exc: logger.error("Uncaught exception", exc_info=exc)
+
+logger.info("Plotting snRNA-seq QC figures ...")
+
+##  Settings and functions  -----------------------------------------------------------
 
 # Hard genes-per-nucleus QC thresholds (fixed; only used to log a sanity check)
 MIN_GENES_PER_CELL = 1000
 MAX_GENES_PER_CELL = 5000
 
-# Summary tables are written here by hand, not tracked by Snakemake
+# Summary table location (not a declared rule output)
 TABLE_DIR = "../results/16MANUSCRIPT-TABLES/"
 TABLE_FILE = "snrna_qc_summary.xlsx"
-
 
 
 def relabel(x, labels):
@@ -64,10 +73,6 @@ def relabel(x, labels):
 # Display order of cell types (legend, x-axis, table)
 CELLTYPE_ORDER = ["Glu-A", "Glu-B", "GABA", "NPC", "OPC", "MG", "Endo-Peri"]
 
-
-# ======================================================================================
-#  EXPORTABLE BLOCK (start)
-# ======================================================================================
 
 # ── Loading and metric calculation ────────────────────────────────────────────────────
 
@@ -292,10 +297,6 @@ def plot_qc_per_celltype(qc, celltype_col="cell_type", figsize=(6.5, 4.8)):
         lab.set_ha("right")
     return fig
 
-# ======================================================================================
-#  EXPORTABLE BLOCK (end)
-# ======================================================================================
-
 
 def main(h5ad_path, out_sample, out_celltype, scripts_dir, labels,
          celltype_col="cell_type", leiden_col="leiden_harmony_0.2", sample_col="sample"):
@@ -377,19 +378,27 @@ def main(h5ad_path, out_sample, out_celltype, scripts_dir, labels,
                 f"{os.path.abspath(table_path)}")
 
 
-if "snakemake" in globals():
-    log_file = snakemake.log[0]
-    logging.basicConfig(filename=log_file, level=logging.INFO,
-                        format="%(asctime)s - %(levelname)s - %(message)s",
-                        datefmt="%Y-%m-%d %H:%M:%S")
-    logger.addHandler(logging.StreamHandler(sys.stdout))
-    logger.info("Generating snRNA-seq QC figures ...")
+##  Run  ------------------------------------------------------------------------------
+variables = {
+    "h5ad_path":    str(snakemake.input.h5ad),
+    "out_sample":   str(snakemake.output.per_sample),
+    "out_celltype": str(snakemake.output.per_celltype),
+    "table":        os.path.join(TABLE_DIR, TABLE_FILE),
+    "labels":       ", ".join(f"{k} -> {v}" for k, v in dict(snakemake.params.labels).items()),
+}
+width = max(map(len, variables))
+logger.info("Variables\n============================\n" +
+            "\n".join(f"{k:<{width}}  {v}" for k, v in variables.items()) +
+            "\n============================")
 
-    main(
-        h5ad_path=str(snakemake.input.h5ad),
-        out_sample=str(snakemake.output.per_sample),
-        out_celltype=str(snakemake.output.per_celltype),
-        scripts_dir=str(snakemake.scriptdir),
-        labels=dict(snakemake.params.labels),
-    )
-    logger.info("Done.")
+main(
+    h5ad_path=str(snakemake.input.h5ad),
+    out_sample=str(snakemake.output.per_sample),
+    out_celltype=str(snakemake.output.per_celltype),
+    scripts_dir=str(snakemake.scriptdir),
+    labels=dict(snakemake.params.labels),
+)
+logger.info("Done.")
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

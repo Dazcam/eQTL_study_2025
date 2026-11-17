@@ -1,13 +1,31 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate eQTL supplementry plts for manuscript
+#    Genotype PC and expression PC selection plots (Supp Figs 11 and 2)
 #
 #--------------------------------------------------------------------------------------
-
-# 1: Genotype PC elbow plt
-# 2: eQTL Expression QC plt L1
-
-## Info  ------------------------------------------------------------------------------
+#
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: supplementary_fig
+#            Upstream:   04 calc_genotype_pcs (pca.eigenval);
+#                        05 tensorqtl_perm (tensorQTL logs, quantile, genPC 4,
+#                        expPC 10-50)
+#            Downstream: Supp Figs 2 and 11
+#
+# Purpose:   - Supp Fig 11: % variance explained by each genotype PC (elbow plot)
+#            - Supp Fig 2: eGenes (FDR < 0.05, from the tensorQTL permutation
+#              logs) against the number of expression PCs (10-50) for each L1
+#              cell type (A) and L2 subcluster (B)
+#            Manuscript cell type labels (config manuscript_labels)
+#
+# Inputs:    geno_dir    Directory with pca.eigenval (04 calc_genotype_pcs)
+#            expr_dir    tensorQTL permutation results directory
+#
+# Outputs:   out_file    Supp Fig 2 (PDF)
+#            genotype_elbow_plt.pdf, Supp Fig 11, written next to out_file
+#            (not a declared rule output)
+#
+# Notes:     Cell types, expPC values, genPC and norm method are set in this script.
+#
+#--------------------------------------------------------------------------------------
 
 ## Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -21,30 +39,23 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating supplementry plot for the manuscript ...")
+message("\n\nPlotting genotype and expression PC plots ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(cowplot)
-library(ggrepel)
 
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
 
-# ----- Set variables
-geno_dir <- snakemake@params[['geno_dir']]
-expr_dir <- snakemake@params[['expr_dir']] 
-out_file <- snakemake@output[[1]]
-out_dir <- dirname(out_file)
+# Inputs, outputs and settings
+geno_dir          <- snakemake@params[['geno_dir']]
+expr_dir          <- snakemake@params[['expr_dir']]
+manuscript_labels <- snakemake@params[["labels"]]
+out_file          <- snakemake@output[[1]]
+out_dir           <- dirname(out_file)
 
-message('Smk variables set to:')
-message('  geno_dir: ', geno_dir)
-message('  expr_dir: ', expr_dir)
-message('  out_dir: ', out_dir)
-message('  out_file (tracked by snakemake): ', out_file)
-
-# NOTE: these old-format names (Glu-UL / Glu-DL) drive the log file paths read
-# by summarise_logs() below, which are still stored under the old naming on
-# disk. Do not rename these - relabel_cell_types() handles renaming for
-# display only, applied to the summary tables after they're built.
+# Cell types (pipeline labels: these build the log file paths)
 cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 cell_types_L2 <- c("Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
                    "Glu-DL-0", "Glu-DL-1", "Glu-DL-2", 
@@ -54,10 +65,18 @@ exp_PCs <- c(10, 20, 30, 40, 50)
 gen_PCs <- 4
 norm_methods <- 'quantile'
 
-# --- Relabel map for cell type name changes, for display/plotting only
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("geno_dir", "expr_dir", "labels", "out_file", "cell_types",
+               "cell_types_L2", "exp_PCs", "gen_PCs", "norm_methods"),
+  value    = c(geno_dir, expr_dir, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "), out_file,
+               paste(cell_types, collapse = ", "), paste(cell_types_L2, collapse = ", "),
+               paste(exp_PCs, collapse = ", "), gen_PCs, norm_methods)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
 custom_palette <- c(
   'Glu-A' = '#4363d8',
@@ -70,32 +89,19 @@ custom_palette <- c(
 )
 
 custom_palette_L2 <- c(
-  # NPCs
-  "NPC-0"    = '#e6194b', # Red
-  "NPC-1"    = '#ffd8b1', # Magenta
-  "NPC-2"    = '#800000', # Pink
-  
-  # Glu-A
-  "Glu-A-0" = '#4363d8', # Blue
-  "Glu-A-1" = "#911EB4", # Purple
-  "Glu-A-2" = "#9A6324", # Brown
-  
-  # Glu-B
-  "Glu-B-0" = '#46f0f0', # Cyan
-  "Glu-B-1" = '#008080', # Teal
-  "Glu-B-2" = "#FFE119", # Yellow
-  
-  # GABA
-  "GABA-0"   = "#3CB44B", # Green
-  "GABA-1"   = "#F58231", # Orange
-  "GABA-2"   = '#f032e6'  # Lime
+  "NPC-0"   = '#e6194b',
+  "NPC-1"   = '#ffd8b1',
+  "NPC-2"   = '#800000',
+  "Glu-A-0" = '#4363d8',
+  "Glu-A-1" = "#911EB4",
+  "Glu-A-2" = "#9A6324",
+  "Glu-B-0" = '#46f0f0',
+  "Glu-B-1" = '#008080',
+  "Glu-B-2" = "#FFE119",
+  "GABA-0"  = "#3CB44B",
+  "GABA-1"  = "#F58231",
+  "GABA-2"  = '#f032e6'
 )
-
-# '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
-# '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', 
-# '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', 
-# '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', 
-# '#ffffff', '#000000'
 
 base_theme <- theme(
   axis.text.y = element_text(size = 10),
@@ -110,13 +116,11 @@ base_theme <- theme(
   panel.spacing.x = unit(2, "lines"),
 )
 
-# ----- Load data
+##  Supp Fig 11: genotype PC elbow plot  ----------------------------------------------
 message('Loading eigenval file ...')
 eigenval <- read_table(paste0(geno_dir, "pca.eigenval"), col_names = "eigenval")
 
-
-# ----- Geno PC Elbow plt
-# Calc proportion and cumulative variance explained
+# Proportion and cumulative variance explained
 message('Generating Elbow plot ...')
 variance <- eigenval %>%
   mutate(PC = row_number(),
@@ -150,7 +154,7 @@ ggsave(
   dpi = 300
 )
 
-# ----- eQTL expression PC plt
+##  Supp Fig 2: eGenes against expression PCs  ----------------------------------------
 message('Loading eQTL expression data ...')
 summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs, 
                            genPC = gen_PCs, norm_method = norm_methods) {
@@ -178,7 +182,7 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
     
     gene_line <- str_subset(lines, 'phenotypes tested:')
     sample_line <- str_subset(lines, 'samples')
-    covariate_line <- tail(str_subset(lines, 'covariates'), 1) # need to fix this
+    covariate_line <- tail(str_subset(lines, 'covariates'), 1)
     variants_line <- str_subset(lines, 'variants')
     qtl_line <- str_subset(lines, 'QTL phenotypes @ FDR 0.05:')
     window_line <- str_subset(lines, 'cis-window:')
@@ -225,13 +229,8 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
     process_log(cell_type, expPC, norm_method)
   })
   
-  # Identify which elements are non-null
+  # Drop cell type / expPC combinations without a log file
   valid_idx <- !sapply(summary_list, is.null)
-  table(valid_idx)  # how many TRUE vs FALSE
-  length(summary_list)
-  sum(valid_idx)
-  
-  # Keep only valid entries
   summary_list <- summary_list[valid_idx]
   
   # Name the list elements for clarity
@@ -245,9 +244,7 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
   return(summary_list)
 }
 
-# --- Legend order (matches the Glu-A, Glu-B, GABA, NPC, OPC, MG, Endo-Peri
-# convention used in the other manuscript figures) - applied via explicit
-# factor levels, since ggplot otherwise falls back to alphabetical order
+# Legend order, as in the other manuscript figures
 cell_order_L1 <- relabel_cell_types(c("Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"), manuscript_labels)
 cell_order_L2 <- relabel_cell_types(c(
   "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
@@ -313,7 +310,7 @@ final_plt <- plot_grid(expr_L1_plt, expr_L2_plt, labels = 'AUTO',
                        ncol = 2, label_size = 24)
 
 
-message('Saving expression PC plot ...')
+message('Saving expression PC plot: ', out_file)
 ggsave(
   filename = out_file,
   plot = final_plt,
@@ -323,6 +320,8 @@ ggsave(
   device = "pdf",
   dpi = 300
 )
+
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

@@ -1,22 +1,24 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate MaxCPP S-LDSR plot for manuscript (Figure 5)
+#    MaxCPP S-LDSR enrichment per cell type and disorder (Fig 5)
 #
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  17MANUSCRIPT-FIGURES | Rule: ldsr_fig
-#            Upstream:   11SLDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
-#            Downstream: None. Same processing as manuscript_table_sldsr.R; keep in sync.
+#            Upstream:   11 S-LDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
+#            Downstream: Fig 5. Same processing as manuscript_table_ldsr.R (Supp
+#                        Table 8); keep the two in sync.
 #
 # Purpose:   S-LDSR enrichment bar charts, one facet per disorder:
 #            A: L1 populations   B: L2 subclusters   C: pseudotime trajectory bins
 #            - Keeps only cell types in config['cell_types']
-#            - Relabels cell types (Glu-UL -> Glu-A, Glu-DL -> Glu-B, drop "-Q4-")
+#            - Manuscript cell type labels (config manuscript_labels)
 #            - Dashed line: per-level Bonferroni (0.05 / n cell types in that level,
 #              counted from the data); dotted line: nominal P = 0.05
 #
-# Inputs:    in_dir      ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv
+# Inputs:    in_dir      Directory with ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv
 #            cell_types  config['cell_types'] (pipeline labels)
+#            labels      config['manuscript_labels']
 #
 # Outputs:   out_file    Combined three-panel figure (PDF)
 #
@@ -34,25 +36,29 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating MaxCPP S-LDSR plot for the manuscript ...")
+message("\n\nPlotting MaxCPP S-LDSR enrichment ...")
 
 ##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(cowplot)
 
-# Input and output paths
-in_dir     <- snakemake@params[["in_dir"]]
-cell_types <- unlist(snakemake@params[["cell_types"]])
-out_file   <- snakemake@output[[1]]
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
 
-# Make a tibble showing what each variable is set to
+# Input and output paths
+in_dir            <- snakemake@params[["in_dir"]]
+cell_types        <- unlist(snakemake@params[["cell_types"]])
+manuscript_labels <- snakemake@params[["labels"]]
+out_file          <- snakemake@output[[1]]
+
+# Print what each variable is set to
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("in_dir", "cell_types", "out_file"),
-  value    = c(in_dir, paste(cell_types, collapse = ", "), out_file)) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
+  variable = c("in_dir", "cell_types", "labels", "out_file"),
+  value    = c(in_dir, paste(cell_types, collapse = ", "), paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "), out_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
 message("============================\n")
 
 # Custom colour palette (trajectory colours match the SLDSR report Rmd and are
@@ -68,12 +74,6 @@ custom_palette <- c(
   'Trajectory-to-Glu-A' = '#E91E8C',
   'Trajectory-to-Glu-B' = '#2F4F4F'
 )
-
-# Relabel helper: Glu-UL -> Glu-A, Glu-DL -> Glu-B, strip "-Q4-" from bin names,
-# e.g. "NPC-to-Glu-UL-Q4-Bin1" -> "NPC-to-Glu-A-Bin1"
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
 
 ## Read and prepare table  -------------------------------------------------------------
 ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv'),
@@ -150,7 +150,7 @@ ldsr_tbl <- ldsr_tbl |>
 # Per-level Bonferroni; denominator counted from the cell types actually plotted
 n_tests <- ldsr_tbl |> distinct(level, cell_type) |> count(level)
 message("\nBonferroni denominators per level:")
-n_tests |> knitr::kable(format = "simple", align = "l") |> print()
+n_tests |> knitr::kable(format = "simple", align = "l") |> cat(sep = "\n")
 
 thresh_level1  <- -log10(0.05 / n_tests$n[n_tests$level == 1])
 thresh_level2  <- -log10(0.05 / n_tests$n[n_tests$level == 2])
@@ -190,8 +190,7 @@ plot_A <- plot_level(1, thresh_level1)   # L1 populations
 plot_B <- plot_level(2, thresh_level2)   # L2 subclusters
 plot_C <- plot_level(3, thresh_level3)   # Pseudotime trajectory bins
 
-# rel_heights are approximate, sized by row count per panel (7 / 12 / 4 rows);
-# adjust if the balance looks off once rendered
+# rel_heights sized by row count per panel (7 / 12 / 4 rows)
 final_plot <- plot_grid(
   plot_A, plot_B, plot_C,
   labels      = c("A", "B", "C"),
@@ -207,15 +206,11 @@ ggsave(
   filename = out_file,
   plot     = final_plot,
   width    = 10,     # inches, full-page width
-  height   = 8.5,    # reduced for 4-row Plot C; adjust after rendering
+  height   = 8.5,
   units    = "in",
   device   = "pdf",
   dpi      = 300
 )
-
-# High-res PNG
-# ggsave(filename = out_file, plot = final_plot, width = 10, height = 7.5,
-#        units = "in", dpi = 300, device = "png", bg = "white")
 
 message("Done.")
 

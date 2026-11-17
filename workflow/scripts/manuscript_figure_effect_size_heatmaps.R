@@ -1,19 +1,28 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate effect-size correlation heatmaps for manuscript
+#    eQTL effect-size correlation heatmaps (Supp Figs 7 and 8)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: effect_size_heatmaps_fig
+#            Upstream:   15 eqtl_effect_replication (Pearson r matrices)
+#            Downstream: Supp Figs 7 and 8
+#
+# Purpose:   Plot the Pearson r of eQTL slopes computed in 15 (rows: discovery
+#            cell type, FDR < 0.05 eQTL; columns: replication cell type, same
+#            SNP-gene pairs, no significance cutoff); asymmetric matrices
+#            - Supp Fig 7: fetal -> fetal, 19 L1 and L2 cell types
+#            - Supp Fig 8: fetal L1 -> adult L1 (Jang et al.), 7 x 7
+#            Manuscript cell type labels (config manuscript_labels)
+#
+# Inputs:    eqtl_effect_replication  15 eqtl_effect_replication RDS
+#
+# Outputs:   fetal_vs_fetal           Supp Fig 7 (TIFF, 600 dpi, LZW)
+#            fetal_vs_jang            Supp Fig 8 (TIFF, 600 dpi, LZW)
 #
 #--------------------------------------------------------------------------------------
 
-#   A. Fetal -> Fetal : discovery (FDR<0.05 in one fetal cell type) x replication
-#                        (same pair's slope in every other fetal cell type, L1+L2,
-#                        no significance cutoff on replication) -- asymmetric
-#   B. Fetal L1 -> Adult (Jang et al. 2026) : fetal L1 discovery x the 7 Jang
-#                        L1-pooled replication cell types -- asymmetric
-#
-#--------------------------------------------------------------------------------------
-
-## Info  ------------------------------------------------------------------------------
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -25,23 +34,35 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating effect-size correlation heatmaps for the manuscript ...")
+message("\n\nPlotting effect-size correlation heatmaps ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
-  library(ggplot2)
 })
 
-# --- Set variables
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
+
+# Inputs, outputs and settings
 eqtl_effect_replication_file <- snakemake@params[["eqtl_effect_replication"]]
+manuscript_labels            <- snakemake@params[["labels"]]
+fetal_vs_fetal_file          <- snakemake@output[["fetal_vs_fetal"]]
+fetal_vs_jang_file           <- snakemake@output[["fetal_vs_jang"]]
 
-fetal_vs_fetal_file <- snakemake@output[["fetal_vs_fetal"]]
-fetal_vs_jang_file  <- snakemake@output[["fetal_vs_jang"]]
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("eqtl_effect_replication_file", "labels", "fetal_vs_fetal_file",
+               "fetal_vs_jang_file"),
+  value    = c(eqtl_effect_replication_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               fetal_vs_fetal_file, fetal_vs_jang_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# eqtl_effect_replication_file <- "../results/15EQTL-SHARING/eqtl_effect_replication/eqtl_effect_replication.rds"
-
-# --- Read and unpack
+##  Read effect-size correlations  ----------------------------------------------------
 effect_repl <- read_rds(eqtl_effect_replication_file)
 
 message("Discovery FDR threshold used upstream: ", effect_repl$settings$fdr_thresh)
@@ -49,13 +70,8 @@ message("Fetal cell types (L1+L2): ", length(effect_repl$settings$fetal_cell_typ
 message("Fetal L1 cell types: ", paste(effect_repl$settings$fetal_l1, collapse = ", "))
 message("Jang cell types: ", paste(effect_repl$settings$jang_cell_types, collapse = ", "))
 
-# --- Relabel cell type names for plotting: Glu-UL -> Glu-A, Glu-DL -> Glu-B
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
-
-# Diverging red-white-blue scale, r in [-1, 1] -- kept from the previous
-# version of this script (ComplexHeatmap's colorRamp2 equivalent for ggplot)
+##  Functions  ------------------------------------------------------------------------
+# Diverging red-white-blue scale, r in [-1, 1]
 corr_colours <- c("#2166AC", "white", "#B2182B")
 
 # Long-format helper: matrix (rows = discovery, cols = replication) -> tibble
@@ -64,9 +80,8 @@ mat_to_long <- function(mat) {
     pivot_longer(-discovery, names_to = "replication", values_to = "r")
 }
 
-# Shared heatmap builder, styled after plot_jang_heatmap()/plot_int_heatmap()
-# in manuscript_figure_replication.R -- same borders/labels/theme, diverging
-# fill scale instead of pi1's sequential one.
+# Heatmap builder, styled as plot_jang_heatmap() / plot_int_heatmap() in
+# manuscript_figure_replication.R, with a diverging fill scale
 plot_corr_heatmap <- function(df, x_lab, y_lab, cell_text_size, axis_text_size,
                               base_size = 13) {
   ggplot(df, aes(x = replication, y = discovery, fill = r)) +
@@ -89,10 +104,7 @@ plot_corr_heatmap <- function(df, x_lab, y_lab, cell_text_size, axis_text_size,
     )
 }
 
-# ========================================================================================
-# A. Fetal -> Fetal (19 L1+L2 types, discovery x replication)
-# ========================================================================================
-
+##  Supp Fig 7: fetal -> fetal (19 L1 and L2 cell types)  -----------------------------
 message("\n--- Fetal -> fetal heatmap ---\n")
 
 fetal_family_order <- c(
@@ -114,9 +126,7 @@ fetal_long <- fetal_long |>
   mutate(discovery = factor(discovery, levels = rev(fetal_order_present)),
          replication = factor(replication, levels = fetal_order_present))
 
-# 19x19 grid -- smaller text than the 7x7 fetal-adult grid so labels stay
-# legible without shrinking to unreadable size; canvas widened to compensate
-# (9x9in was sized for ComplexHeatmap's tighter grid.text layout)
+# 19 x 19 grid: smaller text and a larger canvas than the 7 x 7 heatmap
 ht_fetal <- plot_corr_heatmap(
   fetal_long,
   x_lab = "Prenatal cell type (replication)",
@@ -134,10 +144,7 @@ ggsave(
   dpi = 600, device = "tiff", compression = "lzw"
 )
 
-# ========================================================================================
-# B. Fetal L1 -> Adult (Jang et al. 2026, 7x7)
-# ========================================================================================
-
+##  Supp Fig 8: fetal L1 -> adult L1 (Jang et al., 7 x 7)  ----------------------------
 message("\n--- Fetal L1 -> Jang heatmap ---\n")
 
 fetal_l1_order <- c("Glu-A", "Glu-B", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
@@ -172,7 +179,7 @@ ggsave(
   dpi = 600, device = "tiff", compression = "lzw"
 )
 
-message("Export complete.")
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

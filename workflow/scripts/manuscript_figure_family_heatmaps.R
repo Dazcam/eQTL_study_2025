@@ -1,16 +1,32 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate subcluster-specific family heatmaps for manuscript
+#    Subcluster-specific eQTL family heatmaps (Supp Figs 3-6)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: family_heatmaps_fig
+#            Upstream:   15 eqtl_effects (subcluster-specific pairs, slopes per cell type)
+#            Downstream: Supp Figs 3-6 (one per family)
+#
+# Purpose:   For each L1 family (Glu-A, Glu-B, GABA, NPC):
+#            - Rows: the family's subcluster-specific (gene, SNP) pairs from 15
+#            - Columns: the L1 parent and its 3 L2 subclusters
+#            - Fill: eQTL slope (colour scale -1 to 1); black border on the L2
+#              subcluster(s) where the pair was classified subcluster-specific
+#            - Height scales with the number of rows (0.18 in per row, min 8 in)
+#            Manuscript cell type labels (config manuscript_labels)
+#
+# Inputs:    eqtl_effects   15 eqtl_effects RDS ($subcluster_specific, $effect_size_long)
+#            gene_lookup    Ensembl ID to gene symbol (row labels; falls back to the ID)
+#
+# Outputs:   glu_a, glu_b, gaba, npc   One heatmap per family (TIFF, 600 dpi, LZW)
+#
+# Notes:     A family with no subcluster-specific pairs is skipped and its output
+#            is not written.
 #
 #--------------------------------------------------------------------------------------
 
-# L1 eQTL beta hetmaps across the parent and its 3
-# L2 children for every subcluster-specific (gene, SNP) pair in that family.
-# Black border marks the cell where the pair was actually classified
-# subcluster-specific. 
-
-## Info  ------------------------------------------------------------------------------
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -22,17 +38,21 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating subcluster-specific family heatmaps for the manuscript ...")
+message("\n\nPlotting subcluster-specific family heatmaps ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(ComplexHeatmap)
 library(circlize)
 library(grid)
 
-# --- Set variables
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
+
+# Inputs, outputs and settings
 eqtl_effects_file <- snakemake@params[["eqtl_effects"]]
-gene_lookup_file   <- snakemake@params[["gene_lookup"]]
+gene_lookup_file  <- snakemake@params[["gene_lookup"]]
+manuscript_labels <- snakemake@params[["labels"]]
 
 out_files <- list(
   "Glu-A" = snakemake@output[["glu_a"]],
@@ -41,22 +61,25 @@ out_files <- list(
   "NPC"   = snakemake@output[["npc"]]
 )
 
-# eqtl_effects_file <- "../results/15EQTL-SHARING/eqtl_effects/eqtl_effect_sizes.rds"
-# gene_lookup_file  <- "../resources/sheets/gene_lookup_hg38.tsv"
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("eqtl_effects_file", "gene_lookup_file", "labels", "out_files"),
+  value    = c(eqtl_effects_file, gene_lookup_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               paste(unlist(out_files), collapse = ", "))) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# --- Read and unpack
+##  Read and relabel  -----------------------------------------------------------------
 eqtl_effects   <- read_rds(eqtl_effects_file)
 subcluster_tbl <- eqtl_effects$subcluster_specific
 effect_long    <- eqtl_effects$effect_size_long
 
 gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
-  select(ensembl_gene_id, external_gene_name) |>
+  dplyr::select(ensembl_gene_id, external_gene_name) |>
   distinct(ensembl_gene_id, .keep_all = TRUE)
-
-# --- Relabel cell type names for plotting: Glu-UL -> Glu-A, Glu-DL -> Glu-B
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
 
 subcluster_tbl <- subcluster_tbl |>
   mutate(parent_L1    = relabel_cell_types(parent_L1, manuscript_labels),
@@ -65,7 +88,7 @@ subcluster_tbl <- subcluster_tbl |>
 effect_long <- effect_long |>
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
-# --- Family definitions (new Glu-A/Glu-B names)
+# Family members (manuscript labels)
 family_order <- list(
   "Glu-A" = c("Glu-A", "Glu-A-0", "Glu-A-1", "Glu-A-2"),
   "Glu-B" = c("Glu-B", "Glu-B-0", "Glu-B-1", "Glu-B-2"),
@@ -73,8 +96,9 @@ family_order <- list(
   "NPC"   = c("NPC", "NPC-0", "NPC-1", "NPC-2")
 )
 
-# --- Build the beta matrix + significance mask for one family (unchanged
-# logic from the report's build_family_matrix())
+##  Functions  ------------------------------------------------------------------------
+# Slope matrix and subcluster-specific mask for one family, as the report's
+# build_family_matrix()
 build_family_matrix <- function(family, subcluster_tbl, effect_long, gene_lookup) {
   members <- family_order[[family]]
 
@@ -90,11 +114,11 @@ build_family_matrix <- function(family, subcluster_tbl, effect_long, gene_lookup
     filter(cell_type %in% members,
            phenotype_id %in% fam_pairs$phenotype_id,
            variant_id %in% fam_pairs$variant_id) |>
-    inner_join(fam_pairs |> select(phenotype_id, variant_id, pair_label),
+    inner_join(fam_pairs |> dplyr::select(phenotype_id, variant_id, pair_label),
                by = c("phenotype_id", "variant_id"))
 
   slope_wide <- slopes |>
-    select(pair_label, cell_type, slope) |>
+    dplyr::select(pair_label, cell_type, slope) |>
     distinct(pair_label, cell_type, .keep_all = TRUE) |>
     pivot_wider(names_from = cell_type, values_from = slope)
 
@@ -135,10 +159,8 @@ build_heatmap_from_data <- function(fam_data) {
   )
 }
 
-# --- Render each family to its own full-page TIFF. Height scales with row
-# count (the same 0.18in/row rule the report used for Glu-UL, applied
-# consistently to all four here) so dense families don't come out squashed;
-# width is fixed since every family always has the same 4 columns.
+##  One heatmap per family  -----------------------------------------------------------
+# Height scales with row count; width is fixed (4 columns per family)
 width_in <- 6
 
 for (family in names(family_order)) {
@@ -167,7 +189,7 @@ for (family in names(family_order)) {
   dev.off()
 }
 
-message("Export complete.")
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

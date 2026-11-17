@@ -1,18 +1,43 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate eQTL p1 replication plt for manuscript
+#    eQTL sharing between prenatal and adult cell populations (Fig 3)
 #
 #--------------------------------------------------------------------------------------
-
-# A: Pie chart of shared eGenes accross cell types
-# B: Upset Plot
-# C: Internal Pi1 heatmap
-# D: Fetal vs. adult Pi1 heatmap (Jang et al. 2026; Glu-A, Glu-B, GABA, NPC only)
-# E: NEUROD1 (rs115583150) eQTL boxplot -- Glu-B
-# F: Glu-A vs Ext beta correlation
-# G: PLBD2 (rs12825284) eQTL boxplot -- Glu-A
-
-## Info  ------------------------------------------------------------------------------
+#
+# Pipeline:  17MANUSCRIPT-FIGURES | Rule: replication_fig
+#            Upstream:   05 tensorqtl_perm (quantile, genPC 4); 07 internal pi1;
+#                        15 pi1_jang and beta correlation (Jang et al. adult eQTL);
+#                        eqtl_boxplots_py (17)
+#            Downstream: Fig 3
+#
+# Purpose:   Panels for the 7 L1 cell types (manuscript labels):
+#            A  Pie chart: eGenes (FDR < 0.05) by the number of L1 cell types
+#               they are found in
+#            B  UpSet plot of eGenes shared between L1 cell types (the 20 most
+#               frequent intersections)
+#            C  pi1 heatmap, prenatal discovery x prenatal replication (forward
+#               estimates; diagonal set to 1)
+#            D  pi1 heatmap, prenatal discovery (Glu-A, Glu-B, GABA, NPC) x the
+#               7 Jang adult cell types
+#            E  eQTL boxplot (config pair fig3e: NEUROD1, rs115583150, Glu-B)
+#            F  Glu-A vs adult Ext eQTL slopes for Glu-A FDR < 0.05 pairs; blue /
+#               red: also significant in Jang (lead SNP, qval < 0.05) with the
+#               same / opposite sign; PLBD2 labelled
+#            G  eQTL boxplot (config pair fig3g: PLBD2, rs12825284, Glu-A)
+#
+# Inputs:    in_dir         tensorQTL permutation results directory
+#            internal_dir   07 internal pi1 results
+#            jang_pi1_dir   15 Jang pi1 results
+#            beta_file      15 beta correlation RDS ($paired_betas)
+#            boxplot_e/g    Boxplot CSVs from eqtl_boxplots_py
+#            gene_lookup    Ensembl ID to gene symbol
+#
+# Outputs:   out_file       Fig 3 (PDF)
+#
+# Notes:     Cell types, expPC values and the Jang cell type lists are set in
+#            this script.
+#
+#--------------------------------------------------------------------------------------
 
 ## Set up logging for Snakemake
 if (exists("snakemake")) {
@@ -26,39 +51,34 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating replication plot for the manuscript ...")
+message("\n\nPlotting eQTL sharing figure ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 library(tidyverse)
 library(cowplot)
 library(ggrepel)
 library(UpSetR)
 library(grid)
 
-# --- Set variables
-in_dir <- snakemake@params[['in_dir']]
-internal_dir <- snakemake@params[['internal_dir']]
-jang_pi1_dir <- snakemake@params[['jang_pi1_dir']]
-gene_lookup_file <- snakemake@params[['gene_lookup']]
-jang_beta_file <- snakemake@input[['beta_file']]
-boxplot_e_file <- snakemake@input[['boxplot_e']]
-boxplot_g_file <- snakemake@input[['boxplot_g']]
-boxplot_pairs <- snakemake@params[['boxplot_pairs']]
-out_file <- snakemake@output[[1]]
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
 
-# in_dir <- '../results/05TENSORQTL/tensorqtl_perm/'
-# internal_dir <- "../results/07REPLICATION-SC/internal/"
-# jang_pi1_dir <- "../results/15EQTL-SHARING/pi1_jang/"
-# jang_beta_file <- "../results/15EQTL-SHARING/<step5_output>.rds"
-# out_dir <- "../results/17MANUSCRIPT-FIGURES/"
+# Inputs, outputs and settings
+in_dir            <- snakemake@params[['in_dir']]
+internal_dir      <- snakemake@params[['internal_dir']]
+jang_pi1_dir      <- snakemake@params[['jang_pi1_dir']]
+gene_lookup_file  <- snakemake@params[['gene_lookup']]
+manuscript_labels <- snakemake@params[["labels"]]
+boxplot_pairs     <- snakemake@params[['boxplot_pairs']]
+jang_beta_file    <- snakemake@input[['beta_file']]
+boxplot_e_file    <- snakemake@input[['boxplot_e']]
+boxplot_g_file    <- snakemake@input[['boxplot_g']]
+out_file          <- snakemake@output[[1]]
 
-# NOTE: these old-format names (Glu-UL / Glu-DL) drive file paths for the eQTL
-# input files (Panel A) and the internal Pi1 comparison (Panel C), which are
-# still stored under the old naming on disk. Do not rename these - the
-# relabel_cell_types() helper below handles renaming for display only.
+# L1 cell types (pipeline labels: these build the input file paths)
 cell_types <- c("Glu-UL", "Glu-DL", "NPC", "GABA", "Endo-Peri", "OPC", "MG")
 
-# Exp PC map (old names - keys file paths for Panels A and C)
+# Expression PCs (pipeline labels)
 expPC_map <- c(
   "Glu-UL"     = 50,
   "Glu-DL"     = 40,
@@ -69,15 +89,9 @@ expPC_map <- c(
   "Endo-Peri"  = 30
 )
 
-# --- Relabel map for cell type name changes, for display/plotting only
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
-
 cell_types_new <- relabel_cell_types(cell_types, manuscript_labels)
 
-# Define custom color palette (new Glu-A/Glu-B keys, since this is applied
-# only to already-relabelled data downstream)
+# Colour palette (manuscript labels)
 custom_palette <- c(
   'Glu-A' = '#4363d8',
   'Glu-B' = '#00B6EB',
@@ -92,11 +106,28 @@ eqtl_list <- list()
 genPC <- 4
 norm_method <- 'quantile'
 
-gene_lookup <- read_tsv(gene_lookup_file) |>
-  select(gene = ensembl_gene_id, symbol = external_gene_name)
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("in_dir", "internal_dir", "jang_pi1_dir", "gene_lookup_file", "labels",
+               "jang_beta_file", "boxplot_e_file", "boxplot_g_file", "boxplot_pairs",
+               "cell_types", "expPC_map", "norm_method", "genPC", "out_file"),
+  value    = c(in_dir, internal_dir, jang_pi1_dir, gene_lookup_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               jang_beta_file, boxplot_e_file, boxplot_g_file,
+               paste(names(boxplot_pairs), map_chr(boxplot_pairs, ~ paste(unlist(.x), collapse = " ")),
+                     sep = ": ", collapse = "; "),
+               paste(cell_types, collapse = ", "),
+               paste(names(expPC_map), expPC_map, sep = ":", collapse = ", "),
+               norm_method, genPC, out_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
+gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
+  dplyr::select(gene = ensembl_gene_id, symbol = external_gene_name)
 
-# ----- Pie chart shared eQTL amoung L1 cell types (Panel A - unchanged) -----
+##  Panel A: pie chart of eGenes by number of L1 cell types  -------------------------
 for (cell_type in cell_types) {
   
   expPC <- expPC_map[[cell_type]]
@@ -121,8 +152,7 @@ for (cell_type in cell_types) {
 
 eqtls_all <- bind_rows(eqtl_list)
 
-# Relabel here (feeds both Panel A's counts, which are cell-type-agnostic,
-# and Panel B's set names, which do need the new labels)
+# Manuscript labels (needed for the panel B set names)
 gene_cell <- eqtls_all %>%
   distinct(phenotype_id, cell_type) %>%
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
@@ -146,16 +176,9 @@ pie_dat <- gene_counts %>%
 
 mono_cols <- colorRampPalette(c("#08306B", "#DEEBF7"))(nrow(pie_dat))
 
-# --- Build the pie as real Cartesian polygons instead of geom_rect() +
-# coord_polar(). coord_polar applies its transform AFTER stat/geom
-# computation, so geom_text_repel (which repels labels in PRE-transform
-# space) can't account for it -- that mismatch is what was misaligning the
-# small-slice labels and their connector lines. Building genuine (x, y)
-# points up front means there is only one coordinate system, so repel's own
-# leader lines (segment.color below) line up with the labels by construction.
-# Calibrated to match the original orientation exactly: y = 0 sits at
-# 12 o'clock, increasing y goes clockwise -- theta = pi/2 - 2*pi*fraction
-# (ggplot2's actual coord_polar(theta = "y") default direction/start).
+# Pie drawn as Cartesian polygons (not coord_polar) so label positions and
+# connector lines share one coordinate system. Slices start at 12 o'clock
+# and run clockwise: theta = pi/2 - 2*pi*fraction.
 n_arc_pts <- 100
 
 make_wedge <- function(row, r = 1) {
@@ -171,22 +194,15 @@ wedge_polygons <- pie_dat %>%
   split(seq_len(nrow(.))) %>%
   map_dfr(make_wedge)
 
-# Inner labels (large slices) at r = 0.6, same radial position as the
-# original's x = 0.5 xmax/xmin = 0/1 rect gave visually
+# Inner labels (large slices) at r = 0.6
 inner_labels <- pie_dat %>%
   filter(large_slice) %>%
   mutate(theta = pi / 2 - 2 * pi * midpoint,
          x = 0.6 * cos(theta),
          y = 0.6 * sin(theta))
 
-# Outer labels (small slices): fully deterministic fan-out, NOT geom_text_repel.
-# ggrepel's placement is an adaptive physics simulation that depends on the
-# panel's actual rendered aspect ratio -- it can look correct in one render
-# and come out broken in another (e.g. once embedded in the full multi-panel
-# figure at a different width/height than a standalone test). Spacing labels
-# out by hand, left-to-right in the same clockwise order the slices appear,
-# removes that instability entirely: the same input always produces the same
-# layout, regardless of how the panel ends up sized.
+# Outer labels (small slices): fixed fan-out above the pie, left to right in
+# slice order, so the layout does not depend on the rendered panel size
 outer_labels <- pie_dat %>%
   filter(!large_slice) %>%
   arrange(midpoint) %>%
@@ -216,31 +232,20 @@ pie_chart <- ggplot() +
         legend.box.margin = margin(t = 10, r = 0, b = 10, l = 0),
         plot.margin = margin(t = 60, r = 30, b = 30, l = 30))
 
-# --- Upset Plot (Panel B - relabelled set names) ----
+##  Panel B: UpSet plot  --------------------------------------------------------------
 gene_by_cell <- gene_cell %>%
   pivot_wider(names_from = cell_type, values_from = cell_type,
               values_fill = 0, values_fn = function(x) 1) %>%
   column_to_rownames("phenotype_id")
 
-# Explicit set order (matching every other manuscript figure's L1 cell-type
-# order) instead of UpSetR's default size-based sort. This also fixes
-# sets.bar.color below, which was mismatched (NPC/GABA and OPC/Endo-Peri
-# swapped) because the colour vector's order didn't match UpSetR's own
-# (size-sorted) set order when no explicit `sets=` was given.
-# Confirmed from the rendered output: UpSetR draws the first-listed set at the
-# BOTTOM and the last-listed at the TOP, so the vector below is written
-# bottom-to-top (Endo-Peri first -> bottom, Glu-A last -> top).
+# Fixed set order (keep.order = TRUE) so sets.bar.color matches the sets.
+# UpSetR draws the first set at the bottom, so this runs bottom to top.
 set_order <- c("Endo-Peri", "MG", "OPC", "NPC", "GABA", "Glu-B", "Glu-A")
 
-# Render to PNG
+# UpSetR is base graphics: render to a temporary PNG and re-import as a grob.
+# Its margins are fixed in absolute size, so a wide canvas leaves less
+# whitespace.
 tmp_upset <- tempfile(fileext = ".png")
-
-# UpSetR's outer margins are fixed in absolute size, not proportional to the
-# device -- so shrinking the canvas (2800 -> 2000) compressed the chart itself
-# while the margins stayed the same size, making the whitespace proportionally
-# WORSE, not better. Going the other way -- widening well past the original
-# 2800 -- gives the chart more room relative to those fixed margins and
-# spreads it out as intended. Height (top/bottom whitespace) still unchanged.
 png(tmp_upset, width = 3400, height = 1800, res = 300)
 
 upset(
@@ -261,7 +266,7 @@ upset(
 
 dev.off()
 
-# Re-import as grob for cowplot
+# Re-import as a grob for cowplot
 img <- png::readPNG(tmp_upset)
 
 upset_grob <- grid::rasterGrob(
@@ -274,7 +279,7 @@ upset_plt <- ggplotify::as.ggplot(upset_grob) +
     plot.margin = margin(t = 40, r = 0, b = 40, l = 0, unit = "pt")
   )
 
-# --- Internal pi1 heatmap (Panel C - relabelled + new axis titles) -----
+##  Panel C: prenatal pi1 heatmap  ----------------------------------------------------
 read_pi1_results <- function(ct, ref_ct) {
   
   expPC <- expPC_map[[ct]]
@@ -301,19 +306,18 @@ read_pi1_results <- function(ct, ref_ct) {
   }
 }
 
-# Generate all combinations (old names - matches file paths on disk)
+# All discovery x replication pairs (pipeline labels: these build the file paths)
 combinations <- expand.grid(cell_type = cell_types, ref_cell_type = cell_types, stringsAsFactors = FALSE)
 
 # Read all pi1 results
 pi1_result_tbl <- map2_dfr(combinations$cell_type, combinations$ref_cell_type, read_pi1_results)
 
-# Prepare the full square data without manual mirroring
+# Forward pi1 for every pair; 1 on the diagonal
 pi1_square_tbl <- pi1_result_tbl %>%
   mutate(
-    # Use the specific Forward result for every unique combination provided by expand.grid
     pi1_final = ifelse(cell_type == ref_cell_type, 1.0, pi1_forward)
   ) %>%
-  select(ref = cell_type, query = ref_cell_type, pi1 = pi1_final) %>%
+  dplyr::select(ref = cell_type, query = ref_cell_type, pi1 = pi1_final) %>%
   mutate(
     ref = relabel_cell_types(ref, manuscript_labels),
     query = relabel_cell_types(query, manuscript_labels),
@@ -322,7 +326,6 @@ pi1_square_tbl <- pi1_result_tbl %>%
     ref = factor(ref, levels = cell_types_new)
   )
 
-# Updated heatmap function
 plot_int_heatmap <- function(df) {
   ggplot(df, aes(x = query, y = ref, fill = pi1)) +
     geom_tile(color = "black", lwd = 1.1, linetype = 1) +
@@ -344,13 +347,13 @@ plot_int_heatmap <- function(df) {
     )
 }
 
-# Generate only the forward heatmap (no title)
 pi1_int_heatmap <- plot_int_heatmap(pi1_square_tbl)
 
 
-# --- Jang pi1 heatmap (Panel D - replaces Fugita; restricted to Glu-A, Glu-B,
-# GABA, NPC rows in that order, all 7 Jang adult reference types as columns) -----
-jang_L1_cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC")  # old names - match file names on disk
+##  Panel D: prenatal vs adult (Jang) pi1 heatmap  ------------------------------------
+# Rows: Glu-A, Glu-B, GABA, NPC (pipeline labels, for the file paths);
+# columns: the 7 Jang adult cell types
+jang_L1_cell_types <- c("Glu-UL", "Glu-DL", "GABA", "NPC")
 jang_adult_cell_types <- c("Ast", "End", "Ext", "IN", "MG", "OD", "OPC")
 
 read_jang_pi1_results <- function(ct, ref_ct, jang_dir) {
@@ -377,7 +380,7 @@ pi1_jang_tbl <- map2_dfr(jang_combinations$cell_type, jang_combinations$ref_cell
                          read_jang_pi1_results, jang_dir = jang_pi1_dir)
 
 pi1_jang_square_tbl <- pi1_jang_tbl %>%
-  select(cell_type, ref_cell_type, pi1 = pi1_forward) %>%
+  dplyr::select(cell_type, ref_cell_type, pi1 = pi1_forward) %>%
   mutate(
     cell_type = relabel_cell_types(cell_type, manuscript_labels),
     # rev() so Glu-A appears at the top (standard matrix view)
@@ -385,7 +388,6 @@ pi1_jang_square_tbl <- pi1_jang_tbl %>%
     ref_cell_type = factor(ref_cell_type, levels = jang_adult_cell_types)
   )
 
-# Function to generate the Jang heatmap
 plot_jang_heatmap <- function(df) {
   ggplot(df, aes(x = ref_cell_type, y = cell_type, fill = pi1)) +
     geom_tile(color = "black", lwd = 1.1, linetype = 1) +
@@ -411,11 +413,10 @@ plot_jang_heatmap <- function(df) {
 pi1_jang_heatmap <- plot_jang_heatmap(pi1_jang_square_tbl)
 
 
-### --- beta correlation plt (Panel E, right-hand side - Jang data) -----
+##  Panel F: Glu-A vs adult Ext eQTL slopes  ------------------------------------------
 jang_beta_list <- read_rds(jang_beta_file)
 paired_betas_all <- jang_beta_list$paired_betas
 
-# genes dropped from the table entirely (not just left unlabelled)
 exclude_genes <- c("ABCC8", "CLHC1")
 
 make_jang_beta_plot <- function(paired_betas_all, my_ct, jang_ct, gene_lookup,
@@ -438,13 +439,9 @@ make_jang_beta_plot <- function(paired_betas_all, my_ct, jang_ct, gene_lookup,
   
   cor_label <- sprintf("r = %.2f", cor_val)
   
-  # --- Point classification: two-check "significant_jang" convention (see
-  # repl_sc_beta_correlation.R / eqtl_sharing_report.Rmd), replacing the old
-  # sign-mismatch-only "discordant" rule. A pair is only highlighted as
-  # concordant/discordant if it is ALSO significant in Jang (i.e. it IS that
-  # gene's lead SNP in Jang's top-association file AND qval < 0.05) -
-  # everything else, including sign-mismatched pairs that aren't
-  # Jang-significant, falls into a single grey "other" bucket.
+  # Point colour, as in repl_sc_beta_correlation.R / eqtl_sharing_report.Rmd:
+  # pairs also significant in Jang (lead SNP, qval < 0.05) are blue (same
+  # sign) or red (opposite sign); all other pairs are grey
   paired_betas <- paired_betas |>
     mutate(
       concordant = sign(beta_my) == sign(beta_jang),
@@ -490,16 +487,11 @@ make_jang_beta_plot <- function(paired_betas_all, my_ct, jang_ct, gene_lookup,
       direction = "both",
       seed = 2025
     ) +
-#    annotate(
-#      "text", x = -1.25, y = Inf, label = cor_label,
-#      hjust = 0, vjust = 1.8, size = 5
-#    ) +
     labs(
       x = substitute("Adult" ~ x ~ beta, list(x = ct_labels[2])),
       y = substitute("Prenatal" ~ x ~ beta, list(x = ct_labels[1]))
     ) +
-    # Centred, fixed y-range so this panel reads consistently alongside the
-    # boxplot next to it, rather than auto-scaling to the data
+    # Fixed y-range, centred on 0
     coord_cartesian(clip = "off", ylim = c(-2, 2)) +
     theme_minimal(base_size = 13) +
     theme(
@@ -516,20 +508,11 @@ beta_gluA_plt <- make_jang_beta_plot(paired_betas_all, "Glu-UL", "Ext", gene_loo
                                      label_genes = "PLBD2",
                                      ct_labels = c("Glu-A", "Ext"))
 
-### --- eQTL boxplots (Panel E left-hand side + Panel F) -----
-# Shared builder for every per-gene boxplot in this figure (PLBD2 for Panel E,
-# NEUROD1 + EMX1 for Panel F). Box colour matches the discovery cell type's
-# colour used throughout every other manuscript figure (custom_palette).
-# Style, per manuscript request:
-#   - no panel border
-#   - no "(log2)" in the y-axis label
-#   - larger x-axis (genotype) tick text
-#   - genotype and n= on two separate lines, not a plotmath subscript
+##  Panels E and G: eQTL boxplots  ----------------------------------------------------
+# Box colour is the discovery cell type's colour; x labels give the genotype
+# and its n on two lines
 make_eqtl_boxplot <- function(csv_file, gene, rsid, cell_type_label, fill_colour) {
 
-  # Data file is named with the OLD cell-type naming (matching what's on
-  # disk), same convention as every other file path in this pipeline - only
-  # display labels (cell_type_label passed in) use the new Glu-A/Glu-B names.
   dat <- read_csv(csv_file, show_col_types = FALSE,
                   col_types = cols(
                     Sample = col_character(),
@@ -562,9 +545,8 @@ make_eqtl_boxplot <- function(csv_file, gene, rsid, cell_type_label, fill_colour
       )
     )
 
-  # Genotype counts feed the two-line x-axis labels ("TT" / "n=95") - only
-  # genotypes actually present in the data get a label; scale_x_discrete's
-  # default drop = TRUE already excludes any unused factor level from the axis
+  # Genotype counts for the two-line x-axis labels ("TT" / "n=95"); only
+  # genotypes present in the data are shown
   geno_counts <- dat |>
     count(Genotype, name = "n") |>
     mutate(label = paste0(Genotype, "\nn=", n))
@@ -584,11 +566,10 @@ make_eqtl_boxplot <- function(csv_file, gene, rsid, cell_type_label, fill_colour
       axis.text.x = element_text(size = 12),
       axis.text.y = element_text(size = 10),
       legend.position = "none",
-      plot.margin = margin(25, 50, 22, 50, unit = "pt")  # matches make_jang_beta_plot's margin
-      # panel.border intentionally omitted -- no black border around the plot
+      plot.margin = margin(25, 50, 22, 50, unit = "pt")  # as make_jang_beta_plot
     )
 
-  # rsID label centred beneath the panel, matching the original style
+  # rsID label centred beneath the panel
   ggdraw(boxplot_base) +
     draw_label(rsid, x = 0.5, y = 0.02, fontface = "bold", size = 11)
 }
@@ -596,7 +577,6 @@ make_eqtl_boxplot <- function(csv_file, gene, rsid, cell_type_label, fill_colour
 glu_a_colour <- custom_palette[["Glu-A"]]
 glu_b_colour <- custom_palette[["Glu-B"]]
 
-# File paths use the OLD Glu-DL naming on disk (see make_eqtl_boxplot note above)
 plbd2_boxplot_plt <- make_eqtl_boxplot(
   csv_file = boxplot_g_file,
   gene = boxplot_pairs$fig3g$gene, rsid = boxplot_pairs$fig3g$snp,
@@ -609,48 +589,39 @@ neurod1_boxplot_plt <- make_eqtl_boxplot(
   cell_type_label = "Glu-B", fill_colour = glu_b_colour
 )
 
-### --- plot -----
-# Final plot
+##  Assemble and save  ----------------------------------------------------------------
+# A and B
 top_row <- plot_grid(pie_chart, upset_plt, labels = c("A", "B"),
   label_size = 24, ncol = 2,rel_widths = c(1, 1.3))
 
-# Stack heatmaps
+# C above D
 heatmaps_stacked <- plot_grid(
   pi1_int_heatmap,
   pi1_jang_heatmap,
   ncol = 1,
-  rel_heights = c(1, 0.8),   # C slightly taller
+  rel_heights = c(1, 0.8),
   labels = c("C", "D"),
   label_size = 24,
   align = "v"
 )
 
-# Row 1: E (NEUROD1) + F (Glu-A vs Ext beta correlation), individually labelled
+# E and F side by side
 ef_row <- plot_grid(neurod1_boxplot_plt, beta_gluA_plt,
                      labels = c("E", "F"), label_size = 24,
                      ncol = 2, rel_widths = c(0.9, 1.1))
 
-# Row 2: G (PLBD2 boxplot) centred under E and F.
-# G keeps the same width as E (0.9 / 2 = 0.45 of the row), with equal blank
-# space (0.275) on each side, so it sits in the middle of the row.
+# G centred below, the same width as E (0.45 of the row)
 g_row <- plot_grid(NULL, plbd2_boxplot_plt, NULL,
                    labels = c("", "G", ""), label_size = 24,
                    ncol = 3, rel_widths = c(0.275, 0.45, 0.275))
 
-# NOTE: rel_heights below (1, 1) gives the single G panel the same row
-# height as the paired E/F row above -- reasonable starting point, but
-# since G alone ends up wider than either E or F individually, it may be
-# worth revisiting once rendered.
 betas_stacked <- plot_grid(
   ef_row, g_row,
   ncol = 1,
   rel_heights = c(1, 1)
 )
 
-# Bottom row: heatmaps + betas
-# NOTE: betas_stacked now holds two 2-panel rows instead of two single
-# panels, so it needs more horizontal room than before -- rel_widths below
-# is a starting guess, check the render and adjust.
+# C/D beside E/F/G
 bottom_row <- plot_grid(
   heatmaps_stacked,
   betas_stacked,
@@ -665,15 +636,18 @@ final_plt <- plot_grid(
   rel_heights = c(1, 1.4)     
 )
 
+message("Writing: ", out_file)
 ggsave(
   filename = out_file,
   plot = final_plt,
-  width = 20,   # widened from 16 -- betas_stacked is now a 2x2 grid of panels, not 2 stacked
+  width = 20,
   height = 14,
   units = "in",
   device = "pdf",
   dpi = 300
 )
+
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
