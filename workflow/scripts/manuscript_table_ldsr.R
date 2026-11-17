@@ -1,21 +1,23 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate MaxCPP S-LDSR enrichment tables for manuscript
+#    MaxCPP S-LDSR enrichment per cell type and disorder (Supp Table 8)
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  16MANUSCRIPT-TABLES | Rule: sldsr_tbl
-#            Upstream:   11SLDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
+# Pipeline:  16MANUSCRIPT-TABLES | Rule: ldsr_tbl
+#            Upstream:   11 S-LDSR strat_bl_v12 (MaxCPP summary, all cell types x GWAS)
+#            Downstream: Supp Table 8
 #
 # Purpose:   Reproduce the table behind the MaxCPP S-LDSR figure (panels A-C):
 #            - Parse cell type and disorder from the annotation Category
-#            - Relabel cell types (Glu-UL -> Glu-A, Glu-DL -> Glu-B, drop "-Q4-")
 #            - Keep only cell types listed in config['cell_types']
+#            - Manuscript cell type labels (config manuscript_labels)
 #            - Add the plotted -log10(P), level (L1 / L2 / Pseudotime), main cell
 #              type, per-level Bonferroni threshold and significance flags
 #
 # Inputs:    in_file     ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv
 #            cell_types  config['cell_types'] (pipeline labels)
+#            labels      config['manuscript_labels']
 #
 # Outputs:   xlsx        One sheet per disorder (sheet name = full disorder name)
 #
@@ -38,7 +40,7 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating MaxCPP S-LDSR tables for the manuscript ...")
+message("\n\nBuilding MaxCPP S-LDSR table ...")
 
 ##  Load packages, functions and variables  -------------------------------------------
 suppressMessages({
@@ -46,32 +48,28 @@ suppressMessages({
   library(openxlsx)
 })
 
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
+
 # Input and output paths
-in_file    <- snakemake@input[[1]]
-xlsx_out   <- snakemake@output[[1]]
-cell_types <- unlist(snakemake@params[["cell_types"]])
-
-# in_file    <- "../results/11SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv"
-# xlsx_out   <- "../results/16MANUSCRIPT-TABLES/supplementary_table_X.xlsx"
-# cell_types <- c("Glu-UL", "Glu-DL", "NPC", ...)   # config['cell_types']
-
-# Make a tibble showing what each variable is set to
-message("\nVariables")
-message("============================")
-tibble(
-  variable = c("in_file", "xlsx_out", "cell_types"),
-  value    = c(in_file, xlsx_out, paste(cell_types, collapse = ", "))) |>
-  knitr::kable(format = "simple", align = "l") |>
-  print()
-message("============================\n")
+in_file           <- snakemake@input[[1]]
+xlsx_out          <- snakemake@output[[1]]
+cell_types        <- unlist(snakemake@params[["cell_types"]])
+manuscript_labels <- snakemake@params[["labels"]]
 
 alpha <- 0.05
 
-# Relabel helper: Glu-UL -> Glu-A, Glu-DL -> Glu-B, strip "-Q4-" from bin names
-# (same convention as the rest of the manuscript pipeline)
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("in_file", "xlsx_out", "cell_types", "labels", "alpha"),
+  value    = c(in_file, xlsx_out, paste(cell_types, collapse = ", "),
+               paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               alpha)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
 # Full disorder names for xlsx sheets (same mapping as manuscript_table_smr_sig.R)
 disorder_labels <- c(
@@ -134,7 +132,7 @@ n_tests <- ldsr_tbl |>
   count(level, name = "n_tests")
 
 message("\nCell types tested per level (Bonferroni denominator):")
-n_tests |> knitr::kable(format = "simple", align = "l") |> print()
+n_tests |> knitr::kable(format = "simple", align = "l") |> cat(sep = "\n")
 
 ldsr_tbl <- ldsr_tbl |>
   left_join(n_tests, by = "level") |>

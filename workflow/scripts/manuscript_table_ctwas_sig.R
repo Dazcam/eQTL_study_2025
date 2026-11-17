@@ -1,31 +1,32 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate cTWAS significant gene tables for manuscript
+#    Significant cTWAS genes per GWAS (Supp Table 10)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  16MANUSCRIPT-TABLES | Rule: ctwas_sig_tbl
+#            Upstream:   14 cTWAS results and FUSION weights
+#            Downstream: Supp Table 10
+#
+# Purpose:   - Bonferroni factor per cell type: the number of testable genes
+#              (non-empty FUSION .wgt.RDat files), as in ctwas_report.Rmd
+#            - For each GWAS trait, fine-mapped genes (PIP > pip_thresh, in a
+#              credible set) with Bonferroni P < bf_p_thresh, unioned across
+#              cell types; one xlsx sheet per disorder, manuscript labels
+#
+# Inputs:    in_dir            14 cTWAS results directory (output/ctwas_{ct}_{gwas}_ctwas.rds)
+#            weights_dir       14 FUSION weights directory ({ct}/*.wgt.RDat)
+#            gene_lookup_file  Ensembl ID to gene symbol, position and biotype
+#
+# Outputs:   correction        Bonferroni factor per cell type (TSV)
+#            sig_out           Significant genes, one sheet per disorder (xlsx)
+#
+# Notes:     ctwas_report.Rmd (14) computes the same factors independently,
+#            because it runs before this pipeline.
 #
 #--------------------------------------------------------------------------------------
 
-# Two outputs:
-#   A. Per-cell-type BF correction factors (count of cTWAS-testable genes,
-#      i.e. non-empty FUSION weight files) - ported from ctwas_report.Rmd's
-#      "Correction" tab (Table 1). Needed as an input to B, not just useful
-#      on its own. Still written as its own TSV.
-#   B. Significant fine-mapped genes (PIP > 0.8, in a credible set,
-#      BF-corrected P < 0.05), unioned across all cell types - ported from
-#      the "Single (Fine-mapped only)" tab's per-(gwas,cell_type) loop. That
-#      tab built the same results_single_lst this script builds, but its
-#      write.xlsx() (one sheet per gwas x cell_type) was disabled ("Not
-#      working yet"). Replaced here with a single xlsx, one sheet per GWAS
-#      trait (named by full disorder name), formatted column names, and
-#      cell types relabelled Glu-UL/Glu-DL -> Glu-A/Glu-B.
-#
-# Independent of ctwas_report.Rmd (same reasoning as smr_sig_tbl vs
-# smr_report.Rmd): that report renders as part of 14ctwas.smk, which runs
-# BEFORE the tables pipeline where this script lives, so it can't depend on
-# this script's output without inverting that ordering. Both compute the
-# same correction-factor / significance logic independently.
-
-## Info  ------------------------------------------------------------------------------
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -37,36 +38,42 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating cTWAS significant gene tables for the manuscript ...")
+message("\n\nBuilding significant cTWAS gene tables ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 suppressMessages({
   library(tidyverse)
   library(openxlsx)
 })
 
-# --- Set variables
-traits           <- snakemake@params[["traits"]]
-cell_types       <- snakemake@params[["cell_types"]]
-in_dir           <- snakemake@params[["in_dir"]]
-weights_dir      <- snakemake@params[["weights_dir"]]
-gene_lookup_file <- snakemake@params[["gene_lookup_file"]]
-pip_thresh       <- as.numeric(snakemake@params[["pip_thresh"]])
-bf_p_thresh      <- as.numeric(snakemake@params[["bf_p_thresh"]])
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
 
-correction_out <- snakemake@output[["correction"]]
-sig_out        <- snakemake@output[["sig_out"]]  # single xlsx, one sheet per trait
+# Inputs, outputs and settings
+traits            <- snakemake@params[["traits"]]
+cell_types        <- snakemake@params[["cell_types"]]
+in_dir            <- snakemake@params[["in_dir"]]
+weights_dir       <- snakemake@params[["weights_dir"]]
+gene_lookup_file  <- snakemake@params[["gene_lookup_file"]]
+manuscript_labels <- snakemake@params[["labels"]]
+pip_thresh        <- as.numeric(snakemake@params[["pip_thresh"]])
+bf_p_thresh       <- as.numeric(snakemake@params[["bf_p_thresh"]])
+correction_out    <- snakemake@output[["correction"]]
+sig_out           <- snakemake@output[["sig_out"]]
 
-# traits           <- c("scz", "bpd", "mdd", "adhd", "ocd")
-# cell_types       <- c("Glu-UL", "Glu-DL", ..., "NPC-to-Glu-UL-Q4-Bin4")
-# in_dir           <- "../results/14CTWAS/"
-# weights_dir      <- "../results/14CTWAS/weights"
-# gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
-# pip_thresh       <- 0.8
-# bf_p_thresh      <- 0.05
-
-message("Cell types (", length(cell_types), "): ", paste(cell_types, collapse = ", "))
-message("Traits (", length(traits), "): ", paste(traits, collapse = ", "))
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("traits", "cell_types", "in_dir", "weights_dir", "gene_lookup_file",
+               "labels", "pip_thresh", "bf_p_thresh", "correction_out", "sig_out"),
+  value    = c(paste(traits, collapse = ", "), paste(cell_types, collapse = ", "),
+               in_dir, weights_dir, gene_lookup_file,
+               paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               pip_thresh, bf_p_thresh, correction_out, sig_out)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
 # Full disorder names for sheet titles - order must match `traits`
 disorder_labels <- c(
@@ -82,24 +89,16 @@ if (length(missing_labels) > 0) {
        " -- add them to disorder_labels above.")
 }
 
-# Relabel cell type names for display: Glu-UL -> Glu-A, Glu-DL -> Glu-B
-# (covers L2 subtypes too, e.g. Glu-UL-0 -> Glu-A-0)
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
-
-gene_lookup <- suppressMessages(read_tsv(gene_lookup_file, show_col_types = FALSE)) |>
-  select(chr = chromosome_name, start = start_position, end = end_position,
+# gene_lookup_hg38.tsv has >1 row for some gene IDs; without distinct() the
+# left_join below duplicates significant rows
+gene_lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
+  dplyr::select(chr = chromosome_name, start = start_position, end = end_position,
          gene_biotype, ensembl_id = ensembl_gene_id, symbol = external_gene_name) |>
-  # gene_lookup_hg38.tsv has >1 row for some gene IDs; without this the
-  # left_join below fans out and duplicates significant rows (same fix
-  # applied in manuscript_table_smr_sig.R for the same underlying file)
   distinct(ensembl_id, .keep_all = TRUE)
 
-# ---- A. Per-cell-type BF correction factors ------------------------------------
-# Count of non-empty FUSION weight files (.wgt.RDat) per cell type - genes
-# that were actually testable (hsq_p < 0.01 passed), i.e. the number of
-# tests, not the number that came out significant.
+##  Bonferroni factors per cell type  -------------------------------------------------
+# Non-empty FUSION weight files (.wgt.RDat) per cell type: genes that were
+# testable (hsq_p < 0.01), i.e. the number of tests
 message("Computing BF correction factors (testable gene counts) per cell type...")
 
 fusion_tbl <- map_dfr(cell_types, function(ct) {
@@ -132,7 +131,7 @@ message("Unique across all cell types: ", unique_genes_all)
 write_tsv(correction_tbl, correction_out)
 message("Wrote correction factors: ", correction_out)
 
-# ---- B. Per-GWAS significant fine-mapped genes, unioned across cell types -----
+##  Significant fine-mapped genes per trait  ------------------------------------------
 get_ctwas_sig <- function(ct, gwas, in_dir, gene_lookup, per_cell_counts,
                            pip_thresh, bf_p_thresh) {
   file <- file.path(in_dir, "output", paste0("ctwas_", ct, "_", gwas, "_ctwas.rds"))
@@ -159,10 +158,9 @@ get_ctwas_sig <- function(ct, gwas, in_dir, gene_lookup, per_cell_counts,
   }
 
   finemap_res <- as_tibble(ctw_res$finemap_res) |>
-    mutate(cs = as.character(cs)) |>  # a cell type with 0 real cs values gets an
-                                       # all-NA logical column from R by default,
-                                       # which then can't bind_rows() against a
-                                       # cell type with genuine character cs IDs
+    # A cell type with no credible sets has an all-NA logical cs column,
+    # which cannot be bound to character cs IDs from other cell types
+    mutate(cs = as.character(cs)) |>
     filter(group != 'SNP' & susie_pip > pip_thresh & !is.na(cs)) |>
     separate(id, into = c('gene', 'id'), sep = "\\|") |>
     separate(id, into = c('cell_type', 'id'), sep = "_") |>
@@ -187,8 +185,8 @@ empty_sig_tbl <- tibble(
   cs = character(), gene_biotype = character(), chr = character()
 )
 
-# Final column names/order for the xlsx, applied uniformly to every sheet
-# (including the empty-result case, so every sheet has the same header)
+# Final column names for the xlsx, applied to every sheet (including empty
+# ones, so every sheet has the same header)
 format_sig_tbl <- function(tbl) {
   tbl |>
     mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels)) |>
@@ -228,12 +226,13 @@ for (i in seq_along(traits)) {
   sig_sheets[[disorder_labels[[gwas]]]] <- format_sig_tbl(gwas_sig_results)
 }
 
+##  Write combined xlsx  --------------------------------------------------------------
 message("Writing combined cTWAS significant gene table: ", sig_out)
 write.xlsx(sig_sheets, file = sig_out, overwrite = TRUE,
            headerStyle = createStyle(textDecoration = "bold"))
 message("Wrote: ", sig_out)
 
-message("Done: ", paste(traits, collapse = ", "))
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

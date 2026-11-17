@@ -1,23 +1,32 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate SMR vs cTWAS gene-overlap tables for manuscript (per GWAS trait)
+#    SMR vs cTWAS gene overlap tables, one per GWAS trait (Fig 6)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  16MANUSCRIPT-TABLES | Rule: smr_ctwas_venn_tbl
+#            Upstream:   smr_sig_tbl (16); 14 cTWAS results and FUSION weights
+#            Downstream: 17 smr_ctwas_venn_fig (Fig 6)
+#
+# Purpose:   For each GWAS trait:
+#            - SMR genes: union across cell types of the smr_sig_tbl genes
+#            - cTWAS genes: union across cell types of fine-mapped genes
+#              (PIP > ctwas_pip_thresh, in a credible set), optionally with
+#              Bonferroni P < ctwas_bf_thresh (factor = testable genes per cell type)
+#            - Write a membership table (both / SMR_only / cTWAS_only) and log
+#              the gene lists per category
+#
+# Inputs:    smr_tbl_dir       Directory with {gwas}_smr.tsv (smr_sig_tbl)
+#            ctwas_in_dir      14 cTWAS results directory (output/ctwas_{ct}_{gwas}_ctwas.rds)
+#            weights_dir       14 FUSION weights directory ({ct}/*.wgt.RDat)
+#            gene_lookup_file  Ensembl ID to gene symbol lookup
+#
+# Outputs:   venn_{gwas}_genes.tsv, one per trait, same order as traits
+#            (gene, symbol, in_SMR, in_cTWAS, category)
 #
 #--------------------------------------------------------------------------------------
 
-# For each trait: SMR-significant genes (union across cell types), cTWAS-
-# significant genes (union across cell types, optional BF correction), and
-# their overlap (SMR only / shared / cTWAS only). Writes one membership TSV
-# per trait and logs the full gene lists per category, not just counts.
-#
-# Gene-set/BF-correction logic is unchanged from
-# manuscript_figure_smr_ctwas_venn.R's steps 1-5 -- this script is the
-# table-generation half, pulled out so it runs (and is tracked) as its own
-# tables-pipeline rule, ahead of and independent from the plotting rule.
-# manuscript_figure_smr_ctwas_venn.R should subsequently be updated to READ
-# these tables rather than recomputing the gene sets itself.
-
-## Info  ------------------------------------------------------------------------------
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -29,14 +38,14 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating SMR vs cTWAS gene-overlap tables for the manuscript ...")
+message("\n\nBuilding SMR vs cTWAS gene overlap tables ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages and variables  ------------------------------------------------------
 suppressMessages({
   library(tidyverse)
 })
 
-# --- Set variables
+# Inputs, outputs and settings
 traits           <- snakemake@params[["traits"]]
 smr_tbl_dir      <- snakemake@params[["smr_tbl_dir"]]
 ctwas_in_dir     <- snakemake@params[["ctwas_in_dir"]]
@@ -47,28 +56,25 @@ ctwas_pip_thresh <- snakemake@params[["ctwas_pip_thresh"]]
 ctwas_use_bf     <- snakemake@params[["ctwas_use_bf"]]
 ctwas_bf_thresh  <- snakemake@params[["ctwas_bf_thresh"]]
 use_symbols      <- snakemake@params[["use_symbols"]]
+genes_out_files  <- snakemake@output
 
-# Snakemake output list, positionally ordered to match `traits` (both come
-# from expand(..., gwas = traits) against the same config list)
-genes_out_files <- snakemake@output
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("traits", "smr_tbl_dir", "ctwas_in_dir", "weights_dir", "cell_types",
+               "gene_lookup_file", "ctwas_pip_thresh", "ctwas_use_bf", "ctwas_bf_thresh",
+               "use_symbols", "genes_out_files"),
+  value    = c(paste(traits, collapse = ", "), smr_tbl_dir, ctwas_in_dir, weights_dir,
+               paste(cell_types, collapse = ", "), gene_lookup_file, ctwas_pip_thresh,
+               ctwas_use_bf, ctwas_bf_thresh, use_symbols,
+               paste(unlist(genes_out_files), collapse = ", "))) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
-# traits           <- c("scz", "bpd", "mdd", "adhd", "ocd")
-# smr_tbl_dir      <- "??? -- see note below"
-# ctwas_in_dir     <- "../results/14CTWAS/"
-# weights_dir      <- "../results/14CTWAS/weights"
-# gene_lookup_file <- "../resources/sheets/gene_lookup_hg38.tsv"
-# ctwas_pip_thresh <- 0.8
-# ctwas_use_bf     <- TRUE
-# ctwas_bf_thresh  <- 0.05
-# use_symbols      <- TRUE
-
-message("=== SMR vs cTWAS gene tables: ", paste(traits, collapse = ", "), " ===")
-
-# ---- 1. SMR significant genes (union across cell types) ------------------
-# NOTE: reads {smr_tbl_dir}/{gwas}_smr.tsv -- per the original script's
-# comment this is written by smr_report.Rmd, which this pipeline doesn't
-# otherwise reference. Confirm smr_tbl_dir points at the right rule's output
-# before running this.
+##  Functions  ------------------------------------------------------------------------
+# SMR significant genes: {smr_tbl_dir}/{gwas}_smr.tsv from smr_sig_tbl
 get_smr_genes <- function(gwas, smr_tbl_dir) {
   f <- file.path(smr_tbl_dir, paste0(gwas, "_smr.tsv"))
   if (!file.exists(f)) {
@@ -77,7 +83,7 @@ get_smr_genes <- function(gwas, smr_tbl_dir) {
   }
   message("Reading SMR table: ", f)
   tbl <- tryCatch(
-    suppressMessages(read_tsv(f, show_col_types = FALSE)),
+    read_tsv(f, show_col_types = FALSE),
     error = function(e) stop("Failed to read SMR table (", f, "): ", conditionMessage(e))
   )
   if (!"Ensembl ID" %in% names(tbl)) {
@@ -87,16 +93,13 @@ get_smr_genes <- function(gwas, smr_tbl_dir) {
   unique(tbl[["Ensembl ID"]])
 }
 
-# ---- 2. cTWAS significant genes (union across cell types) ----------------
-# Same filter ctwas_report.Rmd uses to build its displayed table:
-# group != 'SNP' & susie_pip > 0.8 & in a credible set (!is.na(cs))
+# cTWAS significant genes, as in ctwas_report.Rmd: group != 'SNP',
+# susie_pip > pip_thresh and in a credible set (!is.na(cs))
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
-# Correction factor for the optional BF-corrected significance path, matching
-# the "Correction" tab in ctwas_report.Rmd: the number of non-empty
-# .wgt.RDat FUSION weight files for a cell type is the count of genes that
-# were actually testable there (hsq_p < 0.01) - i.e. the number of tests,
-# NOT the number of genes that came out significant.
+# Bonferroni factor, as in the ctwas_report.Rmd Correction tab: the number of
+# non-empty .wgt.RDat FUSION weight files for a cell type, i.e. the genes that
+# were testable there (hsq_p < 0.01), not the number that came out significant
 get_bf_factor <- function(ct, weights_dir) {
   ct_dir <- file.path(weights_dir, ct)
   if (!dir.exists(ct_dir)) {
@@ -150,19 +153,13 @@ get_ctwas_genes <- function(gwas, ctwas_in_dir, weights_dir, cell_types,
 
     if (use_bf) {
       if (nrow(fm) == 0) {
-        # Nothing survived the PIP/credible-set filter for this cell type -
-        # no point computing a correction factor, this cell type just
-        # contributes zero genes.
+        # Nothing passed the PIP / credible-set filter in this cell type
         return(character(0))
       }
       bf_factor <- get_bf_factor(ct, weights_dir)
       if (is.na(bf_factor)) {
-        # A cell type can legitimately have no FUSION weights at all (too
-        # few cells to model cis-heritability, etc.) - especially likely
-        # among the finer subcluster/pseudotime-bin cell types. That's a
-        # normal outcome, not a pipeline error, so we skip this cell type
-        # (it contributes zero genes) rather than aborting the whole GWAS
-        # run. The message() above already recorded why, for the log.
+        # A cell type can have no FUSION weights (e.g. small subclusters or
+        # pseudotime bins): it contributes zero genes
         message("  [", ct, "] skipping BF correction (see reason above) - contributes 0 genes")
         bf_skipped_cts <<- c(bf_skipped_cts, ct)
         return(character(0))
@@ -189,7 +186,7 @@ get_ctwas_genes <- function(gwas, ctwas_in_dir, weights_dir, cell_types,
   unique(unlist(genes))
 }
 
-# ---- 3. Ensembl -> symbol lookup, falling back to the Ensembl ID ----------
+# Ensembl -> symbol lookup, falling back to the Ensembl ID
 to_display <- function(ids, use_symbols, gene_lookup_file) {
   if (length(ids) == 0) return(character(0))
   if (!use_symbols || is.null(gene_lookup_file) || !file.exists(gene_lookup_file)) {
@@ -197,8 +194,8 @@ to_display <- function(ids, use_symbols, gene_lookup_file) {
                               ") - falling back to Ensembl IDs")
     return(ids)
   }
-  lookup <- suppressMessages(read_tsv(gene_lookup_file, show_col_types = FALSE)) |>
-    select(ensembl_gene_id, external_gene_name) |>
+  lookup <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
+    dplyr::select(ensembl_gene_id, external_gene_name) |>
     distinct()
   tibble(ensembl_gene_id = ids) |>
     left_join(lookup, by = "ensembl_gene_id") |>
@@ -209,7 +206,7 @@ to_display <- function(ids, use_symbols, gene_lookup_file) {
     pull(external_gene_name)
 }
 
-# ---- 4. Per-trait gene sets -> membership table, with full gene-list logging ---
+# Per-trait gene sets -> membership table, logging the full gene lists
 log_gene_list <- function(label, symbols) {
   if (length(symbols) == 0) {
     message("  ", label, ": (none)")
@@ -258,7 +255,7 @@ build_membership <- function(gwas, smr_tbl_dir, ctwas_in_dir, weights_dir, cell_
   membership
 }
 
-# ---- 5. Run every trait, write its membership table -----------------------
+##  Membership table per trait  -------------------------------------------------------
 if (length(genes_out_files) != length(traits)) {
   stop("Number of Snakemake outputs (", length(genes_out_files),
        ") doesn't match number of traits (", length(traits),
@@ -274,7 +271,7 @@ for (i in seq_along(traits)) {
   message("Wrote membership table: ", genes_out_files[[i]])
 }
 
-message("Done: ", paste(traits, collapse = ", "))
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

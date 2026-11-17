@@ -1,36 +1,36 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate SuSiE fine-mapping diagnostics table for manuscript (Supplementary Table 9)
+#    SuSiE fine-mapping diagnostics per cell type (Supp Table 11)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  16MANUSCRIPT-TABLES | Rule: susie_diag_tbl
+#            Upstream:   10 sort_susie (merged, sorted cred.hp files);
+#                        10 prep_susie_gene_meta (gene TSS)
+#            Downstream: Supp Table 11
+#
+# Purpose:   One row per cell type summarising SuSiE fine-mapping, computed
+#            from the cred.hp files as in the susie_report.Rmd diagnostics
+#            section:
+#              Genes with >=1 CS           Fine-mapped genes with at least one credible set
+#              Mean CS / Gene              Mean credible sets per gene with >=1 CS
+#              % Genes, 1 / 2 / >=3 CS     Share of genes with >=1 CS having 1, 2 or >=3 sets
+#              Median CS Size              Median variants per credible set
+#              Median Distance to TSS (bp) Median |index variant - TSS| across credible sets
+#
+# Inputs:    susie_files       cred.hp file per cell type (same order as cell_types)
+#            gene_meta_files   Gene meta file per cell type (phenotype_pos = TSS)
+#
+# Outputs:   xlsx              One sheet; rows: L1 cell types, L2 subclusters by
+#                              parent, then pseudotime bins; manuscript labels
+#
+# Notes:     The index variant is the highest-PIP variant in a credible set.
+#            Percentages use genes with >=1 credible set as the denominator.
+#            Stops if a cell type has no file or no credible sets.
 #
 #--------------------------------------------------------------------------------------
 
-# One row per cell type, summarising SuSiE fine-mapping performance (reviewer 2
-# response). Recomputed here directly from the sorted, merged cred.hp files so
-# the table is independent of the SuSiE report; the logic mirrors the
-# "Fine-mapping diagnostics (reviewer response)" section of susie_report.Rmd.
-#
-# Columns:
-#   Cell Type                   Cell type (Glu-UL/Glu-DL relabelled Glu-A/Glu-B, "-Q4-"
-#                               stripped from pseudotime bin names)
-#   Genes with >=1 CS           Number of fine-mapped genes with at least one credible set
-#   Mean CS / Gene              Mean number of credible sets per gene with >=1 CS
-#   % Genes, 1 CS               % of genes with >=1 CS that have exactly 1 credible set
-#   % Genes, 2 CS               % of genes with >=1 CS that have exactly 2 credible sets
-#   % Genes, >=3 CS             % of genes with >=1 CS that have 3 or more credible sets
-#   Median CS Size              Median number of variants per credible set
-#   Median Distance to TSS (bp) Median absolute distance between the credible set index
-#                               variant and the gene TSS, across all credible sets
-#
-# Notes for the table legend:
-#   - A credible set's index variant is the variant with the highest PIP in that set.
-#   - Percentages use genes with >=1 credible set as the denominator, not genes tested.
-#   - Distance to TSS is |index variant position - phenotype_pos| from the gene meta file.
-#
-# Row order: major cell types (Glu-A, Glu-B, GABA, NPC, OPC, MG, Endo-Peri), then
-# subclusters grouped by parent in the same order, then pseudotime bins.
-
-## Info  ------------------------------------------------------------------------------
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -42,25 +42,36 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating SuSiE fine-mapping diagnostics table for the manuscript ...")
+message("\n\nBuilding SuSiE fine-mapping diagnostics table ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 suppressMessages({
   library(tidyverse)
   library(openxlsx)
 })
 
-# --- Set variables
-cell_types      <- snakemake@params[["cell_types"]]
-susie_files     <- snakemake@input[["susie_files"]]
-gene_meta_files <- snakemake@input[["gene_meta_files"]]
-xlsx_out        <- snakemake@output[["xlsx"]]
+# Load functions (relabel_cell_types)
+source(file.path(snakemake@scriptdir, "functions.R"))
 
-# cell_types      <- c("Glu-UL", "Glu-DL", "NPC", ...)
-# susie_files     <- "../results/10SUSIE/susie/{cell_type}/{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz"
-# gene_meta_files <- "../results/10SUSIE/susie_input/{cell_type}_gene_meta.tsv"
+# Inputs, outputs and settings
+cell_types        <- snakemake@params[["cell_types"]]
+manuscript_labels <- snakemake@params[["labels"]]
+susie_files       <- snakemake@input[["susie_files"]]
+gene_meta_files   <- snakemake@input[["gene_meta_files"]]
+xlsx_out          <- snakemake@output[["xlsx"]]
 
-message("=== SuSiE diagnostics table: ", length(cell_types), " cell types ===")
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("cell_types", "labels", "susie_files", "gene_meta_files", "xlsx_out"),
+  value    = c(paste(cell_types, collapse = ", "),
+               paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               paste(susie_files, collapse = ", "), paste(gene_meta_files, collapse = ", "),
+               xlsx_out)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
 
 if (length(susie_files) != length(cell_types) || length(gene_meta_files) != length(cell_types)) {
   stop("Number of input files (", length(susie_files), " susie, ", length(gene_meta_files),
@@ -68,25 +79,25 @@ if (length(susie_files) != length(cell_types) || length(gene_meta_files) != leng
        ") -- check the expand(..., cell_type = ...) lists match `cell_types` exactly.")
 }
 
-# --- Index variant (highest-PIP variant per credible set) with distance to TSS
-# and number of credible sets per gene, for one cell type. Same as the report's
-# get_index_variants(), but errors rather than skipping if a file is missing so
-# no cell type can silently drop out of the manuscript table.
+##  Index variants per credible set  --------------------------------------------------
+# Highest-PIP variant per credible set, its distance to the TSS and the number
+# of credible sets per gene. As the report's get_index_variants(), but stops if
+# a file is missing so no cell type drops out of the table.
 get_index_variants <- function(cell_type, susie_path, meta_path) {
   if (!file.exists(susie_path) || !file.exists(meta_path)) {
     stop("  [", cell_type, "] missing susie or gene meta file: ", susie_path, " / ", meta_path)
   }
   message("  [", cell_type, "] reading ", susie_path)
 
-  susie_tbl <- suppressMessages(read_tsv(susie_path, show_col_types = FALSE))
-  gene_meta <- suppressMessages(read_tsv(meta_path, show_col_types = FALSE)) |>
-    select(phenotype_id, phenotype_pos)
+  susie_tbl <- read_tsv(susie_path, show_col_types = FALSE)
+  gene_meta <- read_tsv(meta_path, show_col_types = FALSE) |>
+    dplyr::select(phenotype_id, phenotype_pos)
 
   susie_tbl |>
     group_by(cs_id) |>
     slice_max(pip, n = 1, with_ties = FALSE) |>
     ungroup() |>
-    select(phenotype_id, cs_id, cs_size, pos) |>
+    dplyr::select(phenotype_id, cs_id, cs_size, pos) |>
     left_join(gene_meta, by = "phenotype_id") |>
     mutate(dist_to_tss = abs(pos - phenotype_pos)) |>
     group_by(phenotype_id) |>
@@ -100,7 +111,7 @@ cs_summary_all <- pmap_dfr(
   get_index_variants
 )
 
-# --- Checks: every cell type has credible sets, and every index variant has a TSS
+# Every cell type has credible sets and every index variant has a TSS
 missing_ct <- setdiff(cell_types, unique(cs_summary_all$cell_type))
 if (length(missing_ct) > 0) {
   stop("No credible sets found for: ", paste(missing_ct, collapse = ", "))
@@ -109,7 +120,7 @@ if (anyNA(cs_summary_all$dist_to_tss)) {
   stop("Missing TSS distance for some index variants (phenotype_id not in gene meta file)")
 }
 
-# --- Summaries (same definitions as the report)
+##  Summaries per cell type (definitions as in the report)  ---------------------------
 cs_per_gene <- cs_summary_all |>
   distinct(cell_type, phenotype_id, n_cs_for_gene) |>
   group_by(cell_type) |>
@@ -134,13 +145,7 @@ final_tbl <- cs_per_gene |>
   left_join(cs_size, by = "cell_type") |>
   left_join(dist_to_tss, by = "cell_type")
 
-# --- Relabel helper (display only): Glu-UL -> Glu-A, Glu-DL -> Glu-B, and strip
-# "-Q4-" from pseudotime bin names, e.g. "NPC-to-Glu-UL-Q4-Bin1" ->
-# "NPC-to-Glu-A-Bin1". Same convention as manuscript_table_smr_sig.R.
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
-source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
-
+##  Manuscript labels and row order  --------------------------------------------------
 final_tbl <- final_tbl |>
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
@@ -150,7 +155,7 @@ if (any(old_names)) {
        paste(final_tbl$cell_type[old_names], collapse = ", "))
 }
 
-# --- Row order: major types, then subclusters grouped by parent, then pseudotime bins
+# Row order: major types, then subclusters grouped by parent, then pseudotime bins
 major <- c("Glu-A", "Glu-B", "GABA", "NPC", "OPC", "MG", "Endo-Peri")
 
 final_tbl <- final_tbl |>
@@ -171,7 +176,7 @@ if (anyNA(final_tbl$parent_ord)) {
 
 final_tbl <- final_tbl |>
   arrange(tier, parent_ord, cell_type) |>
-  select(cell_type, n_genes_with_cs, mean_cs_per_gene, pct_genes_1_cs, pct_genes_2_cs,
+  dplyr::select(cell_type, n_genes_with_cs, mean_cs_per_gene, pct_genes_1_cs, pct_genes_2_cs,
          pct_genes_3plus_cs, median_cs_size, median_dist_to_tss) |>
   mutate(across(c(mean_cs_per_gene, pct_genes_1_cs, pct_genes_2_cs, pct_genes_3plus_cs),
                 ~ round(.x, 1)),
@@ -183,7 +188,8 @@ names(final_tbl) <- c("Cell Type", "Genes with \u22651 CS", "Mean CS / Gene", "%
 
 message("Summarised ", nrow(final_tbl), " cell types")
 
-message("Writing xlsx (Supplementary Table 9): ", xlsx_out)
+##  Write xlsx  -----------------------------------------------------------------------
+message("Writing xlsx: ", xlsx_out)
 write.xlsx(
   list(`SuSiE diagnostics` = final_tbl),
   file = xlsx_out,
@@ -191,7 +197,7 @@ write.xlsx(
   headerStyle = createStyle(textDecoration = "bold")
 )
 
-message("Done: ", xlsx_out)
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

@@ -1,31 +1,27 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate Supplementary Table 3: subcluster-specific eGenes for manuscript
+#    Subcluster-specific eGenes (Supp Table 3)
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  16MANUSCRIPT-TABLES | Rule: subcluster_specific_tbl
+#            Upstream:   15 eqtl_effects (eqtl_effect_sizes.rds)
+#            Downstream: Supp Table 3
+#
+# Purpose:   - eGenes significant (FDR) in an L2 subcluster but not in its L1
+#              parent, with L1 and L2 slope, SE and P side by side, as in the
+#              eqtl_sharing_report.Rmd subcluster-specific table
+#            - Remove exact repeats of (ENSG, eSNP, cell_type_L2)
+#            - Log how many genes are specific to one subcluster vs more
+#            - Manuscript cell type labels
+#
+# Inputs:    eqtl_effects      15 eqtl_effects RDS ($subcluster_specific)
+#
+# Outputs:   out_file          xlsx, one sheet
 #
 #--------------------------------------------------------------------------------------
 
-# Ports the "Subcluster-specific gene table" from eqtl_sharing_report.Rmd's
-# "Subcluster-specific eQTL" tab: FDR-sig eGenes in an L2 subcluster but not
-# their L1 parent, with L1-vs-L2 slope/SE/p-value shown side by side.
-#
-# Adds, per manuscript request:
-#   - Defensive deduplication on the natural key (ENSG, eSNP, cell_type_L2)
-#     -- a gene can legitimately have more than one significant eSNP (not a
-#     duplicate), so dedup is keyed on the full (gene, SNP, subcluster)
-#     triple, not just the gene.
-#   - Logs how many distinct genes are subcluster-specific in exactly one
-#     subpopulation (cell_type_L2) vs more than one.
-#   - Cell types relabelled Glu-UL/Glu-DL -> Glu-A/Glu-B, matching every
-#     other manuscript table/plot in this pipeline (the Rmd itself doesn't
-#     do this -- flagging in case it should too).
-#
-# Independent of eqtl_sharing_report.Rmd (same reasoning as smr_sig_tbl vs
-# smr_report.Rmd / ctwas_sig_tbl vs ctwas_report.Rmd): reads directly from
-# the eqtl_effects RDS rather than the report's output, so it doesn't matter
-# which pipeline runs first.
-
-## Info  ------------------------------------------------------------------------------
-
+## Set up logging for Snakemake
 if (exists("snakemake")) {
   log_smk <- function() {
     if (exists("snakemake") && length(snakemake@log) != 0) {
@@ -37,27 +33,35 @@ if (exists("snakemake")) {
   log_smk()
 }
 
-message("\n\nGenerating Supplementary Table 3 (subcluster-specific eGenes) for the manuscript ...")
+message("\n\nBuilding subcluster-specific eGene table ...")
 
-# -------------------------------------------------------------------------------------
+##  Load packages, functions and variables  -------------------------------------------
 suppressMessages({
   library(tidyverse)
   library(openxlsx)
 })
 
-# --- Set variables
-eqtl_effects_file <- snakemake@params[["eqtl_effects"]]
-out_file           <- snakemake@output[[1]]
-
-# eqtl_effects_file <- "../results/15EQTL-SHARING/eqtl_effects/eqtl_effect_sizes.rds"
-# out_file           <- "../results/16MANUSCRIPT-TABLES/subcluster_specific_eqtl_tbl.xlsx"
-
-# --- Relabel cell type names for display: Glu-UL -> Glu-A, Glu-DL -> Glu-B
-# Pipeline -> manuscript cell type labels (config manuscript_labels)
+# Load functions (relabel_cell_types)
 source(file.path(snakemake@scriptdir, "functions.R"))
-manuscript_labels <- snakemake@params[["labels"]]
 
-# --- Read and select/rename, exactly matching the Rmd's chunk
+# Inputs, outputs and settings
+eqtl_effects_file <- snakemake@params[["eqtl_effects"]]
+manuscript_labels <- snakemake@params[["labels"]]
+out_file          <- snakemake@output[[1]]
+
+# Print what each variable is set to
+message("\nVariables")
+message("============================")
+tibble(
+  variable = c("eqtl_effects_file", "labels", "out_file"),
+  value    = c(eqtl_effects_file,
+               paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               out_file)) |>
+  knitr::kable(format = "simple") |>
+  cat(sep = "\n")
+message("============================\n")
+
+##  Subcluster-specific eGenes  -------------------------------------------------------
 message("Reading: ", eqtl_effects_file)
 eqtl_effects   <- read_rds(eqtl_effects_file)
 subcluster_tbl <- eqtl_effects$subcluster_specific
@@ -66,17 +70,15 @@ n_before <- nrow(subcluster_tbl)
 message("Rows in subcluster_specific (raw): ", n_before)
 
 final_tbl <- subcluster_tbl |>
-  select(Gene = gene_symbol, ENSG = phenotype_id, eSNP = variant_id,
+  dplyr::select(Gene = gene_symbol, ENSG = phenotype_id, eSNP = variant_id,
          cell_type_L1 = parent_L1, Slope_L1 = slope_parent, SE_L1 = se_parent, Pval_L1 = pval_nom_parent,
          cell_type_L2 = cell_type_L2, Slope_L2 = slope_L2, SE_L2 = se_L2, Pval_L2 = pval_nom_L2) |>
   mutate(across(where(is.numeric), ~ signif(.x, 3))) |>
   mutate(cell_type_L1 = relabel_cell_types(cell_type_L1, manuscript_labels),
          cell_type_L2 = relabel_cell_types(cell_type_L2, manuscript_labels))
 
-# --- Deduplicate on the natural key: (gene, eSNP, subcluster). A gene can
-# legitimately have more than one significant eSNP, or be specific in more
-# than one subcluster - neither of those is a duplicate. Only an exact
-# repeat of the same (ENSG, eSNP, cell_type_L2) triple is.
+# Deduplicate on (ENSG, eSNP, cell_type_L2): a gene can have more than one
+# significant eSNP, or be specific in more than one subcluster
 n_dupe_keys <- final_tbl |> count(ENSG, eSNP, cell_type_L2) |> filter(n > 1) |> nrow()
 final_tbl <- final_tbl |> distinct(ENSG, eSNP, cell_type_L2, .keep_all = TRUE)
 n_after <- nrow(final_tbl)
@@ -89,8 +91,7 @@ if (n_before == n_after) {
           n_before, " -> ", n_after, " rows.")
 }
 
-# --- Log: how many distinct genes are subcluster-specific in exactly one
-# subpopulation (cell_type_L2) vs more than one
+##  Subpopulation specificity summary  ------------------------------------------------
 gene_subpop_counts <- final_tbl |>
   distinct(ENSG, cell_type_L2) |>
   count(ENSG, name = "n_subpops")
@@ -113,12 +114,12 @@ if (n_genes_multi > 0) {
   }
 }
 
-# --- Export
+##  Write xlsx  -----------------------------------------------------------------------
 message("")
-message("Writing Supplementary Table 3: ", out_file)
+message("Writing: ", out_file)
 write.xlsx(final_tbl, file = out_file, overwrite = TRUE,
            headerStyle = createStyle(textDecoration = "bold"))
-message("Export complete.")
+message("Done.")
 
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------

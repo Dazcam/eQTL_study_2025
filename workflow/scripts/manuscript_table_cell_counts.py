@@ -1,20 +1,21 @@
 #--------------------------------------------------------------------------------------
 #
-#    Generate nuclei counts per L1 cluster, L2 subcluster and pseudotime bin
+#    Nuclei counts per L1 cluster, L2 subcluster and pseudotime bin
 #
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  16MANUSCRIPT-TABLES | Rule: cell_counts_tbl
-#            Upstream:   03SCANPY L1 / L2 objects; 06PSEUDOTIME pseudotime objects
-#            Downstream: None (supplementary table / methods numbers)
+#            Upstream:   02 scanpy L1 / L2 objects; 06 pseudotime objects
+#            Downstream: Methods and text numbers
 #
 # Purpose:   Count nuclei per L1 cluster, L2 subcluster and Q4 pseudotime bin,
-#            using manuscript labels (Glu-UL -> Glu-A, Glu-DL -> Glu-B, "-Q4-"
-#            dropped). Bins are re-derived with pd.qcut, as for eQTL and DE.
+#            using manuscript labels (config manuscript_labels). Bins are
+#            re-derived with pd.qcut, as for eQTL and DE.
 #
 # Inputs:    l1   adata_clusters_v3.h5ad
 #            l2   adata_{l1_pop}_subclusters.h5ad, one per L2 population
 #            pt   {trajectory}/adata_pseudotime.h5ad, one per trajectory
+#            labels  config manuscript_labels
 #
 # Outputs:   xlsx Sheets: L1, L2, Pseudotime bins
 #
@@ -50,16 +51,15 @@ from scanpy_gene_lists import cluster_anns  # noqa: E402  (L1 cluster ID -> cell
 
 L1_CLUSTER_COL = "leiden_harmony_0.2"
 N_BINS = 4
+LABELS = dict(snakemake.params.labels)
 
 log.info("Variables\n============================\n"
          f"l1_h5ad   {snakemake.input.l1}\n"
          f"l2_h5ad   {', '.join(snakemake.input.l2)}\n"
          f"pt_h5ad   {', '.join(snakemake.input.pt)}\n"
+         f"labels    {', '.join(f'{k} -> {v}' for k, v in LABELS.items())}\n"
          f"out_file  {snakemake.output[0]}\n"
          "============================")
-
-
-LABELS = dict(snakemake.params.labels)
 
 
 def relabel(x):

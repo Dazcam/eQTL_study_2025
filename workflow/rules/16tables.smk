@@ -34,13 +34,16 @@ rule diff_exp_tbl:
              xlsx = config["tables"]["diff_exp_tbl"]["xlsx_out"]
     conda:     config["scanpy"]["env"]
     resources: threads = 16, mem_mb = 360000, time = "2:00:00"
-    params:    nb_out       = config["tables"]["diff_exp_tbl"]["nb_out"],
-               trajectories = ",".join(config["trajectories"])
+    params:    nb_out         = config["tables"]["diff_exp_tbl"]["nb_out"],
+               pseudotime_dir = config["tables"]["diff_exp_tbl"]["pseudotime_dir"],
+               trajectories   = ",".join(config["trajectories"]),
+               labels         = ",".join(f"{k}:{v}" for k, v in config["manuscript_labels"].items())
     message: "Computing L1/L2/pseudotime bin differential expression tables"
     log:     config["tables"]["diff_exp_tbl"]["log"]
     shell:
         "papermill {input.nb} {params.nb_out} -p plate extra "
-        "-p trajectories {params.trajectories} >> {log} 2>&1 && "
+        "-p xlsx_out {output.xlsx} -p pseudotime_dir {params.pseudotime_dir} "
+        "-p trajectories {params.trajectories} -p labels {params.labels} >> {log} 2>&1 && "
         "jupyter nbconvert --to html {params.nb_out} "
         "--output-dir=$(dirname {output.html}) "
         "--output=$(basename {output.html}) >> {log} 2>&1"
