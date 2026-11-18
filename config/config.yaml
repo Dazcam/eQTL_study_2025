@@ -1141,8 +1141,6 @@ tables:
     # Supp Table 2
     script: ../scripts/manuscript_table_eQTL.R
     in_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-    peak_dir: ../resources/public_datasets/ziffra_2021/
     out_file: ../results/16MANUSCRIPT-TABLES/supplementary_table_02.xlsx
     benchmark: reports/benchmarks/16tables.eqtl_tbl.benchmark.txt
     log: ../results/00LOG/16MANUSCRIPT-TABLES/eqtl_tbl.log
@@ -1251,7 +1249,6 @@ figures:
   ldsr_fig:
     # Fig 5
     script: ../scripts/manuscript_figure_ldsr.R
-    in_dir: ../results/11SLDSR/strat_bl_v12/
     out_file: ../results/17MANUSCRIPT-FIGURES/figure_05.pdf
     benchmark: reports/benchmarks/17figures.ldsr_fig.benchmark.txt
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/ldsr_fig.log
@@ -1265,10 +1262,11 @@ figures:
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/smr_ctwas_venn_fig.log
 
   supplementary_fig:
-    # Supp Fig 2 (also writes Supp Fig 11)
+    # Supp Figs 2 and 11
     script: ../scripts/manuscript_figure_supplementary.R
     expr_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    out_file: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_02.pdf
+    out_file_expr: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_02.pdf
+    out_file_geno: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_11.pdf
     benchmark: reports/benchmarks/17figures.supplementary_fig.benchmark.txt
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/supplementary_fig.log
 
@@ -1300,8 +1298,8 @@ figures:
   snrna_qc_fig:
     # Supp Fig 12
     script: ../scripts/manuscript_figure_snrna_qc.py
-    out_file_sample: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_12_per_sample.pdf
-    out_file_celltype: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_12_per_cell_type.pdf
+    out_file: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_12.pdf
+    summary: ../results/17MANUSCRIPT-FIGURES/snrna_qc_summary.xlsx
     benchmark: reports/benchmarks/17figures.snrna_qc_fig.benchmark.txt
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/snrna_qc_fig.log
 

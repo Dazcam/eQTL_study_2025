@@ -47,7 +47,7 @@ suppressPackageStartupMessages({
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
-eqtl_effect_replication_file <- snakemake@params[["eqtl_effect_replication"]]
+eqtl_effect_replication_file <- snakemake@input[["eqtl_effect_replication"]]
 manuscript_labels            <- snakemake@params[["labels"]]
 cell_types                   <- unlist(snakemake@params[["cell_types"]])
 fetal_vs_fetal_file          <- snakemake@output[["fetal_vs_fetal"]]

@@ -90,9 +90,9 @@ rule fig4:
 
 rule ldsr_fig:
     # Fig 5
+    input:  config['sldsr']['ldsr_strat_summary']['output'].format(annot_type = config['tables']['ldsr_tbl']['annot_type'])
     output: FIG['ldsr_fig']['out_file']
-    params: in_dir     = FIG['ldsr_fig']['in_dir'],
-            labels     = config['manuscript_labels'],
+    params: labels     = config['manuscript_labels'],
             cell_types = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources: time = "0:30:00"
@@ -114,9 +114,10 @@ rule smr_ctwas_venn_fig:
 
 rule supplementary_fig:
     # Supp Figs 2 and 11
-    output: FIG['supplementary_fig']['out_file']
-    params: geno_dir    = config['geno_post_impute']['calc_genotype_pcs']['params'].rsplit('/', 1)[0] + '/',
-            labels      = config['manuscript_labels'],
+    input:  eigenval = config['geno_post_impute']['calc_genotype_pcs']['params'] + '.eigenval'
+    output: expr_pcs = FIG['supplementary_fig']['out_file_expr'],
+            geno_pcs = FIG['supplementary_fig']['out_file_geno']
+    params: labels      = config['manuscript_labels'],
             expr_dir    = FIG['supplementary_fig']['expr_dir'],
             cell_types  = config['cell_types'],
             l1_types    = config['fetal_l1_types'],
@@ -137,10 +138,8 @@ rule family_heatmaps_fig:
             glu_b = FIG['family_heatmaps_fig']['glu_b'],
             gaba  = FIG['family_heatmaps_fig']['gaba'],
             npc   = FIG['family_heatmaps_fig']['npc']
-    params: eqtl_effects = config['eqtl_sharing']['eqtl_effects']['out_file'],
-            labels       = config['manuscript_labels'],
-            gene_lookup  = config['gene_lookup'],
-            cell_types   = config['cell_types']
+    params: labels     = config['manuscript_labels'],
+            cell_types = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources: time = "0:30:00"
     benchmark: FIG['family_heatmaps_fig']['benchmark']
@@ -152,9 +151,8 @@ rule effect_size_heatmaps_fig:
     input:  eqtl_effect_replication = config['eqtl_sharing']['eqtl_effect_replication']['out_file']
     output: fetal_vs_fetal = FIG['effect_size_heatmaps_fig']['fetal_vs_fetal'],
             fetal_vs_jang  = FIG['effect_size_heatmaps_fig']['fetal_vs_jang']
-    params: eqtl_effect_replication = config['eqtl_sharing']['eqtl_effect_replication']['out_file'],
-            labels                  = config['manuscript_labels'],
-            cell_types              = config['cell_types']
+    params: labels     = config['manuscript_labels'],
+            cell_types = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources: time = "0:30:00"
     benchmark: FIG['effect_size_heatmaps_fig']['benchmark']
@@ -166,10 +164,8 @@ rule bulk_egene_overlaps_fig:
     input:  egenes_per_celltype = config['replication_bulk']['extract_unique_egenes']['out_file'],
             overlap             = config['replication_bulk']['overlap_obrien']['out_file']
     output: FIG['bulk_egene_overlaps_fig']['out_file']
-    params: egenes_per_celltype = config['replication_bulk']['extract_unique_egenes']['out_file'],
-            labels              = config['manuscript_labels'],
-            overlap             = config['replication_bulk']['overlap_obrien']['out_file'],
-            cell_types          = config['cell_types']
+    params: labels     = config['manuscript_labels'],
+            cell_types = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources: time = "0:30:00"
     benchmark: FIG['bulk_egene_overlaps_fig']['benchmark']
@@ -179,8 +175,8 @@ rule bulk_egene_overlaps_fig:
 rule snrna_qc_fig:
     # Supp Fig 12
     input:  h5ad = config['scanpy']['clusters_h5ad']
-    output: per_sample   = FIG['snrna_qc_fig']['out_file_sample'],
-            per_celltype = FIG['snrna_qc_fig']['out_file_celltype']
+    output: per_sample = FIG['snrna_qc_fig']['out_file'],
+            summary    = FIG['snrna_qc_fig']['summary']
     params: labels   = config['manuscript_labels'],
             l1_types = config['fetal_l1_types']
     conda:  config["scanpy"]["env"]

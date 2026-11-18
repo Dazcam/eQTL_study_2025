@@ -1,19 +1,18 @@
 #--------------------------------------------------------------------------------------
 #
-#    snRNA-seq QC per sample and per cell type (Supp Fig 12)
+#    snRNA-seq QC per sample (Supp Fig 12)
 #
 #--------------------------------------------------------------------------------------
 #
 # Pipeline:  17MANUSCRIPT-FIGURES | Rule: snrna_qc_fig
 #            Upstream:   02 scanpy final clustered object (adata_clusters_v3.h5ad)
-#            Downstream: Supp Fig 12 (per sample)
+#            Downstream: Supp Fig 12
 #
 # Purpose:   QC metrics recomputed from layers['counts'] (adata.X holds scaled
 #            values, and obs n_counts / n_genes may pre-date later QC); only obs
 #            and the counts layer are read:
 #            - Per sample (Supp Fig 12), top to bottom: nuclei per sample stacked
 #              by cell type; UMIs per nucleus; genes detected per nucleus
-#            - Per cell type: genes detected per nucleus
 #            - Summary table: nuclei, median UMIs and median genes per nucleus,
 #              per sample and per cell type
 #            Cell types come from obs['cell_type'], or are rebuilt from
@@ -25,14 +24,11 @@
 #            l1_types      config['fetal_l1_types'] (cell type display order)
 #
 # Outputs:   per_sample    Supp Fig 12 (PDF)
-#            per_celltype  Genes per nucleus by cell type (PDF)
-#            ../results/16MANUSCRIPT-TABLES/snrna_qc_summary.xlsx (summary
-#            table; path set in this script, not a declared rule output)
+#            summary       Summary table (xlsx; sheets per_sample, per_cell_type)
 #
 #--------------------------------------------------------------------------------------
 
 import sys
-import os
 import logging
 import warnings
 import numpy as np
@@ -59,10 +55,6 @@ logger.info("Plotting snRNA-seq QC figures ...")
 # Hard genes-per-nucleus QC thresholds (fixed; only used to log a sanity check)
 MIN_GENES_PER_CELL = 1000
 MAX_GENES_PER_CELL = 5000
-
-# Summary table location (not a declared rule output)
-TABLE_DIR = "../results/16MANUSCRIPT-TABLES/"
-TABLE_FILE = "snrna_qc_summary.xlsx"
 
 
 def relabel(x, labels):
@@ -210,7 +202,7 @@ def _set_group_ticks(ax, labels, rotation=90, fontsize=6):
     ax.set_xlim(-0.5, len(labels) - 0.5)
 
 
-# ── Figure 1: per sample ──────────────────────────────────────────────────────────────
+# ── Supp Fig 12: per sample ───────────────────────────────────────────────────────────
 
 def plot_qc_per_sample(qc, sample_col="sample", celltype_col="cell_type",
                        palette=None, figsize=(24, 11), stack_by_celltype=True):
@@ -272,34 +264,7 @@ def plot_qc_per_sample(qc, sample_col="sample", celltype_col="cell_type",
     return fig
 
 
-# ── Figure 2: per cell type ───────────────────────────────────────────────────────────
-
-def plot_qc_per_celltype(qc, celltype_col="cell_type", figsize=(6.5, 4.8)):
-    """
-    Per-cell-type QC figure: genes per nucleus (boxplot), in CELLTYPE_ORDER.
-
-    Parameters
-    ----------
-    qc : pd.DataFrame with one row per nucleus and columns [celltype_col, 'n_genes']
-    """
-    qc = qc.dropna(subset=[celltype_col])
-    qc = qc.assign(**{celltype_col: qc[celltype_col].astype(str)})
-    order = _order_celltypes(qc[celltype_col].unique())
-    n_cells = qc[celltype_col].value_counts()
-    labels = [f"{ct}\n(n = {n_cells[ct]:,})" for ct in order]
-
-    fig, ax = plt.subplots(figsize=figsize)
-    _black_boxplot(ax, qc, celltype_col, "n_genes", order, linewidth=1)
-    _style_axis(ax, "Number of genes per nucleus")
-    _median_label(ax, f"Median: {int(np.median(qc['n_genes'])):,} genes")
-    ax.set_xlabel("")
-    _set_group_ticks(ax, labels, rotation=45, fontsize=8)
-    for lab in ax.get_xticklabels():
-        lab.set_ha("right")
-    return fig
-
-
-def main(h5ad_path, out_sample, out_celltype, scripts_dir, labels,
+def main(h5ad_path, out_sample, out_table, scripts_dir, labels,
          celltype_col="cell_type", leiden_col="leiden_harmony_0.2", sample_col="sample"):
 
     logger.info(f"Reading obs and layers['counts'] from {h5ad_path} ...")
@@ -363,28 +328,19 @@ def main(h5ad_path, out_sample, out_celltype, scripts_dir, labels,
     plt.close(fig)
     logger.info(f"Saved {out_sample}")
 
-    fig = plot_qc_per_celltype(qc, celltype_col=celltype_col)
-    fig.savefig(out_celltype, dpi=300, bbox_inches="tight")
-    plt.close(fig)
-    logger.info(f"Saved {out_celltype}")
-
-    # ── Summary tables (Excel; not a Snakemake output) ───────────────────────────────
+    # ── Summary tables ───────────────────────────────────────────────────────────────
     tables = build_qc_tables(qc, sample_col=sample_col, celltype_col=celltype_col)
-    os.makedirs(TABLE_DIR, exist_ok=True)
-    table_path = os.path.join(TABLE_DIR, TABLE_FILE)
-    with pd.ExcelWriter(table_path) as writer:
+    with pd.ExcelWriter(out_table) as writer:
         for sheet, tbl in tables.items():
             tbl.to_excel(writer, sheet_name=sheet, index=False)
-    logger.info(f"Saved summary tables (sheets: {', '.join(tables)}) to "
-                f"{os.path.abspath(table_path)}")
+    logger.info(f"Saved summary tables (sheets: {', '.join(tables)}) to {out_table}")
 
 
 ##  Run  ------------------------------------------------------------------------------
 variables = {
     "h5ad_path":    str(snakemake.input.h5ad),
     "out_sample":   str(snakemake.output.per_sample),
-    "out_celltype": str(snakemake.output.per_celltype),
-    "table":        os.path.join(TABLE_DIR, TABLE_FILE),
+    "out_table":    str(snakemake.output.summary),
     "labels":       ", ".join(f"{k} -> {v}" for k, v in dict(snakemake.params.labels).items()),
     "l1_types":     ", ".join(snakemake.params.l1_types),
 }
@@ -396,7 +352,7 @@ logger.info("Variables\n============================\n" +
 main(
     h5ad_path=str(snakemake.input.h5ad),
     out_sample=str(snakemake.output.per_sample),
-    out_celltype=str(snakemake.output.per_celltype),
+    out_table=str(snakemake.output.summary),
     scripts_dir=str(snakemake.scriptdir),
     labels=dict(snakemake.params.labels),
 )

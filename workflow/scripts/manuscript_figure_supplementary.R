@@ -16,13 +16,12 @@
 #              exp_pcs) for each L1 cell type (A) and L2 subcluster (B)
 #            Manuscript cell type labels (config manuscript_labels)
 #
-# Inputs:    geno_dir    Directory with pca.eigenval (04 calc_genotype_pcs)
+# Inputs:    eigenval    pca.eigenval (04 calc_genotype_pcs)
 #            expr_dir    tensorQTL permutation results directory
 #            cell_types, l1_types, exp_pcs, geno_pc, norm_method  (config)
 #
-# Outputs:   out_file    Supp Fig 2 (PDF)
-#            genotype_elbow_plt.pdf, Supp Fig 11, written next to out_file
-#            (not a declared rule output)
+# Outputs:   expr_pcs    Supp Fig 2 (PDF)
+#            geno_pcs    Supp Fig 11 (PDF)
 #
 #--------------------------------------------------------------------------------------
 
@@ -48,11 +47,11 @@ library(cowplot)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
-geno_dir          <- snakemake@params[['geno_dir']]
+eigenval_file     <- snakemake@input[["eigenval"]]
 expr_dir          <- snakemake@params[['expr_dir']]
 manuscript_labels <- snakemake@params[["labels"]]
-out_file          <- snakemake@output[[1]]
-out_dir           <- dirname(out_file)
+out_file          <- snakemake@output[["expr_pcs"]]
+geno_out_file     <- snakemake@output[["geno_pcs"]]
 
 # L1 and L2 cell types (pipeline labels: these build the log file paths);
 # pseudotime bins excluded
@@ -68,9 +67,9 @@ norm_methods   <- snakemake@params[["norm_method"]]
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("geno_dir", "expr_dir", "labels", "out_file", "cell_types",
+  variable = c("eigenval_file", "expr_dir", "labels", "out_file", "geno_out_file", "cell_types",
                "cell_types_L2", "exp_PCs", "gen_PCs", "norm_methods"),
-  value    = c(geno_dir, expr_dir, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "), out_file,
+  value    = c(eigenval_file, expr_dir, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "), out_file, geno_out_file,
                paste(cell_types, collapse = ", "), paste(cell_types_L2, collapse = ", "),
                paste(exp_PCs, collapse = ", "), gen_PCs, norm_methods)) |>
   knitr::kable(format = "simple") |>
@@ -117,7 +116,7 @@ base_theme <- theme(
 
 ##  Supp Fig 11: genotype PC elbow plot  ----------------------------------------------
 message('Loading eigenval file ...')
-eigenval <- read_table(paste0(geno_dir, "pca.eigenval"), col_names = "eigenval")
+eigenval <- read_table(eigenval_file, col_names = "eigenval")
 
 # Proportion and cumulative variance explained
 message('Generating Elbow plot ...')
@@ -144,7 +143,7 @@ geno_plt <- ggplot(variance, aes(x = PC, y = variance_explained)) +
 
 message('Saving Elbow plot ...')
 ggsave(
-  filename = paste0(out_dir, "/genotype_elbow_plt.pdf"),
+  filename = geno_out_file,
   plot = geno_plt,
   width = 5,
   height = 5,

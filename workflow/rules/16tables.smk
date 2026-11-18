@@ -42,11 +42,11 @@ rule diff_exp_tbl:
 
 rule eqtl_tbl:
     # Supp Table 2
+    input:  allele_file = config['tensorQTL']['convert_genotypes']['pvar'],
+            peak_file   = config['replication_sc']['dwnld_ziffra']['output']
     output: TBL['eqtl_tbl']['out_file']
     params: in_dir           = TBL['eqtl_tbl']['in_dir'],
             labels           = config['manuscript_labels'],
-            allele_file      = TBL['eqtl_tbl']['allele_file'],
-            peak_dir         = TBL['eqtl_tbl']['peak_dir'],
             cell_types       = config['cell_types'],
             exp_pc_map       = config['exp_pc_map'],
             geno_pc          = config['tensorQTL']['geno_pcs'],

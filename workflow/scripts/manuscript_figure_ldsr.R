@@ -16,7 +16,7 @@
 #            - Dashed line: per-level Bonferroni (0.05 / n cell types in that level,
 #              counted from the data); dotted line: nominal P = 0.05
 #
-# Inputs:    in_dir      Directory with ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv
+# Inputs:    in_file     ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv
 #            cell_types  config['cell_types'] (pipeline labels)
 #            labels      config['manuscript_labels']
 #
@@ -46,7 +46,7 @@ library(cowplot)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Input and output paths
-in_dir            <- snakemake@params[["in_dir"]]
+in_file           <- snakemake@input[[1]]
 cell_types        <- unlist(snakemake@params[["cell_types"]])
 manuscript_labels <- snakemake@params[["labels"]]
 out_file          <- snakemake@output[[1]]
@@ -55,8 +55,8 @@ out_file          <- snakemake@output[[1]]
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("in_dir", "cell_types", "labels", "out_file"),
-  value    = c(in_dir, paste(cell_types, collapse = ", "), paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "), out_file)) |>
+  variable = c("in_file", "cell_types", "labels", "out_file"),
+  value    = c(in_file, paste(cell_types, collapse = ", "), paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "), out_file)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
 message("============================\n")
@@ -76,7 +76,7 @@ custom_palette <- c(
 )
 
 ## Read and prepare table  -------------------------------------------------------------
-ldsr_tbl <- read_tsv(paste0(in_dir, 'ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv'),
+ldsr_tbl <- read_tsv(in_file,
                      show_col_types = FALSE) |>
   separate(Category, into = c("annot", "file_name"), sep = "/", remove = FALSE) |>
   separate(file_name, into = c("cell_type", "suffix"), sep = "_hg38", remove = TRUE) |>

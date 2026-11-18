@@ -51,8 +51,8 @@ library(grid)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
-eqtl_effects_file <- snakemake@params[["eqtl_effects"]]
-gene_lookup_file  <- snakemake@params[["gene_lookup"]]
+eqtl_effects_file <- snakemake@input[["eqtl_effects"]]
+gene_lookup_file  <- snakemake@input[["gene_lookup"]]
 manuscript_labels <- snakemake@params[["labels"]]
 cell_types        <- unlist(snakemake@params[["cell_types"]])
 

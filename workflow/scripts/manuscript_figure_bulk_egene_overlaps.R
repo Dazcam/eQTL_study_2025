@@ -51,8 +51,8 @@ library(cowplot)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Input and output paths
-egenes_per_celltype_file <- snakemake@params[["egenes_per_celltype"]]
-overlap_file             <- snakemake@params[["overlap"]]
+egenes_per_celltype_file <- snakemake@input[["egenes_per_celltype"]]
+overlap_file             <- snakemake@input[["overlap"]]
 cell_types               <- unlist(snakemake@params[["cell_types"]])
 manuscript_labels        <- snakemake@params[["labels"]]
 out_file                 <- snakemake@output[[1]]

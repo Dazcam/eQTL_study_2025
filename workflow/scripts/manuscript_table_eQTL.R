@@ -18,7 +18,7 @@
 #
 # Inputs:    in_dir            tensorQTL permutation results directory
 #            allele_file       Genotype pvar (CHROM, POS, ID, REF, ALT)
-#            peak_dir          Ziffra 2021 supplementary tables directory
+#            peak_file         Ziffra 2021 supplementary tables (xlsx)
 #            exp_pc_map        Expression PCs per cell type
 #            geno_pc, norm_method  Final tensorQTL settings (config)
 #            gene_lookup_file  Ensembl ID to gene symbol lookup
@@ -56,8 +56,8 @@ source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
 in_dir            <- snakemake@params[["in_dir"]]
-allele_file       <- snakemake@params[["allele_file"]]
-peak_dir          <- snakemake@params[["peak_dir"]]
+allele_file       <- snakemake@input[["allele_file"]]
+peak_file         <- snakemake@input[["peak_file"]]
 gene_lookup_file  <- snakemake@params[["gene_lookup_file"]]
 manuscript_labels <- snakemake@params[["labels"]]
 expPC_map         <- unlist(snakemake@params[["exp_pc_map"]])
@@ -69,9 +69,9 @@ out_file          <- snakemake@output[[1]]
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("in_dir", "allele_file", "peak_dir", "gene_lookup_file", "labels",
+  variable = c("in_dir", "allele_file", "peak_file", "gene_lookup_file", "labels",
                "expPC_map", "norm_method", "genPC", "out_file"),
-  value    = c(in_dir, allele_file, peak_dir, gene_lookup_file,
+  value    = c(in_dir, allele_file, peak_file, gene_lookup_file,
                paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
                paste(names(expPC_map), expPC_map, sep = ":", collapse = ", "),
                norm_method, genPC, out_file)) |>
@@ -85,7 +85,6 @@ gene_lookup_tbl <- read_tsv(gene_lookup_file, show_col_types = FALSE) |>
 
 ##  Ziffra 2021 snATAC-seq peaks  -----------------------------------------------------
 message("Loading Ziffra peak data ...")
-peak_file <- file.path(peak_dir, "Ziffra_2021_supp_tables_2_13.xlsx")
 
 peak_coords <- read_excel(peak_file, sheet = "ST2 AllPrimaryPeaks") |>
   dplyr::select(seqnames, start, end, peak_name)
