@@ -136,7 +136,7 @@ rule subcluster_umap_fig:
     params: panel_order = FIG['subcluster_umap_fig']['panel_order'],
             labels      = config['manuscript_labels']
     conda:  config["scanpy"]["env"]
-    resources: threads = 4, mem_mb = 64000, time = "1:00:00"
+    resources: threads = 4, mem_mb = 80000, time = "1:00:00"
     benchmark: FIG['subcluster_umap_fig']['benchmark']
     log:       FIG['subcluster_umap_fig']['log']
     script:    FIG['subcluster_umap_fig']['script']
