@@ -580,6 +580,7 @@ def plot_celltype_and_gene_features(
     umap_palette=None,
     vmin = 0,
     vmax = 'p99',
+    panel_labels=True,
 ):
     """
     Create a publication-style figure with:
@@ -604,6 +605,8 @@ def plot_celltype_and_gene_features(
         Number of columns for the gene feature plot grid
     cmap_name : str, default: "light_dark_blue"
         Name of the custom colormap to create (currently only light→dark blue supported)
+    panel_labels : bool, default: True
+        Add the "A" and "B" panel labels
         
     Returns
     -------
@@ -656,7 +659,8 @@ def plot_celltype_and_gene_features(
         title="",
         show=False
     )
-    ax_main.set_title("A", loc="left", fontweight="bold", fontsize=14)
+    if panel_labels:
+        ax_main.set_title("A", loc="left", fontweight="bold", fontsize=14)
 
     # ── Panel B: Gene feature plots 
     feature_axes = []
@@ -681,7 +685,7 @@ def plot_celltype_and_gene_features(
         ax.title.set_fontsize(12)
 
     # Add "B" label on the first feature plot
-    if feature_axes:  # only if there are genes
+    if panel_labels and feature_axes:  # only if there are genes
         feature_axes[0].set_title("B", loc="left", fontweight="bold", fontsize=14)
 
     plt.tight_layout()

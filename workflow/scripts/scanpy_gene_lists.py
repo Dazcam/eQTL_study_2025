@@ -39,13 +39,13 @@ custom_palette2 = {
 }
 
 final_genes = [
-    "SATB2", "EPHA3",           # Upper layer ExN
-    "TLE4",                     # Deep layer ExN
-    "GAD1",                     # Radial glia    
-    "GLI2", "PAX6",             # InN                                    
-    "PDGFRA",                   # OPCs                    
+    "SATB2", "CUX2",            # Glu-UL (upper layer)
+    "TLE4", "HS3ST4", "GRIK3",  # Glu-DL (deep layer)
+    "GAD1", "GAD2",             # GABA
+    "GLI2", "PAX6",             # NPC
+    "PDGFRA",                   # OPC
     "C3",                       # MG
-    "FN1"                       # Endothelial cells   
+    "FN1"                       # Endo-Peri
 ]
 
 big_gene_list = [
