@@ -13,8 +13,10 @@
 #            transcripts (pattern isoform_specific, from 08), in the same
 #            direction as the snRNA-seq effect (direction_concordant), and the
 #            most significant transcript has P < bulk_p_thresh:
-#            - Prenatal cell types listed in config cell_types order, manuscript
-#              labels (config manuscript_labels)
+#            - Prenatal cell types: L1 and L2 only (pseudotime bins left out of
+#              the list and the count; pairs found only in pseudotime bins are
+#              dropped), in config cell_types order, manuscript labels (config
+#              manuscript_labels)
 #            - Sorted by gene symbol (case ignored, missing symbols last), then
 #              by transcript P
 #
@@ -83,9 +85,10 @@ filtered <- summary_tbl |>
 message("Isoform-specific, concordant, transcript P < ", bulk_p_thresh, ": ",
         nrow(filtered), " pairs, ", n_distinct(filtered$gene_id), " eGenes")
 
-# Pipe-separated prenatal cell types, relabelled and in config order
+# Pipe-separated prenatal cell types: L1 and L2 only, relabelled, in config order
 order_cell_type_list <- function(x) {
-  cts <- relabel_cell_types(str_split_1(x, fixed("|")), manuscript_labels)
+  cts <- str_split_1(x, fixed("|"))
+  cts <- relabel_cell_types(cts[!str_detect(cts, "-to-")], manuscript_labels)
   paste(cell_type_levels(cts, cell_types, manuscript_labels), collapse = "|")
 }
 
@@ -93,7 +96,14 @@ order_cell_type_list <- function(x) {
 n_sig_col <- paste0("N bulk transcripts P < ", nominal_threshold)
 
 final_tbl <- filtered |>
-  mutate(cell_types = map_chr(cell_types, order_cell_type_list)) |>
+  mutate(cell_types   = map_chr(cell_types, order_cell_type_list),
+         n_cell_types = str_count(cell_types, fixed("|")) + 1L) |>
+  filter(cell_types != "")
+
+message("After removing pseudotime bins: ", nrow(final_tbl), " pairs, ",
+        n_distinct(final_tbl$gene_id), " eGenes")
+
+final_tbl <- final_tbl |>
   arrange(is.na(gene_symbol), str_to_upper(gene_symbol), most_sig_bulk_pval) |>
   transmute(`Ensembl ID`                       = gene_id,
             `Gene symbol`                      = gene_symbol,
