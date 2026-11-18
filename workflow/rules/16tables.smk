@@ -24,6 +24,7 @@ rule diff_exp_tbl:
     params:  nb_out         = TBL["diff_exp_tbl"]["nb_out"],
              pseudotime_dir = TBL["diff_exp_tbl"]["pseudotime_dir"],
              trajectories   = ",".join(config["trajectories"]),
+             cell_types     = ",".join(config["cell_types"]),
              labels         = ",".join(f"{k}:{v}" for k, v in config["manuscript_labels"].items())
     conda:     config["scanpy"]["env"]
     resources: threads = 16, mem_mb = 160000, time = "2:00:00"
@@ -33,7 +34,8 @@ rule diff_exp_tbl:
     shell:
         "papermill {input.nb} {params.nb_out} -p plate extra "
         "-p xlsx_out {output.xlsx} -p pseudotime_dir {params.pseudotime_dir} "
-        "-p trajectories {params.trajectories} -p labels {params.labels} > {log} 2>&1 && "
+        "-p trajectories {params.trajectories} -p cell_types {params.cell_types} "
+        "-p labels {params.labels} > {log} 2>&1 && "
         "jupyter nbconvert --to html {params.nb_out} "
         "--output-dir=$(dirname {output.html}) "
         "--output=$(basename {output.html}) >> {log} 2>&1"
@@ -157,7 +159,8 @@ rule cell_counts_tbl:
             l2 = expand(TBL['cell_counts_tbl']['l2_h5ad'], l1_pop = L2_POPS),
             pt = expand(config['pseudotime']['palantir']['h5ad'], trajectory = config['trajectories'])
     output: TBL['cell_counts_tbl']['out_file']
-    params: labels = config['manuscript_labels']
+    params: cell_types = config['cell_types'],
+            labels     = config['manuscript_labels']
     conda:  config["scanpy"]["env"]
     resources: time = "0:30:00", mem_mb = 8000
     benchmark: TBL['cell_counts_tbl']['benchmark']

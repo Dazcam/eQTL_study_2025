@@ -6,22 +6,24 @@
 #
 # Pipeline:  16MANUSCRIPT-TABLES | Rule: cell_counts_tbl
 #            Upstream:   02 scanpy L1 / L2 objects; 06 pseudotime objects
-#            Downstream: none in the pipeline
+#            Downstream: 17 eqtl_qc_fig (Fig 2B)
 #
-# Purpose:   Count nuclei per L1 cluster, L2 subcluster and Q4 pseudotime bin,
-#            using manuscript labels (config manuscript_labels). Bins are
-#            re-derived with pd.qcut, as for eQTL and DE.
+# Purpose:   Count nuclei per L1 cluster, L2 subcluster and Q4 pseudotime bin
+#            for the cell types in config cell_types, in config order, using
+#            manuscript labels (config manuscript_labels). Bins are re-derived
+#            with pd.qcut, as for eQTL and DE.
 #
-# Inputs:    l1   adata_clusters_v3.h5ad
-#            l2   adata_{l1_pop}_subclusters.h5ad, one per L2 population
-#            pt   {trajectory}/adata_pseudotime.h5ad, one per trajectory
-#            labels  config manuscript_labels
+# Inputs:    l1          adata_clusters_v3.h5ad
+#            l2          adata_{l1_pop}_subclusters.h5ad, one per L2 population
+#            pt          {trajectory}/adata_pseudotime.h5ad, one per trajectory
+#            cell_types  config cell_types (pipeline labels)
+#            labels      config manuscript_labels
 #
-# Outputs:   xlsx Sheets: L1 (% of all nuclei), L2 (% of L1 cluster),
-#                 Pseudotime bins (% of trajectory)
+# Outputs:   xlsx        Sheets: L1, L2, Pseudotime bins (nuclei per cell type)
 #
 # Notes:     Only .obs is read from each object. L2 population and trajectory
-#            names are taken from the file paths.
+#            names are taken from the file paths. Stops if a config cell type
+#            has no nuclei.
 #
 #--------------------------------------------------------------------------------------
 
@@ -53,11 +55,13 @@ from scanpy_gene_lists import cluster_anns  # noqa: E402  (L1 cluster ID -> cell
 L1_CLUSTER_COL = "leiden_harmony_0.2"
 N_BINS = 4
 LABELS = dict(snakemake.params.labels)
+CELL_TYPES = list(snakemake.params.cell_types)
 
 log.info("Variables\n============================\n"
          f"l1_h5ad   {snakemake.input.l1}\n"
          f"l2_h5ad   {', '.join(snakemake.input.l2)}\n"
          f"pt_h5ad   {', '.join(snakemake.input.pt)}\n"
+         f"cell_types {', '.join(CELL_TYPES)}\n"
          f"labels    {', '.join(f'{k} -> {v}' for k, v in LABELS.items())}\n"
          f"out_file  {snakemake.output[0]}\n"
          "============================")
@@ -77,10 +81,11 @@ def read_obs(path):
 
 
 def count(labels, name):
-    """Nuclei per label and % of the total."""
-    tbl = labels.map(relabel).value_counts().sort_index().rename_axis(name).reset_index(name="Nuclei")
-    tbl["%"] = (100 * tbl["Nuclei"] / tbl["Nuclei"].sum()).round(2)
-    return tbl
+    """Nuclei per config cell type (pipeline labels in), in config order, manuscript labels."""
+    n = labels.value_counts()
+    order = [ct for ct in CELL_TYPES if ct in n.index]
+    return pd.DataFrame({name: [relabel(ct) for ct in order],
+                         "Nuclei": [int(n[ct]) for ct in order]})
 
 
 ## L1  ----------------------------------------------------------------------------------
@@ -95,10 +100,12 @@ log.info(f"L1:\n{l1_tbl.to_string(index=False)}")
 l2_tbls = []
 for path in snakemake.input.l2:
     pop = os.path.basename(path).removeprefix("adata_").removesuffix("_subclusters.h5ad")
-    tbl = count(read_obs(path)["subcluster"].astype(str), "L2 subcluster")
+    sub = read_obs(path)["subcluster"].astype(str)
+    sub = sub.where(sub.str.startswith(pop + "-"), pop + "-" + sub)   # full name, e.g. Glu-UL-0
+    tbl = count(sub, "L2 subcluster")
     tbl.insert(0, "L1 cluster", relabel(pop))
     l2_tbls.append(tbl)
-l2_tbl = pd.concat(l2_tbls, ignore_index=True).rename(columns={"%": "% of L1 cluster"})
+l2_tbl = pd.concat(l2_tbls, ignore_index=True)
 log.info(f"L2:\n{l2_tbl.to_string(index=False)}")
 
 
@@ -111,8 +118,15 @@ for path in snakemake.input.pt:
     tbl = count(f"{traj}-Q{N_BINS}-Bin" + bins.astype(str), "Bin")
     tbl.insert(0, "Trajectory", relabel(traj))
     pt_tbls.append(tbl)
-pt_tbl = pd.concat(pt_tbls, ignore_index=True).rename(columns={"%": "% of trajectory"})
+pt_tbl = pd.concat(pt_tbls, ignore_index=True)
 log.info(f"Pseudotime bins:\n{pt_tbl.to_string(index=False)}")
+
+
+## Check every config cell type was counted  -----------------------------------------
+counted = set(l1_tbl["L1 cluster"]) | set(l2_tbl["L2 subcluster"]) | set(pt_tbl["Bin"])
+missing = [ct for ct in CELL_TYPES if relabel(ct) not in counted]
+if missing:
+    raise ValueError(f"No nuclei counted for config cell types: {', '.join(missing)}")
 
 
 ## Write output  ------------------------------------------------------------------------
