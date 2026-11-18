@@ -69,6 +69,42 @@ rule subcluster_specific_tbl:
     log:       TBL['subcluster_specific_tbl']['log']
     script:    TBL['subcluster_specific_tbl']['script']
 
+rule eqtl_specificity_tbl:
+    # Supp Table 4
+    input:  classification = config['eqtl_sharing']['classify_specificity']['out_file'],
+            gene_lookup    = config['gene_lookup']
+    output: TBL['eqtl_specificity_tbl']['out_file']
+    singularity: config["containers"]["r_eqtl"]
+    resources: time = "0:30:00"
+    benchmark: TBL['eqtl_specificity_tbl']['benchmark']
+    log:       TBL['eqtl_specificity_tbl']['log']
+    script:    TBL['eqtl_specificity_tbl']['script']
+
+rule eqtl_heterogeneity_tbl:
+    # Supp Table 5
+    input:  config['eqtl_sharing']['heterogeneity_test']['out_file']
+    output: TBL['eqtl_heterogeneity_tbl']['out_file']
+    params: labels = config['manuscript_labels']
+    singularity: config["containers"]["r_eqtl"]
+    resources: time = "0:30:00"
+    benchmark: TBL['eqtl_heterogeneity_tbl']['benchmark']
+    log:       TBL['eqtl_heterogeneity_tbl']['log']
+    script:    TBL['eqtl_heterogeneity_tbl']['script']
+
+rule isoform_tbl:
+    # Supp Table 7
+    input:  config['replication_bulk']['isoform_eqtl']['summary']
+    output: TBL['isoform_tbl']['out_file']
+    params: cell_types        = config['cell_types'],
+            labels            = config['manuscript_labels'],
+            nominal_threshold = config['replication_bulk']['isoform_eqtl']['nominal_threshold'],
+            bulk_p_thresh     = TBL['isoform_tbl']['bulk_p_thresh']
+    singularity: config["containers"]["r_eqtl"]
+    resources: time = "0:30:00"
+    benchmark: TBL['isoform_tbl']['benchmark']
+    log:       TBL['isoform_tbl']['log']
+    script:    TBL['isoform_tbl']['script']
+
 rule ldsr_tbl:
     # Supp Table 8
     input:  config['sldsr']['ldsr_strat_summary']['output'].format(annot_type = TBL['ldsr_tbl']['annot_type'])
@@ -173,6 +209,9 @@ TARGETS = globals().setdefault("TARGETS", {})
 TARGETS["16tables"] = [rules.diff_exp_tbl.output,
                        rules.eqtl_tbl.output,
                        rules.subcluster_specific_tbl.output,
+                       rules.eqtl_specificity_tbl.output,
+                       rules.eqtl_heterogeneity_tbl.output,
+                       rules.isoform_tbl.output,
                        rules.ldsr_tbl.output,
                        rules.smr_sig_tbl.output,
                        rules.ctwas_sig_tbl.output,

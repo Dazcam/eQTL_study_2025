@@ -1152,6 +1152,28 @@ tables:
     benchmark: reports/benchmarks/16tables.subcluster_specific_tbl.benchmark.txt
     log: ../results/00LOG/16MANUSCRIPT-TABLES/subcluster_specific_tbl.log
 
+  eqtl_specificity_tbl:
+    # Supp Table 4
+    script: ../scripts/manuscript_table_eqtl_specificity.R
+    out_file: ../results/16MANUSCRIPT-TABLES/supplementary_table_04.xlsx
+    benchmark: reports/benchmarks/16tables.eqtl_specificity_tbl.benchmark.txt
+    log: ../results/00LOG/16MANUSCRIPT-TABLES/eqtl_specificity_tbl.log
+
+  eqtl_heterogeneity_tbl:
+    # Supp Table 5
+    script: ../scripts/manuscript_table_eqtl_heterogeneity.R
+    out_file: ../results/16MANUSCRIPT-TABLES/supplementary_table_05.xlsx
+    benchmark: reports/benchmarks/16tables.eqtl_heterogeneity_tbl.benchmark.txt
+    log: ../results/00LOG/16MANUSCRIPT-TABLES/eqtl_heterogeneity_tbl.log
+
+  isoform_tbl:
+    # Supp Table 7
+    script: ../scripts/manuscript_table_isoform.R
+    bulk_p_thresh: 5.0e-8   # most significant bulk transcript
+    out_file: ../results/16MANUSCRIPT-TABLES/supplementary_table_07.xlsx
+    benchmark: reports/benchmarks/16tables.isoform_tbl.benchmark.txt
+    log: ../results/00LOG/16MANUSCRIPT-TABLES/isoform_tbl.log
+
   ldsr_tbl:
     # Supp Table 8
     script: ../scripts/manuscript_table_ldsr.R
