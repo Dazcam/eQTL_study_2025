@@ -10,6 +10,23 @@ BOXPLOT_CSV = {panel: FIG['eqtl_boxplots_py']['out_csv'].format(**pair)
                for panel, pair in BOXPLOT_PAIRS.items()}
 
 
+# Fig 1A: made outside the pipeline
+
+rule umap_fig:
+    # Fig 1B-D
+    input:  h5ad = config['scanpy']['clusters_h5ad']
+    output: bc_pdf = FIG['umap_fig']['bc_pdf'],
+            bc_svg = FIG['umap_fig']['bc_svg'],
+            d_pdf  = FIG['umap_fig']['d_pdf'],
+            d_svg  = FIG['umap_fig']['d_svg']
+    params: labels   = config['manuscript_labels'],
+            l1_types = config['fetal_l1_types']
+    conda:  config["scanpy"]["env"]
+    resources: threads = 8, mem_mb = 150000, time = "2:00:00"
+    benchmark: FIG['umap_fig']['benchmark']
+    log:       FIG['umap_fig']['log']
+    script:    FIG['umap_fig']['script']
+
 rule eqtl_qc_fig:
     # Fig 2
     input:  ziffra_tbl    = config['replication_sc']['ziffra_summary']['out_file'],
@@ -68,25 +85,25 @@ rule replication_fig:
     log:       FIG['replication_fig']['log']
     script:    FIG['replication_fig']['script']
 
-rule fig4:
+rule pseudotime_fig:
     # Fig 4
-    input:  h5ad = config['pseudotime']['palantir']['h5ad'].format(trajectory = FIG['fig4']['trajectory'])
-    output: FIG['fig4']['out_file']
-    params: trajectory       = FIG['fig4']['trajectory'],
+    input:  h5ad = config['pseudotime']['palantir']['h5ad'].format(trajectory = FIG['pseudotime_fig']['trajectory'])
+    output: FIG['pseudotime_fig']['out_file']
+    params: trajectory       = FIG['pseudotime_fig']['trajectory'],
             labels           = config['manuscript_labels'],
             root_gene        = config['pseudotime']['palantir']['root_gene'],
             terminal_markers = config['pseudotime']['palantir']['terminal_markers'],
             perm_dir         = config['tensorQTL']['tensorqtl_perm']['output'].split('{cell_type}')[0],
-            pseudotime_dir   = FIG['fig4']['pseudotime_dir'],
+            pseudotime_dir   = FIG['pseudotime_fig']['pseudotime_dir'],
             cell_types       = config['cell_types'],
             exp_pc_map       = config['exp_pc_map'],
             geno_pc          = config['tensorQTL']['geno_pcs'],
             norm_method      = config['tensorQTL']['norm_methods'][0]
     conda:  config["scanpy"]["env"]
     resources: threads = 8, mem_mb = 100000, time = "1:00:00"
-    benchmark: FIG['fig4']['benchmark']
-    log:       FIG['fig4']['log']
-    script:    FIG['fig4']['script']
+    benchmark: FIG['pseudotime_fig']['benchmark']
+    log:       FIG['pseudotime_fig']['log']
+    script:    FIG['pseudotime_fig']['script']
 
 rule ldsr_fig:
     # Fig 5
@@ -111,6 +128,18 @@ rule smr_ctwas_venn_fig:
     benchmark: FIG['smr_ctwas_venn_fig']['benchmark']
     log:       FIG['smr_ctwas_venn_fig']['log']
     script:    FIG['smr_ctwas_venn_fig']['script']
+
+rule subcluster_umap_fig:
+    # Supp Fig 1
+    input:  h5ad = expand(config['scanpy']['subclusters_h5ad'], l1_pop = FIG['subcluster_umap_fig']['panel_order'])
+    output: pdf = FIG['subcluster_umap_fig']['out_file']
+    params: panel_order = FIG['subcluster_umap_fig']['panel_order'],
+            labels      = config['manuscript_labels']
+    conda:  config["scanpy"]["env"]
+    resources: threads = 4, mem_mb = 64000, time = "1:00:00"
+    benchmark: FIG['subcluster_umap_fig']['benchmark']
+    log:       FIG['subcluster_umap_fig']['log']
+    script:    FIG['subcluster_umap_fig']['script']
 
 rule supplementary_fig:
     # Supp Figs 2 and 11
@@ -172,6 +201,8 @@ rule bulk_egene_overlaps_fig:
     log:       FIG['bulk_egene_overlaps_fig']['log']
     script:    FIG['bulk_egene_overlaps_fig']['script']
 
+# Supp Fig 10: made outside the pipeline
+
 rule snrna_qc_fig:
     # Supp Fig 12
     input:  h5ad = config['scanpy']['clusters_h5ad']
@@ -188,12 +219,14 @@ rule snrna_qc_fig:
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["17figures"] = [rules.eqtl_qc_fig.output,
+TARGETS["17figures"] = [rules.umap_fig.output,
+                        rules.eqtl_qc_fig.output,
                         rules.eqtl_boxplots_py.output,
                         rules.replication_fig.output,
-                        rules.fig4.output,
+                        rules.pseudotime_fig.output,
                         rules.ldsr_fig.output,
                         rules.smr_ctwas_venn_fig.output,
+                        rules.subcluster_umap_fig.output,
                         rules.supplementary_fig.output,
                         rules.family_heatmaps_fig.output,
                         rules.effect_size_heatmaps_fig.output,

@@ -329,6 +329,7 @@ scanpy:
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
   clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad   # written by the clustering notebooks
+  subclusters_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # scanpy_subclustering notebook
   metadata_per_sample: reports/02SCANPY/02_metadata_per_sample.tsv   # sex and PCW per sample (notebooks)
   pseudobulk: ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv   # scanpy_pseudobulk notebook
   l1_cell_counts: reports/02SCANPY/scanpy_L1_cell_type_counts.tsv   # nuclei per L1 cell type (annotation notebook)
@@ -1221,7 +1222,6 @@ tables:
   cell_counts_tbl:
     # Nuclei counts for Fig 2B
     script: ../scripts/manuscript_table_cell_counts.py
-    l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad
     out_file: ../results/16MANUSCRIPT-TABLES/nuclei_counts_tbl.xlsx
     benchmark: reports/benchmarks/16tables.cell_counts_tbl.benchmark.txt
     log: ../results/00LOG/16MANUSCRIPT-TABLES/cell_counts_tbl.log
@@ -1229,6 +1229,16 @@ tables:
 # ------------  Pipeline 17: Manuscript figures  ------------
 
 figures:
+  umap_fig:
+    # Fig 1B-D
+    script: ../scripts/manuscript_figure_umap.py
+    bc_pdf: ../results/17MANUSCRIPT-FIGURES/figure_01_b_c.pdf
+    bc_svg: ../results/17MANUSCRIPT-FIGURES/figure_01_b_c.svg
+    d_pdf: ../results/17MANUSCRIPT-FIGURES/figure_01_d.pdf
+    d_svg: ../results/17MANUSCRIPT-FIGURES/figure_01_d.svg
+    benchmark: reports/benchmarks/17figures.umap_fig.benchmark.txt
+    log: ../results/00LOG/17MANUSCRIPT-FIGURES/umap_fig.log
+
   eqtl_qc_fig:
     # Fig 2
     script: ../scripts/manuscript_figure_eqtl_QC.R
@@ -1259,14 +1269,14 @@ figures:
     benchmark: reports/benchmarks/17figures.replication_fig.benchmark.txt
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/replication_fig.log
 
-  fig4:
+  pseudotime_fig:
     # Fig 4
-    script: ../scripts/manuscript_figure_fig4.py
+    script: ../scripts/manuscript_figure_pseudotime.py
     trajectory: NPC-to-Glu-UL
     pseudotime_dir: ../results/06PSEUDOTIME/
     out_file: ../results/17MANUSCRIPT-FIGURES/figure_04.tiff
-    benchmark: reports/benchmarks/17figures.fig4.benchmark.txt
-    log: ../results/00LOG/17MANUSCRIPT-FIGURES/fig4.log
+    benchmark: reports/benchmarks/17figures.pseudotime_fig.benchmark.txt
+    log: ../results/00LOG/17MANUSCRIPT-FIGURES/pseudotime_fig.log
 
   ldsr_fig:
     # Fig 5
@@ -1282,6 +1292,14 @@ figures:
     out_file_grid: ../results/17MANUSCRIPT-FIGURES/figure_06_bpd_mdd_adhd_ocd.png
     benchmark: reports/benchmarks/17figures.smr_ctwas_venn_fig.benchmark.txt
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/smr_ctwas_venn_fig.log
+
+  subcluster_umap_fig:
+    # Supp Fig 1
+    script: ../scripts/manuscript_figure_subcluster_umap.py
+    panel_order: ["Glu-UL", "Glu-DL", "NPC", "GABA"]   # panels A-D, as in the Supp Fig 1 legend
+    out_file: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_01.pdf
+    benchmark: reports/benchmarks/17figures.subcluster_umap_fig.benchmark.txt
+    log: ../results/00LOG/17MANUSCRIPT-FIGURES/subcluster_umap_fig.log
 
   supplementary_fig:
     # Supp Figs 2 and 11

@@ -91,6 +91,8 @@ rule eqtl_heterogeneity_tbl:
     log:       TBL['eqtl_heterogeneity_tbl']['log']
     script:    TBL['eqtl_heterogeneity_tbl']['script']
 
+# Supp Table 6: made outside the pipeline
+
 rule isoform_tbl:
     # Supp Table 7
     input:  config['replication_bulk']['isoform_eqtl']['summary']
@@ -169,6 +171,8 @@ rule susie_diag_tbl:
     log:       TBL['susie_diag_tbl']['log']
     script:    TBL['susie_diag_tbl']['script']
 
+# Supp Table 12: made outside the pipeline
+
 rule smr_ctwas_venn_tbl:
     # Gene lists for Fig 6
     input:  smr_sig_tbls = smr_sig_tbls
@@ -192,7 +196,7 @@ rule smr_ctwas_venn_tbl:
 rule cell_counts_tbl:
     # Nuclei counts for Fig 2B
     input:  l1 = config['scanpy']['clusters_h5ad'],
-            l2 = expand(TBL['cell_counts_tbl']['l2_h5ad'], l1_pop = L2_POPS),
+            l2 = expand(config['scanpy']['subclusters_h5ad'], l1_pop = L2_POPS),
             pt = expand(config['pseudotime']['palantir']['h5ad'], trajectory = config['trajectories'])
     output: TBL['cell_counts_tbl']['out_file']
     params: cell_types = config['cell_types'],
