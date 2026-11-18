@@ -42,7 +42,7 @@ message("\n\nPlotting MaxCPP S-LDSR enrichment ...")
 library(tidyverse)
 library(cowplot)
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Input and output paths
@@ -111,23 +111,8 @@ ldsr_tbl <- ldsr_tbl |>
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
 ## Cell type order and colour groups  --------------------------------------------------
-# Plots A/B: main clusters + subclusters. Patterns are anchored ("-[0-9]+$") so
-# they can't catch trajectory names (e.g. "^NPC-" would match "NPC-to-Glu-A-Bin1")
-cell_order_main <- c(
-  "Glu-A", sort(grep("^Glu-A-[0-9]+$", ldsr_tbl$cell_type, value = TRUE)),
-  "Glu-B", sort(grep("^Glu-B-[0-9]+$", ldsr_tbl$cell_type, value = TRUE)),
-  "GABA",  sort(grep("^GABA-[0-9]+$",  ldsr_tbl$cell_type, value = TRUE)),
-  "NPC",   sort(grep("^NPC-[0-9]+$",   ldsr_tbl$cell_type, value = TRUE)),
-  "OPC", "MG", "Endo-Peri"
-) |> unique()
-
-# Plot C: trajectory bins, Glu-A before Glu-B, each in Bin1-4 order
-cell_order_traj <- c(
-  sort(grep("^NPC-to-Glu-A-Bin[0-9]+$", ldsr_tbl$cell_type, value = TRUE)),
-  sort(grep("^NPC-to-Glu-B-Bin[0-9]+$", ldsr_tbl$cell_type, value = TRUE))
-) |> unique()
-
-cell_order <- c(cell_order_main, cell_order_traj)
+# Each L1 type followed by its subclusters, then trajectory bins (config order)
+cell_order <- cell_type_levels(ldsr_tbl$cell_type, cell_types, manuscript_labels)
 
 # Assign main cluster to subclusters / trajectory bins (trajectory check first,
 # since e.g. "NPC-to-Glu-A-Bin1" would otherwise match the "NPC" or "Glu-A" pattern)

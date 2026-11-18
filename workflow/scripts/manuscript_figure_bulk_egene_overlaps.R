@@ -11,7 +11,8 @@
 #
 # Purpose:   Per cell type, total eGenes (dark bar) and the number also significant
 #            in O'Brien 2018 bulk fetal brain eQTL (light bar), grouped in three
-#            blocks: L1, L2, pseudotime bins. eGenes with no overlap record count
+#            blocks: L1, L2, pseudotime bins (each in config cell_types order).
+#            eGenes with no overlap record count
 #            as not overlapping.
 #            A: gene-level bulk eQTL overlap
 #            B: transcript-level bulk eQTL overlap
@@ -46,7 +47,7 @@ message("\n\nPlotting bulk eGene overlaps ...")
 library(tidyverse)
 library(cowplot)
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Input and output paths
@@ -158,23 +159,8 @@ celltype_overlap <- celltype_overlap |>
     )
   )
 
-# Three level blocks (L1, L2, pseudotime), family order within each block.
-# Entries not present after the config filter are dropped below.
-l1_order <- c("Glu-A", "Glu-B", "GABA", "NPC", "Endo-Peri", "MG", "OPC")
-l2_order <- c("Glu-A-0", "Glu-A-1", "Glu-A-2",
-              "Glu-B-0", "Glu-B-1", "Glu-B-2",
-              "GABA-0", "GABA-1", "GABA-2",
-              "NPC-0", "NPC-1", "NPC-2")
-pt_order <- c(sort(grep("^NPC-to-Glu-A", celltype_overlap$cell_type, value = TRUE)),
-              sort(grep("^NPC-to-Glu-B", celltype_overlap$cell_type, value = TRUE)))
-
-cell_order <- c(l1_order, l2_order, pt_order)
-cell_order <- cell_order[cell_order %in% celltype_overlap$cell_type]
-
-unordered <- setdiff(celltype_overlap$cell_type, cell_order)
-if (length(unordered) > 0) {
-  stop("Cell types not covered by the x-axis ordering: ", paste(unordered, collapse = ", "))
-}
+# Three level blocks (L1, L2, pseudotime), each in config cell_types order
+cell_order <- cell_type_levels(celltype_overlap$cell_type, cell_types, manuscript_labels, layout = "level")
 
 celltype_overlap <- celltype_overlap |>
   mutate(cell_type = factor(cell_type, levels = cell_order))

@@ -240,8 +240,8 @@ gene_by_cell <- gene_cell %>%
   column_to_rownames("phenotype_id")
 
 # Fixed set order (keep.order = TRUE) so sets.bar.color matches the sets.
-# UpSetR draws the first set at the bottom, so this runs bottom to top.
-set_order <- c("Endo-Peri", "MG", "OPC", "NPC", "GABA", "Glu-B", "Glu-A")
+# UpSetR draws the first set at the bottom, so config order is reversed.
+set_order <- rev(cell_types_new)
 
 # UpSetR is base graphics: render to a temporary PNG and re-import as a grob.
 # Its margins are fixed in absolute size, so a wide canvas leaves less

@@ -50,7 +50,7 @@ library(tidyverse)
 library(readxl)
 library(cowplot)
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
@@ -100,14 +100,9 @@ custom_palette <- c(
   'OPC' = '#FDE725FF'
 )
 
-# y-axis order (pipeline labels; relabelled for plotting below)
-cell_order <- c(
-  "Glu-UL", paste0("Glu-UL-", 0:2),
-  "Glu-DL", paste0("Glu-DL-", 0:2), 
-  "GABA", paste0("GABA-", 0:2),
-  "NPC", paste0("NPC-", 0:2),
-  "OPC", "MG", "Endo-Peri"
-)
+# y-axis order: each L1 type followed by its subclusters (pipeline labels;
+# relabelled for plotting below)
+cell_order <- cell_type_levels(cell_types, cell_types)
 
 # Relabelled versions of the order/palette vectors, for use in plots only
 cell_order_new <- relabel_cell_types(cell_order, manuscript_labels)
@@ -345,16 +340,11 @@ ziffra_tbl <- read_tsv(ziffra_tbl_file, show_col_types = FALSE) |>
          clean_peak = relabel_cell_types(clean_peak, manuscript_labels),
          test = paste(eqtl_cell_type, clean_peak, sep = ' in '))
   
-# y-axis order
-cell_order <- c(
-  sort(grep("^Glu-A",  ziffra_tbl$test, value = TRUE)),
-  sort(grep("^Glu-B",  ziffra_tbl$test, value = TRUE)),
-  sort(grep("^GABA",    ziffra_tbl$test, value = TRUE)),
-  sort(grep("^NPC",     ziffra_tbl$test, value = TRUE)),
-  sort(grep("^OPC",       ziffra_tbl$test, value = TRUE)),
-  sort(grep("^MG",       ziffra_tbl$test, value = TRUE)),
-  sort(grep("^Endo-",       ziffra_tbl$test, value = TRUE))
-) |> unique()
+# y-axis order: eQTL cell types in config order, peak sets sorted within each
+eqtl_order <- cell_type_levels(ziffra_tbl$eqtl_cell_type, cell_types, manuscript_labels)
+cell_order <- unlist(lapply(eqtl_order, function(ct) {
+  sort(unique(ziffra_tbl$test[ziffra_tbl$eqtl_cell_type == ct]))
+}))
 
 # Main type for colouring
 ziffra_tbl <- ziffra_tbl |>

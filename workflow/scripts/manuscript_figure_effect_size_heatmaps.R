@@ -13,9 +13,11 @@
 #            SNP-gene pairs, no significance cutoff); asymmetric matrices
 #            - Supp Fig 7: fetal -> fetal, 19 L1 and L2 cell types
 #            - Supp Fig 8: fetal L1 -> adult L1 (Jang et al.), 7 x 7
-#            Manuscript cell type labels (config manuscript_labels)
+#            Manuscript cell type labels (config manuscript_labels); fetal cell
+#            types in config cell_types order, each L1 type followed by its subclusters
 #
 # Inputs:    eqtl_effect_replication  15 eqtl_effect_replication RDS
+#            cell_types               config['cell_types'] (pipeline labels)
 #
 # Outputs:   fetal_vs_fetal           Supp Fig 7 (TIFF, 600 dpi, LZW)
 #            fetal_vs_jang            Supp Fig 8 (TIFF, 600 dpi, LZW)
@@ -41,12 +43,13 @@ suppressPackageStartupMessages({
   library(tidyverse)
 })
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
 eqtl_effect_replication_file <- snakemake@params[["eqtl_effect_replication"]]
 manuscript_labels            <- snakemake@params[["labels"]]
+cell_types                   <- unlist(snakemake@params[["cell_types"]])
 fetal_vs_fetal_file          <- snakemake@output[["fetal_vs_fetal"]]
 fetal_vs_jang_file           <- snakemake@output[["fetal_vs_jang"]]
 
@@ -54,9 +57,10 @@ fetal_vs_jang_file           <- snakemake@output[["fetal_vs_jang"]]
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("eqtl_effect_replication_file", "labels", "fetal_vs_fetal_file",
+  variable = c("eqtl_effect_replication_file", "labels", "cell_types", "fetal_vs_fetal_file",
                "fetal_vs_jang_file"),
   value    = c(eqtl_effect_replication_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               paste(cell_types, collapse = ", "),
                fetal_vs_fetal_file, fetal_vs_jang_file)) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
@@ -107,19 +111,13 @@ plot_corr_heatmap <- function(df, x_lab, y_lab, cell_text_size, axis_text_size,
 ##  Supp Fig 7: fetal -> fetal (19 L1 and L2 cell types)  -----------------------------
 message("\n--- Fetal -> fetal heatmap ---\n")
 
-fetal_family_order <- c(
-  "Glu-A", "Glu-A-0", "Glu-A-1", "Glu-A-2",
-  "Glu-B", "Glu-B-0", "Glu-B-1", "Glu-B-2",
-  "GABA", "GABA-0", "GABA-1", "GABA-2",
-  "NPC", "NPC-0", "NPC-1", "NPC-2",
-  "MG", "OPC", "Endo-Peri"
-)
-
 fetal_long <- mat_to_long(effect_repl$fetal_vs_fetal$pearson) |>
   mutate(discovery = relabel_cell_types(discovery, manuscript_labels),
          replication = relabel_cell_types(replication, manuscript_labels))
 
-fetal_order_present <- fetal_family_order[fetal_family_order %in% unique(fetal_long$discovery)]
+# Each L1 type followed by its subclusters; pseudotime bins not shown
+fetal_order_present <- cell_type_levels(fetal_long$discovery, cell_types, manuscript_labels)
+fetal_order_present <- fetal_order_present[!str_detect(fetal_order_present, "-to-")]
 message("Fetal cell types present (expected 19): ", length(fetal_order_present))
 
 fetal_long <- fetal_long |>
@@ -147,13 +145,12 @@ ggsave(
 ##  Supp Fig 8: fetal L1 -> adult L1 (Jang et al., 7 x 7)  ----------------------------
 message("\n--- Fetal L1 -> Jang heatmap ---\n")
 
-fetal_l1_order <- c("Glu-A", "Glu-B", "GABA", "NPC", "MG", "OPC", "Endo-Peri")
 jang_l1_order  <- effect_repl$settings$jang_cell_types  # already unprefixed: Ext, IN, MG, OPC, End, Ast, OD
 
 adult_long <- mat_to_long(effect_repl$fetal_vs_adult$pearson) |>
   mutate(discovery = relabel_cell_types(discovery, manuscript_labels))
 
-adult_order_present <- fetal_l1_order[fetal_l1_order %in% unique(adult_long$discovery)]
+adult_order_present <- cell_type_levels(adult_long$discovery, cell_types, manuscript_labels)
 jang_order_present  <- jang_l1_order[jang_l1_order %in% unique(adult_long$replication)]
 message("Fetal L1 cell types present (expected 7): ", length(adult_order_present))
 message("Jang cell types present (expected 7): ", length(jang_order_present))

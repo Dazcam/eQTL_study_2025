@@ -139,7 +139,8 @@ rule family_heatmaps_fig:
             npc   = FIG['family_heatmaps_fig']['npc']
     params: eqtl_effects = config['eqtl_sharing']['eqtl_effects']['out_file'],
             labels       = config['manuscript_labels'],
-            gene_lookup  = config['gene_lookup']
+            gene_lookup  = config['gene_lookup'],
+            cell_types   = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources: time = "0:30:00"
     benchmark: FIG['family_heatmaps_fig']['benchmark']
@@ -152,7 +153,8 @@ rule effect_size_heatmaps_fig:
     output: fetal_vs_fetal = FIG['effect_size_heatmaps_fig']['fetal_vs_fetal'],
             fetal_vs_jang  = FIG['effect_size_heatmaps_fig']['fetal_vs_jang']
     params: eqtl_effect_replication = config['eqtl_sharing']['eqtl_effect_replication']['out_file'],
-            labels                  = config['manuscript_labels']
+            labels                  = config['manuscript_labels'],
+            cell_types              = config['cell_types']
     singularity: config["containers"]["r_eqtl"]
     resources: time = "0:30:00"
     benchmark: FIG['effect_size_heatmaps_fig']['benchmark']
@@ -160,7 +162,7 @@ rule effect_size_heatmaps_fig:
     script:    FIG['effect_size_heatmaps_fig']['script']
 
 rule bulk_egene_overlaps_fig:
-    # Supp Fig 9A
+    # Supp Fig 9
     input:  egenes_per_celltype = config['replication_bulk']['extract_unique_egenes']['out_file'],
             overlap             = config['replication_bulk']['overlap_obrien']['out_file']
     output: FIG['bulk_egene_overlaps_fig']['out_file']
@@ -179,7 +181,8 @@ rule snrna_qc_fig:
     input:  h5ad = config['scanpy']['clusters_h5ad']
     output: per_sample   = FIG['snrna_qc_fig']['out_file_sample'],
             per_celltype = FIG['snrna_qc_fig']['out_file_celltype']
-    params: labels = config['manuscript_labels']
+    params: labels   = config['manuscript_labels'],
+            l1_types = config['fetal_l1_types']
     conda:  config["scanpy"]["env"]
     resources: threads = 4, mem_mb = 20000, time = "1:00:00"
     benchmark: FIG['snrna_qc_fig']['benchmark']

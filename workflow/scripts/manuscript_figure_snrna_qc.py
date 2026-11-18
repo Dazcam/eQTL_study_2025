@@ -22,6 +22,7 @@
 #
 # Inputs:    h5ad          Final clustered object
 #            labels        config['manuscript_labels']
+#            l1_types      config['fetal_l1_types'] (cell type display order)
 #
 # Outputs:   per_sample    Supp Fig 12 (PDF)
 #            per_celltype  Genes per nucleus by cell type (PDF)
@@ -70,8 +71,8 @@ def relabel(x, labels):
         x = x.replace(old, new)
     return x
 
-# Display order of cell types (legend, x-axis, table)
-CELLTYPE_ORDER = ["Glu-A", "Glu-B", "GABA", "NPC", "OPC", "MG", "Endo-Peri"]
+# Display order of cell types (legend, x-axis, table): config fetal_l1_types order
+CELLTYPE_ORDER = [relabel(ct, dict(snakemake.params.labels)) for ct in snakemake.params.l1_types]
 
 
 # ── Loading and metric calculation ────────────────────────────────────────────────────
@@ -385,6 +386,7 @@ variables = {
     "out_celltype": str(snakemake.output.per_celltype),
     "table":        os.path.join(TABLE_DIR, TABLE_FILE),
     "labels":       ", ".join(f"{k} -> {v}" for k, v in dict(snakemake.params.labels).items()),
+    "l1_types":     ", ".join(snakemake.params.l1_types),
 }
 width = max(map(len, variables))
 logger.info("Variables\n============================\n" +

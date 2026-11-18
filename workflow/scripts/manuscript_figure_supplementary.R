@@ -44,7 +44,7 @@ message("\n\nPlotting genotype and expression PC plots ...")
 library(tidyverse)
 library(cowplot)
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
@@ -60,8 +60,6 @@ all_cell_types <- unlist(snakemake@params[["cell_types"]])
 all_cell_types <- all_cell_types[!str_detect(all_cell_types, "-to-")]
 cell_types     <- unlist(snakemake@params[["l1_types"]])
 cell_types_L2  <- setdiff(all_cell_types, cell_types)
-# L2 grouped by parent in config cell_types order (sets the plotting order)
-cell_types_L2  <- cell_types_L2[order(match(sub("-[^-]+$", "", cell_types_L2), all_cell_types))]
 exp_PCs        <- unlist(snakemake@params[["exp_pcs"]])
 gen_PCs        <- snakemake@params[["geno_pc"]]
 norm_methods   <- snakemake@params[["norm_method"]]
@@ -245,24 +243,16 @@ summarise_logs <- function(cell_types, in_dir, expPCs = exp_PCs,
   return(summary_list)
 }
 
-# Legend order, as in the other manuscript figures
-cell_order_L1 <- relabel_cell_types(c("Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"), manuscript_labels)
-cell_order_L2 <- relabel_cell_types(c(
-  "Glu-UL-0", "Glu-UL-1", "Glu-UL-2",
-  "Glu-DL-0", "Glu-DL-1", "Glu-DL-2",
-  "GABA-0", "GABA-1", "GABA-2",
-  "NPC-0", "NPC-1", "NPC-2"
-), manuscript_labels)
-
+# Legend order: config cell_types order
 summary_L1_list <- summarise_logs(cell_types, expr_dir)
 summary_L1_tbl <- bind_rows(summary_L1_list) |>
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels),
-         cell_type = factor(cell_type, levels = cell_order_L1))
+         cell_type = factor(cell_type, levels = cell_type_levels(cell_type, all_cell_types, manuscript_labels)))
 
 summary_L2_list <- summarise_logs(cell_types_L2, expr_dir)
 summary_L2_tbl <- bind_rows(summary_L2_list) |>
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels),
-         cell_type = factor(cell_type, levels = cell_order_L2))
+         cell_type = factor(cell_type, levels = cell_type_levels(cell_type, all_cell_types, manuscript_labels)))
 
 # Plot
 message('Generating expression L1 PC plot ...')

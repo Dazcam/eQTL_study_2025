@@ -21,8 +21,8 @@
 # Inputs:    susie_files       cred.hp file per cell type (same order as cell_types)
 #            gene_meta_files   Gene meta file per cell type (phenotype_pos = TSS)
 #
-# Outputs:   xlsx              One sheet; rows: L1 cell types, L2 subclusters by
-#                              parent, then pseudotime bins; manuscript labels
+# Outputs:   xlsx              One sheet; rows: L1, L2, then pseudotime bins, each
+#                              in config cell_types order; manuscript labels
 #
 # Notes:     The index variant is the highest-PIP variant in a credible set.
 #            Percentages use genes with >=1 credible set as the denominator.
@@ -50,7 +50,7 @@ suppressMessages({
   library(openxlsx)
 })
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
@@ -155,27 +155,11 @@ if (any(old_names)) {
        paste(final_tbl$cell_type[old_names], collapse = ", "))
 }
 
-# Row order: major types, then subclusters grouped by parent, then pseudotime bins
-major <- c("Glu-A", "Glu-B", "GABA", "NPC", "OPC", "MG", "Endo-Peri")
+# Row order: L1, then L2, then pseudotime bins, each in config cell_types order
+row_order <- cell_type_levels(final_tbl$cell_type, cell_types, manuscript_labels, layout = "level")
 
 final_tbl <- final_tbl |>
-  mutate(
-    tier   = case_when(cell_type %in% major ~ 1L,
-                       str_detect(cell_type, "^NPC-to-") ~ 3L,
-                       TRUE ~ 2L),
-    parent = case_when(tier == 1L ~ cell_type,
-                       tier == 2L ~ str_remove(cell_type, "-[0-9]+$"),
-                       tier == 3L ~ str_extract(cell_type, "Glu-[AB]")),
-    parent_ord = match(parent, major)
-  )
-
-if (anyNA(final_tbl$parent_ord)) {
-  stop("Could not assign a parent cell type for: ",
-       paste(final_tbl$cell_type[is.na(final_tbl$parent_ord)], collapse = ", "))
-}
-
-final_tbl <- final_tbl |>
-  arrange(tier, parent_ord, cell_type) |>
+  arrange(match(cell_type, row_order)) |>
   dplyr::select(cell_type, n_genes_with_cs, mean_cs_per_gene, pct_genes_1_cs, pct_genes_2_cs,
          pct_genes_3plus_cs, median_cs_size, median_dist_to_tss) |>
   mutate(across(c(mean_cs_per_gene, pct_genes_1_cs, pct_genes_2_cs, pct_genes_3plus_cs),

@@ -10,7 +10,7 @@
 #
 # Purpose:   For each L1 family (Glu-A, Glu-B, GABA, NPC):
 #            - Rows: the family's subcluster-specific (gene, SNP) pairs from 15
-#            - Columns: the L1 parent and its 3 L2 subclusters
+#            - Columns: the L1 parent and its L2 subclusters, in config cell_types order
 #            - Fill: eQTL slope (colour scale -1 to 1); black border on the L2
 #              subcluster(s) where the pair was classified subcluster-specific
 #            - Height scales with the number of rows (0.18 in per row, min 8 in)
@@ -18,6 +18,7 @@
 #
 # Inputs:    eqtl_effects   15 eqtl_effects RDS ($subcluster_specific, $effect_size_long)
 #            gene_lookup    Ensembl ID to gene symbol (row labels; falls back to the ID)
+#            cell_types     config['cell_types'] (pipeline labels; family members and order)
 #
 # Outputs:   glu_a, glu_b, gaba, npc   One heatmap per family (TIFF, 600 dpi, LZW)
 #
@@ -46,13 +47,14 @@ library(ComplexHeatmap)
 library(circlize)
 library(grid)
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Inputs, outputs and settings
 eqtl_effects_file <- snakemake@params[["eqtl_effects"]]
 gene_lookup_file  <- snakemake@params[["gene_lookup"]]
 manuscript_labels <- snakemake@params[["labels"]]
+cell_types        <- unlist(snakemake@params[["cell_types"]])
 
 out_files <- list(
   "Glu-A" = snakemake@output[["glu_a"]],
@@ -65,8 +67,9 @@ out_files <- list(
 message("\nVariables")
 message("============================")
 tibble(
-  variable = c("eqtl_effects_file", "gene_lookup_file", "labels", "out_files"),
+  variable = c("eqtl_effects_file", "gene_lookup_file", "labels", "cell_types", "out_files"),
   value    = c(eqtl_effects_file, gene_lookup_file, paste(names(manuscript_labels), unlist(manuscript_labels), sep = " -> ", collapse = ", "),
+               paste(cell_types, collapse = ", "),
                paste(unlist(out_files), collapse = ", "))) |>
   knitr::kable(format = "simple") |>
   cat(sep = "\n")
@@ -88,13 +91,12 @@ subcluster_tbl <- subcluster_tbl |>
 effect_long <- effect_long |>
   mutate(cell_type = relabel_cell_types(cell_type, manuscript_labels))
 
-# Family members (manuscript labels)
-family_order <- list(
-  "Glu-A" = c("Glu-A", "Glu-A-0", "Glu-A-1", "Glu-A-2"),
-  "Glu-B" = c("Glu-B", "Glu-B-0", "Glu-B-1", "Glu-B-2"),
-  "GABA"  = c("GABA", "GABA-0", "GABA-1", "GABA-2"),
-  "NPC"   = c("NPC", "NPC-0", "NPC-1", "NPC-2")
-)
+# Family members (manuscript labels): the L1 parent, then its L2 subclusters
+fetal_levels <- cell_type_levels(relabel_cell_types(cell_types[!str_detect(cell_types, "-to-")], manuscript_labels),
+                                 cell_types, manuscript_labels)
+family_order <- lapply(names(out_files), function(p) {
+  fetal_levels[fetal_levels == p | sub("-[0-9]+$", "", fetal_levels) == p]
+}) |> setNames(names(out_files))
 
 ##  Functions  ------------------------------------------------------------------------
 # Slope matrix and subcluster-specific mask for one family, as the report's

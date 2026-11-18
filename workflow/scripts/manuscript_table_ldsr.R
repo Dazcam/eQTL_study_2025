@@ -15,6 +15,7 @@
 #            - Manuscript cell type labels (config manuscript_labels)
 #            - Add the plotted -log10(P), level (L1 / L2 / Pseudotime), main cell
 #              type, per-level Bonferroni threshold and significance flags
+#            - Rows ordered L1, L2, then pseudotime bins, each in config cell_types order
 #
 # Inputs:    in_file     ldsr_strat_hg38_bl_v12.maxCPP.summary.tsv
 #            cell_types  config['cell_types'] (pipeline labels)
@@ -49,7 +50,7 @@ suppressMessages({
   library(openxlsx)
 })
 
-# Load functions (relabel_cell_types)
+# Load functions (relabel_cell_types, cell_type_levels)
 source(file.path(snakemake@scriptdir, "functions.R"))
 
 # Input and output paths
@@ -156,32 +157,18 @@ if (nrow(ldsr_tbl) != n_expected) {
           " cell type x disorder combinations missing from the summary file")
 }
 
-## Order rows as in the plot  -----------------------------------------------------------
-cell_order <- c(
-  "Glu-A", sort(grep("^Glu-A-[0-9]+$", ldsr_tbl$cell_type, value = TRUE)),
-  "Glu-B", sort(grep("^Glu-B-[0-9]+$", ldsr_tbl$cell_type, value = TRUE)),
-  "GABA",  sort(grep("^GABA-[0-9]+$",  ldsr_tbl$cell_type, value = TRUE)),
-  "NPC",   sort(grep("^NPC-[0-9]+$",   ldsr_tbl$cell_type, value = TRUE)),
-  "OPC", "MG", "Endo-Peri",
-  sort(grep("^NPC-to-Glu-A-Bin[0-9]+$", ldsr_tbl$cell_type, value = TRUE)),
-  sort(grep("^NPC-to-Glu-B-Bin[0-9]+$", ldsr_tbl$cell_type, value = TRUE))
-) |> unique()
-
-unordered <- setdiff(unique(ldsr_tbl$cell_type), cell_order)
-if (length(unordered) > 0) {
-  stop("Cell types not covered by the plot ordering: ", paste(unordered, collapse = ", "))
-}
+## Order rows: L1, then L2, then pseudotime bins, each in config order  -----------------
+cell_order <- cell_type_levels(ldsr_tbl$cell_type, cell_types, manuscript_labels, layout = "level")
 
 final_tbl <- ldsr_tbl |>
   mutate(
     disorder = factor(disorder, levels = names(disorder_labels)),
-    level    = factor(level, levels = c("L1", "L2", "Pseudotime")),
     order    = match(cell_type, cell_order)
   ) |>
-  arrange(disorder, level, order) |>
+  arrange(disorder, order) |>
   dplyr::select(-order) |>
   relocate(disorder, cell_type, level, main_type, annot) |>
-  mutate(across(c(disorder, level), as.character))
+  mutate(disorder = as.character(disorder))
 
 ## Write output  ------------------------------------------------------------------------
 sheets <- final_tbl |>

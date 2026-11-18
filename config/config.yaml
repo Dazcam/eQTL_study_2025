@@ -13,11 +13,11 @@ root_dir: /scratch/c.c1477909/eQTL_study_2025/
 cell_types: 
   - "Glu-UL"
   - "Glu-DL"
-  - "NPC"
   - "GABA"
-  - "Endo-Peri"
-  - "OPC" 
+  - "NPC"
+  - "OPC"
   - "MG"
+  - "Endo-Peri"
   - "Glu-UL-0"
   - "Glu-UL-1"
   - "Glu-UL-2"
@@ -116,7 +116,7 @@ jang_l1_types:
 jang_l1_order: ["Ext", "IN", "MG", "OPC", "End", "Ast", "OD"]
 
 # Fetal L1 cell types (06 replication and eQTL sharing)
-fetal_l1_types: ["Glu-UL", "Glu-DL", "GABA", "NPC", "MG", "OPC", "Endo-Peri"]
+fetal_l1_types: ["Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"]
 
 eqtl_fdr: 0.05
 
@@ -1291,7 +1291,7 @@ figures:
     log: ../results/00LOG/17MANUSCRIPT-FIGURES/effect_size_heatmaps_fig.log
 
   bulk_egene_overlaps_fig:
-    # Supp Fig 9A
+    # Supp Fig 9
     script: ../scripts/manuscript_figure_bulk_egene_overlaps.R
     out_file: ../results/17MANUSCRIPT-FIGURES/supplementary_figure_09.tiff
     benchmark: reports/benchmarks/17figures.bulk_egene_overlaps_fig.benchmark.txt

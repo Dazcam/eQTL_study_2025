@@ -7,13 +7,14 @@
 # Functions: normalise_counts()  Normalise / filter a CPM matrix by one of four methods
 #            get_mhc_genes()     Gene IDs overlapping the extended MHC (or any region)
 #            relabel_cell_types() Pipeline -> manuscript cell type labels
+#            cell_type_levels()   Cell types present, in config order (family or level layout)
 #
 # Packages:  Base R only; limma must be installed (not loaded) for
 #            normalise_counts(norm_method = "quantile")
 #
 # Used in:   tensorqtl_prep_input_files.R (normalise_counts);
 #            smr_create_query.R, ctwas_run.R (get_mhc_genes);
-#            16 tables and 17 figures scripts (relabel_cell_types)
+#            16 tables and 17 figures scripts (relabel_cell_types, cell_type_levels)
 #
 #--------------------------------------------------------------------------------------
 
@@ -122,6 +123,48 @@ relabel_cell_types <- function(x, labels) {
     x <- gsub(old, labels[[old]], x, fixed = TRUE)
   }
   x
+}
+
+#' Order cell types as in config cell_types.
+#' Used in 16 tables and 17 figures scripts
+#'
+#' L2 subclusters are named "<L1>-<n>"; pseudotime bins contain "-to-".
+#' layout = "family": each L1 type followed by its L2 subclusters, in config
+#'   order, then pseudotime bins (as on the Fig 2 y-axis).
+#' layout = "level": all L1, then all L2, then pseudotime bins, each in config
+#'   order.
+#'
+#' @param x Cell types to order (character or factor; duplicates allowed).
+#' @param cell_types Config cell_types (pipeline labels).
+#' @param labels Optional named list (config manuscript_labels). When given,
+#'   cell_types are relabelled first, so x can use manuscript labels.
+#' @param layout "family" or "level".
+#' @return Unique cell types of x in order, for use as factor levels. Stops if
+#'   x holds a cell type not in cell_types.
+cell_type_levels <- function(x, cell_types, labels = NULL, layout = c("family", "level")) {
+  layout <- match.arg(layout)
+  ref <- as.character(unlist(cell_types))
+  if (!is.null(labels)) ref <- relabel_cell_types(ref, labels)
+
+  is_pt  <- grepl("-to-", ref, fixed = TRUE)
+  parent <- ifelse(is_pt, NA_character_, sub("-[0-9]+$", "", ref))
+  is_l2  <- !is_pt & parent != ref & parent %in% ref
+  l1 <- ref[!is_pt & !is_l2]
+  l2 <- ref[is_l2]
+  pt <- ref[is_pt]
+
+  ordered <- if (layout == "level") {
+    c(l1, l2, pt)
+  } else {
+    c(unlist(lapply(l1, function(p) c(p, l2[parent[is_l2] == p])), use.names = FALSE), pt)
+  }
+
+  x <- unique(as.character(x))
+  unknown <- setdiff(x, ordered)
+  if (length(unknown) > 0) {
+    stop("cell_type_levels: not in config cell_types: ", paste(unknown, collapse = ", "))
+  }
+  ordered[ordered %in% x]
 }
 
 #--------------------------------------------------------------------------------------
