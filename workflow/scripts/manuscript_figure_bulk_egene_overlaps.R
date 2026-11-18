@@ -12,8 +12,7 @@
 # Purpose:   Per cell type, total eGenes (dark bar) and the number also significant
 #            in O'Brien 2018 bulk fetal brain eQTL (light bar), grouped in three
 #            blocks: L1, L2, pseudotime bins (each in config cell_types order).
-#            eGenes with no overlap record count
-#            as not overlapping.
+#            eGenes with no overlap record count as not overlapping.
 #            A: gene-level bulk eQTL overlap
 #            B: transcript-level bulk eQTL overlap
 #            - Keeps only cell types in config['cell_types']
