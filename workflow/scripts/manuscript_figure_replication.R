@@ -322,9 +322,9 @@ pi1_square_tbl <- pi1_result_tbl %>%
   mutate(
     ref = relabel_cell_types(ref, manuscript_labels),
     query = relabel_cell_types(query, manuscript_labels),
-    # rev() ensures the first cell type is at the top (standard matrix view)
-    query = factor(query, levels = rev(cell_types_new)), 
-    ref = factor(ref, levels = cell_types_new)
+    # First cell type at the top (y) and on the left (x), as a standard matrix
+    query = factor(query, levels = cell_types_new),
+    ref = factor(ref, levels = rev(cell_types_new))
   )
 
 plot_int_heatmap <- function(df) {
