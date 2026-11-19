@@ -1,5 +1,11 @@
 localrules: prep_susie_gene_meta
 
+
+##  Settings  ------------------------------------------------------------------------------
+SUS = config["susie"]
+
+
+##  Functions  -----------------------------------------------------------------------------
 def susie_exp_bed(w):
     norm_method = config['tensorQTL']['norm_methods'][0]
     return f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed"
@@ -22,23 +28,32 @@ def susie_perm(w):
             f"{w.cell_type}_{norm_method}_perm.cis_qtl.txt.gz")
 
 
+def susie_batch_files(w):
+    return expand(rules.run_susie.output.cs_hp_out,
+                  cell_type     = w.cell_type,
+                  batch_index   = range(1, config["susie_batches"] + 1),
+                  susie_batches = config["susie_batches"])
+
+
+##  Rules  ---------------------------------------------------------------------------------
+
 rule prep_susie_gene_meta:
     input:  bed = susie_exp_bed
-    output: config["susie"]["prep_susie_gene_meta"]["output"]
+    output: SUS["prep_susie_gene_meta"]["output"]
     singularity: config["containers"]["R"]
     message:     "Create gene metadata file for {wildcards.cell_type} for SuSiE"
     benchmark:   "reports/benchmarks/10susie.prep_susie_gene_meta_{cell_type}.benchmark.txt"
-    log:         config["susie"]["prep_susie_gene_meta"]["log"]
+    log:         SUS["prep_susie_gene_meta"]["log"]
     script: "../scripts/susie_prep_gene_meta.R"
 
 rule vcf_to_dosage:
-    input:  config["susie"]["vcf_to_dosage"]["vcf"]
-    output: dosage = config["susie"]["vcf_to_dosage"]["out_dosage"],
-            idx    = config["susie"]["vcf_to_dosage"]["out_idx"]
+    input:  SUS["vcf_to_dosage"]["vcf"]
+    output: dosage = SUS["vcf_to_dosage"]["out_dosage"],
+            idx    = SUS["vcf_to_dosage"]["out_idx"]
     envmodules: "BCFtools/1.23-GCC-14.3.0", "HTSlib/1.23-GCC-14.3.0"
     message:    "Generate an allele dosage file from the genotype VCF for SuSiE"
     benchmark:  "reports/benchmarks/10susie.vcf_to_dosage.benchmark.txt"
-    log:        config["susie"]["vcf_to_dosage"]["log"]
+    log:        SUS["vcf_to_dosage"]["log"]
     shell:  """
             set -euo pipefail
             exec 2> {log}
@@ -56,12 +71,12 @@ rule vcf_to_dosage:
 rule prep_susie_input:
     input:  exp_bed  = susie_exp_bed,
             covar    = susie_covar
-    output: exp_bed  = config["susie"]["prep_susie_input"]["out_exp"],
-            covar    = config["susie"]["prep_susie_input"]["out_covar"],
-            samp_lst = config["susie"]["prep_susie_input"]["out_samp_lst"]
+    output: exp_bed  = SUS["prep_susie_input"]["out_exp"],
+            covar    = SUS["prep_susie_input"]["out_covar"],
+            samp_lst = SUS["prep_susie_input"]["out_samp_lst"]
     message:   "Prepare expression, covariate and sample files for {wildcards.cell_type} for SuSiE"
     benchmark: "reports/benchmarks/10susie.prep_susie_input_{cell_type}.benchmark.txt"
-    log:       config["susie"]["prep_susie_input"]["log"]
+    log:       SUS["prep_susie_input"]["log"]
     script: "../scripts/susie_prep_input.py"
 
 rule run_susie:
@@ -72,16 +87,16 @@ rule run_susie:
             covar       = rules.prep_susie_input.output.covar,
             geno_mat    = rules.vcf_to_dosage.output.dosage,
             geno_idx    = rules.vcf_to_dosage.output.idx
-    output: cs_hp_out   = config["susie"]["run_susie"]["cs_hp_out"],
-            cs_out      = config["susie"]["run_susie"]["cs_out"],
-            snp_out     = config["susie"]["run_susie"]["snp_out"]
+    output: cs_hp_out   = SUS["run_susie"]["cs_hp_out"],
+            cs_out      = SUS["run_susie"]["cs_out"],
+            snp_out     = SUS["run_susie"]["snp_out"]
     params: chunk       = lambda w: f"{w.batch_index} {config['susie_batches']}",
             cis_window  = config["window"],
             fdr         = config["eqtl_fdr"]
     singularity: config["containers"]["susie"]
     message:     "Run SuSiE fine-mapping for {wildcards.cell_type}, batch {wildcards.batch_index}"
     benchmark:   "reports/benchmarks/10susie.run_susie_{cell_type}_{batch_index}_{susie_batches}.benchmark.txt"
-    log:         config["susie"]["run_susie"]["log"]
+    log:         SUS["run_susie"]["log"]
     shell:  """
             set -euo pipefail
             echo "Running run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" > {log}
@@ -102,20 +117,13 @@ rule run_susie:
             echo "Completed run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" >> {log}
             """
 
-def susie_batch_files(w):
-    return expand(rules.run_susie.output.cs_hp_out,
-                  cell_type     = w.cell_type,
-                  batch_index   = range(1, config["susie_batches"] + 1),
-                  susie_batches = config["susie_batches"])
-
-
 rule merge_susie:
     input:      susie_batch_files
-    output:     config["susie"]["merge_susie"]["output"]
+    output:     SUS["merge_susie"]["output"]
     envmodules: "HTSlib/1.21-GCC-13.3.0"
     message:    "Merge SuSiE credible sets into a single file for {wildcards.cell_type}"
     benchmark:  "reports/benchmarks/10susie.merge_susie_{cell_type}.benchmark.txt"
-    log:        config["susie"]["merge_susie"]["log"]
+    log:        SUS["merge_susie"]["log"]
     shell:  """
             set -euo pipefail
             echo "Merging SuSiE cred.hp.txt for {wildcards.cell_type}" > {log}
@@ -125,11 +133,11 @@ rule merge_susie:
 
 rule sort_susie:
     input:      rules.merge_susie.output
-    output:     config["susie"]["sort_susie"]["output"]
+    output:     SUS["sort_susie"]["output"]
     envmodules: "HTSlib/1.21-GCC-13.3.0"
     message:    "Sort SuSiE credible sets by chromosome and position for {wildcards.cell_type}"
     benchmark:  "reports/benchmarks/10susie.sort_susie_{cell_type}.benchmark.txt"
-    log:        config["susie"]["sort_susie"]["log"]
+    log:        SUS["sort_susie"]["log"]
     shell:  """
             set -euo pipefail
             echo "Sorting SuSiE cred.hp.txt for {wildcards.cell_type}" > {log}
@@ -146,21 +154,21 @@ rule susie_report:
     input:  susie_files     = expand(rules.sort_susie.output, cell_type = config["cell_types"]),
             gene_meta_files = expand(rules.prep_susie_gene_meta.output, cell_type = config["cell_types"]),
             gene_lookup     = config["gene_lookup"],
-            rmd_script      = config["susie"]["susie_report"]["script"]
-    output: config["susie"]["susie_report"]["html"]
+            rmd_script      = SUS["susie_report"]["script"]
+    output: SUS["susie_report"]["html"]
     params: cell_types    = ",".join(config["cell_types"]),
-            in_dir        = config["susie"]["susie_report"]["in_dir"],
-            gene_meta_dir = config["susie"]["susie_report"]["gene_meta_dir"],
+            in_dir        = SUS["susie_report"]["in_dir"],
+            gene_meta_dir = SUS["susie_report"]["gene_meta_dir"],
             gene_lookup   = lambda wc, input: "../" + input.gene_lookup,
-            bmark_dir     = config["susie"]["susie_report"]["bmark_dir"],
+            bmark_dir     = SUS["susie_report"]["bmark_dir"],
             cis_window    = config["window"],
             n_batches     = config["susie_batches"],
             eqtl_fdr      = config["eqtl_fdr"],
-            output_file   = config["susie"]["susie_report"]["output_file"]
+            output_file   = SUS["susie_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message:     "Generate SuSiE report"
     benchmark:   "reports/benchmarks/10susie.susie_report.benchmark.txt"
-    log:         config["susie"]["susie_report"]["log"]
+    log:         SUS["susie_report"]["log"]
     shell:  """
             Rscript -e "rmarkdown::render('{input.rmd_script}', \
                 output_file = '{params.output_file}', \
@@ -177,4 +185,4 @@ rule susie_report:
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["10susie"] = [config["susie"]["susie_report"]["html"]]
+TARGETS["10susie"] = [SUS["susie_report"]["html"]]

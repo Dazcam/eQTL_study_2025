@@ -1,9 +1,9 @@
-configfile: '../config/config.yaml'
-
 import re
 
-GWAS_TRAITS = list(config['gwas'].keys())
+
+##  Settings  ------------------------------------------------------------------------------
 TBL = config['tables']
+GWAS_TRAITS = list(config['gwas'].keys())
 
 smr_sig_tbls = expand(TBL['smr_sig_tbl']['out_file'], gwas = GWAS_TRAITS)
 venn_gene_tbls = expand(TBL['smr_ctwas_venn_tbl']['genes_out'], gwas = GWAS_TRAITS)
@@ -12,6 +12,8 @@ venn_gene_tbls = expand(TBL['smr_ctwas_venn_tbl']['genes_out'], gwas = GWAS_TRAI
 L2_POPS = [ct for ct in config['cell_types']
            if '-to-' not in ct and any(re.fullmatch(re.escape(ct) + r'-\d+', sub) for sub in config['cell_types'])]
 
+
+##  Rules  ---------------------------------------------------------------------------------
 
 rule diff_exp_tbl:
     # Supp Table 1

@@ -1,24 +1,27 @@
-configfile: "../config/config.yaml"
-
 localrules: create_parse_json, setup_liftover
 
+
+##  Settings  ------------------------------------------------------------------------------
+SET    = config["setup"]
 PLATES = list(config["fastq"].keys())
 
 
+##  Rules  ---------------------------------------------------------------------------------
+
 rule get_containers:
-    output:  config["setup"]["get_containers"]["output"],
+    output:  SET["get_containers"]["output"],
     message: "Downloading singulairty / apptainer containers"
-    log:     config["setup"]["get_containers"]["log"]
+    log:     SET["get_containers"]["log"]
     shell:
              r"""
              scripts/setup_pull_quayio_containers.sh
              """
 
 rule create_parse_json:
-    output:  config["setup"]["create_parse_json"]["output"],
+    output:  SET["create_parse_json"]["output"],
     params:  dirs=lambda wildcards: config["fastq"][wildcards.plate]
     message:  "Create json to map fastq files to sample IDs for Parse alignment"
-    log:     config["setup"]["create_parse_json"]["log"]
+    log:     SET["create_parse_json"]["log"]
     shell:
              """
              python scripts/setup_create_parse_json.py \
@@ -27,9 +30,9 @@ rule create_parse_json:
              """
 
 rule setup_liftover:
-    output:  config["setup"]["liftover"]["output"]
-    params:  outdir = config["setup"]["liftover"]["outdir"]
-    log:     config["setup"]["liftover"]["log"]
+    output:  SET["liftover"]["output"]
+    params:  outdir = SET["liftover"]["outdir"]
+    log:     SET["liftover"]["log"]
     shell:
              """
              wget -nc -P {params.outdir} http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver
@@ -42,12 +45,12 @@ rule setup_liftover:
 
 # Requires scanpy env so need to set up envs first
 rule get_fugita_data:
-    output:  config["setup"]["get_fugita_data"]["output"]
-    params:  outdir=config["setup"]["get_fugita_data"]["outdir"],
-             token=config["setup"]["get_fugita_data"]["token"]
+    output:  SET["get_fugita_data"]["output"]
+    params:  outdir=SET["get_fugita_data"]["outdir"],
+             token=SET["get_fugita_data"]["token"]
     conda:   config["scanpy"]["env"]
     message: "Downloading Fugita et al. cell cell type and subtype data from Synapse"
-    log:     config["setup"]["get_fugita_data"]["log"]
+    log:     SET["get_fugita_data"]["log"]
     shell:
              """
              python scripts/setup_get_fugita_data.py \
@@ -57,11 +60,11 @@ rule get_fugita_data:
              """
 
 rule get_jang_singlebrain:
-    output:  config["setup"]["get_jang_singlebrain"]["output"]
-    params:  outdir=config["setup"]["get_jang_singlebrain"]["outdir"]
+    output:  SET["get_jang_singlebrain"]["output"]
+    params:  outdir=SET["get_jang_singlebrain"]["outdir"]
     conda:   config["scanpy"]["env"]
     message: "Downloading Jang et al. SingleBrain eQTL summary statistics from Zenodo"
-    log:     config["setup"]["get_jang_singlebrain"]["log"]
+    log:     SET["get_jang_singlebrain"]["log"]
     shell:
              """
              mkdir -p {params.outdir}
@@ -70,36 +73,36 @@ rule get_jang_singlebrain:
              """
 
 rule parse_nott_peaks:
-    input:  xlsx = config["setup"]["parse_nott_peaks"]["xlsx_file"]
-    output: config["setup"]["parse_nott_peaks"]["out_file"]
+    input:  xlsx = SET["parse_nott_peaks"]["xlsx_file"]
+    output: SET["parse_nott_peaks"]["out_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Parse Nott et al. 2019 Table S5 (8 sheets) into a combined hg19 BED"
     benchmark: "reports/benchmarks/00setup.parse_nott_peaks.benchmark.txt"
-    log:    config["setup"]["parse_nott_peaks"]["log"]
+    log:    SET["parse_nott_peaks"]["log"]
     script: "../scripts/setup_parse_nott_peaks.R"
 
 rule liftover_nott_peaks:
     # Liftover Nott et al. 2019 peaks from hg19 to hg38
-    input: sentinel = config["setup"]["liftover"]["output"],
+    input: sentinel = SET["liftover"]["output"],
            bed   = rules.parse_nott_peaks.output,
-           chain = config["setup"]["liftover_nott_hg38"]["chain"]
-    output:  config["setup"]["liftover_nott_hg38"]["output"]
+           chain = SET["liftover_nott_hg38"]["chain"]
+    output:  SET["liftover_nott_hg38"]["output"]
     singularity: config["containers"]["ubuntu"]
-    params: config["setup"]["liftover_nott_hg38"]["unlifted"]
+    params: SET["liftover_nott_hg38"]["unlifted"]
     benchmark: "reports/benchmarks/00setup.liftover_nott_peaks.benchmark.txt"
     message: "Lifting over Nott et al. 2019 peaks from hg19 to hg38"
-    log: config["setup"]["liftover_nott_hg38"]["log"]
+    log: SET["liftover_nott_hg38"]["log"]
     shell: "../resources/liftover/liftOver {input.bed} {input.chain} {output} {params} 2> {log}"
 
 
 #rule get_obrien_data:
-#    output: all_qtl = config["setup"]["get_obrien_data"]["all_qtl"],
-#            top_qtl = config["setup"]["get_obrien_data"]["top_qtl"]
-#    params: out_dir = config["setup"]["get_obrien_data"]["out_dir"],
-#            web_link = config["setup"]["get_obrien_data"]["web_link"],
-#            zip_out = config["setup"]["get_obrien_data"]["zip_out"]
+#    output: all_qtl = SET["get_obrien_data"]["all_qtl"],
+#            top_qtl = SET["get_obrien_data"]["top_qtl"]
+#    params: out_dir = SET["get_obrien_data"]["out_dir"],
+#            web_link = SET["get_obrien_data"]["web_link"],
+#            zip_out = SET["get_obrien_data"]["zip_out"]
 #    message: "Download bulk brain gene eQTL files from O'Brien 2018, PMID:30419947"
-#    log:    config["setup"]["get_obrien_data"]["log"]
+#    log:    SET["get_obrien_data"]["log"]
 #    shell:  """
 #            curl -L -b "cookies.txt" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" -o {params.zip_out} {params.web_link} &&
 #            unzip -j -o {params.zip_out} all_eqtls_gene.txt.gz -d {params.out_dir} &&
@@ -108,10 +111,10 @@ rule liftover_nott_peaks:
 #            """
 
 rule get_obrien_supp:
-    output: config["setup"]["get_obrien_supp"]["output"],
-    params: web_link = config["setup"]["get_obrien_supp"]["web_link"],
+    output: SET["get_obrien_supp"]["output"],
+    params: web_link = SET["get_obrien_supp"]["web_link"],
     message: "Download bulk eQTL supp tables for from O'Brien 2018, PMID:30419947"
-    log:    config["setup"]["get_obrien_supp"]["log"]
+    log:    SET["get_obrien_supp"]["log"]
     shell:   "wget -O {output} {params.web_link}"
 
 

@@ -1,14 +1,19 @@
-configfile: '../config/config.yaml' 
-
 localrules: get_gwas_sumstats
+
+
+##  Settings  ------------------------------------------------------------------------------
+PG = config["prep_gwas"]
+
+
+##  Rules  ---------------------------------------------------------------------------------
 
 rule get_gwas_sumstats:
     # Download GWAS sumsatts files
-    output:  config["prep_gwas"]["get_gwas_sumstats"]["output"]
+    output:  PG["get_gwas_sumstats"]["output"]
     params:  lambda wildcards: config['gwas'][wildcards.gwas]
     message: "Download {wildcards.gwas} sumstats file"
     benchmark: "reports/benchmarks/09prep_gwas.get_gwas_sumstats_{gwas}.benchmark.txt"
-    log:     config["prep_gwas"]["get_gwas_sumstats"]["log"]
+    log:     PG["get_gwas_sumstats"]["log"]
     run:
         
              user_agent = '"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"'
@@ -62,11 +67,11 @@ rule standardise_sumstats:
     # Standardises sumstats: SNP, CHR. BP, PVAL, A1, A2 + additional GWAS dependant cols
     # python convert available here: https://github.com/precimed/python_convert/tree/master
     input:   rules.get_gwas_sumstats.output
-    output:  config["prep_gwas"]["standardise_sumstats"]["output"]
+    output:  PG["standardise_sumstats"]["output"]
     message: "Standardising {input}"
     benchmark: "reports/benchmarks/09prep_gwas.standardise_sumstats_{gwas}.benchmark.txt"
-    params: config["prep_gwas"]["standardise_sumstats"]["temp"]
-    log:    config["prep_gwas"]["standardise_sumstats"]["log"] 
+    params: PG["standardise_sumstats"]["temp"]
+    log:    PG["standardise_sumstats"]["log"] 
     run:
 
              if wildcards.gwas in ("mdd", "scz"):
@@ -145,10 +150,10 @@ rule standardise_sumstats:
 rule add_z_score:
     # Adds z-scores to GWAS sumstats lacking
     input:   rules.standardise_sumstats.output
-    output:  config["prep_gwas"]["add_z_score"]["output"]
+    output:  PG["add_z_score"]["output"]
     message: "Adding Z score to {input} if required"
     benchmark: "reports/benchmarks/09prep_gwas.add_z_score_{gwas}.benchmark.txt"
-    log:     config["prep_gwas"]["add_z_score"]["log"]
+    log:     PG["add_z_score"]["log"]
     shell:
              """
              python scripts/gwas_add_z_score_to_sumstats.py \
@@ -159,10 +164,10 @@ rule add_z_score:
 rule add_N:
     # N to GWAS sumstats lacking 
     input:   rules.add_z_score.output
-    output:  config["prep_gwas"]["add_N"]["output"]
+    output:  PG["add_N"]["output"]
     message: "Adding N to {input} if required"
     benchmark: "reports/benchmarks/09prep_gwas.add_N_{gwas}.benchmark.txt"
-    log:     config["prep_gwas"]["add_N"]["log"]
+    log:     PG["add_N"]["log"]
     run:
         if wildcards.gwas in ("mdd", "scz"):
             
@@ -191,10 +196,10 @@ rule add_N:
 rule make_gwas_bed_hg19:
     # Generate gwas hg19 bed file for lift over
     input:   rules.add_N.output
-    output:  config["prep_gwas"]["make_gwas_bed_hg19"]["output"]
+    output:  PG["make_gwas_bed_hg19"]["output"]
     message: "Create bed input file for {input} hg19 to hg38 LiftOver"
     benchmark: "reports/benchmarks/09prep_gwas.make_gwas_bed_hg19_{gwas}.benchmark.txt"
-    log: config["prep_gwas"]["make_gwas_bed_hg19"]["log"]
+    log: PG["make_gwas_bed_hg19"]["log"]
     run:
 
         shell("""
@@ -206,13 +211,13 @@ rule make_gwas_bed_hg19:
 rule liftover_gwas_to_hg38:
     # Liftover sumstats from hg19 to hg38
     input: bed = rules.make_gwas_bed_hg19.output,
-           chain = config["prep_gwas"]["liftover_gwas_to_hg38"]["chain"]
-    output:  config["prep_gwas"]["liftover_gwas_to_hg38"]["output"]
+           chain = PG["liftover_gwas_to_hg38"]["chain"]
+    output:  PG["liftover_gwas_to_hg38"]["output"]
     singularity: config["containers"]["ubuntu"]
-    params: config["prep_gwas"]["liftover_gwas_to_hg38"]["unlifted"]
+    params: PG["liftover_gwas_to_hg38"]["unlifted"]
     benchmark: "reports/benchmarks/09prep_gwas.liftover_gwas_to_hg38_{gwas}.benchmark.txt"
     message: "Lifting over {input} from hg19 to hg38"
-    log: config["prep_gwas"]["liftover_gwas_to_hg38"]["log"]
+    log: PG["liftover_gwas_to_hg38"]["log"]
     shell:
         """
 
@@ -224,11 +229,11 @@ rule add_hg38_coords_to_gwas:
     #Restore summary statistics file with hg38 coords
     input: lifted = rules.liftover_gwas_to_hg38.output,
            sumstats = rules.add_N.output
-    output: config["prep_gwas"]["add_hg38_coords_to_gwas"]["output"]
+    output: PG["add_hg38_coords_to_gwas"]["output"]
     resources: threads = 5, mem_mb = 20000, time="5:00:00"
     message: "Adding hg38 coords to {input.sumstats} sumstats"
     benchmark: "reports/benchmarks/09prep_gwas.add_hg38_coords_to_gwas_{gwas}.benchmark.txt"
-    log: config["prep_gwas"]["add_hg38_coords_to_gwas"]["log"]
+    log: PG["add_hg38_coords_to_gwas"]["log"]
     script: "../scripts/gwas_add_hg38_coords_to_gwas.py"
 
 
@@ -236,12 +241,12 @@ rule munge_sumstats:
     # Format sumstats for LDSR input
     input:   snps = "../resources/ldsr/ldsr_hg38_refs/1000G.EUR.hg38.w_hm3_test.snplist",
              gwas = rules.add_hg38_coords_to_gwas.output
-    output:  config["prep_gwas"]["munge_sumstats"]["output"]
+    output:  PG["munge_sumstats"]["output"]
 #    conda:   "../envs/ldsr.yml" # Struggling to get this to work, can create env, but snakemake can't
     message: "Munging sumstats for LDSR compatibility: {input.gwas}"
     benchmark: "reports/benchmarks/09prep_gwas.munge_sumstats_{gwas}.benchmark.txt"
-    params:  config["prep_gwas"]["munge_sumstats"]["prefix"]
-    log:     config["prep_gwas"]["munge_sumstats"]["log"]
+    params:  PG["munge_sumstats"]["prefix"]
+    log:     PG["munge_sumstats"]["log"]
     shell:
         """
         eval "$(/apps/languages/miniforge3/24.3.0-0/bin/conda shell.bash hook)"

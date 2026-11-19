@@ -1,7 +1,11 @@
-configfile: "../config/config.yaml"
+##  Settings  ------------------------------------------------------------------------------
+TW = config["twas_weights"]
+
+
+##  Rules  ---------------------------------------------------------------------------------
 
 rule get_gemma:
-    output:  config["twas_weights"]["get_gemma"]["output"]
+    output:  TW["get_gemma"]["output"]
     message: "Download gemma binary for FUSION"
     benchmark: "reports/benchmarks/13twas_weights.get_gemma.benchmark.txt"
     shell:
@@ -13,34 +17,34 @@ rule get_gemma:
             """
 
 rule prep_exp_data:
-    input:  config["twas_weights"]["prep_exp_data"]["input"]
-    output: exp = config["twas_weights"]["prep_exp_data"]["exp"],
-            coord = config["twas_weights"]["prep_exp_data"]["coord"]
+    input:  TW["prep_exp_data"]["input"]
+    output: exp = TW["prep_exp_data"]["exp"],
+            coord = TW["prep_exp_data"]["coord"]
     params: run_test = config['twas_run_test']
     singularity: config["containers"]["r_eqtl"]
     message: "Creating plink ready expression data and gene coordinate file for FUSION weight calculation"
     benchmark: "reports/benchmarks/13twas_weights.prep_exp_data_{cell_type}.benchmark.txt"
-    log:    config["twas_weights"]["prep_exp_data"]["log"]
+    log:    TW["prep_exp_data"]["log"]
     script: "../scripts/twas_weights_prep_expr_for_FUSION.R"
 
 rule convert_vcf:
-    input: config["twas_weights"]["convert_vcf"]["input"]
-    output: bed = config["twas_weights"]["convert_vcf"]["bed"],
-            bim = config["twas_weights"]["convert_vcf"]["bim"],
-            fam = config["twas_weights"]["convert_vcf"]["fam"]
-    params: prefix = config["twas_weights"]["convert_vcf"]["prefix"]
+    input: TW["convert_vcf"]["input"]
+    output: bed = TW["convert_vcf"]["bed"],
+            bim = TW["convert_vcf"]["bim"],
+            fam = TW["convert_vcf"]["fam"]
+    params: prefix = TW["convert_vcf"]["prefix"]
     envmodules: "plink/2.0"
     message: "Converting genotypes from VCF to PLINK binary (bed/bim/fam) format for FUSION weight calculation"
     benchmark: "reports/benchmarks/13twas_weights.convert_vcf.benchmark.txt"
-    log:    config["twas_weights"]["convert_vcf"]["log"]
+    log:    TW["convert_vcf"]["log"]
     shell:  """plink2 --vcf {input} --make-bed --out {params.prefix} > {log} 2>&1"""
 
 rule get_ldref_snplist:
-    input:       expand(config["twas_weights"]["get_ldref_snplist"]["input"], chr = range(1, 23))
-    output:      config["twas_weights"]["get_ldref_snplist"]["snp_lst"]
+    input:       expand(TW["get_ldref_snplist"]["input"], chr = range(1, 23))
+    output:      TW["get_ldref_snplist"]["snp_lst"]
     message:    "Extract SNP IDs from LD reference .bim files"
     benchmark:  "reports/benchmarks/13twas_weights.get_ldref_snplist.benchmark.txt"
-    log:        config["twas_weights"]["get_ldref_snplist"]["log"]
+    log:        TW["get_ldref_snplist"]["log"]
     shell:      """
                 # Extract SNP IDs from LD reference .bim files
                 cat {input} | cut -f 2 > {output} 2> {log}
@@ -54,11 +58,11 @@ rule prepare_covar:
             geno_pc=config['tensorQTL']['geno_pcs'],
             exp_pc=config['exp_pc_map'][w.cell_type]
         )
-    output: config["twas_weights"]["prepare_covar"]["output"]
+    output: TW["prepare_covar"]["output"]
     message: "Prepare covariate gene expression data for FUSION"
     singularity: config["containers"]["r_eqtl"]
     benchmark: "reports/benchmarks/13twas_weights.prepare_covar_{cell_type}.benchmark.txt"
-    log:  config["twas_weights"]["prepare_covar"]["log"]
+    log:  TW["prepare_covar"]["log"]
     script:   "../scripts/twas_weights_prep_covar_for_FUSION.R"
 
 rule compute_weights:
@@ -70,21 +74,21 @@ rule compute_weights:
             ldref_snps = rules.get_ldref_snplist.output,
             covar = rules.prepare_covar.output,
             gemma = rules.get_gemma.output
-    output: touch(config["twas_weights"]["compute_weights"]["output"])
-    params: prefix_in = config["twas_weights"]["convert_vcf"]["prefix"],
-            outdir = config["twas_weights"]["compute_weights"]["outdir"],
-            tmp_dir = config["twas_weights"]["compute_weights"]["tmp_dir"],
-            fusion_script = config["twas_weights"]["compute_weights"]["fusion_script"],
-            gcta = config["twas_weights"]["compute_weights"]["gcta"],
-            plink = config["twas_weights"]["compute_weights"]["plink"],
+    output: touch(TW["compute_weights"]["output"])
+    params: prefix_in = TW["convert_vcf"]["prefix"],
+            outdir = TW["compute_weights"]["outdir"],
+            tmp_dir = TW["compute_weights"]["tmp_dir"],
+            fusion_script = TW["compute_weights"]["fusion_script"],
+            gcta = TW["compute_weights"]["gcta"],
+            plink = TW["compute_weights"]["plink"],
             cis_window = config["tensorQTL"]["window"],
-            hsq_p = config["twas_weights"]["compute_weights"]["hsq_p"],
-            crossval = config["twas_weights"]["compute_weights"]["crossval"],
-            models = config["twas_weights"]["compute_weights"]["models"]
+            hsq_p = TW["compute_weights"]["hsq_p"],
+            crossval = TW["compute_weights"]["crossval"],
+            models = TW["compute_weights"]["models"]
     singularity: config["containers"]["twas"]
     message: "Running FUSION weights for ALL genes in {wildcards.cell_type}"
     benchmark: "reports/benchmarks/13twas_weights.compute_weights_{cell_type}.benchmark.txt"
-    log: config["twas_weights"]["compute_weights"]["log"]
+    log: TW["compute_weights"]["log"]
     shell:
         r"""
         echo "Starting weight computation for {wildcards.cell_type}" > {log}
@@ -163,33 +167,33 @@ rule make_pos_file:
     input:  weights = rules.compute_weights.output,
             coord = rules.prep_exp_data.output.coord,
             expr = rules.prep_exp_data.output.exp
-    output: config["twas_weights"]["make_pos_file"]["output"]
+    output: TW["make_pos_file"]["output"]
     params: cis_window = config["tensorQTL"]["window"]
     message:  "Generate FUSION .pos file for {wildcards.cell_type}"
     benchmark: "reports/benchmarks/13twas_weights.make_pos_file_{cell_type}.benchmark.txt"
-    log:      config["twas_weights"]["make_pos_file"]["log"]
+    log:      TW["make_pos_file"]["log"]
     script:   "../scripts/twas_weights_make_fusion_pos_file.py"
 
 rule twas_weights_report:
     input:  pos = expand(rules.make_pos_file.output, cell_type = config['cell_types']),
             coord = expand(rules.prep_exp_data.output.coord, cell_type = config['cell_types']),
-            rmd_script = config["twas_weights"]["twas_weights_report"]["script"],
+            rmd_script = TW["twas_weights_report"]["script"],
             functions = "scripts/twas_weights_functions.R"
-    output: config["twas_weights"]["twas_weights_report"]["output"]
+    output: TW["twas_weights_report"]["output"]
     params: cell_types = ",".join(config["cell_types"]),
-            weights_dir = lambda w: config["twas_weights"]["compute_weights"]["outdir"],
-            pos_file = lambda w: config["twas_weights"]["make_pos_file"]["output"],
-            coord_file = lambda w: config["twas_weights"]["prep_exp_data"]["coord"],
-            weights_log = lambda w: config["twas_weights"]["compute_weights"]["log"],
-            bmark_dir = config["twas_weights"]["twas_weights_report"]["bmark_dir"],
+            weights_dir = lambda w: TW["compute_weights"]["outdir"],
+            pos_file = lambda w: TW["make_pos_file"]["output"],
+            coord_file = lambda w: TW["prep_exp_data"]["coord"],
+            weights_log = lambda w: TW["compute_weights"]["log"],
+            bmark_dir = TW["twas_weights_report"]["bmark_dir"],
             cis_window = config["tensorQTL"]["window"],
-            hsq_p = config["twas_weights"]["compute_weights"]["hsq_p"],
-            crossval = config["twas_weights"]["compute_weights"]["crossval"],
-            models = config["twas_weights"]["compute_weights"]["models"]
+            hsq_p = TW["compute_weights"]["hsq_p"],
+            crossval = TW["compute_weights"]["crossval"],
+            models = TW["compute_weights"]["models"]
     singularity: config["containers"]["r_eqtl"]
     message:  "Generate TWAS weights report"
     benchmark: "reports/benchmarks/13twas_weights.twas_weights_report.benchmark.txt"
-    log: config["twas_weights"]["twas_weights_report"]["log"]
+    log: TW["twas_weights_report"]["log"]
     shell:
         """
         Rscript -e "wd <- getwd(); rmarkdown::render('{input.rmd_script}', \
@@ -210,4 +214,4 @@ rule twas_weights_report:
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["13twas_weights"] = [config["twas_weights"]["twas_weights_report"]["output"]]
+TARGETS["13twas_weights"] = [TW["twas_weights_report"]["output"]]

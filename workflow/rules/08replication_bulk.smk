@@ -1,16 +1,8 @@
-configfile: "../config/config.yaml"
-
+##  Settings  ------------------------------------------------------------------------------
 RB = config["replication_bulk"]
 
 
-def perm_files(cell_types):
-    """tensorQTL permutation output per cell type, at the final expPC (exp_pc_map)."""
-    return [config["tensorQTL"]["tensorqtl_perm"]["output"].format(
-                cell_type=ct, norm_method=config["tensorQTL"]["norm_methods"][0],
-                geno_pc=config["tensorQTL"]["geno_pcs"], exp_pc=config["exp_pc_map"][ct])
-            for ct in cell_types]
-
-
+##  Targets  -------------------------------------------------------------------------------
 # Benchmark file per rule, shown in the report
 REPL_BULK_BENCHMARKS = [(rule, RB[key]["benchmark"]) for rule, key in [
     ("extract_unique_egenes",   "extract_unique_egenes"),
@@ -18,6 +10,8 @@ REPL_BULK_BENCHMARKS = [(rule, RB[key]["benchmark"]) for rule, key in [
     ("isoform_eqtl_comparison", "isoform_eqtl"),
     ("repl_bulk_report",        "report")]]
 
+
+##  Rules  ---------------------------------------------------------------------------------
 
 rule extract_unique_egenes:
     input:  perm_files = perm_files(config["cell_types"])

@@ -1,18 +1,8 @@
-configfile: '../config/config.yaml'
-
 import os
 
-DSH         = config['data_sharing']
-NORM_METHOD = config['tensorQTL']['norm_methods'][0]
-GENO_PC     = config['tensorQTL']['geno_pcs']
 
-
-def manuscript_label(ct):
-    """Pipeline -> manuscript cell type label (config manuscript_labels, in order)."""
-    for old, new in config['manuscript_labels'].items():
-        ct = ct.replace(old, new)
-    return ct
-
+##  Settings  ------------------------------------------------------------------------------
+DSH = config['data_sharing']
 
 # Manuscript label -> pipeline label, in config cell_types order
 CT_NEW2OLD = {manuscript_label(ct): ct for ct in config['cell_types']}
@@ -20,14 +10,7 @@ assert len(CT_NEW2OLD) == len(config['cell_types']), "Relabelling produced dupli
 MS_LABELS = list(CT_NEW2OLD)
 
 
-def perm_files(cell_types):
-    """tensorQTL permutation output per cell type, at the final expPC (exp_pc_map)."""
-    return [config['tensorQTL']['tensorqtl_perm']['output'].format(
-                cell_type=ct, norm_method=NORM_METHOD, geno_pc=GENO_PC,
-                exp_pc=config['exp_pc_map'][ct])
-            for ct in cell_types]
-
-
+##  Functions  -----------------------------------------------------------------------------
 def nominal_files(cell_types):
     """12SMR nominal export (cat_tensorqtl_nom_snps) per cell type."""
     return [config['smr']['cat_tensorqtl_nom_snps']['cat_snps'].format(cell_type=ct)
@@ -50,7 +33,7 @@ def interleave(a, b):
     return [f for pair in zip(a, b) for f in pair]
 
 
-# Rules  -----------------------------------------------------------------------------
+##  Rules  ---------------------------------------------------------------------------------
 
 rule data_perm:
     input:  eqtl        = perm_files(config['cell_types']),

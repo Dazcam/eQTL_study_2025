@@ -1,5 +1,4 @@
-configfile: '../config/config.yaml'
-
+##  Settings  ------------------------------------------------------------------------------
 FIG = config['figures']
 
 BOXPLOT_PAIRS = FIG['eqtl_boxplots_py']['pairs']
@@ -9,6 +8,8 @@ BOXPLOT_EXP = {f"exp_{panel}": config['tensorQTL']['prep_tensorQTL_input']['exp_
 BOXPLOT_CSV = {panel: FIG['eqtl_boxplots_py']['out_csv'].format(**pair)
                for panel, pair in BOXPLOT_PAIRS.items()}
 
+
+##  Rules  ---------------------------------------------------------------------------------
 
 # Fig 1A: made outside the pipeline
 

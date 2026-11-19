@@ -1,4 +1,5 @@
-configfile: "../config/config.yaml"
+##  Settings  ------------------------------------------------------------------------------
+PT = config["pseudotime"]
 
 # Pseudotime quantile schemes: Q4, Q5 and Q6 equal-cell-number bins per trajectory.
 # Single source for the pseudobulk script (params), its declared CSV outputs and the
@@ -12,7 +13,7 @@ PT_GENO_PC = config["tensorQTL"]["geno_pcs"]
 PT_PSEUDOBULK_CSVS = [
     csv
     for n in PT_Q_VALUES
-    for csv in expand(config["pseudotime"]["pseudobulk"]["csv"],
+    for csv in expand(PT["pseudobulk"]["csv"],
                       quantile_n=n, bin=range(1, n + 1), allow_missing=True)
 ]
 
@@ -21,17 +22,18 @@ PT_PSEUDOBULK_CSVS = [
 PT_ORIG_CELL_TYPES = [ct for ct in config["cell_types"] if "-to-" not in ct]
 
 # Q4 bins exported to 05TENSORQTL as pseudo cell types for SuSiE, SMR and TWAS
-PT_Q4_EXPORT_TARGETS = expand(config["pseudotime"]["export"]["sentinel"],
+PT_Q4_EXPORT_TARGETS = expand(PT["export"]["sentinel"],
                               trajectory=config["trajectories"], bin=range(1, 5))
 
 
+##  Functions  -----------------------------------------------------------------------------
 def get_pseudotime_tensorqtl(wildcards=None):
     files = []
     for n in PT_Q_VALUES:
         for step in ["tensorqtl_perm", "tensorqtl_nom"]:
             files.extend(
                 expand(
-                    config["pseudotime"][step]["output"],
+                    PT[step]["output"],
                     trajectory=config["trajectories"],
                     quantile_n=n,
                     bin=range(1, n + 1),
@@ -53,7 +55,7 @@ def pt_export_paths(trajectory, bin):
     pc  = config["exp_pc_map"][pt_group]
     src = dict(trajectory=trajectory, quantile_n=4, bin=bin, geno_pc=PT_GENO_PC, exp_pc=pc)
     dst = dict(cell_type=pt_group, norm_method="quantile", geno_pc=PT_GENO_PC, exp_pc=pc)
-    pt, tq = config["pseudotime"], config["tensorQTL"]
+    pt, tq = PT, config["tensorQTL"]
     return {
         "nom":  (pt["tensorqtl_nom"]["prefix_out"].format(**src),
                  tq["tensorqtl_nom"]["prefix_out"].format(**dst)),
@@ -73,82 +75,84 @@ def pt_export_inputs(wildcards):
     return src
 
 
+##  Rules  ---------------------------------------------------------------------------------
+
 rule pseudotime_subset:
     input:  h5ad   = config["scanpy"]["clusters_h5ad"]
-    output: h5ad   = config["pseudotime"]["subset"]["h5ad"]
-    conda:  config["pseudotime"]["env"]
+    output: h5ad   = PT["subset"]["h5ad"]
+    conda:  PT["env"]
     resources: threads = 2, mem_mb = 180000, time = "00:30:00"
     threads: 2
-    log:    config["pseudotime"]["subset"]["log"]
+    log:    PT["subset"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_subset_{trajectory}.benchmark.txt"
     message: "Subsetting trajectory: {wildcards.trajectory}"
-    script: config["pseudotime"]["subset"]["script"]
+    script: PT["subset"]["script"]
 
 rule pseudotime_palantir:
     input:  h5ad   = rules.pseudotime_subset.output.h5ad
-    output: h5ad   = config["pseudotime"]["palantir"]["h5ad"]
-    params: n_neighbors   = config["pseudotime"]["palantir"]["n_neighbors"],
-            n_pcs         = config["pseudotime"]["palantir"]["n_pcs"],
-            n_dcs         = config["pseudotime"]["palantir"]["n_dcs"],
-            num_waypoints = config["pseudotime"]["palantir"]["num_waypoints"],
-            root_gene     = config["pseudotime"]["palantir"]["root_gene"],
-            terminal_markers = config["pseudotime"]["palantir"]["terminal_markers"]
-    conda:  config["pseudotime"]["env"]
+    output: h5ad   = PT["palantir"]["h5ad"]
+    params: n_neighbors   = PT["palantir"]["n_neighbors"],
+            n_pcs         = PT["palantir"]["n_pcs"],
+            n_dcs         = PT["palantir"]["n_dcs"],
+            num_waypoints = PT["palantir"]["num_waypoints"],
+            root_gene     = PT["palantir"]["root_gene"],
+            terminal_markers = PT["palantir"]["terminal_markers"]
+    conda:  PT["env"]
     resources: threads = 4, mem_mb = 96000, time = "01:00:00"
     threads: 4
-    log:    config["pseudotime"]["palantir"]["log"]
+    log:    PT["palantir"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_palantir_{trajectory}.benchmark.txt"
     message: "Running Palantir pseudotime for trajectory: {wildcards.trajectory}"
-    script: config["pseudotime"]["palantir"]["script"]
+    script: PT["palantir"]["script"]
 
 rule pseudotime_pseudobulk:
     input:  h5ad     = rules.pseudotime_palantir.output.h5ad,
-            geno     = config["pseudotime"]["pseudobulk"]["geno_sample_file"]
-    output: sentinel = config["pseudotime"]["pseudobulk"]["sentinel"],
+            geno     = PT["pseudobulk"]["geno_sample_file"]
+    output: sentinel = PT["pseudobulk"]["sentinel"],
             csvs     = PT_PSEUDOBULK_CSVS
     params: q_values = PT_Q_VALUES
-    conda:  config["pseudotime"]["env"]
+    conda:  PT["env"]
     resources: threads = 2, mem_mb = 90000, time = "00:15:00"
     threads: 2
-    log:    config["pseudotime"]["pseudobulk"]["log"]
+    log:    PT["pseudobulk"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_pseudobulk_{trajectory}.benchmark.txt"
     message: "Generating pseudobulk quantile bins for trajectory: {wildcards.trajectory}"
-    script: config["pseudotime"]["pseudobulk"]["script"]
+    script: PT["pseudobulk"]["script"]
 
 rule pseudotime_prep_tensorqtl:
     input:  cov_file    = config["geno_post_impute"]["calc_genotype_pcs"]["output"],
             sex_file    = config["scanpy"]["metadata_per_sample"],
             gene_lookup = config["gene_lookup"],
-            pseudobulk  = config["pseudotime"]["pseudobulk"]["csv"]
-    output: exp_out     = config["pseudotime"]["prep_tensorqtl"]["exp_out"],
-            cov_out     = config["pseudotime"]["prep_tensorqtl"]["cov_out"],
-            report_rds  = config["pseudotime"]["prep_tensorqtl"]["report_rds"]
+            pseudobulk  = PT["pseudobulk"]["csv"]
+    output: exp_out     = PT["prep_tensorqtl"]["exp_out"],
+            cov_out     = PT["prep_tensorqtl"]["cov_out"],
+            report_rds  = PT["prep_tensorqtl"]["report_rds"]
     params: cell_type   = "{trajectory}-Q{quantile_n}-Bin{bin}",
             norm_method = "quantile"
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time = "2:00:00"
-    log:    config["pseudotime"]["prep_tensorqtl"]["log"]
+    log:    PT["prep_tensorqtl"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_prep_tensorqtl_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt"
     message: "Prepping tensorQTL inputs for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin}"
-    script: config["pseudotime"]["prep_tensorqtl"]["script"]
+    script: PT["prep_tensorqtl"]["script"]
 
 rule pseudotime_split_covariates:
     input:  rules.pseudotime_prep_tensorqtl.output.cov_out
-    output: config["pseudotime"]["split_covariates"]["output"]
+    output: PT["split_covariates"]["output"]
     params: cell_type = "{trajectory}-Q{quantile_n}-Bin{bin}"
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 6000, time = "1:00:00"
-    log:    config["pseudotime"]["split_covariates"]["log"]
+    log:    PT["split_covariates"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_split_covariates_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
     message: "Splitting covariates for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} genPC {wildcards.geno_pc} expPC {wildcards.exp_pc}"
-    script: config["pseudotime"]["split_covariates"]["script"]
+    script: PT["split_covariates"]["script"]
 
 rule pseudotime_zip_bed:
     input:  rules.pseudotime_prep_tensorqtl.output.exp_out
-    output: config["pseudotime"]["zip_bed"]["output"]
+    output: PT["zip_bed"]["output"]
     envmodules: "HTSlib/1.21-GCC-13.3.0"
     resources: threads = 1, mem_mb = 2000, time = "15:00"
-    log:    config["pseudotime"]["zip_bed"]["log"]
+    log:    PT["zip_bed"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_zip_bed_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt"
     message: "bgzip and tabix BED for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin}"
     shell:
@@ -161,14 +165,14 @@ rule pseudotime_tensorqtl_nom:
     input:  genotypes  = config["tensorQTL"]["convert_genotypes"]["output"],
             counts     = rules.pseudotime_zip_bed.output,
             covariates = rules.pseudotime_split_covariates.output
-    output: config["pseudotime"]["tensorqtl_nom"]["output"]
+    output: PT["tensorqtl_nom"]["output"]
     params: prefix_in  = config["tensorQTL"]["tensorqtl_nom"]["prefix_in"],
-            prefix_out = config["pseudotime"]["tensorqtl_nom"]["prefix_out"],
+            prefix_out = PT["tensorqtl_nom"]["prefix_out"],
             window     = config["tensorQTL"]["window"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 4, mem_mb = 20000, time = "30:00"
     threads: 4
-    log:    config["pseudotime"]["tensorqtl_nom"]["log"]
+    log:    PT["tensorqtl_nom"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_tensorqtl_nom_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
     message: "tensorQTL nominal for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} expPC {wildcards.exp_pc}"
     shell:
@@ -183,14 +187,14 @@ rule pseudotime_tensorqtl_perm:
     input:  genotypes  = config["tensorQTL"]["convert_genotypes"]["output"],
             counts     = rules.pseudotime_zip_bed.output,
             covariates = rules.pseudotime_split_covariates.output
-    output: config["pseudotime"]["tensorqtl_perm"]["output"]
+    output: PT["tensorqtl_perm"]["output"]
     params: prefix_in  = config["tensorQTL"]["tensorqtl_perm"]["prefix_in"],
-            prefix_out = config["pseudotime"]["tensorqtl_perm"]["prefix_out"],
+            prefix_out = PT["tensorqtl_perm"]["prefix_out"],
             window     = config["tensorQTL"]["window"]
     singularity: config["containers"]["tensorqtl"]
     resources: threads = 4, mem_mb = 20000, time = "2:00:00"
     threads: 4
-    log:    config["pseudotime"]["tensorqtl_perm"]["log"]
+    log:    PT["tensorqtl_perm"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_tensorqtl_perm_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt"
     message: "tensorQTL permutation for {wildcards.trajectory} Q{wildcards.quantile_n} bin {wildcards.bin} expPC {wildcards.exp_pc}"
     shell:
@@ -203,8 +207,8 @@ rule pseudotime_tensorqtl_perm:
 
 rule pseudotime_export_smr_twas_inputs:
     input:  unpack(pt_export_inputs)
-    output: touch(config["pseudotime"]["export"]["sentinel"])
-    log:    config["pseudotime"]["export"]["log"]
+    output: touch(PT["export"]["sentinel"])
+    log:    PT["export"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_export_smr_twas_inputs_{trajectory}_Q4_bin{bin}.benchmark.txt"
     wildcard_constraints:
         trajectory = "|".join(config["trajectories"]),
@@ -234,12 +238,12 @@ rule pseudotime_export_smr_twas_inputs:
 rule pseudotime_report:
     input:  perm           = get_pseudotime_tensorqtl(),
             gene_lookup    = config["gene_lookup"],
-            rmd_script     = config["pseudotime"]["report"]["rmd_script"]
-    output: config["pseudotime"]["report"]["html"]
-    params: in_dir              = config["pseudotime"]["report"]["in_dir"],
-            cell_type_perm_dir  = config["pseudotime"]["report"]["cell_type_perm_dir"],
-            output_file         = config["pseudotime"]["report"]["output_file"],
-            bmark_dir           = config["pseudotime"]["report"]["bmark_dir"],
+            rmd_script     = PT["report"]["rmd_script"]
+    output: PT["report"]["html"]
+    params: in_dir              = PT["report"]["in_dir"],
+            cell_type_perm_dir  = PT["report"]["cell_type_perm_dir"],
+            output_file         = PT["report"]["output_file"],
+            bmark_dir           = PT["report"]["bmark_dir"],
             gene_lookup         = lambda wc, input: "../" + input.gene_lookup,
             trajectories        = ",".join(config["trajectories"]),
             q_values            = ",".join(map(str, PT_Q_VALUES)),
@@ -248,16 +252,16 @@ rule pseudotime_report:
             window              = config["tensorQTL"]["window"],
             orig_cell_types     = ",".join(PT_ORIG_CELL_TYPES),
             orig_exp_pcs        = ",".join(str(config["exp_pc_map"][ct]) for ct in PT_ORIG_CELL_TYPES),
-            n_neighbors         = config["pseudotime"]["palantir"]["n_neighbors"],
-            n_pcs               = config["pseudotime"]["palantir"]["n_pcs"],
-            n_dcs               = config["pseudotime"]["palantir"]["n_dcs"],
-            num_waypoints       = config["pseudotime"]["palantir"]["num_waypoints"],
-            root_gene           = config["pseudotime"]["palantir"]["root_gene"],
-            terminal_markers    = ",".join(f"{k}={v}" for k, v in config["pseudotime"]["palantir"]["terminal_markers"].items()),
-            subset_logs         = ",".join("../" + config["pseudotime"]["subset"]["log"].format(trajectory=t) for t in config["trajectories"])
+            n_neighbors         = PT["palantir"]["n_neighbors"],
+            n_pcs               = PT["palantir"]["n_pcs"],
+            n_dcs               = PT["palantir"]["n_dcs"],
+            num_waypoints       = PT["palantir"]["num_waypoints"],
+            root_gene           = PT["palantir"]["root_gene"],
+            terminal_markers    = ",".join(f"{k}={v}" for k, v in PT["palantir"]["terminal_markers"].items()),
+            subset_logs         = ",".join("../" + PT["subset"]["log"].format(trajectory=t) for t in config["trajectories"])
     singularity: config["containers"]["r_eqtl"]
     resources: threads = 1, mem_mb = 8000, time = "1:00:00"
-    log:    config["pseudotime"]["report"]["log"]
+    log:    PT["report"]["log"]
     benchmark: "reports/benchmarks/06pseudotime.pseudotime_report.benchmark.txt"
     message: "Generating pseudotime eQTL report"
     shell:
@@ -289,4 +293,4 @@ rule pseudotime_report:
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["06pseudotime"] = [config["pseudotime"]["report"]["html"], PT_Q4_EXPORT_TARGETS]
+TARGETS["06pseudotime"] = [PT["report"]["html"], PT_Q4_EXPORT_TARGETS]

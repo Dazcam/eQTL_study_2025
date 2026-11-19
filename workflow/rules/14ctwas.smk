@@ -1,17 +1,22 @@
-configfile: '../config/config.yaml'
-
 localrules: ctwas_report
 
+
+##  Settings  ------------------------------------------------------------------------------
+CTW = config["ctwas"]
+
+
+##  Rules  ---------------------------------------------------------------------------------
+
 rule create_ld_matrices:
-    output: config["ctwas"]["create_ld_matrices"]["output"]
-    params: ld_ref_dir = config["ctwas"]["create_ld_matrices"]["ld_ref_dir"],
-            out_dir    = config["ctwas"]["create_ld_matrices"]["out_dir"]
+    output: CTW["create_ld_matrices"]["output"]
+    params: ld_ref_dir = CTW["create_ld_matrices"]["ld_ref_dir"],
+            out_dir    = CTW["create_ld_matrices"]["out_dir"]
     resources: threads = 1, mem_mb = 10000, time="5:30:00"
     singularity: config["containers"]["twas"]
     message:  "Creating LD matrices and variant info files for causal TWAS"
-    benchmark: config["ctwas"]["create_ld_matrices"]["bmrk"]
-    log:       config["ctwas"]["create_ld_matrices"]["log"]
-    script:    config["ctwas"]["create_ld_matrices"]["script"]
+    benchmark: CTW["create_ld_matrices"]["bmrk"]
+    log:       CTW["create_ld_matrices"]["log"]
+    script:    CTW["create_ld_matrices"]["script"]
 
 
 rule copy_fusion_weights:
@@ -21,13 +26,13 @@ rule copy_fusion_weights:
     files that make preprocess_weights() choke.
     Note: Keep stub files in separate directory from weights or cTWAS chokes 
     """
-    input:   config["ctwas"]["copy_fusion_weights"]["input"]
-    output:  touch(config["ctwas"]["copy_fusion_weights"]["output"])
-    params:  src_dir   = config["ctwas"]["copy_fusion_weights"]["src_dir"],
-             dest_dir  = config["ctwas"]["copy_fusion_weights"]["dest_dir"]
+    input:   CTW["copy_fusion_weights"]["input"]
+    output:  touch(CTW["copy_fusion_weights"]["output"])
+    params:  src_dir   = CTW["copy_fusion_weights"]["src_dir"],
+             dest_dir  = CTW["copy_fusion_weights"]["dest_dir"]
     message:  "Copying genuine FUSION weights for {wildcards.cell_type} (listed in .pos) to {params.dest_dir}"
-    log:       config["ctwas"]["copy_fusion_weights"]["log"]
-    benchmark: config["ctwas"]["copy_fusion_weights"]["bmrk"]
+    log:       CTW["copy_fusion_weights"]["log"]
+    benchmark: CTW["copy_fusion_weights"]["bmrk"]
     shell:  """
             mkdir -p {params.dest_dir} && \\
             awk 'NR>1 {{print $2}}' {input} | \\
@@ -38,15 +43,15 @@ rule copy_fusion_weights:
 
 rule run_ctwas:
     input:  ld_mat      = rules.create_ld_matrices.output,
-            gwas        = config["ctwas"]["run_ctwas"]["gwas"],
+            gwas        = CTW["run_ctwas"]["gwas"],
             weights     = rules.copy_fusion_weights.output,
-            bim_file    = config["ctwas"]["run_ctwas"]["bim_file"],
+            bim_file    = CTW["run_ctwas"]["bim_file"],
             gene_lookup = config["gene_lookup"]
-    output: config["ctwas"]["run_ctwas"]["output"]
-    params: ld_dir        = config["ctwas"]["create_ld_matrices"]["out_dir"],
-            weights_dir   = config["ctwas"]["run_ctwas"]["weights_dir"],
-            run_weight_qc = config["ctwas"]["run_ctwas"]["run_weight_qc"],
-            remove_mhc    = config["ctwas"]["run_ctwas"]["remove_mhc"],
+    output: CTW["run_ctwas"]["output"]
+    params: ld_dir        = CTW["create_ld_matrices"]["out_dir"],
+            weights_dir   = CTW["run_ctwas"]["weights_dir"],
+            run_weight_qc = CTW["run_ctwas"]["run_weight_qc"],
+            remove_mhc    = CTW["run_ctwas"]["remove_mhc"],
             mhc_chr       = config["mhc_region"]["chr"],
             mhc_start     = config["mhc_region"]["start"],
             mhc_end       = config["mhc_region"]["end"]            
@@ -54,29 +59,29 @@ rule run_ctwas:
     threads: 6
     singularity: config["containers"]["twas"]
     message:     "Running cTWAS"
-    benchmark:   config["ctwas"]["run_ctwas"]["bmrk"]
-    log:         config["ctwas"]["run_ctwas"]["log"]
-    script:      config["ctwas"]["run_ctwas"]["script"]
+    benchmark:   CTW["run_ctwas"]["bmrk"]
+    log:         CTW["run_ctwas"]["log"]
+    script:      CTW["run_ctwas"]["script"]
 
 rule ctwas_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:
             ctwas_res   = expand(rules.run_ctwas.output, cell_type = config['cell_types'], gwas = config['gwas']),
             gene_lookup = config["gene_lookup"],
-            rmd_script  = config["ctwas"]["ctwas_report"]["rmd_script"]
-    output: config["ctwas"]["ctwas_report"]["output"]
-    params: in_dir      = config["ctwas"]["ctwas_report"]["in_dir"],
-            bmark_dir   = config["ctwas"]["ctwas_report"]["bmark_dir"],
+            rmd_script  = CTW["ctwas_report"]["rmd_script"]
+    output: CTW["ctwas_report"]["output"]
+    params: in_dir      = CTW["ctwas_report"]["in_dir"],
+            bmark_dir   = CTW["ctwas_report"]["bmark_dir"],
             gene_lookup = lambda wc, input: "../" + input.gene_lookup,
             cell_types  = ",".join(config["cell_types"]),
             gwas        = ",".join(config["gwas"].keys()),
-            pip_thresh  = config["ctwas"]["sig_pip_thresh"],
-            bf_thresh   = config["ctwas"]["sig_bf_thresh"],
-            output_file = config["ctwas"]["ctwas_report"]["output_file"]
+            pip_thresh  = CTW["sig_pip_thresh"],
+            bf_thresh   = CTW["sig_bf_thresh"],
+            output_file = CTW["ctwas_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message:     "Generate cTWAS report"
-    benchmark:   config["ctwas"]["ctwas_report"]["bmrk"]
-    log:         config["ctwas"]["ctwas_report"]["log"]
+    benchmark:   CTW["ctwas_report"]["bmrk"]
+    log:         CTW["ctwas_report"]["log"]
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
@@ -93,4 +98,4 @@ rule ctwas_report:
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["14ctwas"] = [config["ctwas"]["ctwas_report"]["output"]]
+TARGETS["14ctwas"] = [CTW["ctwas_report"]["output"]]

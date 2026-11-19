@@ -1,16 +1,20 @@
-configfile: "../config/config.yaml"
+##  Settings  ------------------------------------------------------------------------------
+GPR = config["geno_pre_impute"]
+
+
+##  Rules  ---------------------------------------------------------------------------------
 
 rule convert_raw:
-    input:   ped = config["geno_pre_impute"]["convert_raw"]["input"]["ped"],
-             map = config["geno_pre_impute"]["convert_raw"]["input"]["map"]
-    output:  config["geno_pre_impute"]["convert_raw"]["output"]
+    input:   ped = GPR["convert_raw"]["input"]["ped"],
+             map = GPR["convert_raw"]["input"]["map"]
+    output:  GPR["convert_raw"]["output"]
     resources: threads = 1, mem_mb = 50000, time = "0-1:00:00"
-    params:  prefix_in = config["geno_pre_impute"]["convert_raw"]["prefix_in"],
-             prefix_out = config["geno_pre_impute"]["convert_raw"]["prefix_out"]
+    params:  prefix_in = GPR["convert_raw"]["prefix_in"],
+             prefix_out = GPR["convert_raw"]["prefix_out"]
     envmodules: 'PLINK'
     message: "Converting raw genotypes to plink format"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.convert_raw.benchmark.txt"
-    log:     config["geno_pre_impute"]["convert_raw"]["log"]
+    log:     GPR["convert_raw"]["log"]
     shell:
         """
         plink --file {params.prefix_in} --make-bed --freq --out {params.prefix_out} > {log} 2>&1
@@ -18,14 +22,14 @@ rule convert_raw:
 
 rule add_sex_to_fam:
     input:  bed  = rules.convert_raw.output,
-            sexfile = config["geno_pre_impute"]["add_sex_to_fam"]["sexfile"]
-    output: config["geno_pre_impute"]["add_sex_to_fam"]["output"]
-    params: prefix_in = config["geno_pre_impute"]["convert_raw"]["prefix_out"],
-            prefix_out = config["geno_pre_impute"]["add_sex_to_fam"]["prefix_out"]
+            sexfile = GPR["add_sex_to_fam"]["sexfile"]
+    output: GPR["add_sex_to_fam"]["output"]
+    params: prefix_in = GPR["convert_raw"]["prefix_out"],
+            prefix_out = GPR["add_sex_to_fam"]["prefix_out"]
     envmodules: "PLINK"
     message: "Standardise fam col 1 and col2 and add sex annotations to fam"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.add_sex_to_fam.benchmark.txt"
-    log:    config["geno_pre_impute"]["add_sex_to_fam"]["log"]
+    log:    GPR["add_sex_to_fam"]["log"]
     shell:
         """
         # Step 1: overwrite fam so FID = IID
@@ -42,14 +46,14 @@ rule add_sex_to_fam:
 
 rule rm_dup_sample:
     input:  rules.add_sex_to_fam.output
-    output: config["geno_pre_impute"]["rm_dup_sample"]["output"]
-    params: prefix_in = config["geno_pre_impute"]["add_sex_to_fam"]["prefix_out"],
-            prefix_out = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"],
-            remove_file = config["geno_pre_impute"]["rm_dup_sample"]["remove_file"]
+    output: GPR["rm_dup_sample"]["output"]
+    params: prefix_in = GPR["add_sex_to_fam"]["prefix_out"],
+            prefix_out = GPR["rm_dup_sample"]["prefix_out"],
+            remove_file = GPR["rm_dup_sample"]["remove_file"]
     envmodules: "PLINK"
     message: "Remove duplicate sample: 14493"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.rm_dup_sample.benchmark.txt"
-    log:    config["geno_pre_impute"]["rm_dup_sample"]["log"]
+    log:    GPR["rm_dup_sample"]["log"]
     shell:
         """
         plink --bfile {params.prefix_in} \
@@ -62,13 +66,13 @@ rule rm_dup_sample:
 # Prune SNPss first to run on independent SNPs
 rule check_het:
     input:  rules.rm_dup_sample.output
-    output: config["geno_pre_impute"]["check_het"]["output"]
-    params: prefix = config["geno_pre_impute"]["rm_dup_sample"]["prefix_out"],
-            report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
+    output: GPR["check_het"]["output"]
+    params: prefix = GPR["rm_dup_sample"]["prefix_out"],
+            report_dir = GPR["genotype-qc2hrc"]["report_dir"]
     envmodules: "PLINK"
     message: "Check for sample autosomal heterozygosity, add a rule to rm samples if needed"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.check_het.benchmark.txt"
-    log: config["geno_pre_impute"]["check_het"]["log"] 
+    log: GPR["check_het"]["log"] 
     shell:
         """
         plink --bfile {params.prefix} --indep-pairwise 50 5 0.2 --out {params.prefix}
@@ -77,14 +81,14 @@ rule check_het:
         """
 
 rule make_kgp3_pgen:
-    input:   config["geno_pre_impute"]["make_kgp3_pgen"]["input"]
-    output:  config["geno_pre_impute"]["make_kgp3_pgen"]["output"]
+    input:   GPR["make_kgp3_pgen"]["input"]
+    output:  GPR["make_kgp3_pgen"]["output"]
     resources: threads = 1, mem_mb = 50000, time = "0-1:00:00"
     envmodules: "PLINK"
-    params:  workdir = config["geno_pre_impute"]["make_kgp3_pgen"]["workdir"]
+    params:  workdir = GPR["make_kgp3_pgen"]["workdir"]
     message: "Create kgp3 pgen file"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.make_kgp3_pgen.benchmark.txt"
-    log:      config["geno_pre_impute"]["make_kgp3_pgen"]["log"]
+    log:      GPR["make_kgp3_pgen"]["log"]
     shell:
         """
         (cd {params.workdir} && plink2 \
@@ -98,18 +102,18 @@ rule make_kgp3_pgen:
 rule genotype_qc2hrc:
     input:  rules.rm_dup_sample.output,
             rules.make_kgp3_pgen.output
-    output: config["geno_pre_impute"]["genotype-qc2hrc"]["output"]
+    output: GPR["genotype-qc2hrc"]["output"]
     singularity: config["containers"]["genotype-qc2hrc"]
     resources: threads = 10, mem_mb = 100000, time="5:00:00"
-    params: prefix_in = config["geno_pre_impute"]["genotype-qc2hrc"]["prefix_in"],
-            prefix_out = config["geno_pre_impute"]["genotype-qc2hrc"]["prefix_out"],
-            shortname = config["geno_pre_impute"]["genotype-qc2hrc"]["shortname"],
-            outdir = config["geno_pre_impute"]["genotype-qc2hrc"]["outdir"],
-            workdir = config["geno_pre_impute"]["genotype-qc2hrc"]["workdir"],
-            report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]      
+    params: prefix_in = GPR["genotype-qc2hrc"]["prefix_in"],
+            prefix_out = GPR["genotype-qc2hrc"]["prefix_out"],
+            shortname = GPR["genotype-qc2hrc"]["shortname"],
+            outdir = GPR["genotype-qc2hrc"]["outdir"],
+            workdir = GPR["genotype-qc2hrc"]["workdir"],
+            report_dir = GPR["genotype-qc2hrc"]["report_dir"]      
     message: "Run GenotypeQCtoHRC to prep genotypes for imputation"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.genotype_qc2hrc.benchmark.txt"
-    log:    config["geno_pre_impute"]["genotype-qc2hrc"]["log"]
+    log:    GPR["genotype-qc2hrc"]["log"]
     shell:
             """
             (cd {params.workdir} && Rscript GenotypeQCtoHRC.R \
@@ -132,9 +136,9 @@ rule genotype_qc2hrc:
 rule cat_genotypes:
     # Note here that input vcfs are aligned to hg38 despite what their name says
     input: rules.genotype_qc2hrc.output
-    output: config["geno_pre_impute"]["cat_genotypes"]["output"]  
+    output: GPR["cat_genotypes"]["output"]  
     envmodules: "BCFtools"
-    params: config["geno_pre_impute"]["cat_genotypes"]["in_dir"]
+    params: GPR["cat_genotypes"]["in_dir"]
     message: "Cat chr specific genotypes into a single file"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.cat_genotypes.benchmark.txt"
     shell:
@@ -147,14 +151,14 @@ rule cat_genotypes:
 # rm MAF A/T and G/C SNPs with MAFs > 0.4
 rule rm_maf_ambig:
     input:  rules.cat_genotypes.output
-    output: config["geno_pre_impute"]["rm_maf_ambig"]["output"]
-    params: prefix_in = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_in"],
-            prefix_out = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_out"],
-            ambig_snp_lst = config["geno_pre_impute"]["rm_maf_ambig"]["ambig_snp_lst"]
+    output: GPR["rm_maf_ambig"]["output"]
+    params: prefix_in = GPR["rm_maf_ambig"]["prefix_in"],
+            prefix_out = GPR["rm_maf_ambig"]["prefix_out"],
+            ambig_snp_lst = GPR["rm_maf_ambig"]["ambig_snp_lst"]
     envmodules: "PLINK"
     message: "Rm strand ambiguous SNPs with MAF > 0.4"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.rm_maf_ambig.benchmark.txt"
-    log:    config["geno_pre_impute"]["rm_maf_ambig"]["log"]
+    log:    GPR["rm_maf_ambig"]["log"]
     shell:
         """
         # Convert VCF to PLINK binary + frequency calc
@@ -174,14 +178,14 @@ rule rm_maf_ambig:
 # rm MAF < 0.01
 rule rm_rare_snps:
     input:  rules.rm_maf_ambig.output
-    output: config["geno_pre_impute"]["rm_rare_snps"]["output"]
-    params: prefix_in = config["geno_pre_impute"]["rm_maf_ambig"]["prefix_out"],
-            prefix_out = config["geno_pre_impute"]["rm_rare_snps"]["prefix_out"],
-            report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
+    output: GPR["rm_rare_snps"]["output"]
+    params: prefix_in = GPR["rm_maf_ambig"]["prefix_out"],
+            prefix_out = GPR["rm_rare_snps"]["prefix_out"],
+            report_dir = GPR["genotype-qc2hrc"]["report_dir"]
     envmodules: "PLINK"
     message: "Rm rare SNPs with MAF < 0.01"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.rm_rare_snps.benchmark.txt"
-    log:    config["geno_pre_impute"]["rm_rare_snps"]["log"]    
+    log:    GPR["rm_rare_snps"]["log"]    
     shell:
         """
         plink --bfile {params.prefix_in} \
@@ -192,14 +196,14 @@ rule rm_rare_snps:
 
 rule split_chrs:
     input:  rules.rm_rare_snps.output
-    output: config["geno_pre_impute"]["split_chrs"]["output"]
-    params: prefix_in = config["geno_pre_impute"]["rm_rare_snps"]["prefix_out"],
-            prefix_vcf = config["geno_pre_impute"]["split_chrs"]["prefix_vcf"], 
-            outdir = config["geno_pre_impute"]["split_chrs"]["outdir"]
+    output: GPR["split_chrs"]["output"]
+    params: prefix_in = GPR["rm_rare_snps"]["prefix_out"],
+            prefix_vcf = GPR["split_chrs"]["prefix_vcf"], 
+            outdir = GPR["split_chrs"]["outdir"]
     benchmark: "reports/benchmarks/03genotypes_pre_impute.split_chrs.benchmark.txt"
     message: "Split chrs for TOPMED imputation"
     envmodules: "plink/1.9", "compiler/gnu/7/3.0", "bcftools/1.16.0" # Need to fix this for FALCON
-    log: config["geno_pre_impute"]["split_chrs"]["log"]
+    log: GPR["split_chrs"]["log"]
     shell:
         """
         # Convert to VCF
@@ -218,13 +222,13 @@ rule split_chrs:
 
 rule gather_stats:
     input:  rules.split_chrs.output
-    output: config["geno_pre_impute"]["gather_stats"]["output"]
-    params: gQC2hrc_vcf_dir = config["geno_pre_impute"]["gather_stats"]["gQC2hrc_vcf_dir"],
-            final_vcf_dir = config["geno_pre_impute"]["gather_stats"]["final_vcf_dir"],
-            report_dir = config["geno_pre_impute"]["genotype-qc2hrc"]["report_dir"]
+    output: GPR["gather_stats"]["output"]
+    params: gQC2hrc_vcf_dir = GPR["gather_stats"]["gQC2hrc_vcf_dir"],
+            final_vcf_dir = GPR["gather_stats"]["final_vcf_dir"],
+            report_dir = GPR["genotype-qc2hrc"]["report_dir"]
     message: "Gather SNP stats for reporting"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.gather_stats.benchmark.txt"
-    log: config["geno_pre_impute"]["gather_stats"]["log"]
+    log: GPR["gather_stats"]["log"]
     shell:
         """
        	total=0
@@ -256,15 +260,15 @@ rule gather_stats:
 rule geno_pre_report:
     # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  stats = rules.gather_stats.output,
-            rmd_script = config["geno_pre_impute"]["geno_pre_report"]["rmd_script"]
-    output: config["geno_pre_impute"]["geno_pre_report"]["html"]
-    params: in_dir = config["geno_pre_impute"]["geno_pre_report"]["in_dir"],
-            bmark_dir = config["geno_pre_impute"]["geno_pre_report"]["bmark_dir"],
-            output_file = config["geno_pre_impute"]["geno_pre_report"]["out_file"]
+            rmd_script = GPR["geno_pre_report"]["rmd_script"]
+    output: GPR["geno_pre_report"]["html"]
+    params: in_dir = GPR["geno_pre_report"]["in_dir"],
+            bmark_dir = GPR["geno_pre_report"]["bmark_dir"],
+            output_file = GPR["geno_pre_report"]["out_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate genotyping pre-imputation report"
     benchmark: "reports/benchmarks/03genotypes_pre_impute.geno_pre_report.benchmark.txt"
-    log: config["geno_pre_impute"]["geno_pre_report"]["log"]
+    log: GPR["geno_pre_report"]["log"]
     shell:
         """
         Rscript -e "rmarkdown::render('{input.rmd_script}', \
@@ -275,4 +279,4 @@ rule geno_pre_report:
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["03genotypes_pre_impute"] = [config["geno_pre_impute"]["geno_pre_report"]["html"]]
+TARGETS["03genotypes_pre_impute"] = [GPR["geno_pre_report"]["html"]]

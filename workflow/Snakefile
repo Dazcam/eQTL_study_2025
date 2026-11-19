@@ -4,6 +4,9 @@ configfile: '../config/config.yaml'
 # on or off with its include line; rule all then builds everything that is included.
 TARGETS = {}
 
+# Shared settings and helpers used by the rule files; always included
+include: 'rules/common.smk'
+
 #include: 'rules/00setup.smk'
 #include: 'rules/01parse.smk'
 #include: 'rules/02scanpy.smk'

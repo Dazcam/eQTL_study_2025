@@ -1,14 +1,20 @@
+##  Settings  ------------------------------------------------------------------------------
+SCP = config["scanpy"]
+
+
+##  Rules  ---------------------------------------------------------------------------------
+
 rule scanpy_qc:
-    input:   plate = config["scanpy"]["qc"]["input"]["plate"],
-             nb = config["scanpy"]["qc"]["input"]["nb"]
-    output:  config["scanpy"]["qc"]["output"]
-    conda:   config["scanpy"]["env"]
+    input:   plate = SCP["qc"]["input"]["plate"],
+             nb = SCP["qc"]["input"]["nb"]
+    output:  SCP["qc"]["output"]
+    conda:   SCP["env"]
     resources: threads = 16, mem_mb = 160000, time = "3:00:00"
-    params:  nb_out = config["scanpy"]["qc"]["nb_out"],
-             html_out = config["scanpy"]["qc"]["html_out"]
-    benchmark: config["scanpy"]["qc"]["benchmark"]
+    params:  nb_out = SCP["qc"]["nb_out"],
+             html_out = SCP["qc"]["html_out"]
+    benchmark: SCP["qc"]["benchmark"]
     message: "Running Scanpy QC in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["qc"]["log"]
+    log:     SCP["qc"]["log"]
     shell:
         """
         papermill {input.nb} {params.nb_out} -p plate {wildcards.plate} >> {log} 2>&1 && 
@@ -16,59 +22,59 @@ rule scanpy_qc:
         """
 
 rule scanpy_clustering:
-    input:   html = expand(config["scanpy"]["qc"]["output"], plate = config['plate']),
-             nb = config["scanpy"]["clustering"]["input"]
-    output:  config["scanpy"]["clustering"]["output"]
-    conda:   config["scanpy"]["env"]
+    input:   html = expand(SCP["qc"]["output"], plate = config['plate']),
+             nb = SCP["clustering"]["input"]
+    output:  SCP["clustering"]["output"]
+    conda:   SCP["env"]
     resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
-    params:  nb_out = config["scanpy"]["clustering"]["nb_out"],
-             html_out = config["scanpy"]["clustering"]["html_out"]
-    benchmark: config["scanpy"]["clustering"]["benchmark"]
+    params:  nb_out = SCP["clustering"]["nb_out"],
+             html_out = SCP["clustering"]["html_out"]
+    benchmark: SCP["clustering"]["benchmark"]
     message: "Running Scanpy clustering in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["clustering"]["log"]
+    log:     SCP["clustering"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate clustering >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
 
 rule scanpy_clustering2:
-    input:   html = config["scanpy"]["clustering"]["output"],
-             nb = config["scanpy"]["clustering2"]["input"]
-    output:  config["scanpy"]["clustering2"]["output"]
-    conda:   config["scanpy"]["env"]
+    input:   html = SCP["clustering"]["output"],
+             nb = SCP["clustering2"]["input"]
+    output:  SCP["clustering2"]["output"]
+    conda:   SCP["env"]
     resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
-    params:  nb_out = config["scanpy"]["clustering2"]["nb_out"],
-             html_out = config["scanpy"]["clustering2"]["html_out"]
+    params:  nb_out = SCP["clustering2"]["nb_out"],
+             html_out = SCP["clustering2"]["html_out"]
     message: "Running Scanpy clustering 2 in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["clustering2"]["log"]
+    log:     SCP["clustering2"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate clustering2 >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
 
 rule scanpy_clustering3:
-    input:   html = config["scanpy"]["clustering2"]["output"],
-             nb = config["scanpy"]["clustering3"]["input"]
-    output:  config["scanpy"]["clustering3"]["output"]
-    conda:   config["scanpy"]["env"]
+    input:   html = SCP["clustering2"]["output"],
+             nb = SCP["clustering3"]["input"]
+    output:  SCP["clustering3"]["output"]
+    conda:   SCP["env"]
     resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
-    params:  nb_out = config["scanpy"]["clustering3"]["nb_out"],
-             html_out = config["scanpy"]["clustering3"]["html_out"]
+    params:  nb_out = SCP["clustering3"]["nb_out"],
+             html_out = SCP["clustering3"]["html_out"]
     message: "Running Scanpy clustering 3 in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["clustering3"]["log"]
+    log:     SCP["clustering3"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate clustering2 >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
 
 rule scanpy_annotation:
-    input:   html = config["scanpy"]["clustering3"]["output"],
-             nb = config["scanpy"]["annotation"]["input"]
-    output:  config["scanpy"]["annotation"]["output"]
+    input:   html = SCP["clustering3"]["output"],
+             nb = SCP["annotation"]["input"]
+    output:  SCP["annotation"]["output"]
     envmodules: "Miniforge3"
-    conda:   config["scanpy"]["env"]
+    conda:   SCP["env"]
     resources: threads = 10, mem_mb = 200000, time="1:00:00"
-    params:  nb_out = config["scanpy"]["annotation"]["nb_out"],
-             html_out = config["scanpy"]["annotation"]["html_out"]
+    params:  nb_out = SCP["annotation"]["nb_out"],
+             html_out = SCP["annotation"]["html_out"]
     message: "Running Scanpy annotation in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["annotation"]["log"]
+    log:     SCP["annotation"]["log"]
     shell:   
              """
              papermill {input.nb} {params.nb_out} -p plate annotation --kernel eqtl_study >> {log} 2>&1 && 
@@ -76,64 +82,64 @@ rule scanpy_annotation:
              """
 
 rule scanpy_pseudobulk:
-    input:   html = config["scanpy"]["clustering3"]["output"],
-             nb = config["scanpy"]["pseudobulk"]["input"]
-    output:  config["scanpy"]["pseudobulk"]["output"]
-    conda:   config["scanpy"]["env"]
+    input:   html = SCP["clustering3"]["output"],
+             nb = SCP["pseudobulk"]["input"]
+    output:  SCP["pseudobulk"]["output"]
+    conda:   SCP["env"]
     resources: threads = 10, mem_mb = 100000, time="1-0:00:00"
-    params:  nb_out = config["scanpy"]["pseudobulk"]["nb_out"],
-             html_out = config["scanpy"]["pseudobulk"]["html_out"]
+    params:  nb_out = SCP["pseudobulk"]["nb_out"],
+             html_out = SCP["pseudobulk"]["html_out"]
     message: "Running Scanpy cell label and pseudobulk in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["pseudobulk"]["log"]
+    log:     SCP["pseudobulk"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate pseudobulk >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1 "
 
 rule scanpy_subclustering:
-    input:   html = config["scanpy"]["clustering3"]["output"],
-             nb = config["scanpy"]["subclustering"]["input"]
-    output:  config["scanpy"]["subclustering"]["output"]
-    conda:   config["scanpy"]["env"]
+    input:   html = SCP["clustering3"]["output"],
+             nb = SCP["subclustering"]["input"]
+    output:  SCP["subclustering"]["output"]
+    conda:   SCP["env"]
     resources: threads = 8, mem_mb = 80000, time="2:00:00"
-    params:  nb_out = config["scanpy"]["subclustering"]["nb_out"],
-             html_out = config["scanpy"]["subclustering"]["html_out"]
-    benchmark: config["scanpy"]["subclustering"]["benchmark"]
+    params:  nb_out = SCP["subclustering"]["nb_out"],
+             html_out = SCP["subclustering"]["html_out"]
+    benchmark: SCP["subclustering"]["benchmark"]
     message: "Running Scanpy subclustering in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["subclustering"]["log"]
+    log:     SCP["subclustering"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate subclustering >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
 
 rule scanpy_extra:
     # Rule to run quick minor tests
-    input:   html = config["scanpy"]["clustering"]["output"],
-             nb = config["scanpy"]["extra"]["input"]
-    output:  config["scanpy"]["extra"]["output"]
-    conda:   config["scanpy"]["env"]
+    input:   html = SCP["clustering"]["output"],
+             nb = SCP["extra"]["input"]
+    output:  SCP["extra"]["output"]
+    conda:   SCP["env"]
     resources: threads = 8, mem_mb = 80000, time="1:00:00"
-    params:  nb_out = config["scanpy"]["extra"]["nb_out"],
-             html_out = config["scanpy"]["extra"]["html_out"]
+    params:  nb_out = SCP["extra"]["nb_out"],
+             html_out = SCP["extra"]["html_out"]
     message: "Running Scanpy extra in Jupyter notebook and producing HTML output"
-    log:     config["scanpy"]["extra"]["log"]
+    log:     SCP["extra"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} --execution-timeout -1 --request-save-on-cell-execute -p plate extra >> {log} 2>&1 && "
              "jupyter nbconvert --to html {params.nb_out} --output {params.html_out} >> {log} 2>&1"
 
 rule scanpy_lisi:
-    input:  h5ad = config["scanpy"]["clusters_h5ad"]
-    output: csv  = config["scanpy"]["lisi"]["csv"],
-            plot = config["scanpy"]["lisi"]["plot"]
-    params: batch_col     = config["scanpy"]["lisi"]["batch_col"],
-            cell_type_col = config["scanpy"]["lisi"]["cell_type_col"],
-            random_seed   = config["scanpy"]["lisi"]["random_seed"],
-            perplexity    = config["scanpy"]["lisi"]["perplexity"]
-    conda:  config["scanpy"]["env"]
+    input:  h5ad = SCP["clusters_h5ad"]
+    output: csv  = SCP["lisi"]["csv"],
+            plot = SCP["lisi"]["plot"]
+    params: batch_col     = SCP["lisi"]["batch_col"],
+            cell_type_col = SCP["lisi"]["cell_type_col"],
+            random_seed   = SCP["lisi"]["random_seed"],
+            perplexity    = SCP["lisi"]["perplexity"]
+    conda:  SCP["env"]
     resources: threads = 10, mem_mb = 200000, time = "2:00:00"
     threads: 10
     message:   "Running LISI (iLISI / cLISI) batch correction assessment pre- and post-Harmony"
-    benchmark: config["scanpy"]["lisi"]["benchmark"]
-    log:       config["scanpy"]["lisi"]["log"]
-    script:    config["scanpy"]["lisi"]["script"]
+    benchmark: SCP["lisi"]["benchmark"]
+    log:       SCP["lisi"]["log"]
+    script:    SCP["lisi"]["script"]
 
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
