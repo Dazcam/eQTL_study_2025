@@ -1,15 +1,21 @@
+import os
+
+
 ##  Settings  ------------------------------------------------------------------------------
 SMR = config["smr"]
 
 
 ##  Functions  -----------------------------------------------------------------------------
+def tensorqtl_nom_file(w):
+    """05 nominal output (chr 4 parquet, stands in for all chromosomes) at exp_pc_map."""
+    return config["tensorQTL"]["tensorqtl_nom"]["output"].format(
+        cell_type=w.cell_type, norm_method=NORM_METHOD, geno_pc=GENO_PC,
+        exp_pc=config["exp_pc_map"][w.cell_type])
+
+
 def tensorqtl_nom_dir(w):
-    """tensorQTL nominal output directory for one cell type (first norm method)."""
-    norm_method = config['tensorQTL']['norm_methods'][0]
-    geno_pc = config['tensorQTL']['geno_pcs']
-    exp_pc = config['exp_pc_map'][w.cell_type]
-    return (f"../results/05TENSORQTL/tensorqtl_nom/"
-            f"{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/")
+    """05 nominal output directory for one cell type (trailing slash)."""
+    return os.path.dirname(tensorqtl_nom_file(w)) + "/"
 
 
 ##  Rules  ---------------------------------------------------------------------------------
@@ -56,8 +62,7 @@ rule cat_refs:
         """
 
 rule cat_tensorqtl_nom_snps:
-    input:  lambda w: tensorqtl_nom_dir(w) +
-                f"{w.cell_type}_{config['tensorQTL']['norm_methods'][0]}_nom.cis_qtl_pairs.4.parquet"
+    input:  tensorqtl_nom_file
     output: cat_snps = SMR["cat_tensorqtl_nom_snps"]["cat_snps"],
             summary = SMR["cat_tensorqtl_nom_snps"]["summary"]
     params: dir = tensorqtl_nom_dir,

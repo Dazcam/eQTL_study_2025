@@ -30,7 +30,7 @@ rule prep_exp_data:
     script: TW["prep_exp_data"]["script"]
 
 rule convert_vcf:
-    input: TW["convert_vcf"]["input"]
+    input: config["geno_post_impute"]["exclude_SNPs"]["output"]
     output: bed = TW["convert_vcf"]["bed"],
             bim = TW["convert_vcf"]["bim"],
             fam = TW["convert_vcf"]["fam"]

@@ -873,6 +873,7 @@ prep_gwas:
     prefix: ../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready
     log: ../results/00LOG/09PREP-GWAS/munge_sumstats_{gwas}.log
     benchmark: reports/benchmarks/09prep_gwas.munge_sumstats_{gwas}.benchmark.txt
+    snplist: ../resources/ldsr/ldsr_hg38_refs/1000G.EUR.hg38.w_hm3_test.snplist
 
 # ------------  Pipeline 10: SuSiE  ------------
 
@@ -884,7 +885,6 @@ susie:
     script: ../scripts/susie_prep_gene_meta.R
  
   vcf_to_dosage:
-    vcf: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     out_dosage: ../results/10SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz
     out_idx: ../results/10SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz.tbi
     log: ../results/00LOG/10SUSIE/vcf_to_dosage.log
@@ -1071,7 +1071,6 @@ twas_weights:
     script: ../scripts/twas_weights_prep_expr_for_FUSION.R
 
   convert_vcf:
-    input:  ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     bed:    ../results/13TWAS-WEIGHTS/fusion_input/genotypes_hg38.bed
     bim:    ../results/13TWAS-WEIGHTS/fusion_input/genotypes_hg38.bim
     fam:    ../results/13TWAS-WEIGHTS/fusion_input/genotypes_hg38.fam

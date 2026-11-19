@@ -240,7 +240,7 @@ rule add_hg38_coords_to_gwas:
 
 rule munge_sumstats:
     # Format sumstats for LDSR input
-    input:   snps = "../resources/ldsr/ldsr_hg38_refs/1000G.EUR.hg38.w_hm3_test.snplist",
+    input:   snps = PG["munge_sumstats"]["snplist"],
              gwas = rules.add_hg38_coords_to_gwas.output
     output:  PG["munge_sumstats"]["output"]
 #    conda:   "../envs/ldsr.yml" # Struggling to get this to work, can create env, but snakemake can't

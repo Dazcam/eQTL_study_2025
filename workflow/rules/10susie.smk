@@ -7,25 +7,21 @@ SUS = config["susie"]
 
 ##  Functions  -----------------------------------------------------------------------------
 def susie_exp_bed(w):
-    norm_method = config['tensorQTL']['norm_methods'][0]
-    return f"../results/05TENSORQTL/prep_input/{w.cell_type}_{norm_method}.bed"
+    """05 expression BED (prep_tensorQTL_input) for the final norm method."""
+    return config["tensorQTL"]["prep_tensorQTL_input"]["exp_out"].format(
+        cell_type=w.cell_type, norm_method=NORM_METHOD)
 
 
 def susie_covar(w):
-    norm_method = config['tensorQTL']['norm_methods'][0]
-    geno_pc     = config['tensorQTL']['geno_pcs']
-    exp_pc      = config['exp_pc_map'][w.cell_type]
-    return (f"../results/05TENSORQTL/prep_input/"
-            f"{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_split_covariates.txt")
+    """05 covariates (split_covariates) at the cell type's exp_pc_map value."""
+    return config["tensorQTL"]["split_covariates"]["output"].format(
+        cell_type=w.cell_type, norm_method=NORM_METHOD, geno_pc=GENO_PC,
+        exp_pc=config["exp_pc_map"][w.cell_type])
 
 
 def susie_perm(w):
-    norm_method = config['tensorQTL']['norm_methods'][0]
-    geno_pc     = config['tensorQTL']['geno_pcs']
-    exp_pc      = config['exp_pc_map'][w.cell_type]
-    return (f"../results/05TENSORQTL/tensorqtl_perm/"
-            f"{w.cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}/"
-            f"{w.cell_type}_{norm_method}_perm.cis_qtl.txt.gz")
+    """05 permutation results at the cell type's exp_pc_map value."""
+    return perm_files([w.cell_type])[0]
 
 
 def susie_batch_files(w):
@@ -47,7 +43,7 @@ rule prep_susie_gene_meta:
     script: SUS["prep_susie_gene_meta"]["script"]
 
 rule vcf_to_dosage:
-    input:  SUS["vcf_to_dosage"]["vcf"]
+    input:  config["geno_post_impute"]["exclude_SNPs"]["output"]
     output: dosage = SUS["vcf_to_dosage"]["out_dosage"],
             idx    = SUS["vcf_to_dosage"]["out_idx"]
     envmodules: config["envmodules"]["bcftools"]
