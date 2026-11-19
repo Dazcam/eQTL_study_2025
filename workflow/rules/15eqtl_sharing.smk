@@ -104,7 +104,7 @@ rule run_ld_clump:
             subset_prefix = ES["run_ld_clump"]["subset_prefix"],
             clump_kb = ES["run_ld_clump"]["clump_kb"],
             clump_r2 = ES["run_ld_clump"]["clump_r2"]
-    envmodules: "PLINK"
+    envmodules: config["envmodules"]["plink"]
     message: "LD-clump multi-SNP genes' eSNPs against cohort genotypes (independence check)"
     benchmark: ES["run_ld_clump"]["benchmark"]
     log:    ES["run_ld_clump"]["log"]

@@ -71,7 +71,7 @@ rule mk_eqtl_tar:
     input:  interleave(rules.data_perm.output.tsv, rules.data_nominal.output.tsv)
     output: DSH['data_mk_eqtl_tar']['out_file']
     params: script = DSH['data_mk_eqtl_tar']['script']
-    envmodules: "pigz"
+    envmodules: config["envmodules"]["pigz"]
     threads:   8
     resources: threads = 8, mem_mb = 16000, time = "5:00:00"
     message:   "Tarball of eQTL permutation and nominal files"
@@ -86,7 +86,7 @@ rule data_weights:
             weights_dir  = os.path.dirname(config['ctwas']['copy_fusion_weights']['dest_dir']),
             archive_root = DSH['data_weights']['archive_root'],
             pairs        = " ".join(f"{old}={new}" for new, old in CT_NEW2OLD.items())
-    envmodules: "pigz"
+    envmodules: config["envmodules"]["pigz"]
     threads:   10
     resources: threads = 10, mem_mb = 80000, time = "3:00:00"
     message:   "Tarball of FUSION TWAS weights"
@@ -99,7 +99,7 @@ rule final_genotypes:
     input:  vcf     = config['geno_post_impute']['exclude_SNPs']['output'],
             samples = DSH['final_genotypes']['samples']
     output: DSH['final_genotypes']['out_file']
-    envmodules: "BCFtools"
+    envmodules: config["envmodules"]["bcftools"]
     resources: time = "30:00"
     message:   "Genotype VCF for the final samples"
     benchmark: DSH['final_genotypes']['benchmark']

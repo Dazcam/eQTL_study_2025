@@ -150,7 +150,7 @@ rule pseudotime_split_covariates:
 rule pseudotime_zip_bed:
     input:  rules.pseudotime_prep_tensorqtl.output.exp_out
     output: PT["zip_bed"]["output"]
-    envmodules: "HTSlib/1.21-GCC-13.3.0"
+    envmodules: config["envmodules"]["htslib"]
     resources: threads = 1, mem_mb = 2000, time = "15:00"
     log:    PT["zip_bed"]["log"]
     benchmark: PT["zip_bed"]["benchmark"]

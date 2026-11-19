@@ -54,7 +54,7 @@ rule eqtl_boxplots_py:
     output: **BOXPLOT_CSV
     params: pairs       = BOXPLOT_PAIRS,
             plot_checks = FIG['eqtl_boxplots_py']['plot_checks']
-    envmodules: "BCFtools"
+    envmodules: config["envmodules"]["bcftools"]
     conda:  config["scanpy"]["env"]
     resources: time = "0:30:00", mem_mb = 20000
     benchmark: FIG['eqtl_boxplots_py']['benchmark']

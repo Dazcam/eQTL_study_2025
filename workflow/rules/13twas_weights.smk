@@ -35,7 +35,7 @@ rule convert_vcf:
             bim = TW["convert_vcf"]["bim"],
             fam = TW["convert_vcf"]["fam"]
     params: prefix = TW["convert_vcf"]["prefix"]
-    envmodules: "plink/2.0"
+    envmodules: config["envmodules"]["plink"]
     message: "Converting genotypes from VCF to PLINK binary (bed/bim/fam) format for FUSION weight calculation"
     benchmark: TW["convert_vcf"]["benchmark"]
     log:    TW["convert_vcf"]["log"]

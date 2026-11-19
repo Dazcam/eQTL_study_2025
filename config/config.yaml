@@ -164,6 +164,16 @@ containers:
 #  mashr: ../resources/containers/mashr.sif   # retired
   tensorqtl: ../resources/containers/tensorqtl.sif
 
+# Environment modules (Falcon); one module per key, comment lists the pipelines using it
+envmodules:
+  plink:     PLINK/2.0.0-a.6.9-gfbf-2023b   # Pipelines 03, 04, 05, 13, 15 (plink 1.9 and plink2)
+  plink1:    PLINK/1.9b_6.21-x86_64         # Pipeline 03 (split_chrs, loaded with bcftools)
+  bcftools:  BCFtools/1.23-GCC-14.3.0       # Pipelines 03, 04, 10, 17, 18 (includes tabix, bgzip)
+  htslib:    HTSlib/1.23-GCC-14.3.0         # Pipelines 05, 06, 10
+  samtools:  SAMtools/1.22.1-GCC-14.3.0     # Pipeline 04
+  pigz:      pigz/2.8-GCCcore-14.3.0        # Pipeline 18
+  miniforge: Miniforge3/25.11.0-1           # Pipeline 02
+
 # ------------  Pipeline 00: Setup  ------------
 
 fastq:

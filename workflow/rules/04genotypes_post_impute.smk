@@ -11,7 +11,7 @@ rule impute_check:
             vcf = GPO['impute_check']['vcf']
     params: dir = GPO['impute_check']['in_dir'],
             pwd = GPO['impute_check']['pwd']
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     message: "Evaluate imputation quality for each chromosome"
     benchmark: GPO['impute_check']['benchmark']
     log: GPO['impute_check']['log']
@@ -83,7 +83,7 @@ rule add_rsID:
     input:  vcf = rules.impute_check.output.vcf,
             dbsnp = rules.dwnld_dbsnp_ref.output
     output: GPO['add_rsID']['output']
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     message: "Add dbSNP rsIDs to each imputed chr-specific VCF file"
     benchmark: GPO['add_rsID']['benchmark']
     log:    GPO['add_rsID']['log']
@@ -95,7 +95,7 @@ rule add_rsID:
 rule vcf_cat:
     input:  expand(rules.add_rsID.output, chr=CHROMOSOMES)
     output: GPO['vcf_cat']['output']
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     message: "Cat imputed chr-specific VCF files into single file"
     benchmark: GPO['vcf_cat']['benchmark']
     log:    GPO['vcf_cat']['log']
@@ -108,7 +108,7 @@ rule vcf_cat:
 rule filter_tags:
     input:  rules.vcf_cat.output
     output: GPO['filter_tags']['output']
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     message: "Compute HWE and filt concated VCF; Keep SNPs passing MAF, R^2 and HWE threshs"
     benchmark: GPO['filter_tags']['benchmark']
     params: hwe = GPO['filter_tags']['hwe'],
@@ -132,7 +132,7 @@ rule check_VCF:
             fai = temp(GPO['check_VCF']['fai'])    
     params: prefix = GPO['check_VCF']['prefix_out'],
             script = GPO['check_VCF']['script']
-    envmodules: "samtools"
+    envmodules: config['envmodules']['samtools']
     message: "Validate the filt VCF against ref genome and ID problematic SNPs"
     benchmark: GPO['check_VCF']['benchmark']
     log:    GPO['check_VCF']['log']
@@ -146,7 +146,7 @@ rule exclude_SNPs:
     input:  vcf = rules.filter_tags.output,
             list = rules.check_VCF.output.list
     output: GPO['exclude_SNPs']['output']
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     message: "Exclude SNPs IDed in CheckVCF"
     benchmark: GPO['exclude_SNPs']['benchmark']
     log:    GPO['exclude_SNPs']['log']
@@ -157,7 +157,7 @@ rule exclude_SNPs:
 rule idx_vcf:
     input:  rules.exclude_SNPs.output
     output: GPO['idx_vcf']['output']
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     benchmark: GPO['idx_vcf']['benchmark']
     log:    GPO['idx_vcf']['log']
     shell:  """
@@ -171,7 +171,7 @@ rule create_combined_log:
             check_vcf_log = rules.check_VCF.output.log_out,
             exclude_snps = rules.exclude_SNPs.output
     output: combined_log = GPO['create_combined_log']['output']
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     message: "Summarise logs from previous rules"
     benchmark: GPO['create_combined_log']['benchmark']
     log:      GPO['create_combined_log']['log']
@@ -226,7 +226,7 @@ rule get_sample_list:
     input:  rules.idx_vcf.output
     output: GPO['get_sample_list']['output']
     params: GPO['exclude_SNPs']['output']  
-    envmodules: "BCFtools"
+    envmodules: config['envmodules']['bcftools']
     message: "Extract final sample list"
     benchmark: GPO['get_sample_list']['benchmark']
     log:      GPO['get_sample_list']['log']
@@ -238,7 +238,7 @@ rule vcf_to_plink:
             idx = rules.idx_vcf.output
     output: GPO['vcf_to_plink']['output']
     params: GPO['vcf_to_plink']['params'] 
-    envmodules: "PLINK"
+    envmodules: config['envmodules']['plink']
     message: "Convert genotypes VCF to plink format"
     benchmark: GPO['vcf_to_plink']['benchmark']
     log:    GPO['vcf_to_plink']['log']
@@ -249,7 +249,7 @@ rule get_ld_pruned_snps:
     output: GPO['get_ld_pruned_snps']['output']
     params: input_prefix = GPO['vcf_to_plink']['params'],
             output_prefix = GPO['get_ld_pruned_snps']['params']
-    envmodules: "PLINK"
+    envmodules: config['envmodules']['plink']
     message: "LD prune SNPs before running PCA on genotypes"
     benchmark: GPO['get_ld_pruned_snps']['benchmark']
     log:    GPO['get_ld_pruned_snps']['log']
@@ -267,7 +267,7 @@ rule prune_genotypes:
             output_prefix = GPO['prune_genotypes']['params']
     message: "Create genotypes plink-format file containing only pruned SNPs"
     benchmark: GPO['prune_genotypes']['benchmark']
-    envmodules: "PLINK"
+    envmodules: config['envmodules']['plink']
     log:    GPO['prune_genotypes']['log']
     shell:  """
             plink --bfile {params.input_prefix} \
@@ -282,7 +282,7 @@ rule calc_genotype_pcs:
     params: input_prefix = GPO['prune_genotypes']['params'],
             output_prefix = GPO['calc_genotype_pcs']['params'],
             pcs = GPO['calc_genotype_pcs']['pcs']
-    envmodules: "PLINK"
+    envmodules: config['envmodules']['plink']
     message: "Run PCA on pruned genotypes to get genotype-specific PC covariates"
     benchmark: GPO['calc_genotype_pcs']['benchmark']
     log:    GPO['calc_genotype_pcs']['log']

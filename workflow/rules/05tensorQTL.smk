@@ -68,7 +68,7 @@ rule prep_tensorQTL_input:
 rule zip_pblk_cnts:
     input:   rules.prep_tensorQTL_input.output.exp_out
     output:  TQ["zip_pblk_cnts"]["output"]
-    envmodules: "HTSlib/1.19.1-GCC-13.2.0"   # bgzip and tabix
+    envmodules: config["envmodules"]["htslib"]
     message: "bgzip and index pseudoblk counts for norm: {wildcards.norm_method}"
     benchmark: TQ["zip_pblk_cnts"]["benchmark"]
     log:     TQ["zip_pblk_cnts"]["log"]
@@ -83,7 +83,7 @@ rule convert_genotypes:
     input:  config["geno_post_impute"]["exclude_SNPs"]["output"]
     output: TQ["convert_genotypes"]["output"]
     params: TQ["convert_genotypes"]["prefix_out"]
-    envmodules: "plink/2.0"
+    envmodules: config["envmodules"]["plink"]
     message: "Convert genotypes to plink2 format for tensorQTL"
     benchmark: TQ["convert_genotypes"]["benchmark"]
     log:    TQ["convert_genotypes"]["log"]

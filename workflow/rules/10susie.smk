@@ -50,7 +50,7 @@ rule vcf_to_dosage:
     input:  SUS["vcf_to_dosage"]["vcf"]
     output: dosage = SUS["vcf_to_dosage"]["out_dosage"],
             idx    = SUS["vcf_to_dosage"]["out_idx"]
-    envmodules: "BCFtools/1.23-GCC-14.3.0", "HTSlib/1.23-GCC-14.3.0"
+    envmodules: config["envmodules"]["bcftools"]
     message:    "Generate an allele dosage file from the genotype VCF for SuSiE"
     benchmark:  SUS["vcf_to_dosage"]["benchmark"]
     log:        SUS["vcf_to_dosage"]["log"]
@@ -121,7 +121,7 @@ rule run_susie:
 rule merge_susie:
     input:      susie_batch_files
     output:     SUS["merge_susie"]["output"]
-    envmodules: "HTSlib/1.21-GCC-13.3.0"
+    envmodules: config["envmodules"]["htslib"]
     message:    "Merge SuSiE credible sets into a single file for {wildcards.cell_type}"
     benchmark:  SUS["merge_susie"]["benchmark"]
     log:        SUS["merge_susie"]["log"]
@@ -135,7 +135,7 @@ rule merge_susie:
 rule sort_susie:
     input:      rules.merge_susie.output
     output:     SUS["sort_susie"]["output"]
-    envmodules: "HTSlib/1.21-GCC-13.3.0"
+    envmodules: config["envmodules"]["htslib"]
     message:    "Sort SuSiE credible sets by chromosome and position for {wildcards.cell_type}"
     benchmark:  SUS["sort_susie"]["benchmark"]
     log:        SUS["sort_susie"]["log"]

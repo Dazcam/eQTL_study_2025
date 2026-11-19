@@ -102,7 +102,6 @@ rule create_besd:
     params: prefix = SMR["create_besd"]["prefix"],
             n_samples = config["smr_n_samples"]
     resources: mem_mb = 20000
-    envmodules: "compiler/gnu/5/5.0"
     message: "Create besd file for SMR"
     benchmark: SMR["create_besd"]["benchmark"]
     log: SMR["create_besd"]["log"]
@@ -135,7 +134,6 @@ rule smr:
             out_prefix = SMR["smr"]["smr_prefix"],
             peqtl_smr = config["peqtl_smr"]
     resources: mem_mb = 20000
-    envmodules: "compiler/gnu/5/5.0"
     message: "Run SMR"
     benchmark: SMR["smr"]["benchmark"]
     log:    SMR["smr"]["log"]

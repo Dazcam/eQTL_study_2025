@@ -11,7 +11,7 @@ rule convert_raw:
     resources: threads = 1, mem_mb = 50000, time = "0-1:00:00"
     params:  prefix_in = GPR["convert_raw"]["prefix_in"],
              prefix_out = GPR["convert_raw"]["prefix_out"]
-    envmodules: 'PLINK'
+    envmodules: config["envmodules"]["plink"]
     message: "Converting raw genotypes to plink format"
     benchmark: GPR["convert_raw"]["benchmark"]
     log:     GPR["convert_raw"]["log"]
@@ -26,7 +26,7 @@ rule add_sex_to_fam:
     output: GPR["add_sex_to_fam"]["output"]
     params: prefix_in = GPR["convert_raw"]["prefix_out"],
             prefix_out = GPR["add_sex_to_fam"]["prefix_out"]
-    envmodules: "PLINK"
+    envmodules: config["envmodules"]["plink"]
     message: "Standardise fam col 1 and col2 and add sex annotations to fam"
     benchmark: GPR["add_sex_to_fam"]["benchmark"]
     log:    GPR["add_sex_to_fam"]["log"]
@@ -50,7 +50,7 @@ rule rm_dup_sample:
     params: prefix_in = GPR["add_sex_to_fam"]["prefix_out"],
             prefix_out = GPR["rm_dup_sample"]["prefix_out"],
             remove_file = GPR["rm_dup_sample"]["remove_file"]
-    envmodules: "PLINK"
+    envmodules: config["envmodules"]["plink"]
     message: "Remove duplicate sample: 14493"
     benchmark: GPR["rm_dup_sample"]["benchmark"]
     log:    GPR["rm_dup_sample"]["log"]
@@ -69,7 +69,7 @@ rule check_het:
     output: GPR["check_het"]["output"]
     params: prefix = GPR["rm_dup_sample"]["prefix_out"],
             report_dir = GPR["genotype-qc2hrc"]["report_dir"]
-    envmodules: "PLINK"
+    envmodules: config["envmodules"]["plink"]
     message: "Check for sample autosomal heterozygosity, add a rule to rm samples if needed"
     benchmark: GPR["check_het"]["benchmark"]
     log: GPR["check_het"]["log"] 
@@ -85,7 +85,7 @@ rule make_kgp3_pgen:
     input:   GPR["make_kgp3_pgen"]["input"]
     output:  GPR["make_kgp3_pgen"]["output"]
     resources: threads = 1, mem_mb = 50000, time = "0-1:00:00"
-    envmodules: "PLINK"
+    envmodules: config["envmodules"]["plink"]
     params:  workdir = GPR["make_kgp3_pgen"]["workdir"]
     message: "Create kgp3 pgen file"
     benchmark: GPR["make_kgp3_pgen"]["benchmark"]
@@ -138,7 +138,7 @@ rule cat_genotypes:
     # Note here that input vcfs are aligned to hg38 despite what their name says
     input: rules.genotype_qc2hrc.output
     output: GPR["cat_genotypes"]["output"]  
-    envmodules: "BCFtools"
+    envmodules: config["envmodules"]["bcftools"]
     params: GPR["cat_genotypes"]["in_dir"]
     message: "Cat chr specific genotypes into a single file"
     benchmark: GPR["cat_genotypes"]["benchmark"]
@@ -158,7 +158,7 @@ rule rm_maf_ambig:
     params: prefix_in = GPR["rm_maf_ambig"]["prefix_in"],
             prefix_out = GPR["rm_maf_ambig"]["prefix_out"],
             ambig_snp_lst = GPR["rm_maf_ambig"]["ambig_snp_lst"]
-    envmodules: "PLINK"
+    envmodules: config["envmodules"]["plink"]
     message: "Rm strand ambiguous SNPs with MAF > 0.4"
     benchmark: GPR["rm_maf_ambig"]["benchmark"]
     log:    GPR["rm_maf_ambig"]["log"]
@@ -185,7 +185,7 @@ rule rm_rare_snps:
     params: prefix_in = GPR["rm_maf_ambig"]["prefix_out"],
             prefix_out = GPR["rm_rare_snps"]["prefix_out"],
             report_dir = GPR["genotype-qc2hrc"]["report_dir"]
-    envmodules: "PLINK"
+    envmodules: config["envmodules"]["plink"]
     message: "Rm rare SNPs with MAF < 0.01"
     benchmark: GPR["rm_rare_snps"]["benchmark"]
     log:    GPR["rm_rare_snps"]["log"]    
@@ -205,7 +205,7 @@ rule split_chrs:
             outdir = GPR["split_chrs"]["outdir"]
     benchmark: GPR["split_chrs"]["benchmark"]
     message: "Split chrs for TOPMED imputation"
-    envmodules: "plink/1.9", "compiler/gnu/7/3.0", "bcftools/1.16.0" # Need to fix this for FALCON
+    envmodules: config["envmodules"]["plink1"], config["envmodules"]["bcftools"]
     log: GPR["split_chrs"]["log"]
     shell:
         """

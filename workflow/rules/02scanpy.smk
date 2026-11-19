@@ -70,7 +70,7 @@ rule scanpy_annotation:
     input:   html = SCP["clustering3"]["output"],
              nb = SCP["annotation"]["script"]
     output:  SCP["annotation"]["output"]
-    envmodules: "Miniforge3"
+    envmodules: config["envmodules"]["miniforge"]
     conda:   SCP["env"]
     resources: threads = 10, mem_mb = 200000, time="1:00:00"
     params:  nb_out = SCP["annotation"]["nb_out"],
