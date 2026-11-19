@@ -58,21 +58,20 @@ rule rm_dup_sample:
         """
         plink --bfile {params.prefix_in} \
               --remove {params.remove_file} \
-              --make-bed -freq --out {params.prefix_out} > {log} 2>&1
+              --make-bed --freq --out {params.prefix_out} > {log} 2>&1
         echo "Samples after removal:  $(wc -l < {params.prefix_out}.fam)" >> {log}
         """
 
-# Just checking this for now, will assess if rm needed
-# Prune SNPss first to run on independent SNPs
+# LD-prune first so heterozygosity is computed on independent SNPs
 rule check_het:
     input:  rules.rm_dup_sample.output
     output: GPR["check_het"]["output"]
     params: prefix = GPR["rm_dup_sample"]["prefix_out"],
             report_dir = GPR["genotype-qc2hrc"]["report_dir"]
     envmodules: config["envmodules"]["plink"]
-    message: "Check for sample autosomal heterozygosity, add a rule to rm samples if needed"
+    message: "Check for sample autosomal heterozygosity"
     benchmark: GPR["check_het"]["benchmark"]
-    log: GPR["check_het"]["log"] 
+    log:    GPR["check_het"]["log"]
     shell:
         """
         exec > {log} 2>&1
@@ -111,7 +110,7 @@ rule genotype_qc2hrc:
             shortname = GPR["genotype-qc2hrc"]["shortname"],
             outdir = GPR["genotype-qc2hrc"]["outdir"],
             workdir = GPR["genotype-qc2hrc"]["workdir"],
-            report_dir = GPR["genotype-qc2hrc"]["report_dir"]      
+            report_dir = GPR["genotype-qc2hrc"]["report_dir"]
     message: "Run GenotypeQCtoHRC to prep genotypes for imputation"
     benchmark: GPR["genotype-qc2hrc"]["benchmark"]
     log:    GPR["genotype-qc2hrc"]["log"]
@@ -131,27 +130,26 @@ rule genotype_qc2hrc:
              cp {output} {params.report_dir}
              cp {params.outdir}eqtl_genotypes_hg19.qc3.sexcheck {params.report_dir}
              cp {params.outdir}eqtl_genotypes_hg19.qc4.pcrelate.kin {params.report_dir}
-             cut -f 1-9 {params.outdir}eqtl_genotypes_hg19.qc5.ancestry_inference.txt > {params.report_dir}
+             cp {params.outdir}eqtl_genotypes_hg19.qc5.ancestry_inference.txt {params.report_dir}
              """
 
 rule cat_genotypes:
     # Note here that input vcfs are aligned to hg38 despite what their name says
-    input: rules.genotype_qc2hrc.output
-    output: GPR["cat_genotypes"]["output"]  
+    input:  rules.genotype_qc2hrc.output
+    output: GPR["cat_genotypes"]["output"]
     envmodules: config["envmodules"]["bcftools"]
-    params: GPR["cat_genotypes"]["in_dir"]
+    params: in_dir = GPR["cat_genotypes"]["in_dir"]
     message: "Cat chr specific genotypes into a single file"
     benchmark: GPR["cat_genotypes"]["benchmark"]
-    log:      GPR["cat_genotypes"]["log"]
+    log:    GPR["cat_genotypes"]["log"]
     shell:
-        """ 
+        """
         exec > {log} 2>&1
-        bcftools concat -Oz -o {output} {params}eqtl_genotypes_hg19.gh.topmed.chr{{1..22}}.vcf.gz
+        bcftools concat -Oz -o {output} {params.in_dir}eqtl_genotypes_hg19.gh.topmed.chr{{1..22}}.vcf.gz
         bcftools index -t {output}
         """
 
-## Note we need a work around here to deal with chr specific files
-# rm MAF A/T and G/C SNPs with MAFs > 0.4
+# Rm strand ambiguous A/T and G/C SNPs with MAF > 0.4
 rule rm_maf_ambig:
     input:  rules.cat_genotypes.output
     output: GPR["rm_maf_ambig"]["output"]
@@ -164,21 +162,22 @@ rule rm_maf_ambig:
     log:    GPR["rm_maf_ambig"]["log"]
     shell:
         """
+        exec > {log} 2>&1
+
         # Convert VCF to PLINK binary + frequency calc
         plink --vcf {input} --make-bed --freq --out {params.prefix_in}
-        
+
         # Extract high-MAF ambiguous SNPs
         awk 'NR>1 && (($3=="A" && $4=="T") || ($3=="T" && $4=="A") || \
                       ($3=="G" && $4=="C") || ($3=="C" && $4=="G")) && $5>0.4 {{print $2}}' \
             {params.prefix_in}.frq > {params.ambig_snp_lst}
-        
+
         # Remove them
         plink --bfile {params.prefix_in} --exclude {params.ambig_snp_lst} \
-              --make-bed --out {params.prefix_out} > {log} 2>&1
+              --make-bed --out {params.prefix_out}
         """
 
-## Note	we need	a work around here to deal with	chr specific files
-# rm MAF < 0.01
+# Rm rare SNPs with MAF < 0.01
 rule rm_rare_snps:
     input:  rules.rm_maf_ambig.output
     output: GPR["rm_rare_snps"]["output"]
@@ -188,7 +187,7 @@ rule rm_rare_snps:
     envmodules: config["envmodules"]["plink"]
     message: "Rm rare SNPs with MAF < 0.01"
     benchmark: GPR["rm_rare_snps"]["benchmark"]
-    log:    GPR["rm_rare_snps"]["log"]    
+    log:    GPR["rm_rare_snps"]["log"]
     shell:
         """
         plink --bfile {params.prefix_in} \
@@ -201,19 +200,21 @@ rule split_chrs:
     input:  rules.rm_rare_snps.output
     output: GPR["split_chrs"]["output"]
     params: prefix_in = GPR["rm_rare_snps"]["prefix_out"],
-            prefix_vcf = GPR["split_chrs"]["prefix_vcf"], 
+            prefix_vcf = GPR["split_chrs"]["prefix_vcf"],
             outdir = GPR["split_chrs"]["outdir"]
     benchmark: GPR["split_chrs"]["benchmark"]
     message: "Split chrs for TOPMED imputation"
     envmodules: config["envmodules"]["plink1"], config["envmodules"]["bcftools"]
-    log: GPR["split_chrs"]["log"]
+    log:    GPR["split_chrs"]["log"]
     shell:
         """
+        exec > {log} 2>&1
+
         # Convert to VCF
         plink --bfile {params.prefix_in} --recode vcf bgz \
-              --out {params.prefix_vcf} > {log} 2>&1
+              --out {params.prefix_vcf}
         bcftools index -t {params.prefix_vcf}.vcf.gz
-        
+
         # Split by chromosome 1–22
         for chr in $(seq 1 22); do
             bcftools view -r $chr \
@@ -226,16 +227,16 @@ rule split_chrs:
 rule gather_stats:
     input:  rules.split_chrs.output
     output: GPR["gather_stats"]["output"]
-    params: gQC2hrc_vcf_dir = GPR["gather_stats"]["gQC2hrc_vcf_dir"],
-            final_vcf_dir = GPR["gather_stats"]["final_vcf_dir"],
+    params: gQC2hrc_vcf_dir = GPR["cat_genotypes"]["in_dir"],
+            final_vcf_dir = GPR["split_chrs"]["outdir"],
             report_dir = GPR["genotype-qc2hrc"]["report_dir"]
     message: "Gather SNP stats for reporting"
     benchmark: GPR["gather_stats"]["benchmark"]
-    log: GPR["gather_stats"]["log"]
+    log:    GPR["gather_stats"]["log"]
     shell:
         """
-       	exec > {log} 2>&1
-       	total=0
+        exec > {log} 2>&1
+        total=0
         for file in {params.gQC2hrc_vcf_dir}eqtl_genotypes_hg19.gh.topmed.chr*.vcf.gz
         do
           chr=$(basename "$file" .vcf.gz | sed 's/.*chr//')
@@ -245,8 +246,8 @@ rule gather_stats:
         done > {params.report_dir}gQC2hrc_vcf_chr_counts.tsv
 
         # append total row
-        echo -e "TOTAL\t${{total}}" >> {params.report_dir}gQC2hrc_vcf_chr_counts.tsv        
-    
+        echo -e "TOTAL\t${{total}}" >> {params.report_dir}gQC2hrc_vcf_chr_counts.tsv
+
         total=0
         for file in {params.final_vcf_dir}eqtl_genotypes_hg38.gh.topmed.chr*.vcf.gz
         do
@@ -262,22 +263,24 @@ rule gather_stats:
         """
 
 rule geno_pre_report:
-    # Note diff paths for output and out_file; Rmarkdown needs outfile to be relative to Rmd file
     input:  stats = rules.gather_stats.output,
             rmd_script = GPR["geno_pre_report"]["script"]
     output: GPR["geno_pre_report"]["html"]
     params: in_dir = GPR["geno_pre_report"]["in_dir"],
-            bmark_dir = GPR["geno_pre_report"]["bmark_dir"],
-            output_file = GPR["geno_pre_report"]["out_file"]
+            ambig_snp_lst = GPR["rm_maf_ambig"]["ambig_snp_lst"],
+            bmark_dir = GPR["geno_pre_report"]["bmark_dir"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate genotyping pre-imputation report"
     benchmark: GPR["geno_pre_report"]["benchmark"]
-    log: GPR["geno_pre_report"]["log"]
+    log:    GPR["geno_pre_report"]["log"]
     shell:
         """
-        Rscript -e "rmarkdown::render('{input.rmd_script}', \
-            output_file = '{params.output_file}', \
-            params = list(in_dir = '{params.in_dir}', bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+        Rscript -e "wd <- getwd(); rmarkdown::render('{input.rmd_script}', \
+            output_file = file.path(wd, '{output}'), \
+            knit_root_dir = wd, \
+            params = list(in_dir = '{params.in_dir}', \
+                          ambig_snp_lst = '{params.ambig_snp_lst}', \
+                          bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
 
 

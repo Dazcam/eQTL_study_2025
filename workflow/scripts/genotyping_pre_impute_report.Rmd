@@ -7,6 +7,7 @@ output:
     df_print: paged
 params:
   in_dir: null
+  ambig_snp_lst: null
   bmark_dir: null
 ---
 
@@ -19,6 +20,7 @@ library(cowplot)
 library(DT)
 library(glue)
 in_dir <- params$in_dir
+ambig_snp_lst <- params$ambig_snp_lst
 bmark_dir <- params$bmark_dir
 ```
 
@@ -40,9 +42,9 @@ below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQC
 6. Relatedness assessed (duplicate sample identified 14493 and removed)
 7. Ancestry assessed
 8. Liftover hg19 to hg38
-9. Conversion of markers to dbSNP 156 (check this) using 1000G Phase 3
+9. Conversion of markers to dbSNP 156 using 1000G Phase 3
 10. [Genotype Harmonizer](https://github.com/molgenis/systemsgenetics/wiki/Genotype-Harmonizer) used to align curated markers to the Trans-Omics for Precision Medicine ([TopMED](https://topmed.nhlbi.nih.gov/)) imputation panel
-11. Remove ambiguous A/T, G/C SNP with MAF > 0.4 (none rm here does GenotypeQCtoHRC do this?), 
+11. Remove ambiguous A/T, G/C SNP with MAF > 0.4
 12. Remove SNPs MAF < 0.01
 
 ***
@@ -58,7 +60,6 @@ below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQC
 #### Tables
 
 ```{r, autosomal_het_table, results='asis', echo=FALSE}
-in_dir <- '~/Desktop/eQTL_study_2025/workflow/reports/03GENOTYPES-PRE/'
 het_tbl <- read.table(paste0(in_dir, 'eqtl_genotypes_hg19_nodup.het'), header = T) |>
   tibble() |>
   rename(O_HOM = 'O.HOM.', E_HOM = 'E.HOM.', N_NM = 'N.NM.') |>
@@ -85,8 +86,7 @@ datatable(het_tbl, caption = 'Table 1. Autosomal heterozygosity table')
 outliers_tbl <- het_tbl %>%
   filter(outlier_het | outlier_F) %>%
   select(FID, IID, outlier_het, outlier_F)
-datatable(outliers_tbl, caption = 'Table 2. Autosomal heterozygosity oultliers table')
-write_tsv(outliers_tbl, paste0(in_dir, "het_outliers.txt"), col_names = FALSE)
+datatable(outliers_tbl, caption = 'Table 2. Autosomal heterozygosity outliers table')
 ```
 
 ***
@@ -104,7 +104,7 @@ het_plot <- ggplot(het_tbl, aes(x = het_rate)) +
     title = "Heterozygosity Rate Distribution",
     x = "Heterozygosity Rate",
     y = "Count",
-    caption = "Red dashed lines indicate ±3 SD thresholds"
+    caption = "Red dashed lines indicate ±4 SD thresholds"
   ) +
   theme_minimal(base_size = 12) +
   theme(
@@ -142,8 +142,6 @@ combined_plot <- plot_grid(het_plot, f_plot, labels = c("A", "B"),
                            label_size = 14, label_fontface = "bold",
                            ncol = 2, align = "h")
 combined_plot
-#ggsave(paste0(ind_dir, "het_F_distribution_combined.png"), combined_plot,
-#       width = 10, height = 5, dpi = 300, bg = "white")
 ```
 
 ### QC 5: Sex ambiguity
@@ -176,9 +174,7 @@ datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 
 ***
 
-### QC 6: Kinship 
-
-+ Note: 
+### QC 6: Kinship
 
 ***
 
@@ -227,11 +223,11 @@ datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) predi
 
 ***
 
-### QC 6: Post-GenotypeQCtoHRC checks 
+### QC 11-12: Post-GenotypeQCtoHRC checks
 
 ***
 
-+ `r glue("{length(readLines(file.path(in_dir, 'ambig_high_maf_snp_lst.tsv')))} ambiguous SNPs with MAF > 0.4 removed")`
++ `r glue("{length(readLines(ambig_snp_lst))} ambiguous SNPs with MAF > 0.4 removed")`
 + `r glue("{readLines(paste0(in_dir, 'rm_rare_snps.txt'))} SNPs with MAF < 0.01 removed")`
 
 
@@ -250,8 +246,6 @@ datatable(final_snp_cnt_tbl, caption = 'Table 7. SNP counts after GenotypeQCtoHR
 ### Benchmarking {.tabset}
 
 ***
-
-+ Why is the GenotypeQCtoHRC benchmark file missing?
 
 #### Table
 
@@ -286,11 +280,7 @@ summary <- benchmarks %>%
   ) %>%
   mutate(across(where(is.numeric), ~round(., 3))) 
 
-datatable(summary, caption = 'Table 8. Rule benchmarking. Sd is null when only on instance of job is run.') 
-
-# Optional save summary tables
-#write.csv(benchmarks, paste0(bmark_dir, "benchmark_summary_detailed.csv"), row.names = FALSE)
-#write.csv(summary, "benchmark_summary_rules.csv", row.names = FALSE)
+datatable(summary, caption = 'Table 8. Rule benchmarking. Sd is null when only on instance of job is run.')
 ```
 
 ***
@@ -339,8 +329,6 @@ mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
   )
 
 plot_grid(runtime_plt, mem_plt)
-
-# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
 
 ***

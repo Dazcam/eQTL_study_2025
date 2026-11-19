@@ -382,185 +382,189 @@ scanpy:
 geno_pre_impute:
   convert_raw:
     input:
-      ped: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.ped
-      map: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.map
-    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed
-    prefix_in: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
-    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19
-    log: ../results/00LOG/03GENOTYPES-PRE/convert_raw.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.convert_raw.benchmark.txt
+      ped:         ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.ped
+      map:         ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19.map
+    output:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19.bed
+    prefix_in:     ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
+    prefix_out:    ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19
+    log:           ../results/00LOG/03GENOTYPES-PRE/convert_raw.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.convert_raw.benchmark.txt
 
   add_sex_to_fam:
-    sexfile: ../resources/sheets/samples_sex_plink.tsv
-    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex.bed
-    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex
-    log: ../results/00LOG/03GENOTYPES-PRE/add_sex_to_fam.log 
-    benchmark: reports/benchmarks/03genotypes_pre_impute.add_sex_to_fam.benchmark.txt
-   
+    sexfile:       ../resources/sheets/samples_sex_plink.tsv
+    output:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex.bed
+    prefix_out:    ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex
+    log:           ../results/00LOG/03GENOTYPES-PRE/add_sex_to_fam.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.add_sex_to_fam.benchmark.txt
+
   rm_dup_sample:
-    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.bed
-    prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup
-    remove_file: ../config/rm_dup_sample.txt
-    log: ../results/00LOG/03GENOTYPES-PRE/rm_dup_sample.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.rm_dup_sample.benchmark.txt
+    output:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.bed
+    prefix_out:    ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup
+    remove_file:   ../config/rm_dup_sample.txt
+    log:           ../results/00LOG/03GENOTYPES-PRE/rm_dup_sample.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.rm_dup_sample.benchmark.txt
 
   check_het:
-    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.het
-    log: ../results/00LOG/03GENOTYPES-PRE/check_het.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.check_het.benchmark.txt
+    output:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.het
+    log:           ../results/00LOG/03GENOTYPES-PRE/check_het.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.check_het.benchmark.txt
 
   make_kgp3_pgen:
-    input: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
-    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen
-    log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/make_kgp3_pgen.log
-    workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/
-    benchmark: reports/benchmarks/03genotypes_pre_impute.make_kgp3_pgen.benchmark.txt
+    input:         ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
+    output:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen
+    log:           ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/make_kgp3_pgen.log
+    workdir:       ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.make_kgp3_pgen.benchmark.txt
 
   genotype-qc2hrc:
-    output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
-    prefix_in: eqtl_genotypes_hg19_nodup
-    prefix_out: eqtl_genotypes_hg38_preTM
-    shortname: eqtlhg38tm
-    outdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
-    workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC
-    report_dir: reports/03GENOTYPES-PRE/
-    log: ../results/00LOG/03GENOTYPES-PRE/genotype-qc2hrc.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.genotype_qc2hrc.benchmark.txt
+    output:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
+    prefix_in:     eqtl_genotypes_hg19_nodup
+    prefix_out:    eqtl_genotypes_hg38_preTM
+    shortname:     eqtlhg38tm
+    outdir:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
+    workdir:       ../results/03GENOTYPES-PRE/GenotypeQCtoHRC
+    report_dir:    reports/03GENOTYPES-PRE/
+    log:           ../results/00LOG/03GENOTYPES-PRE/genotype-qc2hrc.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.genotype_qc2hrc.benchmark.txt
 
   cat_genotypes:
-    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.vcf.gz
-    in_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/
-    benchmark: reports/benchmarks/03genotypes_pre_impute.cat_genotypes.benchmark.txt
-    log: ../results/00LOG/03GENOTYPES-PRE/cat_genotypes.log
+    output:        ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.vcf.gz
+    in_dir:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.cat_genotypes.benchmark.txt
+    log:           ../results/00LOG/03GENOTYPES-PRE/cat_genotypes.log
 
   rm_maf_ambig:
-    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.bed
-    prefix_in: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.
-    prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig
-    ambig_snp_lst: reports/03GENOTYPES-PRE/ambig_high_maf_snp_lst.tsv
-    log: ../results/00LOG/03GENOTYPES-PRE/rm_maf_ambig.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.rm_maf_ambig.benchmark.txt
+    output:        ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.bed
+    prefix_in:     ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.
+    prefix_out:    ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig
+    ambig_snp_lst: ../results/03GENOTYPES-PRE/genotypes/ambig_high_maf_snp_lst.tsv
+    log:           ../results/00LOG/03GENOTYPES-PRE/rm_maf_ambig.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.rm_maf_ambig.benchmark.txt
 
   rm_rare_snps:
-    output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps.bed
-    prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps 
-    log: ../results/00LOG/03GENOTYPES-PRE/rm_rare_snps.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.rm_rare_snps.benchmark.txt
+    output:        ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps.bed
+    prefix_out:    ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps
+    log:           ../results/00LOG/03GENOTYPES-PRE/rm_rare_snps.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.rm_rare_snps.benchmark.txt
 
   split_chrs:
-    output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done 
-    prefix_vcf: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.filt
-    outdir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/
-    log: ../results/00LOG/03GENOTYPES-PRE/split_chrs.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.split_chrs.benchmark.txt
+    output:        ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done
+    prefix_vcf:    ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.filt
+    outdir:        ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/
+    log:           ../results/00LOG/03GENOTYPES-PRE/split_chrs.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.split_chrs.benchmark.txt
 
   gather_stats:
-    output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/gather_stats.done
-    gQC2hrc_vcf_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/  
-    final_vcf_dir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/    
-    log: ../results/00LOG/03GENOTYPES-PRE/gather_stats.log     
-    benchmark: reports/benchmarks/03genotypes_pre_impute.gather_stats.benchmark.txt
+    output:        ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/gather_stats.done
+    log:           ../results/00LOG/03GENOTYPES-PRE/gather_stats.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.gather_stats.benchmark.txt
 
   geno_pre_report:
-    script: scripts/genotyping_pre_impute_report.Rmd
-    html: reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
-    out_file: ../reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
-    in_dir: ../reports/03GENOTYPES-PRE/
-    bmark_dir: ../reports/benchmarks/
-    log: ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
-    benchmark: reports/benchmarks/03genotypes_pre_impute.geno_pre_report.benchmark.txt
+    script:        scripts/genotyping_pre_impute_report.Rmd
+    html:          reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
+    in_dir:        reports/03GENOTYPES-PRE/
+    bmark_dir:     reports/benchmarks/
+    log:           ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
+    benchmark:     reports/benchmarks/03genotypes_pre_impute.geno_pre_report.benchmark.txt
 
 # ------------  Pipeline 04: Genotypes post-imputation  ------------
 
 geno_post_impute:
   impute_check:
-    input:  ../results/04GENOTYPES-POST/TOPMED/chr_{chr}.zip
-    tsv: reports/04GENOTYPES-POST/impute_check/chr_{chr}_summary.tsv
-    vcf: ../results/04GENOTYPES-POST/TOPMED/chr{chr}.dose.vcf.gz
-    in_dir: ../results/04GENOTYPES-POST/TOPMED/
-    pwd: ../config/passwords/topmed.txt 
-    log: ../results/00LOG/04GENOTYPES-POST/impute_check_{chr}.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.impute_check_{chr}.benchmark.txt
+    input:         ../results/04GENOTYPES-POST/TOPMED/chr_{chr}.zip
+    tsv:           ../results/04GENOTYPES-POST/impute_check/chr_{chr}_summary.tsv
+    vcf:           ../results/04GENOTYPES-POST/TOPMED/chr{chr}.dose.vcf.gz
+    in_dir:        ../results/04GENOTYPES-POST/TOPMED/
+    pwd:           ../config/passwords/topmed.txt
+    log:           ../results/00LOG/04GENOTYPES-POST/impute_check_{chr}.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.impute_check_{chr}.benchmark.txt
+
   impute_check_cat:
-    output: ../results/04GENOTYPES-POST/impute_check/chr_ALL_summary.tsv
-    benchmark: reports/benchmarks/04genotypes_post_impute.impute_check_cat.benchmark.txt
-    log: ../results/00LOG/04GENOTYPES-POST/impute_check_cat.log
+    output:        ../results/04GENOTYPES-POST/impute_check/chr_ALL_summary.tsv
+    benchmark:     reports/benchmarks/04genotypes_post_impute.impute_check_cat.benchmark.txt
+    log:           ../results/00LOG/04GENOTYPES-POST/impute_check_cat.log
+
   dwnld_dbsnp_ref:
-    output: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz
-    web_link: https://ftp.ncbi.nih.gov/snp/redesign/latest_release/VCF/GCF_000001405.40.gz
-    prefix: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz 
-    log: ../results/00LOG/04GENOTYPES-POST/dwnld_dbsnp_ref.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.dwnld_dbsnp_ref.benchmark.txt
+    output:        ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz
+    web_link:      https://ftp.ncbi.nih.gov/snp/redesign/latest_release/VCF/GCF_000001405.40.gz
+    log:           ../results/00LOG/04GENOTYPES-POST/dwnld_dbsnp_ref.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.dwnld_dbsnp_ref.benchmark.txt
+
   add_rsID:
-    output: ../results/04GENOTYPES-POST/dbSNP_annotated/chr{chr}.dbSNP.vcf.gz
-    log: ../results/00LOG/04GENOTYPES-POST/add_rsID_{chr}.log     
-    benchmark: reports/benchmarks/04genotypes_post_impute.add_rsID_{chr}.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/dbSNP_annotated/chr{chr}.dbSNP.vcf.gz
+    log:           ../results/00LOG/04GENOTYPES-POST/add_rsID_{chr}.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.add_rsID_{chr}.benchmark.txt
+
   vcf_cat:
-    output: ../results/04GENOTYPES-POST/dbSNP_annotated/chrALL.dbSNP.vcf.gz
-    log: ../results/00LOG/04GENOTYPES-POST/vcf_cat.log    
-    benchmark: reports/benchmarks/04genotypes_post_impute.vcf_cat.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/dbSNP_annotated/chrALL.dbSNP.vcf.gz
+    log:           ../results/00LOG/04GENOTYPES-POST/vcf_cat.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.vcf_cat.benchmark.txt
+
   filter_tags:
-    output: ../results/04GENOTYPES-POST/filtered/chrALL.filt.vcf.gz
-    hwe: 0.0001
-    maf: 0.05
-    rsq: 0.8  
-    log: ../results/00LOG/04GENOTYPES-POST/filter_tags.log    
-    benchmark: reports/benchmarks/04genotypes_post_impute.filter_tags.benchmark.txt
-  check_VCF:  
-    ref_gz: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
-    log_out: ../results/04GENOTYPES-POST/filtered/check_vcf.check.log
-    list: ../results/04GENOTYPES-POST/filtered/exclusion_list.txt
-    ref: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa
-    fai: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
-    prefix_out: ../results/04GENOTYPES-POST/filtered/check_vcf
-    log: ../results/00LOG/04GENOTYPES-POST/check_VCF.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.check_VCF.benchmark.txt
-    script: scripts/checkVCF.py
+    output:        ../results/04GENOTYPES-POST/filtered/chrALL.filt.vcf.gz
+    hwe:           0.0001
+    maf:           0.05
+    rsq:           0.8
+    log:           ../results/00LOG/04GENOTYPES-POST/filter_tags.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.filter_tags.benchmark.txt
+
+  check_VCF:
+    ref_gz:        ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    log_out:       ../results/04GENOTYPES-POST/filtered/check_vcf.check.log
+    list:          ../results/04GENOTYPES-POST/filtered/exclusion_list.txt
+    ref:           ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+    fai:           ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
+    prefix_out:    ../results/04GENOTYPES-POST/filtered/check_vcf
+    log:           ../results/00LOG/04GENOTYPES-POST/check_VCF.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.check_VCF.benchmark.txt
+    script:        scripts/checkVCF.py
+
   exclude_SNPs:
-    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
-    log: ../results/00LOG/04GENOTYPES-POST/exclde_SNPs.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.exclude_SNPs.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
+    log:           ../results/00LOG/04GENOTYPES-POST/exclude_SNPs.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.exclude_SNPs.benchmark.txt
+
   idx_vcf:
-    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz.tbi
-    log: ../results/00LOG/04GENOTYPES-POST/idx_vcf.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.idx_vcf.benchmark.txt
-  create_combined_log:
-    output: ../results/04GENOTYPES-POST/filtered/combined_genotype_processing.log
-    log: ../results/00LOG/04GENOTYPES-POST/create_combined_log.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.create_combined_log.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz.tbi
+    log:           ../results/00LOG/04GENOTYPES-POST/idx_vcf.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.idx_vcf.benchmark.txt
+
   get_sample_list:
-    output: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
-    benchmark: reports/benchmarks/04genotypes_post_impute.get_sample_list.benchmark.txt
-    log: ../results/00LOG/04GENOTYPES-POST/get_sample_list.log
+    output:        ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+    benchmark:     reports/benchmarks/04genotypes_post_impute.get_sample_list.benchmark.txt
+    log:           ../results/00LOG/04GENOTYPES-POST/get_sample_list.log
+
   vcf_to_plink:
-    output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bed
-    params: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt
-    log: ../results/00LOG/04GENOTYPES-POST/vcf_to_plink.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.vcf_to_plink.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bed
+    params:        ../results/04GENOTYPES-POST/filtered/chrALL_final.filt
+    log:           ../results/00LOG/04GENOTYPES-POST/vcf_to_plink.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.vcf_to_plink.benchmark.txt
+
   get_ld_pruned_snps:
-    output: ../results/04GENOTYPES-POST/covariates/ld_prune.prune.in
-    params: ../results/04GENOTYPES-POST/covariates/ld_prune
-    log: ../results/00LOG/04GENOTYPES-POST/get_ld_pruned_snps.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.get_ld_pruned_snps.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/covariates/ld_prune.prune.in
+    params:        ../results/04GENOTYPES-POST/covariates/ld_prune
+    log:           ../results/00LOG/04GENOTYPES-POST/get_ld_pruned_snps.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.get_ld_pruned_snps.benchmark.txt
+
   prune_genotypes:
-    output: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned.bed
-    params: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned
-    log: ../results/00LOG/04GENOTYPES-POST/prune_genotypes.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.prune_genotypes.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned.bed
+    params:        ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned
+    log:           ../results/00LOG/04GENOTYPES-POST/prune_genotypes.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.prune_genotypes.benchmark.txt
+
   calc_genotype_pcs:
-    output: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
-    params: ../results/04GENOTYPES-POST/covariates/pca
-    pcs: 10
-    log: ../results/00LOG/04GENOTYPES-POST/calc_genotype_pcs.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.calc_genotype_pcs.benchmark.txt
+    output:        ../results/04GENOTYPES-POST/covariates/pca.eigenvec
+    params:        ../results/04GENOTYPES-POST/covariates/pca
+    pcs:           10
+    log:           ../results/00LOG/04GENOTYPES-POST/calc_genotype_pcs.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.calc_genotype_pcs.benchmark.txt
+
   geno_post_report:
-    script: scripts/genotyping_post_impute_report.Rmd
-    html: reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
-    out_file: ../reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
-    in_dir: ../reports/04GENOTYPES-POST/
-    bmark_dir: ../reports/benchmarks/
-    log: ../results/00LOG/04GENOTYPES-POST/geno_post_report.log
-    benchmark: reports/benchmarks/04genotypes_post_impute.geno_post_report.benchmark.txt
+    script:        scripts/genotyping_post_impute_report.Rmd
+    html:          reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
+    bmark_dir:     reports/benchmarks/
+    log:           ../results/00LOG/04GENOTYPES-POST/geno_post_report.log
+    benchmark:     reports/benchmarks/04genotypes_post_impute.geno_post_report.benchmark.txt
 
 # ------------  Pipeline 05: tensorQTL  ------------
 
@@ -659,7 +663,6 @@ pseudotime:
     csv:              ../results/06PSEUDOTIME/{trajectory}/pseudobulk/Q{quantile_n}/Q{quantile_n}_bin{bin}_{trajectory}_pseudobulk.csv
     log:              ../results/00LOG/06PSEUDOTIME/{trajectory}/pseudobulk.log
     script:           ../scripts/pseudotime_pseudobulk.py
-    geno_sample_file: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
     benchmark: reports/benchmarks/06pseudotime.pseudotime_pseudobulk_{trajectory}.benchmark.txt
 
   prep_tensorqtl:

@@ -6,7 +6,8 @@ output:
   html_document:
     df_print: paged
 params:
-  in_dir: null
+  impute_summary: null
+  eigenval: null
   bmark_dir: null
 ---
 
@@ -14,7 +15,7 @@ params:
 
 ***
 
-+ From workflow dir run `mkdir -p ../results/04GENOTYPES-POST/TOPMED/`. Copy imputed output file into that dircetory
++ From workflow dir run `mkdir -p ../results/04GENOTYPES-POST/TOPMED/`. Copy imputed output file into that directory
 
 1. `impute_check`: Evaluate imputation quality for each chromosome
 2. `impute_check_cat`: Cat impute check counts for each chr into single file
@@ -28,13 +29,12 @@ params:
 7. `check_VCF`: Validate the filt VCF against ref genome and ID problematic SNPs
 8. `exclude_SNPs`: Exclude SNPs IDed in CheckVCF
 9. `idx_vcf`: Index the final filtered VCF
-10. `create_combined_log`: Summarise logs from previous rules
-11. `get_sample_list`: Extract final sample list
-12. `vcf_to_plink`: Convert genotypes VCF to plink format
-13. `get_ld_pruned_snps`: LD prune SNPs before running PCA on genotypes
+10. `get_sample_list`: Extract final sample list
+11. `vcf_to_plink`: Convert genotypes VCF to plink format
+12. `get_ld_pruned_snps`: LD prune SNPs before running PCA on genotypes
     + `--indep-pairwise 250 5 0.2`
-14. `prune_genotypes`: Create genotypes plink-format file containing only pruned SNPs
-15. `calc_genotype_pcs`: Run PCA on pruned genotypes to get genotype-specific PC covariates
+13. `prune_genotypes`: Create genotypes plink-format file containing only pruned SNPs
+14. `calc_genotype_pcs`: Run PCA on pruned genotypes to get genotype-specific PC covariates
 
 ***
 
@@ -48,16 +48,17 @@ library(DT)
 library(glue)
 library(gt)
 library(gtExtras)
-in_dir <- params$in_dir
+impute_summary <- params$impute_summary
+eigenval_file <- params$eigenval
 bmark_dir <- params$bmark_dir
 ```
 
-****
+***
 
 ### Check imputation
 
 ```{r, check_imputation_tbl, echo = FALSE, message = FALSE, warning = FALSE}
-imp_check_tbl <- read_tsv(paste0(in_dir, 'impute_check/chr_ALL_summary.tsv'))
+imp_check_tbl <- read_tsv(impute_summary)
 
 # Create the GT table
 imp_check_tbl %>%
@@ -103,7 +104,7 @@ imp_check_tbl %>%
   gt_theme_538() %>%
   # Add a footnote for context
   tab_footnote(
-    footnote = "MAF: Minor Allele Frequency; R²: Imputation quality score. Data includes chromosomes 21, 22, X, and overall totals.",
+    footnote = "MAF: Minor Allele Frequency; R²: Imputation quality score. Data includes chromosomes 1-22, X and overall totals.",
     locations = cells_title(groups = "subtitle")
   ) %>%
   # Set table width and font size
@@ -119,7 +120,7 @@ imp_check_tbl %>%
 ### Genotype PCs
 
 ```{r, genotype_PCs, echo = FALSE, message = FALSE, warning = FALSE}
-eigenval <- read_table("../reports/04GENOTYPES-POST/pca.eigenval", col_names = "eigenval")
+eigenval <- read_table(eigenval_file, col_names = "eigenval")
 
 # calculate proportion and cumulative variance explained
 variance <- eigenval %>%
@@ -262,8 +263,6 @@ mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
   )
 
 plot_grid(runtime_plt, mem_plt)
-
-# ggsave(paste0(bmark_dir, "genotype_genotype_pre_benchmark.png"), width = 7, height = 5)
 ```
 
 

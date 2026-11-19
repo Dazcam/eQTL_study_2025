@@ -107,7 +107,7 @@ rule pseudotime_palantir:
 
 rule pseudotime_pseudobulk:
     input:  h5ad     = rules.pseudotime_palantir.output.h5ad,
-            geno     = PT["pseudobulk"]["geno_sample_file"]
+            geno     = config["geno_post_impute"]["get_sample_list"]["output"]
     output: sentinel = PT["pseudobulk"]["sentinel"],
             csvs     = PT_PSEUDOBULK_CSVS
     params: q_values = PT_Q_VALUES
