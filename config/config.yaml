@@ -1346,19 +1346,6 @@ figures:
 # ------------  Pipeline 18: Data sharing  ------------
 
 data_sharing:
-  extract_fq:
-    out_r1: ../results/18DATA-SHARING/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
-    out_r2: ../results/18DATA-SHARING/MRGD_fqs/{plate}/{sample}_R2.fastq.gz
-    log_r1: ../results/00LOG/18DATA-SHARING/{plate}/cat_fqs_{sample}_R1.log
-    log_r2: ../results/00LOG/18DATA-SHARING/{plate}/cat_fqs_{sample}_R2.log
-    outdir: ../results/18DATA-SHARING/MRGD_fqs/
-
-  # Unused: no rule; outputs archived to results/old_results/14DATA_SHARING
-#  extract_cell_meta:
-#    input: /nfs/neurocluster/projects/fetal_brain_single_cell_eQTL_NBray/{plate}/{sample}/all-sample/DGE_filtered/cell_metadata.csv
-#    output: ../results/14DATA_SHARING/MRGD_fqs/{plate}/{sample}_cell_metadata.csv
-#    log: ../results/00LOG/14DATA_SHARING/{plate}/extract_cell_meta_{sample}.log
-
   data_perm:
     in_dir: ../results/05TENSORQTL/tensorqtl_perm/
     allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
@@ -1396,18 +1383,3 @@ data_sharing:
     out_file: ../results/18DATA-SHARING/eqtl_atlas_susie_credible_sets.tar
     top_dir: susie_credible_sets   # directory name inside the tarball
     log: ../results/00LOG/18DATA-SHARING/data_susie_mk_tar.log
-
-  # Retired: final_scanpy_obj rule moved to rules/test_rules
-#  data_final_scanpy_obj:
-#    # {l1_pop} is the PIPELINE name (Glu-UL, Glu-DL, ...), not the manuscript label
-#    l2_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # TODO: subcluster_dir + ...
-#    l2_populations: [Glu-UL, Glu-DL, NPC, GABA]
-#    l1_without_l2: [MG, Endo-Peri, OPC]                             # script asserts these are exactly the L1 pops with no L2
-#    pt_n_bins: 4
-#    l1_cluster_col: leiden_harmony_0.2
-#    keep_obs: [sample]                                              # extend with any other per-cell columns you want to share
-#    keep_obsm: [X_umap, X_pca_harmony]
-#    x_from_counts: true                                             # X = raw counts (layers['counts']) instead of scaled values
-#    out_h5ad: ../results/18DATA-SHARING/eqtl_atlas_snRNAseq.h5ad
-#    out_mapping: ../results/18DATA-SHARING/eqtl_atlas_cell_annotations.tsv.gz
-#    log: ../results/00LOG/18DATA-SHARING/final_scanpy_obj.log
