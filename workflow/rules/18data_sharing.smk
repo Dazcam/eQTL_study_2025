@@ -68,22 +68,22 @@ rule data_nominal:
     script:    DSH['data_nominal']['script']
 
 rule mk_eqtl_tar:
-    input:  files  = interleave(rules.data_perm.output.tsv, rules.data_nominal.output.tsv),
-            script = DSH['data_mk_eqtl_tar']['script']
+    input:  interleave(rules.data_perm.output.tsv, rules.data_nominal.output.tsv)
     output: DSH['data_mk_eqtl_tar']['out_file']
+    params: script = DSH['data_mk_eqtl_tar']['script']
     envmodules: "pigz"
     threads:   8
     resources: threads = 8, mem_mb = 16000, time = "5:00:00"
     message:   "Tarball of eQTL permutation and nominal files"
     benchmark: DSH['data_mk_eqtl_tar']['benchmark']
     log:       DSH['data_mk_eqtl_tar']['log']
-    shell:  "{input.script} {output} {threads} {input.files} > {log} 2>&1"
+    shell:  "{params.script} {output} {threads} {input} > {log} 2>&1"
 
 rule data_weights:
-    input:  weights = weights_files(config['cell_types']),
-            script  = DSH['data_weights']['script']
+    input:  weights_files(config['cell_types'])
     output: DSH['data_weights']['out_file']
-    params: weights_dir  = os.path.dirname(config['ctwas']['copy_fusion_weights']['dest_dir']),
+    params: script       = DSH['data_weights']['script'],
+            weights_dir  = os.path.dirname(config['ctwas']['copy_fusion_weights']['dest_dir']),
             archive_root = DSH['data_weights']['archive_root'],
             pairs        = " ".join(f"{old}={new}" for new, old in CT_NEW2OLD.items())
     envmodules: "pigz"
@@ -92,7 +92,7 @@ rule data_weights:
     message:   "Tarball of FUSION TWAS weights"
     benchmark: DSH['data_weights']['benchmark']
     log:       DSH['data_weights']['log']
-    shell:  "{input.script} {output} {threads} {params.weights_dir} "
+    shell:  "{params.script} {output} {threads} {params.weights_dir} "
             "{params.archive_root} {params.pairs} > {log} 2>&1"
 
 rule final_genotypes:

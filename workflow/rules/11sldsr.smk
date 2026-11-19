@@ -38,10 +38,11 @@ rule get_hg38_refs:
             frq = expand(HG38_REFS["frq"], chr=range(1, 23)),
             bim = expand(HG38_REFS["bim"], chr=range(1, 23)),
             snps = HG38_REFS["snps"]
-    params: out_dir = ref_dir("hg38")
-    benchmark: "reports/benchmarks/11sldsr.get_hg38_refs.benchmark.txt"
+    params: out_dir = ref_dir("hg38"),
+            script  = HG38_REFS["script"]
+    benchmark: HG38_REFS["benchmark"]
     log:    HG38_REFS["log"]
-    shell: "scripts/ldsr_get_hg38_refs.sh {params.out_dir} > {log} 2>&1"
+    shell: "{params.script} {params.out_dir} > {log} 2>&1"
 
 rule get_hg19_refs:
     output: baseline = expand(HG19_REFS["baseline"], chr=range(1, 23)),
@@ -49,10 +50,11 @@ rule get_hg19_refs:
             frq = expand(HG19_REFS["frq"], chr=range(1, 23)),
             bim = expand(HG19_REFS["bim"], chr=range(1, 23)),
             snps = HG19_REFS["snps"]
-    params: out_dir = ref_dir("hg19")
-    benchmark: "reports/benchmarks/11sldsr.get_hg19_refs.benchmark.txt"
+    params: out_dir = ref_dir("hg19"),
+            script  = HG19_REFS["script"]
+    benchmark: HG19_REFS["benchmark"]
     log:    HG19_REFS["log"]
-    shell: "scripts/ldsr_get_hg19_refs.sh {params.out_dir} > {log} 2>&1"
+    shell: "{params.script} {params.out_dir} > {log} 2>&1"
 
 rule make_annot:
     input:  cred_set = config["susie"]["sort_susie"]["output"],
@@ -61,9 +63,9 @@ rule make_annot:
             cs95 = LDS["make_annot"]["cs95"]
     log:    LDS["make_annot"]["log"]
     singularity: config["containers"]["r_eqtl"]
-    benchmark: "reports/benchmarks/11sldsr.make_annot_{cell_type}_{chr}.benchmark.txt"
+    benchmark: LDS["make_annot"]["benchmark"]
     message: "Generating maxCPP and CS95 annotations for {wildcards.cell_type}, chr {wildcards.chr}"
-    script: "../scripts/ldsr_make_annot.R"
+    script: LDS["make_annot"]["script"]
 
 rule lift_hapmap3_snps:
     # Lift HapMap3 SNPs to hg38
@@ -72,13 +74,14 @@ rule lift_hapmap3_snps:
             bim_hg38 = rules.get_hg38_refs.output.bim
     output: LDS["lift_hapmap3_snps"]["output"]
     params: hg19_dir = os.path.dirname(HG19_REFS["bim"]),
-            hg38_dir = os.path.dirname(HG38_REFS["bim"])
+            hg38_dir = os.path.dirname(HG38_REFS["bim"]),
+            script = LDS["lift_hapmap3_snps"]["script"]
     singularity: config["containers"]["ubuntu"]
-    benchmark: "reports/benchmarks/11sldsr.lift_hapmap3_snps.benchmark.txt"
+    benchmark: LDS["lift_hapmap3_snps"]["benchmark"]
     log:    LDS["lift_hapmap3_snps"]["log"]
     shell:
         """
-        scripts/ldsr_liftover_hapmap3_snps.sh {output} {input.snps} \
+        {params.script} {output} {input.snps} \
           {params.hg19_dir} {params.hg38_dir} > {log} 2>&1
         """
 
@@ -90,7 +93,7 @@ rule ldsr_ld_scores_hg38:
     params: bfile = strip_suffix(HG38_REFS["bim"], ".bim"),
             ldscores = strip_suffix(LDS["ldsr_ld_scores_hg38"]["output"],
                                     ".l2.ldscore.gz")
-    benchmark: "reports/benchmarks/11sldsr.ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.benchmark.txt"
+    benchmark: LDS["ldsr_ld_scores_hg38"]["benchmark"]
     message: "Generating LD scores on hg38 for {wildcards.cell_type}, {wildcards.annot_type}, chr {wildcards.chr}"
     log:    LDS["ldsr_ld_scores_hg38"]["log"]
     shell:
@@ -117,7 +120,7 @@ rule ldsr_strat_hg38_bl_v12:
             out_prefix = strip_suffix(LDS["ldsr_strat_hg38_bl_v12"]["output"],
                                       ".results")
     message: "Running stratified LDSR with {wildcards.cell_type} using hg38 refs, baseline 1.2, {wildcards.annot_type} and {wildcards.gwas} GWAS"
-    benchmark: "reports/benchmarks/11sldsr.ldsr_strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.benchmark.txt"
+    benchmark: LDS["ldsr_strat_hg38_bl_v12"]["benchmark"]
     log:    LDS["ldsr_strat_hg38_bl_v12"]["log"]
     shell:
         """
@@ -138,17 +141,18 @@ rule ldsr_strat_hg38_bl_v12:
 rule ldsr_strat_summary:
     input:  expand(rules.ldsr_strat_hg38_bl_v12.output, cell_type=config["cell_types"], gwas=config["gwas"], allow_missing=True)
     output: LDS["ldsr_strat_summary"]["output"]
-    benchmark: "reports/benchmarks/11sldsr.ldsr_strat_summary_{annot_type}.benchmark.txt"
+    benchmark: LDS["ldsr_strat_summary"]["benchmark"]
     log:    LDS["ldsr_strat_summary"]["log"]
     shell:
         """
+        exec > {log} 2>&1
         head -1 {input[0]} > {output}
         grep L2_1 {input} | cut -f 6- -d/ >> {output}
         """
 
 rule ldsr_report:
     input:  ldsr = expand(rules.ldsr_strat_summary.output, annot_type=config["annot_types"]),
-            rmd_script = "scripts/ldsr_report.Rmd"
+            rmd_script = LDS["ldsr_report"]["script"]
     output: LDS["ldsr_report"]["html"]
     params: in_dir = LDS["ldsr_report"]["in_dir"],
             output_file = LDS["ldsr_report"]["output_file"],
@@ -162,7 +166,7 @@ rule ldsr_report:
             ld_snps = LDS["lift_hapmap3_snps"]["output"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SLDSR report"
-    benchmark: "reports/benchmarks/11sldsr.ldsr_report.benchmark.txt"
+    benchmark: LDS["ldsr_report"]["benchmark"]
     log:    LDS["ldsr_report"]["log"]
     shell:
         """

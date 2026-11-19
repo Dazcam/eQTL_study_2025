@@ -10,21 +10,25 @@ PLATES = list(config["fastq"].keys())
 
 rule get_containers:
     output:  SET["get_containers"]["output"],
+    params:  script = SET["get_containers"]["script"]
     message: "Downloading singulairty / apptainer containers"
+    benchmark: SET["get_containers"]["benchmark"]
     log:     SET["get_containers"]["log"]
     shell:
              r"""
-             scripts/setup_pull_quayio_containers.sh
+             {params.script} > {log} 2>&1
              """
 
 rule create_parse_json:
     output:  SET["create_parse_json"]["output"],
-    params:  dirs=lambda wildcards: config["fastq"][wildcards.plate]
+    params:  dirs=lambda wildcards: config["fastq"][wildcards.plate],
+             script = SET["create_parse_json"]["script"]
     message:  "Create json to map fastq files to sample IDs for Parse alignment"
+    benchmark: SET["create_parse_json"]["benchmark"]
     log:     SET["create_parse_json"]["log"]
     shell:
              """
-             python scripts/setup_create_parse_json.py \
+             python {params.script} \
              --plate {wildcards.plate} \
              --fastq_dirs {params.dirs} > {log} 2>&1
              """
@@ -32,9 +36,11 @@ rule create_parse_json:
 rule setup_liftover:
     output:  SET["liftover"]["output"]
     params:  outdir = SET["liftover"]["outdir"]
+    benchmark: SET["liftover"]["benchmark"]
     log:     SET["liftover"]["log"]
     shell:
              """
+             exec > {log} 2>&1
              wget -nc -P {params.outdir} http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver
              wget -nc -P {params.outdir} http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
              wget -nc -P {params.outdir} http://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz
@@ -47,13 +53,15 @@ rule setup_liftover:
 rule get_fugita_data:
     output:  SET["get_fugita_data"]["output"]
     params:  outdir=SET["get_fugita_data"]["outdir"],
-             token=SET["get_fugita_data"]["token"]
+             token=SET["get_fugita_data"]["token"],
+             script = SET["get_fugita_data"]["script"]
     conda:   config["scanpy"]["env"]
     message: "Downloading Fugita et al. cell cell type and subtype data from Synapse"
+    benchmark: SET["get_fugita_data"]["benchmark"]
     log:     SET["get_fugita_data"]["log"]
     shell:
              """
-             python scripts/setup_get_fugita_data.py \
+             python {params.script} \
              --token {params.token} \
              --outdir {params.outdir} > {log} 2>&1
              touch {output}
@@ -64,6 +72,7 @@ rule get_jang_singlebrain:
     params:  outdir=SET["get_jang_singlebrain"]["outdir"]
     conda:   config["scanpy"]["env"]
     message: "Downloading Jang et al. SingleBrain eQTL summary statistics from Zenodo"
+    benchmark: SET["get_jang_singlebrain"]["benchmark"]
     log:     SET["get_jang_singlebrain"]["log"]
     shell:
              """
@@ -77,9 +86,9 @@ rule parse_nott_peaks:
     output: SET["parse_nott_peaks"]["out_file"]
     singularity: config["containers"]["r_eqtl"]
     message: "Parse Nott et al. 2019 Table S5 (8 sheets) into a combined hg19 BED"
-    benchmark: "reports/benchmarks/00setup.parse_nott_peaks.benchmark.txt"
+    benchmark: SET["parse_nott_peaks"]["benchmark"]
     log:    SET["parse_nott_peaks"]["log"]
-    script: "../scripts/setup_parse_nott_peaks.R"
+    script: SET["parse_nott_peaks"]["script"]
 
 rule liftover_nott_peaks:
     # Liftover Nott et al. 2019 peaks from hg19 to hg38
@@ -89,7 +98,7 @@ rule liftover_nott_peaks:
     output:  SET["liftover_nott_hg38"]["output"]
     singularity: config["containers"]["ubuntu"]
     params: SET["liftover_nott_hg38"]["unlifted"]
-    benchmark: "reports/benchmarks/00setup.liftover_nott_peaks.benchmark.txt"
+    benchmark: SET["liftover_nott_hg38"]["benchmark"]
     message: "Lifting over Nott et al. 2019 peaks from hg19 to hg38"
     log: SET["liftover_nott_hg38"]["log"]
     shell: "../resources/liftover/liftOver {input.bed} {input.chain} {output} {params} 2> {log}"
@@ -114,8 +123,9 @@ rule get_obrien_supp:
     output: SET["get_obrien_supp"]["output"],
     params: web_link = SET["get_obrien_supp"]["web_link"],
     message: "Download bulk eQTL supp tables for from O'Brien 2018, PMID:30419947"
+    benchmark: SET["get_obrien_supp"]["benchmark"]
     log:    SET["get_obrien_supp"]["log"]
-    shell:   "wget -O {output} {params.web_link}"
+    shell:   "wget -O {output} {params.web_link} > {log} 2>&1"
 
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------

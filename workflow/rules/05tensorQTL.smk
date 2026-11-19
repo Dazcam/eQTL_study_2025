@@ -51,7 +51,7 @@ rule prep_tensorQTL_input:
     input:  cov_file    = config["geno_post_impute"]["calc_genotype_pcs"]["output"],
             sex_file    = config["scanpy"]["metadata_per_sample"],
             gene_lookup = config["gene_lookup"],
-            pseudobulk  = config["scanpy"]["pseudobulk"]
+            pseudobulk  = config["scanpy"]["pseudobulk_csv"]
     output: cov_out     = TQ["prep_tensorQTL_input"]["cov_out"],
             exp_out     = TQ["prep_tensorQTL_input"]["exp_out"],
             report_rds  = TQ["prep_tensorQTL_input"]["report_rds"]
@@ -174,7 +174,7 @@ rule tensorqtl_report:
     input:  perm  = TQTL_PERM_RUNS,
             indep = TQTL_INDEP_RUNS,
             cell_counts = config["scanpy"]["l1_cell_counts"],
-            rmd_script = TQ["tensorqtl_report"]["rmd_script"]
+            rmd_script = TQ["tensorqtl_report"]["script"]
     output: TQ["tensorqtl_report"]["output"]
     params: in_dir       = TQ["tensorqtl_report"]["in_dir"],
             ind_dir      = TQ["tensorqtl_report"]["ind_dir"],

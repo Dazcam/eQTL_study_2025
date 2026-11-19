@@ -42,9 +42,9 @@ rule prep_susie_gene_meta:
     output: SUS["prep_susie_gene_meta"]["output"]
     singularity: config["containers"]["R"]
     message:     "Create gene metadata file for {wildcards.cell_type} for SuSiE"
-    benchmark:   "reports/benchmarks/10susie.prep_susie_gene_meta_{cell_type}.benchmark.txt"
+    benchmark:   SUS["prep_susie_gene_meta"]["benchmark"]
     log:         SUS["prep_susie_gene_meta"]["log"]
-    script: "../scripts/susie_prep_gene_meta.R"
+    script: SUS["prep_susie_gene_meta"]["script"]
 
 rule vcf_to_dosage:
     input:  SUS["vcf_to_dosage"]["vcf"]
@@ -52,7 +52,7 @@ rule vcf_to_dosage:
             idx    = SUS["vcf_to_dosage"]["out_idx"]
     envmodules: "BCFtools/1.23-GCC-14.3.0", "HTSlib/1.23-GCC-14.3.0"
     message:    "Generate an allele dosage file from the genotype VCF for SuSiE"
-    benchmark:  "reports/benchmarks/10susie.vcf_to_dosage.benchmark.txt"
+    benchmark:  SUS["vcf_to_dosage"]["benchmark"]
     log:        SUS["vcf_to_dosage"]["log"]
     shell:  """
             set -euo pipefail
@@ -75,9 +75,9 @@ rule prep_susie_input:
             covar    = SUS["prep_susie_input"]["out_covar"],
             samp_lst = SUS["prep_susie_input"]["out_samp_lst"]
     message:   "Prepare expression, covariate and sample files for {wildcards.cell_type} for SuSiE"
-    benchmark: "reports/benchmarks/10susie.prep_susie_input_{cell_type}.benchmark.txt"
+    benchmark: SUS["prep_susie_input"]["benchmark"]
     log:       SUS["prep_susie_input"]["log"]
-    script: "../scripts/susie_prep_input.py"
+    script: SUS["prep_susie_input"]["script"]
 
 rule run_susie:
     input:  exp_mat     = rules.prep_susie_input.output.exp_bed,
@@ -92,15 +92,16 @@ rule run_susie:
             snp_out     = SUS["run_susie"]["snp_out"]
     params: chunk       = lambda w: f"{w.batch_index} {config['susie_batches']}",
             cis_window  = config["window"],
-            fdr         = config["eqtl_fdr"]
+            fdr         = config["eqtl_fdr"],
+            script      = SUS["run_susie"]["script"]
     singularity: config["containers"]["susie"]
     message:     "Run SuSiE fine-mapping for {wildcards.cell_type}, batch {wildcards.batch_index}"
-    benchmark:   "reports/benchmarks/10susie.run_susie_{cell_type}_{batch_index}_{susie_batches}.benchmark.txt"
+    benchmark:   SUS["run_susie"]["benchmark"]
     log:         SUS["run_susie"]["log"]
     shell:  """
             set -euo pipefail
             echo "Running run_susie for {wildcards.cell_type}, batch {wildcards.batch_index}" > {log}
-            Rscript scripts/susie_run.R \
+            Rscript {params.script} \
               --expression_matrix {input.exp_mat} \
               --phenotype_meta {input.gene_meta} \
               --sample_meta {input.smpl_lst} \
@@ -122,7 +123,7 @@ rule merge_susie:
     output:     SUS["merge_susie"]["output"]
     envmodules: "HTSlib/1.21-GCC-13.3.0"
     message:    "Merge SuSiE credible sets into a single file for {wildcards.cell_type}"
-    benchmark:  "reports/benchmarks/10susie.merge_susie_{cell_type}.benchmark.txt"
+    benchmark:  SUS["merge_susie"]["benchmark"]
     log:        SUS["merge_susie"]["log"]
     shell:  """
             set -euo pipefail
@@ -136,7 +137,7 @@ rule sort_susie:
     output:     SUS["sort_susie"]["output"]
     envmodules: "HTSlib/1.21-GCC-13.3.0"
     message:    "Sort SuSiE credible sets by chromosome and position for {wildcards.cell_type}"
-    benchmark:  "reports/benchmarks/10susie.sort_susie_{cell_type}.benchmark.txt"
+    benchmark:  SUS["sort_susie"]["benchmark"]
     log:        SUS["sort_susie"]["log"]
     shell:  """
             set -euo pipefail
@@ -167,7 +168,7 @@ rule susie_report:
             output_file   = SUS["susie_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message:     "Generate SuSiE report"
-    benchmark:   "reports/benchmarks/10susie.susie_report.benchmark.txt"
+    benchmark:   SUS["susie_report"]["benchmark"]
     log:         SUS["susie_report"]["log"]
     shell:  """
             Rscript -e "rmarkdown::render('{input.rmd_script}', \

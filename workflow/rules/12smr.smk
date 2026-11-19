@@ -17,7 +17,7 @@ def tensorqtl_nom_dir(w):
 rule get_smr_binary:
     output: SMR["get_smr_binary"]["smr"]
     message: "Download the smr binary file"
-    benchmark: "reports/benchmarks/12smr.get_smr_binary.benchmark.txt"
+    benchmark: SMR["get_smr_binary"]["benchmark"]
     log: SMR["get_smr_binary"]["log"]
     shell:
         """
@@ -39,7 +39,7 @@ rule cat_refs:
             bim = SMR["cat_refs"]["cat_bim"],
             fam = SMR["cat_refs"]["cat_fam"]
     message: "Cat hg38 refs into a single file"
-    benchmark: "reports/benchmarks/12smr.cat_refs.benchmark.txt"
+    benchmark: SMR["cat_refs"]["benchmark"]
     log: SMR["cat_refs"]["log"]
     shell:
         """
@@ -61,13 +61,14 @@ rule cat_tensorqtl_nom_snps:
     output: cat_snps = SMR["cat_tensorqtl_nom_snps"]["cat_snps"],
             summary = SMR["cat_tensorqtl_nom_snps"]["summary"]
     params: dir = tensorqtl_nom_dir,
-            norm_method = config['tensorQTL']['norm_methods'][0]
+            norm_method = config['tensorQTL']['norm_methods'][0],
+            script = SMR["cat_tensorqtl_nom_snps"]["script"]
     message: "Cat TensorQTL parquet files into single file for SMR"
-    benchmark: "reports/benchmarks/12smr.cat_tensorqtl_nom_snps_{cell_type}.benchmark.txt"
+    benchmark: SMR["cat_tensorqtl_nom_snps"]["benchmark"]
     log: SMR["cat_tensorqtl_nom_snps"]["log"]
     shell:
         """
-        python scripts/smr_cat_tensorqtl_nom_snps.py \
+        python {params.script} \
           --nom_dir {params.dir} \
           --cell_type {wildcards.cell_type} \
           --norm_method {params.norm_method} \
@@ -90,9 +91,9 @@ rule create_query:
     singularity: config["containers"]["R"]
     resources: mem_mb = 20000
     message: "Create query file for SMR"
-    benchmark: "reports/benchmarks/12smr.create_query_{cell_type}.benchmark.txt"
+    benchmark: SMR["create_query"]["benchmark"]
     log: SMR["create_query"]["log"]
-    script: "../scripts/smr_create_query.R"
+    script: SMR["create_query"]["script"]
 
 rule create_besd:
     input:  query = rules.create_query.output.query,
@@ -103,7 +104,7 @@ rule create_besd:
     resources: mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
     message: "Create besd file for SMR"
-    benchmark: "reports/benchmarks/12smr.create_besd_{cell_type}.benchmark.txt"
+    benchmark: SMR["create_besd"]["benchmark"]
     log: SMR["create_besd"]["log"]
     shell:
         """
@@ -117,9 +118,9 @@ rule format_gwas:
     resources: mem_mb = 20000
     singularity: config["containers"]["R"]
     message: "Prep GWAS into .ma format for SMR"
-    benchmark: "reports/benchmarks/12smr.format_gwas_{gwas}.benchmark.txt"
+    benchmark: SMR["format_gwas"]["benchmark"]
     log: SMR["format_gwas"]["log"]
-    script: "../scripts/smr_format_gwas.R"
+    script: SMR["format_gwas"]["script"]
 
 rule smr:
     input:  bin = rules.get_smr_binary.output,
@@ -136,7 +137,7 @@ rule smr:
     resources: mem_mb = 20000
     envmodules: "compiler/gnu/5/5.0"
     message: "Run SMR"
-    benchmark: "reports/benchmarks/12smr.smr_{cell_type}_{gwas}.benchmark.txt"
+    benchmark: SMR["smr"]["benchmark"]
     log:    SMR["smr"]["log"]
     shell:  """
             {input.bin} --bfile {params.geno_prefix} \
@@ -149,7 +150,7 @@ rule smr:
 rule smr_report:
     input:  smr_files = expand(rules.smr.output, cell_type = config["cell_types"], gwas = config["gwas"]),
             gene_lookup = config["gene_lookup"],
-            rmd_script = "scripts/smr_report.Rmd"
+            rmd_script = SMR["smr_report"]["script"]
     output: SMR["smr_report"]["html"]
     params: cell_types = ",".join(config["cell_types"]),
             gwas = ",".join(config["gwas"]),
@@ -163,7 +164,7 @@ rule smr_report:
     resources: mem_mb = 20000
     singularity: config["containers"]["r_eqtl"]
     message: "Generate SMR report"
-    benchmark: "reports/benchmarks/12smr.smr_report.benchmark.txt"
+    benchmark: SMR["smr_report"]["benchmark"]
     log: SMR["smr_report"]["log"]
     shell:
         """

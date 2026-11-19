@@ -29,9 +29,11 @@ rule get_refs:
              fa_link = PAR["get_refs"]["fa_link"],
        	     gtf_link = PAR["get_refs"]["gtf_link"]
     message: "Downloading genome reference files"
+    benchmark: PAR["get_refs"]["benchmark"]
     log:     PAR["get_refs"]["log"]
     shell:
              r"""
+             exec > {log} 2>&1
              wget {params.fa_link} -P {params.outdir}
              wget {params.gtf_link} -P {params.outdir}
              """
@@ -45,6 +47,7 @@ rule mk_ref:
              build = PAR["mk_ref"]["build"]
     resources: threads = 6, mem_mb = 64000, time="1-0:00:00"
     message: "Creating processed reference sequence index files"
+    benchmark: PAR["mk_ref"]["benchmark"]
     log:     PAR["mk_ref"]["log"]
     shell:
        	     r"""
@@ -68,9 +71,9 @@ rule cat_fqs:
             r2 = temp(PAR["cat_fqs"]["out_r2"])
     log:    r1 = PAR["cat_fqs"]["log_r1"],
             r2 = PAR["cat_fqs"]["log_r2"]
-    benchmark: "reports/benchmarks/01parse.cat_fqs_{plate}_{sample}.benchmark.txt"
+    benchmark: PAR["cat_fqs"]["benchmark"]
     params: outdir = PAR["cat_fqs"]["outdir"],
-            fq_size = "reports/benchmarks/input_fq_sizes.tsv"
+            fq_size = PAR["cat_fqs"]["fq_size"]
     shell:
         """
         cat {input.r1} > {output.r1} 2> {log.r1} && \
@@ -87,7 +90,7 @@ rule run_parse:
                 plate=wc.plate, sample=wc.sample
             )            
     priority: 50
-    benchmark: "reports/benchmarks/01parse.run_parse_{plate}_{sample}.benchmark.txt"
+    benchmark: PAR["run_parse"]["benchmark"]
     resources: threads = 32, mem_mb = 360000, time="10-0:00:00"
     message: "Running Parse alignment"
     log:     PAR["run_parse"]["log"]
@@ -118,7 +121,7 @@ rule run_parse_combine:
         sublib_list=lambda wc: PAR["run_parse_combine"]["sublib_list"].format(plate=wc.plate),
         outdir=lambda wc: PAR["run_parse_combine"]["outdir"].format(plate=wc.plate)
     resources: threads = 32, mem_mb = 360000, time="3-0:00:00"
-    benchmark: "reports/benchmarks/01parse.run_parse_combine_{plate}.benchmark.txt"
+    benchmark: PAR["run_parse_combine"]["benchmark"]
     message: "Combining Parse for fastq files"
     log:     PAR["run_parse_combine"]["log"]
     shell:

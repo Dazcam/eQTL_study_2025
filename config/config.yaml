@@ -186,33 +186,43 @@ setup:
   get_containers:
     output: ../resources/containers/get_containers.done
     log: ../results/00LOG/00SETUP/get_containers.log 
+    script: scripts/setup_pull_quayio_containers.sh
+    benchmark: reports/benchmarks/00setup.get_containers.benchmark.txt
 
   create_parse_json:
     output: ../config/samples_{plate}.json
     log: ../results/00LOG/00SETUP/create_parse_json_{plate}.log
+    script: scripts/setup_create_parse_json.py
+    benchmark: reports/benchmarks/00setup.create_parse_json_{plate}.benchmark.txt
 
   liftover:
     output: ../resources/liftover/setup_liftover.done
     outdir: ../resources/liftover
     log: ../results/00LOG/00SETUP/liftover.log
+    benchmark: reports/benchmarks/00setup.setup_liftover.benchmark.txt
 
   get_fugita_data:
     output: ../resources/public_datasets/fugita_2024/.setup_get_fugita_data.done
     outdir: ../resources/public_datasets/fugita_2024/
     token: ../config/passwords/synapse.txt
     log: ../results/00LOG/00SETUP/get_fugita_data.log
+    script: scripts/setup_get_fugita_data.py
+    benchmark: reports/benchmarks/00setup.get_fugita_data.benchmark.txt
 
 
   parse_nott_peaks:
     xlsx_file: ../resources/public_datasets/nott_2019/nott_2019_table_s5.xlsx
     out_file:  ../resources/public_datasets/nott_2019/nott_peaks_hg19.bed
     log:       ../results/00LOG/00SETUP/nott_parse_peaks.log
+    benchmark: reports/benchmarks/00setup.parse_nott_peaks.benchmark.txt
+    script: ../scripts/setup_parse_nott_peaks.R
 
   liftover_nott_hg38:
     chain:     ../resources/liftover/hg19ToHg38.over.chain.gz
     output:    ../resources/public_datasets/nott_2019/nott_peaks_hg38.bed
     unlifted:  ../resources/public_datasets/nott_2019/nott_peaks_hg38.unlifted.bed
     log:       ../results/00LOG/00SETUP/nott_liftover.log
+    benchmark: reports/benchmarks/00setup.liftover_nott_peaks.benchmark.txt
 
   get_jang_singlebrain:
     output: ../resources/public_datasets/Jang_2026/.setup_get_jang_singlebrain.done
@@ -220,11 +230,13 @@ setup:
     full_assoc: ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_full_assoc.tsv.gz
     top_assoc:  ../resources/public_datasets/Jang_2026/{jang_cell_type}_eqtl_top_assoc.tsv.gz
     log: ../results/00LOG/00SETUP/get_jang_singlebrain.log
+    benchmark: reports/benchmarks/00setup.get_jang_singlebrain.benchmark.txt
   
   get_obrien_supp:
     output: ../resources/public_datasets/obrien_2018/obrien_2018_supp_tables.xlsx
     web_link: https://media.springernature.com/original/springer-static/esm/art%3A10.1186%2Fs13059-018-1567-1/MediaObjects/13059_2018_1567_MOESM1_ESM.xlsx
     log: ../results/00LOG/00SETUP/get_obrien_supp.log
+    benchmark: reports/benchmarks/00setup.get_obrien_supp.benchmark.txt
 
 # ------------  Pipeline 01: Parse  ------------
 
@@ -236,12 +248,14 @@ parse:
     gtf_out: ../resources/refs/Homo_sapiens.GRCh38.113.gtf.gz
     outdir: ../resources/refs/
     log: ../results/00LOG/01PARSE/get_refs.log
+    benchmark: reports/benchmarks/01parse.get_refs.benchmark.txt
 
   mk_ref:
     outfile: ../resources/refs/ref.done
     outdir: ../resources/refs/hg38
     build: hg38
     log: ../results/00LOG/01PARSE/mk_ref.log
+    benchmark: reports/benchmarks/01parse.mk_ref.benchmark.txt
 
   cat_fqs:
     out_r1: ../results/01PARSE/MRGD_fqs/{plate}/{sample}_R1.fastq.gz
@@ -249,26 +263,29 @@ parse:
     log_r1: ../results/00LOG/01PARSE/{plate}/cat_fqs_{sample}_R1.log
     log_r2: ../results/00LOG/01PARSE/{plate}/cat_fqs_{sample}_R2.log
     outdir: ../results/01PARSE/MRGD_fqs/
+    benchmark: reports/benchmarks/01parse.cat_fqs_{plate}_{sample}.benchmark.txt
+    fq_size: reports/benchmarks/input_fq_sizes.tsv
 
   run_parse:
     outfile: ../results/01PARSE/{plate}/{sample}/run.done
     outdir: "../results/01PARSE/{plate}/{sample}"        
     sample_list: "../config/sample-list_{plate}.txt"
     log: ../results/00LOG/01PARSE/{plate}/run_parse_{sample}.log
+    benchmark: reports/benchmarks/01parse.run_parse_{plate}_{sample}.benchmark.txt
 
   run_parse_combine:
     outfile: "../results/01PARSE/{plate}/combine/run.done"
     outdir: "../results/01PARSE/{plate}/combine"
     sublib_list: "../config/sublib_lst_{plate}.txt"
     log: "../results/00LOG/01PARSE/{plate}/run_parse_combine.log"    
+    benchmark: reports/benchmarks/01parse.run_parse_combine_{plate}.benchmark.txt
 
 # ------------  Pipeline 02: Scanpy  ------------
 
 scanpy:
   qc:
-    input: 
-      plate: ../results/01PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad
-      nb: scripts/scanpy_qc.ipynb  
+    input: ../results/01PARSE/combine_{plate}/all-sample/DGE_filtered/anndata.h5ad
+    script: scripts/scanpy_qc.ipynb
     output: ../results/02SCANPY/scanpy_qc_{plate}.html
     nb_out: ../results/02SCANPY/scanpy_qc_{plate}_pm.ipynb
     html_out: scanpy_qc_{plate}.html
@@ -276,7 +293,7 @@ scanpy:
     log: ../results/00LOG/02SCANPY/scanpy_qc_{plate}.log
 
   clustering:
-    input: scripts/scanpy_clustering.ipynb
+    script: scripts/scanpy_clustering.ipynb
     output: ../results/02SCANPY/scanpy_clustering.html 
     nb_out: ../results/02SCANPY/scanpy_clustering_pm.ipynb
     html_out: scanpy_clustering.html
@@ -284,44 +301,47 @@ scanpy:
     log: ../results/00LOG/02SCANPY/scanpy_clustering.log
 
   clustering2:
-    input: scripts/scanpy_clustering2.ipynb
+    script: scripts/scanpy_clustering2.ipynb
     output: ../results/02SCANPY/scanpy_clustering2.html
     nb_out: ../results/02SCANPY/scanpy_clustering2_pm.ipynb
     html_out: scanpy_clustering2.html
-    benchmark: reports/benchmarks/scanpy_clustering2.benchmark.txt
+    benchmark: reports/benchmarks/02scanpy.scanpy_clustering2.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_clustering2.log
 
   clustering3:
-    input: scripts/scanpy_clustering3.ipynb
+    script: scripts/scanpy_clustering3.ipynb
     output: ../results/02SCANPY/scanpy_clustering3.html
     nb_out: ../results/02SCANPY/scanpy_clustering3_pm.ipynb
     html_out: scanpy_clustering3.html
-    benchmark: reports/benchmarks/scanpy_clustering3.benchmark.txt
+    benchmark: reports/benchmarks/02scanpy.scanpy_clustering3.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_clustering3.log
 
   annotation:
-    input: scripts/scanpy_annotation.ipynb
+    script: scripts/scanpy_annotation.ipynb
     output: ../results/02SCANPY/scanpy_annotation.html
     nb_out: ../results/02SCANPY/scanpy_annotation_pm.ipynb
     html_out: scanpy_annotation.html
     log: ../results/00LOG/02SCANPY/scanpy_annotation.log
+    benchmark: reports/benchmarks/02scanpy.scanpy_annotation.benchmark.txt
 
   pseudobulk:
-    input: scripts/scanpy_pseudobulk.ipynb
+    script: scripts/scanpy_pseudobulk.ipynb
     output: ../results/02SCANPY/scanpy_pseudobulk.html
     nb_out: ../results/02SCANPY/scanpy_pseudobulk_pm.ipynb
     html_out: scanpy_pseudobulk.html
     log: ../results/00LOG/02SCANPY/scanpy_pseudobulk.log
+    benchmark: reports/benchmarks/02scanpy.scanpy_pseudobulk.benchmark.txt
 
   extra:
-    input: scripts/scanpy_extra2.ipynb
+    script: scripts/scanpy_extra2.ipynb
     output: ../results/02SCANPY/scanpy_extra2.html
     nb_out: ../results/02SCANPY/scanpy_extra2_pm.ipynb
     html_out: scanpy_extra2.html
     log: ../results/00LOG/02SCANPY/scanpy_extra2.log
+    benchmark: reports/benchmarks/02scanpy.scanpy_extra.benchmark.txt
 
   subclustering:
-    input: scripts/scanpy_subclustering.ipynb
+    script: scripts/scanpy_subclustering.ipynb
     output: ../results/02SCANPY/scanpy_subclustering.html
     nb_out: ../results/02SCANPY/scanpy_subclustering_pm.ipynb
     html_out: scanpy_subclustering.html
@@ -331,7 +351,7 @@ scanpy:
   clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad   # written by the clustering notebooks
   subclusters_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # scanpy_subclustering notebook
   metadata_per_sample: reports/02SCANPY/02_metadata_per_sample.tsv   # sex and PCW per sample (notebooks)
-  pseudobulk: ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv   # scanpy_pseudobulk notebook
+  pseudobulk_csv: ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv   # scanpy_pseudobulk notebook
   l1_cell_counts: reports/02SCANPY/scanpy_L1_cell_type_counts.tsv   # nuclei per L1 cell type (annotation notebook)
 
   lisi:
@@ -358,28 +378,33 @@ geno_pre_impute:
     prefix_in: ../resources/genotypes/PLINK_040325_1121_Bray_hg19/Bray_hg19
     prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19
     log: ../results/00LOG/03GENOTYPES-PRE/convert_raw.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.convert_raw.benchmark.txt
 
   add_sex_to_fam:
     sexfile: ../resources/sheets/samples_sex_plink.tsv
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex.bed
     prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_sex
     log: ../results/00LOG/03GENOTYPES-PRE/add_sex_to_fam.log 
+    benchmark: reports/benchmarks/03genotypes_pre_impute.add_sex_to_fam.benchmark.txt
    
   rm_dup_sample:
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.bed
     prefix_out: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup
     remove_file: ../config/rm_dup_sample.txt
     log: ../results/00LOG/03GENOTYPES-PRE/rm_dup_sample.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.rm_dup_sample.benchmark.txt
 
   check_het:
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtl_genotypes_hg19_nodup.het
     log: ../results/00LOG/03GENOTYPES-PRE/check_het.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.check_het.benchmark.txt
 
   make_kgp3_pgen:
     input: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.id
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/kgp3.array_snps.pgen
     log: ../results/00LOG/03GENOTYPES-PRE/GenotypeQCtoHRC/make_kgp3_pgen.log
     workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/dragondata_extra/ancestry_reference/1kgp/
+    benchmark: reports/benchmarks/03genotypes_pre_impute.make_kgp3_pgen.benchmark.txt
 
   genotype-qc2hrc:
     output: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm.qc_report.html
@@ -390,10 +415,13 @@ geno_pre_impute:
     workdir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC
     report_dir: reports/03GENOTYPES-PRE/
     log: ../results/00LOG/03GENOTYPES-PRE/genotype-qc2hrc.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.genotype_qc2hrc.benchmark.txt
 
   cat_genotypes:
     output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.vcf.gz
     in_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/
+    benchmark: reports/benchmarks/03genotypes_pre_impute.cat_genotypes.benchmark.txt
+    log: ../results/00LOG/03GENOTYPES-PRE/cat_genotypes.log
 
   rm_maf_ambig:
     output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.bed
@@ -401,31 +429,36 @@ geno_pre_impute:
     prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig
     ambig_snp_lst: reports/03GENOTYPES-PRE/ambig_high_maf_snp_lst.tsv
     log: ../results/00LOG/03GENOTYPES-PRE/rm_maf_ambig.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.rm_maf_ambig.benchmark.txt
 
   rm_rare_snps:
     output: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps.bed
     prefix_out: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.rm_ambig.rm_rare_snps 
     log: ../results/00LOG/03GENOTYPES-PRE/rm_rare_snps.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.rm_rare_snps.benchmark.txt
 
   split_chrs:
     output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/genotypes.done 
     prefix_vcf: ../results/03GENOTYPES-PRE/genotypes/eqtl_genotypes_hg38.gh.topmed.allchr.filt
     outdir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/
     log: ../results/00LOG/03GENOTYPES-PRE/split_chrs.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.split_chrs.benchmark.txt
 
   gather_stats:
     output: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/gather_stats.done
     gQC2hrc_vcf_dir: ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/imputeMe/  
     final_vcf_dir: ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/    
     log: ../results/00LOG/03GENOTYPES-PRE/gather_stats.log     
+    benchmark: reports/benchmarks/03genotypes_pre_impute.gather_stats.benchmark.txt
 
   geno_pre_report:
-    rmd_script: scripts/genotyping_pre_impute_report.Rmd
+    script: scripts/genotyping_pre_impute_report.Rmd
     html: reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
     out_file: ../reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
     in_dir: ../reports/03GENOTYPES-PRE/
     bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
+    benchmark: reports/benchmarks/03genotypes_pre_impute.geno_pre_report.benchmark.txt
 
 # ------------  Pipeline 04: Genotypes post-imputation  ------------
 
@@ -437,25 +470,32 @@ geno_post_impute:
     in_dir: ../results/04GENOTYPES-POST/TOPMED/
     pwd: ../config/passwords/topmed.txt 
     log: ../results/00LOG/04GENOTYPES-POST/impute_check_{chr}.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.impute_check_{chr}.benchmark.txt
   impute_check_cat:
     output: ../results/04GENOTYPES-POST/impute_check/chr_ALL_summary.tsv
+    benchmark: reports/benchmarks/04genotypes_post_impute.impute_check_cat.benchmark.txt
+    log: ../results/00LOG/04GENOTYPES-POST/impute_check_cat.log
   dwnld_dbsnp_ref:
     output: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz
     web_link: https://ftp.ncbi.nih.gov/snp/redesign/latest_release/VCF/GCF_000001405.40.gz
     prefix: ../resources/refs/dbSNP/dbsnp_hg38_build156.vcf.gz 
     log: ../results/00LOG/04GENOTYPES-POST/dwnld_dbsnp_ref.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.dwnld_dbsnp_ref.benchmark.txt
   add_rsID:
     output: ../results/04GENOTYPES-POST/dbSNP_annotated/chr{chr}.dbSNP.vcf.gz
     log: ../results/00LOG/04GENOTYPES-POST/add_rsID_{chr}.log     
+    benchmark: reports/benchmarks/04genotypes_post_impute.add_rsID_{chr}.benchmark.txt
   vcf_cat:
     output: ../results/04GENOTYPES-POST/dbSNP_annotated/chrALL.dbSNP.vcf.gz
     log: ../results/00LOG/04GENOTYPES-POST/vcf_cat.log    
+    benchmark: reports/benchmarks/04genotypes_post_impute.vcf_cat.benchmark.txt
   filter_tags:
     output: ../results/04GENOTYPES-POST/filtered/chrALL.filt.vcf.gz
     hwe: 0.0001
     maf: 0.05
     rsq: 0.8  
     log: ../results/00LOG/04GENOTYPES-POST/filter_tags.log    
+    benchmark: reports/benchmarks/04genotypes_post_impute.filter_tags.benchmark.txt
   check_VCF:  
     ref_gz: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
     log_out: ../results/04GENOTYPES-POST/filtered/check_vcf.check.log
@@ -464,41 +504,53 @@ geno_post_impute:
     fai: ../resources/refs/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai
     prefix_out: ../results/04GENOTYPES-POST/filtered/check_vcf
     log: ../results/00LOG/04GENOTYPES-POST/check_VCF.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.check_VCF.benchmark.txt
+    script: scripts/checkVCF.py
   exclude_SNPs:
     output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     log: ../results/00LOG/04GENOTYPES-POST/exclde_SNPs.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.exclude_SNPs.benchmark.txt
   idx_vcf:
     output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz.tbi
     log: ../results/00LOG/04GENOTYPES-POST/idx_vcf.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.idx_vcf.benchmark.txt
   create_combined_log:
     output: ../results/04GENOTYPES-POST/filtered/combined_genotype_processing.log
-    log: ../results/00LOG/04GENOTYPES-POST/create_combined_log 
+    log: ../results/00LOG/04GENOTYPES-POST/create_combined_log.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.create_combined_log.benchmark.txt
   get_sample_list:
     output: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+    benchmark: reports/benchmarks/04genotypes_post_impute.get_sample_list.benchmark.txt
+    log: ../results/00LOG/04GENOTYPES-POST/get_sample_list.log
   vcf_to_plink:
     output: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.bed
     params: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt
     log: ../results/00LOG/04GENOTYPES-POST/vcf_to_plink.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.vcf_to_plink.benchmark.txt
   get_ld_pruned_snps:
     output: ../results/04GENOTYPES-POST/covariates/ld_prune.prune.in
     params: ../results/04GENOTYPES-POST/covariates/ld_prune
     log: ../results/00LOG/04GENOTYPES-POST/get_ld_pruned_snps.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.get_ld_pruned_snps.benchmark.txt
   prune_genotypes:
     output: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned.bed
     params: ../results/04GENOTYPES-POST/covariates/chrALL_final.filt.ld_pruned
     log: ../results/00LOG/04GENOTYPES-POST/prune_genotypes.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.prune_genotypes.benchmark.txt
   calc_genotype_pcs:
     output: ../results/04GENOTYPES-POST/covariates/pca.eigenvec
     params: ../results/04GENOTYPES-POST/covariates/pca
     pcs: 10
     log: ../results/00LOG/04GENOTYPES-POST/calc_genotype_pcs.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.calc_genotype_pcs.benchmark.txt
   geno_post_report:
-    rmd_script: scripts/genotyping_post_impute_report.Rmd
+    script: scripts/genotyping_post_impute_report.Rmd
     html: reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
     out_file: ../reports/04GENOTYPES-POST/04genotyping_post_impute_report.html
     in_dir: ../reports/04GENOTYPES-POST/
     bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/04GENOTYPES-POST/geno_post_report.log
+    benchmark: reports/benchmarks/04genotypes_post_impute.geno_post_report.benchmark.txt
 
 # ------------  Pipeline 05: tensorQTL  ------------
 
@@ -557,7 +609,7 @@ tensorQTL:
     benchmark:  reports/benchmarks/05tensorQTL.tensorqtl_independent_{cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}.benchmark.txt
 
   tensorqtl_report:
-    rmd_script:  scripts/tensorqtl_report.Rmd
+    script:  scripts/tensorqtl_report.Rmd
     output:      reports/05TENSORQTL/05tensorqtl_report.html
     in_dir:      ../../results/05TENSORQTL/tensorqtl_perm/
     ind_dir:     ../../results/05TENSORQTL/tensorqtl_independent/
@@ -576,6 +628,7 @@ pseudotime:
     h5ad:       ../results/06PSEUDOTIME/{trajectory}/adata_subset.h5ad
     log:        ../results/00LOG/06PSEUDOTIME/{trajectory}/subset.log
     script:     ../scripts/pseudotime_subset.py
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_subset_{trajectory}.benchmark.txt
 
   palantir:
     h5ad:          ../results/06PSEUDOTIME/{trajectory}/adata_pseudotime.h5ad
@@ -589,6 +642,7 @@ pseudotime:
     terminal_markers:            # terminal cell = max expression of this gene in the terminal type
       Glu-DL: TLE4
       Glu-UL: SATB2
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_palantir_{trajectory}.benchmark.txt
 
   pseudobulk:
     sentinel:         ../results/06PSEUDOTIME/{trajectory}/pseudobulk/pseudobulk_complete.txt
@@ -596,6 +650,7 @@ pseudotime:
     log:              ../results/00LOG/06PSEUDOTIME/{trajectory}/pseudobulk.log
     script:           ../scripts/pseudotime_pseudobulk.py
     geno_sample_file: ../results/04GENOTYPES-POST/filtered/geno_sample_list.txt
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_pseudobulk_{trajectory}.benchmark.txt
 
   prep_tensorqtl:
     exp_out:      ../results/06PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed
@@ -603,38 +658,45 @@ pseudotime:
     report_rds:   reports/06PSEUDOTIME/prep_input/gene_exp_matrix_report_{trajectory}_Q{quantile_n}_bin{bin}_quantile.rds
     log:          ../results/00LOG/06PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.log
     script:       ../scripts/tensorqtl_prep_input_files.R
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_prep_tensorqtl_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt
 
   split_covariates:
     output: ../results/06PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.txt
     log:    ../results/00LOG/06PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_quantile_genPC{geno_pc}_expPC{exp_pc}_split_covariates.log
     script: ../scripts/tensorqtl_split_covariates.R
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_split_covariates_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt
 
   zip_bed:
     output: ../results/06PSEUDOTIME/{trajectory}/tensorqtl/prep_input/Q{quantile_n}_bin{bin}_quantile.bed.gz
     log:    ../results/00LOG/06PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_zip_bed.log
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_zip_bed_{trajectory}_Q{quantile_n}_bin{bin}.benchmark.txt
 
   tensorqtl_nom:
     output:     ../results/06PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom.cis_qtl_pairs.1.parquet
     prefix_out: ../results/06PSEUDOTIME/{trajectory}/tensorqtl/nominal/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_nom
     log:        ../results/00LOG/06PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_nom.log
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_tensorqtl_nom_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt
 
   tensorqtl_perm:
     output:     ../results/06PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm.cis_qtl.txt.gz
     prefix_out: ../results/06PSEUDOTIME/{trajectory}/tensorqtl/perm/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}/Q{quantile_n}_bin{bin}_perm
     log:        ../results/00LOG/06PSEUDOTIME/{trajectory}/tensorqtl/Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}_perm.log
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_tensorqtl_perm_{trajectory}_Q{quantile_n}_bin{bin}_genPC{geno_pc}_expPC{exp_pc}.benchmark.txt
 
   export:
     sentinel: ../results/05TENSORQTL/prep_input/.pt_export_{trajectory}_Q4_bin{bin}.done
     log:      ../results/00LOG/06PSEUDOTIME/{trajectory}/export_smr_twas_Q4_bin{bin}.log
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_export_smr_twas_inputs_{trajectory}_Q4_bin{bin}.benchmark.txt
 
   report:
     html:                reports/06PSEUDOTIME/06pseudotime_report.html
     output_file:         ../reports/06PSEUDOTIME/06pseudotime_report.html
-    rmd_script:          scripts/pseudotime_report.Rmd
+    script:          scripts/pseudotime_report.Rmd
     in_dir:              ../../results/06PSEUDOTIME/
     cell_type_perm_dir:  ../../results/05TENSORQTL/tensorqtl_perm/
     bmark_dir:           ../reports/benchmarks/
     log:                 ../results/00LOG/06PSEUDOTIME/report.log
+    benchmark: reports/benchmarks/06pseudotime.pseudotime_report.benchmark.txt
 
 # ------------  Pipeline 07: Replication (single-cell)  ------------
 
@@ -759,38 +821,48 @@ prep_gwas:
   get_gwas_sumstats:
     output: ../results/09PREP-GWAS/{gwas}_hg19_raw.tsv
     log: ../results/00LOG/09PREP-GWAS/get_gwas_sumstats_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.get_gwas_sumstats_{gwas}.benchmark.txt
 
   standardise_sumstats:
     output: ../results/09PREP-GWAS/{gwas}_hg19_standardised.tsv
     temp: ../results/09PREP-GWAS/{gwas}_hg19_raw_temp.tsv
     log: ../results/00LOG/09PREP-GWAS/standardise_sumstats_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.standardise_sumstats_{gwas}.benchmark.txt
 
   add_z_score:
     output: ../results/09PREP-GWAS/{gwas}_hg19_with_Z.tsv
     log: ../results/00LOG/09PREP-GWAS/add_z_score_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.add_z_score_{gwas}.benchmark.txt
+    script: scripts/gwas_add_z_score_to_sumstats.py
 
   add_N:
     output: ../results/09PREP-GWAS/{gwas}_hg19_with_N.tsv
     log: ../results/00LOG/09PREP-GWAS/add_N_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.add_N_{gwas}.benchmark.txt
 
   make_gwas_bed_hg19:
     output: ../results/09PREP-GWAS/{gwas}_hg19.bed
     log: ../results/00LOG/09PREP-GWAS/create_gwas_bed_hg19_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.make_gwas_bed_hg19_{gwas}.benchmark.txt
 
   liftover_gwas_to_hg38:
     output: ../results/09PREP-GWAS/{gwas}_hg38.bed
     chain: ../resources/liftover/hg19ToHg38.over.chain.gz
     unlifted: ../results/09PREP-GWAS/{gwas}_hg19_unlifted.bed
     log: ../results/00LOG/09PREP-GWAS/liftover_gwas_to_hg38_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.liftover_gwas_to_hg38_{gwas}.benchmark.txt
 
   add_hg38_coords_to_gwas:
     output: ../results/09PREP-GWAS/{gwas}_hg38.tsv
     log: ../results/00LOG/09PREP-GWAS/add_hg38_coords_to_gwas_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.add_hg38_coords_to_gwas_{gwas}.benchmark.txt
+    script: ../scripts/gwas_add_hg38_coords_to_gwas.py
 
   munge_sumstats:
     output: ../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz # Chnage back to this for run over weekend
     prefix: ../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready
     log: ../results/00LOG/09PREP-GWAS/munge_sumstats_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.munge_sumstats_{gwas}.benchmark.txt
 
 # ------------  Pipeline 10: SuSiE  ------------
 
@@ -798,32 +870,41 @@ susie:
   prep_susie_gene_meta:
     output: ../results/10SUSIE/susie_input/{cell_type}_gene_meta.tsv
     log: ../results/00LOG/10SUSIE/prep_susie_gene_meta_{cell_type}.log
+    benchmark: reports/benchmarks/10susie.prep_susie_gene_meta_{cell_type}.benchmark.txt
+    script: ../scripts/susie_prep_gene_meta.R
  
   vcf_to_dosage:
     vcf: ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
     out_dosage: ../results/10SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz
     out_idx: ../results/10SUSIE/susie_input/chrALL_final.filt.dose.tsv.gz.tbi
     log: ../results/00LOG/10SUSIE/vcf_to_dosage.log
+    benchmark: reports/benchmarks/10susie.vcf_to_dosage.benchmark.txt
  
   prep_susie_input:
     out_exp: ../results/10SUSIE/susie_input/{cell_type}_susie_ready.bed
     out_covar: ../results/10SUSIE/susie_input/{cell_type}_covariates_susie_ready.txt
     out_samp_lst: ../results/10SUSIE/susie_input/{cell_type}_samp_lst_susie_ready.txt
     log: ../results/00LOG/10SUSIE/prep_susie_input_{cell_type}.log
+    benchmark: reports/benchmarks/10susie.prep_susie_input_{cell_type}.benchmark.txt
+    script: ../scripts/susie_prep_input.py
  
   run_susie:
     cs_hp_out: ../results/10SUSIE/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.cred.hp.txt
     cs_out: ../results/10SUSIE/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.cred.txt
     snp_out: ../results/10SUSIE/susie/{cell_type}/{cell_type}.{batch_index}_{susie_batches}.susie.snp.txt
     log: ../results/00LOG/10SUSIE/run_susie_{cell_type}_{batch_index}_{susie_batches}.log
+    benchmark: reports/benchmarks/10susie.run_susie_{cell_type}_{batch_index}_{susie_batches}.benchmark.txt
+    script: scripts/susie_run.R
  
   merge_susie:
     output: ../results/10SUSIE/susie/{cell_type}/{cell_type}.mrgd.susie.cred.hp.txt.gz
     log: ../results/00LOG/10SUSIE/merge_susie_{cell_type}.log
+    benchmark: reports/benchmarks/10susie.merge_susie_{cell_type}.benchmark.txt
  
   sort_susie:
     output: ../results/10SUSIE/susie/{cell_type}/{cell_type}.mrgd.srtd.susie.cred.hp.txt.gz
     log: ../results/00LOG/10SUSIE/sort_susie_{cell_type}.log
+    benchmark: reports/benchmarks/10susie.sort_susie_{cell_type}.benchmark.txt
  
   susie_report:
     output_file: ../reports/10SUSIE/10susie_report.html
@@ -833,6 +914,7 @@ susie:
     gene_meta_dir: ../../results/10SUSIE/susie_input/
     bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/10SUSIE/10susie_report.log
+    benchmark: reports/benchmarks/10susie.susie_report.benchmark.txt
 
 # ------------  Pipeline 11: S-LDSR  ------------
 
@@ -846,6 +928,8 @@ sldsr:
     bim: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
     snps: ../resources/ldsr/ldsr_hg38_refs/hm3_no_MHC.list.txt
     log: ../results/00LOG/11SLDSR/get_hg38_refs.log
+    benchmark: reports/benchmarks/11sldsr.get_hg38_refs.benchmark.txt
+    script: scripts/ldsr_get_hg38_refs.sh
 
   get_hg19_refs:
     # Single source of truth for hg19 ref paths (as above)
@@ -855,27 +939,36 @@ sldsr:
     bim: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.bim
     snps: ../resources/ldsr/ldsr_hg19_refs/hm3_no_MHC.list.txt
     log: ../results/00LOG/11SLDSR/get_hg19_refs.log
+    benchmark: reports/benchmarks/11sldsr.get_hg19_refs.benchmark.txt
+    script: scripts/ldsr_get_hg19_refs.sh
 
   make_annot:
     maxcpp: ../results/11SLDSR/annot/{cell_type}/{cell_type}.maxCPP.{chr}.annot.gz
     cs95: ../results/11SLDSR/annot/{cell_type}/{cell_type}.CS95.{chr}.annot.gz
     log: ../results/00LOG/11SLDSR/make_annot_{cell_type}.{chr}.log
+    benchmark: reports/benchmarks/11sldsr.make_annot_{cell_type}_{chr}.benchmark.txt
+    script: ../scripts/ldsr_make_annot.R
 
   lift_hapmap3_snps:
     output: ../results/11SLDSR/liftover/hm3_hg38_no_MHC.list.txt
     log: ../results/00LOG/11SLDSR/lift_hapmap3_snps.log
+    benchmark: reports/benchmarks/11sldsr.lift_hapmap3_snps.benchmark.txt
+    script: scripts/ldsr_liftover_hapmap3_snps.sh
 
   ldsr_ld_scores_hg38:
     output: ../results/11SLDSR/annot/{cell_type}/{cell_type}.{annot_type}.{chr}.l2.ldscore.gz
     log: ../results/00LOG/11SLDSR/ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.log
+    benchmark: reports/benchmarks/11sldsr.ldsr_ld_scores_hg38_{cell_type}_{annot_type}_{chr}.benchmark.txt
 
   ldsr_strat_hg38_bl_v12:
     output: ../results/11SLDSR/strat_bl_v12/{cell_type}/{annot_type}/{cell_type}_hg38_bl.v1.2_{gwas}.results
     log: ../results/00LOG/11SLDSR/strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.log
+    benchmark: reports/benchmarks/11sldsr.ldsr_strat_hg38_bl_v12_{cell_type}_{annot_type}_{gwas}.benchmark.txt
 
   ldsr_strat_summary:
     output: ../results/11SLDSR/strat_bl_v12/ldsr_strat_hg38_bl_v12.{annot_type}.summary.tsv
     log: ../results/00LOG/11SLDSR/ldsr_strat_summary.{annot_type}.log
+    benchmark: reports/benchmarks/11sldsr.ldsr_strat_summary_{annot_type}.benchmark.txt
 
   ldsr_report:
     html: reports/11SLDSR/11ldsr_report.html
@@ -884,6 +977,8 @@ sldsr:
     output_file: ../reports/11SLDSR/11ldsr_report.html
     bmark_dir: ../reports/benchmarks/
     log: ../results/00LOG/11SLDSR/ldsr_report.log
+    benchmark: reports/benchmarks/11sldsr.ldsr_report.benchmark.txt
+    script: scripts/ldsr_report.Rmd
 
 # ------------  Pipeline 12: SMR  ------------
 
@@ -891,22 +986,28 @@ smr:
   get_smr_binary:
     smr:    ../resources/smr/smr
     log: ../results/00LOG/12SMR/get_smr_binary.log
+    benchmark: reports/benchmarks/12smr.get_smr_binary.benchmark.txt
 
   cat_tensorqtl_nom_snps:
     cat_snps: ../results/12SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs.tsv    
     summary:  ../results/12SMR/smr_input/{cell_type}/{cell_type}_nom.cis_qtl_pairs_snp_summary.tsv
     log:      ../results/00LOG/12SMR/cat_tensorqtl_nom_snps_{cell_type}.log
+    benchmark: reports/benchmarks/12smr.cat_tensorqtl_nom_snps_{cell_type}.benchmark.txt
+    script: scripts/smr_cat_tensorqtl_nom_snps.py
 
   create_query:
     query:      ../results/12SMR/smr_input/{cell_type}/{cell_type}_query.tsv
     gene_lst:   ../results/12SMR/smr_input/{cell_type}/{cell_type}_gene_list.tsv
     remove_mhc: FALSE
     log:        ../results/00LOG/12SMR/create_query_{cell_type}.log
+    benchmark: reports/benchmarks/12smr.create_query_{cell_type}.benchmark.txt
+    script: ../scripts/smr_create_query.R
 
   create_besd:
     besd:   ../results/12SMR/smr_input/{cell_type}/{cell_type}.besd
     prefix: ../results/12SMR/smr_input/{cell_type}/{cell_type}
     log:    ../results/00LOG/12SMR/create_besd_{cell_type}.log
+    benchmark: reports/benchmarks/12smr.create_besd_{cell_type}.benchmark.txt
 
   cat_refs:
     frq_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
@@ -918,17 +1019,21 @@ smr:
     cat_bim: ../results/12SMR/smr_input/1000G.EUR.hg38.bim
     cat_fam: ../results/12SMR/smr_input/1000G.EUR.hg38.fam
     log:     ../results/00LOG/12SMR/cat_refs.log
+    benchmark: reports/benchmarks/12smr.cat_refs.benchmark.txt
 
   format_gwas:
     gwas:   ../results/09PREP-GWAS/{gwas}_hg38.tsv
     ma:     ../results/12SMR/smr_input/gwas/{gwas}_hg38.ma
     log:    ../results/00LOG/12SMR/format_gwas_{gwas}.log
+    benchmark: reports/benchmarks/12smr.format_gwas_{gwas}.benchmark.txt
+    script: ../scripts/smr_format_gwas.R
 
   smr:
     geno_prefix: ../results/12SMR/smr_input/1000G.EUR.hg38
     smr:         ../results/12SMR/smr/{cell_type}/{cell_type}_{gwas}.smr
     smr_prefix:  ../results/12SMR/smr/{cell_type}/{cell_type}_{gwas}
     log:         ../results/00LOG/12SMR/smr_{cell_type}_{gwas}.log 
+    benchmark: reports/benchmarks/12smr.smr_{cell_type}_{gwas}.benchmark.txt
   
   smr_report:
     html:      reports/12SMR/12smr_report.html
@@ -936,18 +1041,24 @@ smr:
     log_dir:   ../results/00LOG/12SMR
     bmark_dir: reports/benchmarks
     log:       ../results/00LOG/12SMR/smr_report.log
+    benchmark: reports/benchmarks/12smr.smr_report.benchmark.txt
+    script: scripts/smr_report.Rmd
 
 # ------------  Pipeline 13: TWAS weights  ------------
 
 twas_weights:
   get_gemma:
     output: ../resources/gemma/gemma
+    benchmark: reports/benchmarks/13twas_weights.get_gemma.benchmark.txt
+    log: ../results/00LOG/13TWAS-WEIGHTS/get_gemma.log
 
   prep_exp_data:
     input: ../results/05TENSORQTL/prep_input/{cell_type}_quantile.bed
     exp:   ../results/13TWAS-WEIGHTS/fusion_input/{cell_type}_plink.txt
     coord: ../results/13TWAS-WEIGHTS/fusion_input/{cell_type}_gene_coord.txt
     log:   ../results/00LOG/13TWAS-WEIGHTS/prep_exp_data_{cell_type}.log
+    benchmark: reports/benchmarks/13twas_weights.prep_exp_data_{cell_type}.benchmark.txt
+    script: ../scripts/twas_weights_prep_expr_for_FUSION.R
 
   convert_vcf:
     input:  ../results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz
@@ -956,15 +1067,19 @@ twas_weights:
     fam:    ../results/13TWAS-WEIGHTS/fusion_input/genotypes_hg38.fam
     prefix: ../results/13TWAS-WEIGHTS/fusion_input/genotypes_hg38
     log:    ../results/00LOG/13TWAS-WEIGHTS/convert_vcf.log
+    benchmark: reports/benchmarks/13twas_weights.convert_vcf.benchmark.txt
 
   get_ldref_snplist:
     input:   ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
     snp_lst: ../results/13TWAS-WEIGHTS/fusion_input/ldref_snps.txt
     log:     ../results/00LOG/13TWAS-WEIGHTS/get_ldref_snplist.log
+    benchmark: reports/benchmarks/13twas_weights.get_ldref_snplist.benchmark.txt
 
   prepare_covar:
     output: ../results/13TWAS-WEIGHTS/fusion_input/{cell_type}_covariates.txt
     log:    ../results/00LOG/13TWAS-WEIGHTS/prepare_covar_{cell_type}.log
+    benchmark: reports/benchmarks/13twas_weights.prepare_covar_{cell_type}.benchmark.txt
+    script: ../scripts/twas_weights_prep_covar_for_FUSION.R
 
   compute_weights:
     output:        ../results/13TWAS-WEIGHTS/weights/{cell_type}/all_weights_done.txt
@@ -977,16 +1092,21 @@ twas_weights:
     hsq_p:         0.01
     crossval:      5
     models:        top1,lasso,enet
+    benchmark: reports/benchmarks/13twas_weights.compute_weights_{cell_type}.benchmark.txt
 
   make_pos_file:
     output: ../results/13TWAS-WEIGHTS/weights/{cell_type}/{cell_type}.pos
     log:    ../results/00LOG/13TWAS-WEIGHTS/make_pos_file_{cell_type}.log
+    benchmark: reports/benchmarks/13twas_weights.make_pos_file_{cell_type}.benchmark.txt
+    script: ../scripts/twas_weights_make_fusion_pos_file.py
 
   twas_weights_report:
     script:    scripts/twas_weights_summary.Rmd
     output:    reports/13TWAS-WEIGHTS/13twas_weights_report.html
     bmark_dir: reports/benchmarks
     log:       ../results/00LOG/13TWAS-WEIGHTS/twas_weights_report.log
+    benchmark: reports/benchmarks/13twas_weights.twas_weights_report.benchmark.txt
+    functions: scripts/twas_weights_functions.R
 
 # ------------  Pipeline 14: cTWAS  ------------
 
@@ -1002,7 +1122,7 @@ ctwas:
     output:     ../results/14CTWAS/ld_mats/create_ctwas_ld_matrices.done
     ld_ref_dir: ../resources/ldsr/ldsr_hg38_refs/plink_files/
     out_dir:    ../results/14CTWAS/ld_mats/
-    bmrk:       reports/benchmarks/14ctwas.create_ld_matrices.benchmark.txt
+    benchmark:       reports/benchmarks/14ctwas.create_ld_matrices.benchmark.txt
     log:        ../results/00LOG/14CTWAS/create_ld_matrices.log
  
   copy_fusion_weights:
@@ -1010,7 +1130,7 @@ ctwas:
     output:   ../results/14CTWAS/weights/stubs/{cell_type}_copy_weights.done
     src_dir:  ../results/13TWAS-WEIGHTS/weights/{cell_type}
     dest_dir: ../results/14CTWAS/weights/{cell_type}
-    bmrk:     reports/benchmarks/14ctwas.copy_fusion_weights_{cell_type}.benchmark.txt
+    benchmark:     reports/benchmarks/14ctwas.copy_fusion_weights_{cell_type}.benchmark.txt
     log:      ../results/00LOG/14CTWAS/copy_weights_{cell_type}.log 
 
   run_ctwas:
@@ -1021,17 +1141,17 @@ ctwas:
     weights_dir:   ../results/14CTWAS/weights/{cell_type}/
     run_weight_qc: false
     remove_mhc:    FALSE
-    bmrk:          reports/benchmarks/14ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt
+    benchmark:          reports/benchmarks/14ctwas.run_ctwas_{cell_type}_{gwas}.benchmark.txt
     log:           ../results/00LOG/14CTWAS/ctwas_run_{cell_type}_{gwas}.log
 
   ctwas_report:
-    rmd_script:  scripts/ctwas_report.Rmd
+    script:  scripts/ctwas_report.Rmd
     output:      reports/14CTWAS/14ctwas_report.html
     in_dir:      ../../results/14CTWAS/
     bmark_dir:   ../reports/benchmarks/
 #    tbl_dir:     ../../results/13MANUSCRIPT_PLOTS_TABLES/tables/   # unused
     output_file: ../reports/14CTWAS/14ctwas_report.html
-    bmrk:        reports/benchmarks/14ctwas.ctwas_report.benchmark.txt
+    benchmark:        reports/benchmarks/14ctwas.ctwas_report.benchmark.txt
     log:         ../results/00LOG/14CTWAS/ctwas_report.log 
 
 # ------------  Pipeline 15: eQTL sharing  ------------
@@ -1130,7 +1250,7 @@ eqtl_sharing:
 tables:
   diff_exp_tbl:
     # Supp Table 1
-    nb: scripts/manuscript_table_diff_exp.ipynb
+    script: scripts/manuscript_table_diff_exp.ipynb
     nb_out: ../results/16MANUSCRIPT-TABLES/diff_exp_tbl_pm.ipynb
     html_out: ../results/16MANUSCRIPT-TABLES/diff_exp_tbl.html
     xlsx_out: ../results/16MANUSCRIPT-TABLES/supplementary_table_01.xlsx

@@ -14,7 +14,7 @@ rule create_ld_matrices:
     resources: threads = 1, mem_mb = 10000, time="5:30:00"
     singularity: config["containers"]["twas"]
     message:  "Creating LD matrices and variant info files for causal TWAS"
-    benchmark: CTW["create_ld_matrices"]["bmrk"]
+    benchmark: CTW["create_ld_matrices"]["benchmark"]
     log:       CTW["create_ld_matrices"]["log"]
     script:    CTW["create_ld_matrices"]["script"]
 
@@ -32,7 +32,7 @@ rule copy_fusion_weights:
              dest_dir  = CTW["copy_fusion_weights"]["dest_dir"]
     message:  "Copying genuine FUSION weights for {wildcards.cell_type} (listed in .pos) to {params.dest_dir}"
     log:       CTW["copy_fusion_weights"]["log"]
-    benchmark: CTW["copy_fusion_weights"]["bmrk"]
+    benchmark: CTW["copy_fusion_weights"]["benchmark"]
     shell:  """
             mkdir -p {params.dest_dir} && \\
             awk 'NR>1 {{print $2}}' {input} | \\
@@ -59,7 +59,7 @@ rule run_ctwas:
     threads: 6
     singularity: config["containers"]["twas"]
     message:     "Running cTWAS"
-    benchmark:   CTW["run_ctwas"]["bmrk"]
+    benchmark:   CTW["run_ctwas"]["benchmark"]
     log:         CTW["run_ctwas"]["log"]
     script:      CTW["run_ctwas"]["script"]
 
@@ -68,7 +68,7 @@ rule ctwas_report:
     input:
             ctwas_res   = expand(rules.run_ctwas.output, cell_type = config['cell_types'], gwas = config['gwas']),
             gene_lookup = config["gene_lookup"],
-            rmd_script  = CTW["ctwas_report"]["rmd_script"]
+            rmd_script  = CTW["ctwas_report"]["script"]
     output: CTW["ctwas_report"]["output"]
     params: in_dir      = CTW["ctwas_report"]["in_dir"],
             bmark_dir   = CTW["ctwas_report"]["bmark_dir"],
@@ -80,7 +80,7 @@ rule ctwas_report:
             output_file = CTW["ctwas_report"]["output_file"]
     singularity: config["containers"]["r_eqtl"]
     message:     "Generate cTWAS report"
-    benchmark:   CTW["ctwas_report"]["bmrk"]
+    benchmark:   CTW["ctwas_report"]["benchmark"]
     log:         CTW["ctwas_report"]["log"]
     shell:
         """

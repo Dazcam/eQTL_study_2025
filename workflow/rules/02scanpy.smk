@@ -5,8 +5,8 @@ SCP = config["scanpy"]
 ##  Rules  ---------------------------------------------------------------------------------
 
 rule scanpy_qc:
-    input:   plate = SCP["qc"]["input"]["plate"],
-             nb = SCP["qc"]["input"]["nb"]
+    input:   plate = SCP["qc"]["input"],
+             nb = SCP["qc"]["script"]
     output:  SCP["qc"]["output"]
     conda:   SCP["env"]
     resources: threads = 16, mem_mb = 160000, time = "3:00:00"
@@ -23,7 +23,7 @@ rule scanpy_qc:
 
 rule scanpy_clustering:
     input:   html = expand(SCP["qc"]["output"], plate = config['plate']),
-             nb = SCP["clustering"]["input"]
+             nb = SCP["clustering"]["script"]
     output:  SCP["clustering"]["output"]
     conda:   SCP["env"]
     resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
@@ -38,13 +38,14 @@ rule scanpy_clustering:
 
 rule scanpy_clustering2:
     input:   html = SCP["clustering"]["output"],
-             nb = SCP["clustering2"]["input"]
+             nb = SCP["clustering2"]["script"]
     output:  SCP["clustering2"]["output"]
     conda:   SCP["env"]
     resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
     params:  nb_out = SCP["clustering2"]["nb_out"],
              html_out = SCP["clustering2"]["html_out"]
     message: "Running Scanpy clustering 2 in Jupyter notebook and producing HTML output"
+    benchmark: SCP["clustering2"]["benchmark"]
     log:     SCP["clustering2"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate clustering2 >> {log} 2>&1 && "
@@ -52,13 +53,14 @@ rule scanpy_clustering2:
 
 rule scanpy_clustering3:
     input:   html = SCP["clustering2"]["output"],
-             nb = SCP["clustering3"]["input"]
+             nb = SCP["clustering3"]["script"]
     output:  SCP["clustering3"]["output"]
     conda:   SCP["env"]
     resources: threads = 16, mem_mb = 380000, time="3-0:00:00"
     params:  nb_out = SCP["clustering3"]["nb_out"],
              html_out = SCP["clustering3"]["html_out"]
     message: "Running Scanpy clustering 3 in Jupyter notebook and producing HTML output"
+    benchmark: SCP["clustering3"]["benchmark"]
     log:     SCP["clustering3"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate clustering2 >> {log} 2>&1 && "
@@ -66,7 +68,7 @@ rule scanpy_clustering3:
 
 rule scanpy_annotation:
     input:   html = SCP["clustering3"]["output"],
-             nb = SCP["annotation"]["input"]
+             nb = SCP["annotation"]["script"]
     output:  SCP["annotation"]["output"]
     envmodules: "Miniforge3"
     conda:   SCP["env"]
@@ -74,6 +76,7 @@ rule scanpy_annotation:
     params:  nb_out = SCP["annotation"]["nb_out"],
              html_out = SCP["annotation"]["html_out"]
     message: "Running Scanpy annotation in Jupyter notebook and producing HTML output"
+    benchmark: SCP["annotation"]["benchmark"]
     log:     SCP["annotation"]["log"]
     shell:   
              """
@@ -83,13 +86,14 @@ rule scanpy_annotation:
 
 rule scanpy_pseudobulk:
     input:   html = SCP["clustering3"]["output"],
-             nb = SCP["pseudobulk"]["input"]
+             nb = SCP["pseudobulk"]["script"]
     output:  SCP["pseudobulk"]["output"]
     conda:   SCP["env"]
     resources: threads = 10, mem_mb = 100000, time="1-0:00:00"
     params:  nb_out = SCP["pseudobulk"]["nb_out"],
              html_out = SCP["pseudobulk"]["html_out"]
     message: "Running Scanpy cell label and pseudobulk in Jupyter notebook and producing HTML output"
+    benchmark: SCP["pseudobulk"]["benchmark"]
     log:     SCP["pseudobulk"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} -p plate pseudobulk >> {log} 2>&1 && "
@@ -97,7 +101,7 @@ rule scanpy_pseudobulk:
 
 rule scanpy_subclustering:
     input:   html = SCP["clustering3"]["output"],
-             nb = SCP["subclustering"]["input"]
+             nb = SCP["subclustering"]["script"]
     output:  SCP["subclustering"]["output"]
     conda:   SCP["env"]
     resources: threads = 8, mem_mb = 80000, time="2:00:00"
@@ -113,13 +117,14 @@ rule scanpy_subclustering:
 rule scanpy_extra:
     # Rule to run quick minor tests
     input:   html = SCP["clustering"]["output"],
-             nb = SCP["extra"]["input"]
+             nb = SCP["extra"]["script"]
     output:  SCP["extra"]["output"]
     conda:   SCP["env"]
     resources: threads = 8, mem_mb = 80000, time="1:00:00"
     params:  nb_out = SCP["extra"]["nb_out"],
              html_out = SCP["extra"]["html_out"]
     message: "Running Scanpy extra in Jupyter notebook and producing HTML output"
+    benchmark: SCP["extra"]["benchmark"]
     log:     SCP["extra"]["log"]
     shell:
              "papermill {input.nb} {params.nb_out} --execution-timeout -1 --request-save-on-cell-execute -p plate extra >> {log} 2>&1 && "

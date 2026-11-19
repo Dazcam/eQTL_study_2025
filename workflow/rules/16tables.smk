@@ -18,7 +18,7 @@ L2_POPS = [ct for ct in config['cell_types']
 rule diff_exp_tbl:
     # Supp Table 1
     input:
-        nb      = TBL["diff_exp_tbl"]["nb"],
+        nb      = TBL["diff_exp_tbl"]["script"],
         pt_h5ad = expand(config["pseudotime"]["palantir"]["h5ad"],
                          trajectory = config["trajectories"])
     output:  html = TBL["diff_exp_tbl"]["html_out"],
