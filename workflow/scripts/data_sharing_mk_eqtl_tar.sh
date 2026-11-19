@@ -1,66 +1,82 @@
 #!/bin/bash
+#--------------------------------------------------------------------------------------
+#
+#    Tarball of eQTL permutation and nominal files for data sharing
+#
+#--------------------------------------------------------------------------------------
+#
+# Pipeline:  18DATA-SHARING | Rule: mk_eqtl_tar
+#            Upstream:   data_perm, data_nominal
+#            Downstream: final output (figshare)
+#
+# Purpose:   - Archive the given files (all in one directory) under their base names,
+#              in the order given
+#            - Compress with pigz, then check the gzip stream and the file count
+#
+# Usage:     data_sharing_mk_eqtl_tar.sh <out_file> <threads> <file> [<file> ...]
+#
+# Outputs:   out_file     .tar.gz of the files, no leading directory
+#
+#--------------------------------------------------------------------------------------
 
-set -o pipefail
+set -euo pipefail
 
-OUTDIR=$1
+OUTFILE=$1
 THREADS=$2
-CELL_TYPES_STR=$3
+shift 2
+FILES=("$@")
 COMPRESSION=6
 
-echo "[INFO] Creating output directory: ${OUTDIR}"
-mkdir -p "${OUTDIR}"
-OUTFILE=$(realpath "${OUTDIR%/}/nbray_2026_dev_brain_eqtl.tar.gz")
-
-if [[ -z "$THREADS" || ! "$THREADS" =~ ^[0-9]+$ ]]; then
+if [[ ! "$THREADS" =~ ^[0-9]+$ ]]; then
     echo "[ERROR] THREADS must be a positive integer, got: '$THREADS'" >&2
     exit 2
 fi
 
-if [[ -z "$CELL_TYPES_STR" ]]; then
-    echo "[ERROR] No cell types provided" >&2
+if [[ ${#FILES[@]} -eq 0 ]]; then
+    echo "[ERROR] No files provided" >&2
     exit 2
 fi
 
-read -r -a CELL_TYPES <<< "$CELL_TYPES_STR"
-echo "[INFO] Parsed cell types (${#CELL_TYPES[@]}): ${CELL_TYPES[*]}" >&2
-
-# Create tarball
-echo "[INFO] Creating tarball..."
-cd "${OUTDIR}" || exit 1
-
-files=()
-for ct in "${CELL_TYPES[@]}"; do
-  files+=("${ct}_cis_eQTL_perm.tsv.gz" "${ct}_cis_eQTL_nominal.tsv.gz")
+IN_DIR=$(dirname "${FILES[0]}")
+names=()
+for f in "${FILES[@]}"; do
+    if [[ "$(dirname "$f")" != "$IN_DIR" ]]; then
+        echo "[ERROR] All files must be in ${IN_DIR}: $f" >&2
+        exit 2
+    fi
+    names+=("$(basename "$f")")
 done
 
-expected_count=${#files[@]}
+mkdir -p "$(dirname "$OUTFILE")"
+OUTFILE=$(realpath "$OUTFILE")
+expected_count=${#names[@]}
 
-echo "[INFO] Creating tarball and compressing with pigz ..."
+echo "[INFO] Archiving ${expected_count} files from ${IN_DIR} to ${OUTFILE} (${THREADS} threads)"
+echo "[INFO] Files: ${names[*]}"
 
-if ! tar -cf - "${files[@]}" | pigz -${COMPRESSION} -p "${THREADS}" > "${OUTFILE}"; then
-    echo "[ERROR] Tar or Pigz failed during creation!"
+##  Create tarball  -------------------------------------------------------------------
+if ! tar -C "$IN_DIR" -cf - "${names[@]}" | pigz -${COMPRESSION} -p "$THREADS" > "$OUTFILE"; then
+    echo "[ERROR] tar or pigz failed"
     exit 1
 fi
 
-# Verification step
+##  Verify  ---------------------------------------------------------------------------
 echo "[INFO] Verifying archive ..."
-
-# Gzip integrity
-if ! pigz -t "${OUTFILE}"; then
-    echo "[ERROR] Gzip stream is corrupt!"
+if ! pigz -t "$OUTFILE"; then
+    echo "[ERROR] Gzip stream is corrupt"
     exit 1
 fi
 
-# Count verification
-actual_count=$(tar -tf "${OUTFILE}" | wc -l)
-
-if [ "$actual_count" -eq "$expected_count" ]; then
-    echo "[SUCCESS] Integrity check passed ($actual_count/$expected_count files present)."
+actual_count=$(tar -tf "$OUTFILE" | wc -l)
+if [[ "$actual_count" -eq "$expected_count" ]]; then
+    echo "[SUCCESS] Integrity check passed (${actual_count}/${expected_count} files present)"
 else
-    echo "[ERROR] File count mismatch! Expected $expected_count, found $actual_count."
-    echo "[DEBUG] Files actually in archive:"
-    tar -tf "${OUTFILE}"
+    echo "[ERROR] File count mismatch: expected ${expected_count}, found ${actual_count}"
+    tar -tf "$OUTFILE"
     exit 1
 fi
 
-echo "[INFO] Job completed successfully."
+echo "[INFO] Done."
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------

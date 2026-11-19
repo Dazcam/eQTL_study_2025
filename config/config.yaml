@@ -1346,40 +1346,50 @@ figures:
 # ------------  Pipeline 18: Data sharing  ------------
 
 data_sharing:
+  # {cell_type} in these paths is the manuscript label (manuscript_labels)
   data_perm:
-    in_dir: ../results/05TENSORQTL/tensorqtl_perm/
-    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-    out_file: ../results/18DATA-SHARING/NPC-2_cis_eQTL_perm.tsv.gz   # sentinel path -- dirname() gives the shared output dir; script writes one file per cell type there
-    log: ../results/00LOG/18DATA-SHARING/data_perm.log
+    script:    ../scripts/data_sharing_eQTL_perm.R
+    out_file:  ../results/18DATA-SHARING/{cell_type}_cis_eQTL_perm.tsv.gz
+    summary:   ../results/18DATA-SHARING/eqtl_perm_row_drop_summary.tsv
+    dup_snps:  ../results/18DATA-SHARING/duplicated_pvar_snp_counts_perm.tsv
+    benchmark: reports/benchmarks/18data_sharing.data_perm.benchmark.txt
+    log:       ../results/00LOG/18DATA-SHARING/data_perm.log
 
   data_nominal:
-    in_dir: ../results/12SMR/smr_input/
-    allele_file: ../results/05TENSORQTL/prep_input/chrALL_final.filt.pvar
-    out_file: ../results/18DATA-SHARING/NPC-2_cis_eQTL_nominal.tsv.gz
-    log: ../results/00LOG/18DATA-SHARING/data_nominal.log
+    script:    ../scripts/data_sharing_eQTL_nominal.R
+    out_file:  ../results/18DATA-SHARING/{cell_type}_cis_eQTL_nominal.tsv.gz
+    summary:   ../results/18DATA-SHARING/eqtl_nominal_row_drop_summary.tsv
+    dup_snps:  ../results/18DATA-SHARING/duplicated_pvar_snp_counts_nominal.tsv
+    benchmark: reports/benchmarks/18data_sharing.data_nominal.benchmark.txt
+    log:       ../results/00LOG/18DATA-SHARING/data_nominal.log
 
   data_mk_eqtl_tar:
-    out_dir: ../results/18DATA-SHARING/
-    out_file: ../results/18DATA-SHARING/nbray_2026_dev_brain_eqtl.tar.gz
-    log: ../results/00LOG/18DATA-SHARING/data_mk_eqtl_tar.log
+    script:    scripts/data_sharing_mk_eqtl_tar.sh
+    out_file:  ../results/18DATA-SHARING/nbray_2026_dev_brain_eqtl.tar.gz
+    benchmark: reports/benchmarks/18data_sharing.mk_eqtl_tar.benchmark.txt
+    log:       ../results/00LOG/18DATA-SHARING/data_mk_eqtl_tar.log
 
   data_weights:
-    out_dir: ../results/18DATA-SHARING/
-    file_name: fusion_weights.tar.gz
-    out_file: ../results/18DATA-SHARING/fusion_weights.tar.gz
-    log: ../results/00LOG/18DATA-SHARING/data_weights.log
-
-  data_susie:
-    # {cell_type} here is the manuscript label (Glu-A, Glu-B, NPC-to-Glu-A-Bin1, ...)
-    out_file: ../results/18DATA-SHARING/{cell_type}.susie.cred.hp.tsv.gz
-    log: ../results/00LOG/18DATA-SHARING/data_susie_{cell_type}.log
+    script:       scripts/data_sharing_twas_weights.sh
+    archive_root: fusion_weights   # top directory inside the tarball
+    out_file:     ../results/18DATA-SHARING/fusion_weights.tar.gz
+    benchmark:    reports/benchmarks/18data_sharing.data_weights.benchmark.txt
+    log:          ../results/00LOG/18DATA-SHARING/data_weights.log
 
   final_genotypes:
-    samples:  ../resources/sheets/final_134_sample_ids.txt
-    out_file: ../results/18DATA-SHARING/eqtl_atlas_genotypes.vcf.gz
-    log:      ../results/00LOG/18DATA-SHARING/final_genotypes.log
+    samples:   ../resources/sheets/final_134_sample_ids.txt
+    out_file:  ../results/18DATA-SHARING/eqtl_atlas_genotypes.vcf.gz
+    benchmark: reports/benchmarks/18data_sharing.final_genotypes.benchmark.txt
+    log:       ../results/00LOG/18DATA-SHARING/final_genotypes.log
+
+  data_susie:
+    script:    ../scripts/data_sharing_susie_cred_sets.R
+    out_file:  ../results/18DATA-SHARING/{cell_type}.susie.cred.hp.tsv.gz
+    benchmark: reports/benchmarks/18data_sharing.data_susie_{cell_type}.benchmark.txt
+    log:       ../results/00LOG/18DATA-SHARING/data_susie_{cell_type}.log
 
   data_susie_mk_tar:
-    out_file: ../results/18DATA-SHARING/eqtl_atlas_susie_credible_sets.tar
-    top_dir: susie_credible_sets   # directory name inside the tarball
-    log: ../results/00LOG/18DATA-SHARING/data_susie_mk_tar.log
+    out_file:  ../results/18DATA-SHARING/eqtl_atlas_susie_credible_sets.tar
+    top_dir:   susie_credible_sets   # top directory inside the tarball
+    benchmark: reports/benchmarks/18data_sharing.data_susie_mk_tar.benchmark.txt
+    log:       ../results/00LOG/18DATA-SHARING/data_susie_mk_tar.log

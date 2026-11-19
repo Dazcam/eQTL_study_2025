@@ -14,7 +14,8 @@
 #
 # Used in:   tensorqtl_prep_input_files.R (normalise_counts);
 #            smr_create_query.R, ctwas_run.R (get_mhc_genes);
-#            16 tables and 17 figures scripts (relabel_cell_types, cell_type_levels)
+#            16 tables and 17 figures scripts (relabel_cell_types, cell_type_levels);
+#            18 data sharing R scripts (relabel_cell_types)
 #
 #--------------------------------------------------------------------------------------
 
@@ -103,7 +104,7 @@ get_mhc_genes <- function(gene_lookup, chr, start, end,
 }
 
 #' Relabel pipeline cell type names with manuscript names.
-#' Used in 16 tables and 17 figures scripts
+#' Used in 16 tables, 17 figures and 18 data sharing scripts
 #'
 #' Applies each substitution in config manuscript_labels, in order, to every
 #' occurrence in each string, so it works on plain cell types
