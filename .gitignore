@@ -15,3 +15,5 @@ workflow/.snakemake
 workflow/smk-*.log
 workflow/test/__pycache__/
 workflow/reports/
+.local/
+.pyenv/
