@@ -66,8 +66,7 @@ rule rm_dup_sample:
 rule check_het:
     input:  rules.rm_dup_sample.output
     output: GPR["check_het"]["output"]
-    params: prefix = GPR["rm_dup_sample"]["prefix_out"],
-            report_dir = GPR["genotype-qc2hrc"]["report_dir"]
+    params: prefix = GPR["rm_dup_sample"]["prefix_out"]
     envmodules: config["envmodules"]["plink"]
     message: "Check for sample autosomal heterozygosity"
     benchmark: GPR["check_het"]["benchmark"]
@@ -77,7 +76,6 @@ rule check_het:
         exec > {log} 2>&1
         plink --bfile {params.prefix} --indep-pairwise 50 5 0.2 --out {params.prefix}
         plink --bfile {params.prefix} --extract {params.prefix}.prune.in --het --out {params.prefix}
-        cp {output} {params.report_dir}
         """
 
 rule make_kgp3_pgen:
@@ -128,9 +126,6 @@ rule genotype_qc2hrc:
               --clean TRUE) > {log} 2>&1
 
              cp {output} {params.report_dir}
-             cp {params.outdir}eqtl_genotypes_hg19.qc3.sexcheck {params.report_dir}
-             cp {params.outdir}eqtl_genotypes_hg19.qc4.pcrelate.kin {params.report_dir}
-             cp {params.outdir}eqtl_genotypes_hg19.qc5.ancestry_inference.txt {params.report_dir}
              """
 
 rule cat_genotypes:
@@ -182,8 +177,7 @@ rule rm_rare_snps:
     input:  rules.rm_maf_ambig.output
     output: GPR["rm_rare_snps"]["output"]
     params: prefix_in = GPR["rm_maf_ambig"]["prefix_out"],
-            prefix_out = GPR["rm_rare_snps"]["prefix_out"],
-            report_dir = GPR["genotype-qc2hrc"]["report_dir"]
+            prefix_out = GPR["rm_rare_snps"]["prefix_out"]
     envmodules: config["envmodules"]["plink"]
     message: "Rm rare SNPs with MAF < 0.01"
     benchmark: GPR["rm_rare_snps"]["benchmark"]
@@ -193,7 +187,6 @@ rule rm_rare_snps:
         plink --bfile {params.prefix_in} \
               --maf 0.01 \
               --make-bed --out {params.prefix_out} > {log} 2>&1
-        grep removed {log} > {params.report_dir}rm_rare_snps.txt
         """
 
 rule split_chrs:
@@ -226,10 +219,10 @@ rule split_chrs:
 
 rule gather_stats:
     input:  rules.split_chrs.output
-    output: GPR["gather_stats"]["output"]
+    output: qc2hrc_counts = GPR["gather_stats"]["qc2hrc_counts"],
+            final_counts = GPR["gather_stats"]["final_counts"]
     params: gQC2hrc_vcf_dir = GPR["cat_genotypes"]["in_dir"],
-            final_vcf_dir = GPR["split_chrs"]["outdir"],
-            report_dir = GPR["genotype-qc2hrc"]["report_dir"]
+            final_vcf_dir = GPR["split_chrs"]["outdir"]
     message: "Gather SNP stats for reporting"
     benchmark: GPR["gather_stats"]["benchmark"]
     log:    GPR["gather_stats"]["log"]
@@ -243,10 +236,10 @@ rule gather_stats:
           count=$(zcat "$file" | grep -vc '^#')
           echo -e "${{chr}}\t${{count}}"
           total=$((total + count))
-        done > {params.report_dir}gQC2hrc_vcf_chr_counts.tsv
+        done > {output.qc2hrc_counts}
 
         # append total row
-        echo -e "TOTAL\t${{total}}" >> {params.report_dir}gQC2hrc_vcf_chr_counts.tsv
+        echo -e "TOTAL\t${{total}}" >> {output.qc2hrc_counts}
 
         total=0
         for file in {params.final_vcf_dir}eqtl_genotypes_hg38.gh.topmed.chr*.vcf.gz
@@ -255,20 +248,25 @@ rule gather_stats:
           count=$(zcat "$file" | grep -vc '^#')
           echo -e "${{chr}}\t${{count}}"
           total=$((total + count))
-        done > {params.report_dir}final_vcf_chr_counts.tsv
+        done > {output.final_counts}
 
         # append total row
-        echo -e "TOTAL\t${{total}}" >> {params.report_dir}final_vcf_chr_counts.tsv
-        touch {output}
+        echo -e "TOTAL\t${{total}}" >> {output.final_counts}
         """
 
 rule geno_pre_report:
-    input:  stats = rules.gather_stats.output,
+    input:  het = rules.check_het.output,
+            sexcheck = GPR["genotype-qc2hrc"]["sexcheck"],
+            kinship = GPR["genotype-qc2hrc"]["kinship"],
+            ancestry = GPR["genotype-qc2hrc"]["ancestry"],
+            dup_samples = GPR["rm_dup_sample"]["remove_file"],
+            ambig_snp_lst = GPR["rm_maf_ambig"]["ambig_snp_lst"],
+            rare_snps_log = GPR["rm_rare_snps"]["prefix_out"] + ".log",
+            qc2hrc_counts = rules.gather_stats.output.qc2hrc_counts,
+            final_counts = rules.gather_stats.output.final_counts,
             rmd_script = GPR["geno_pre_report"]["script"]
     output: GPR["geno_pre_report"]["html"]
-    params: in_dir = GPR["geno_pre_report"]["in_dir"],
-            ambig_snp_lst = GPR["rm_maf_ambig"]["ambig_snp_lst"],
-            bmark_dir = GPR["geno_pre_report"]["bmark_dir"]
+    params: bmark_dir = GPR["geno_pre_report"]["bmark_dir"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate genotyping pre-imputation report"
     benchmark: GPR["geno_pre_report"]["benchmark"]
@@ -278,8 +276,15 @@ rule geno_pre_report:
         Rscript -e "wd <- getwd(); rmarkdown::render('{input.rmd_script}', \
             output_file = file.path(wd, '{output}'), \
             knit_root_dir = wd, \
-            params = list(in_dir = '{params.in_dir}', \
-                          ambig_snp_lst = '{params.ambig_snp_lst}', \
+            params = list(het = '{input.het}', \
+                          sexcheck = '{input.sexcheck}', \
+                          kinship = '{input.kinship}', \
+                          ancestry = '{input.ancestry}', \
+                          dup_samples = '{input.dup_samples}', \
+                          ambig_snp_lst = '{input.ambig_snp_lst}', \
+                          rare_snps_log = '{input.rare_snps_log}', \
+                          qc2hrc_counts = '{input.qc2hrc_counts}', \
+                          final_counts = '{input.final_counts}', \
                           bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
 

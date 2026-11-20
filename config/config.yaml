@@ -424,6 +424,9 @@ geno_pre_impute:
     outdir:        ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/
     workdir:       ../results/03GENOTYPES-PRE/GenotypeQCtoHRC
     report_dir:    reports/03GENOTYPES-PRE/
+    sexcheck:      ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/eqtl_genotypes_hg19.qc3.sexcheck
+    kinship:       ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/eqtl_genotypes_hg19.qc4.pcrelate.kin
+    ancestry:      ../results/03GENOTYPES-PRE/GenotypeQCtoHRC/eqtlgenotypeshg38pretm/eqtl_genotypes_hg19.qc5.ancestry_inference.txt
     log:           ../results/00LOG/03GENOTYPES-PRE/genotype-qc2hrc.log
     benchmark:     reports/benchmarks/03genotypes_pre_impute.genotype_qc2hrc.benchmark.txt
 
@@ -455,14 +458,14 @@ geno_pre_impute:
     benchmark:     reports/benchmarks/03genotypes_pre_impute.split_chrs.benchmark.txt
 
   gather_stats:
-    output:        ../results/03GENOTYPES-PRE/genotypes_for_TOPMED/gather_stats.done
+    qc2hrc_counts: ../results/03GENOTYPES-PRE/stats/gQC2hrc_vcf_chr_counts.tsv
+    final_counts:  ../results/03GENOTYPES-PRE/stats/final_vcf_chr_counts.tsv
     log:           ../results/00LOG/03GENOTYPES-PRE/gather_stats.log
     benchmark:     reports/benchmarks/03genotypes_pre_impute.gather_stats.benchmark.txt
 
   geno_pre_report:
     script:        scripts/genotyping_pre_impute_report.Rmd
     html:          reports/03GENOTYPES-PRE/03genotyping_pre_impute_report.html
-    in_dir:        reports/03GENOTYPES-PRE/
     bmark_dir:     reports/benchmarks/
     log:           ../results/00LOG/03GENOTYPES-PRE/geno_pre_report.log
     benchmark:     reports/benchmarks/03genotypes_pre_impute.geno_pre_report.benchmark.txt

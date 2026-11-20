@@ -250,6 +250,11 @@ rule geno_post_report:
             rmd_script = GPO["geno_post_report"]["script"]
     output: GPO["geno_post_report"]["html"]
     params: eigenval = GPO["calc_genotype_pcs"]["params"] + ".eigenval",
+            chromosomes = ",".join(str(c) for c in CHROMOSOMES),
+            hwe = GPO["filter_tags"]["hwe"],
+            maf = GPO["filter_tags"]["maf"],
+            rsq = GPO["filter_tags"]["rsq"],
+            pcs = GPO["calc_genotype_pcs"]["pcs"],
             bmark_dir = GPO["geno_post_report"]["bmark_dir"]
     singularity: config["containers"]["r_eqtl"]
     message: "Generate genotyping post-imputation report"
@@ -262,6 +267,11 @@ rule geno_post_report:
             knit_root_dir = wd, \
             params = list(impute_summary = '{input.impute_summary}', \
                           eigenval = '{params.eigenval}', \
+                          chromosomes = '{params.chromosomes}', \
+                          hwe = '{params.hwe}', \
+                          maf = '{params.maf}', \
+                          rsq = '{params.rsq}', \
+                          pcs = '{params.pcs}', \
                           bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
         """
 

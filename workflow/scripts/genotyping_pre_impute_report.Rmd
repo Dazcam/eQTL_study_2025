@@ -6,36 +6,69 @@ output:
   html_document:
     df_print: paged
 params:
-  in_dir: null
+  het: null
+  sexcheck: null
+  kinship: null
+  ancestry: null
+  dup_samples: null
   ambig_snp_lst: null
+  rare_snps_log: null
+  qc2hrc_counts: null
+  final_counts: null
   bmark_dir: null
 ---
 
-```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
-library(tidyverse)
-library(knitr)
-library(kableExtra)
-library(stringr)
-library(cowplot)
-library(DT)
-library(glue)
-in_dir <- params$in_dir
-ambig_snp_lst <- params$ambig_snp_lst
-bmark_dir <- params$bmark_dir
-```
-
-## Genotyping pre-imputation QC steps
+## Genotyping pre-imputation pipeline steps {.tabset}
 
 ***
 
-Steps 3-7 were carried out using the [GenotypeQCtoHRC package](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC). 
-See the `eqtlgenotypeshg38pretm.qc_report.html` for those metrics. Some additional details for some of those tests are 
-below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQCtoHRC is [Lynham et al. 2023 (DOI:10.1192/bjo.2022.636)](https://www.cambridge.org/core/journals/bjpsych-open/article/dragondata-a-platform-and-protocol-for-integrating-genomic-and-phenotypic-data-across-large-psychiatric-cohorts/2531261CD4300FCF01FA33C6B8693375).
+Steps 3-10 below were carried out using the [GenotypeQCtoHRC package](https://github.com/CardiffMRCPathfinder/GenotypeQCtoHRC).
+See `eqtlgenotypeshg38pretm.qc_report.html` in the `reports/03GENOTYPES-PRE` directory for those metrics; some additional
+details for some of those tests are below. The citation for GenotypeQCtoHRC is [Lynham et al. 2023 (DOI:10.1192/bjo.2022.636)](https://www.cambridge.org/core/journals/bjpsych-open/article/dragondata-a-platform-and-protocol-for-integrating-genomic-and-phenotypic-data-across-large-psychiatric-cohorts/2531261CD4300FCF01FA33C6B8693375).
+
+***
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(cowplot)
+library(DT)
+library(glue)
+library(gt)
+
+# Set variables from params (paths are relative to workflow/)
+het_file <- params$het
+sexcheck_file <- params$sexcheck
+kinship_file <- params$kinship
+ancestry_file <- params$ancestry
+dup_samples_file <- params$dup_samples
+ambig_snp_lst <- params$ambig_snp_lst
+rare_snps_log <- params$rare_snps_log
+qc2hrc_counts_file <- params$qc2hrc_counts
+final_counts_file <- params$final_counts
+bmark_dir <- params$bmark_dir
+```
+
+Rules:
+
+1. `convert_raw`: Convert raw genotypes to plink format
+2. `add_sex_to_fam`: Set FID = IID and add sex annotations to the fam file
+3. `rm_dup_sample`: Remove duplicate sample
+4. `check_het`: LD-prune (`--indep-pairwise 50 5 0.2`) and check autosomal heterozygosity
+5. `make_kgp3_pgen`: Create the 1000G Phase 3 pgen used for ancestry inference
+6. `genotype_qc2hrc`: Run GenotypeQCtoHRC to prep genotypes for imputation
+7. `cat_genotypes`: Cat chr specific genotypes into a single file
+8. `rm_maf_ambig`: Remove strand ambiguous SNPs with MAF > 0.4
+9. `rm_rare_snps`: Remove rare SNPs with MAF < 0.01
+10. `split_chrs`: Split chrs for TOPMed imputation
+11. `gather_stats`: Count SNPs per chr after GenotypeQCtoHRC and in the final VCFs
+12. `geno_pre_report`: Generate this report
+
+QC steps:
 
 1. Rm duplicate sample (14493 and 144FC same sample. 14493 removed)
 2. Check autosomal heterozygosity
 3. Missingness:
-  - Sample rm if > 5% markers missing, 
+  - Sample rm if > 5% markers missing,
   - SNPs excluded if missing in > 5% samples
 4. HWE p < 1 x 10-6
 5. Samples ambig. sex assignments removed (all passed)
@@ -43,13 +76,21 @@ below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQC
 7. Ancestry assessed
 8. Liftover hg19 to hg38
 9. Conversion of markers to dbSNP 156 using 1000G Phase 3
-10. [Genotype Harmonizer](https://github.com/molgenis/systemsgenetics/wiki/Genotype-Harmonizer) used to align curated markers to the Trans-Omics for Precision Medicine ([TopMED](https://topmed.nhlbi.nih.gov/)) imputation panel
-11. Remove ambiguous A/T, G/C SNP with MAF > 0.4
+10. [Genotype Harmonizer](https://github.com/molgenis/systemsgenetics/wiki/Genotype-Harmonizer) used to align curated markers to the Trans-Omics for Precision Medicine ([TopMED](https://topmed.nhlbi.nih.gov/)) imputation panel; all ambiguous A/T, G/C SNPs removed (`--ambiguousSnpFilter`)
+11. Remove ambiguous A/T, G/C SNP with MAF > 0.4 (a check that none remain after step 10)
 12. Remove SNPs MAF < 0.01
 
 ***
 
-## QC tables and plots {.tabset}
+Settings:
+
+```{r settings, echo = FALSE}
+tibble(
+  Setting = c("Duplicate sample(s) removed (FID IID)"),
+  Value   = c(paste(readLines(dup_samples_file), collapse = "; "))
+) |>
+  knitr::kable()
+```
 
 ***
 
@@ -60,7 +101,7 @@ below and in the `reports/03GENOTYPES-PRE`directory. The citation for GenotypeQC
 #### Tables
 
 ```{r, autosomal_het_table, results='asis', echo=FALSE}
-het_tbl <- read.table(paste0(in_dir, 'eqtl_genotypes_hg19_nodup.het'), header = T) |>
+het_tbl <- read.table(het_file, header = T) |>
   tibble() |>
   rename(O_HOM = 'O.HOM.', E_HOM = 'E.HOM.', N_NM = 'N.NM.') |>
   mutate(het_rate = (N_NM - O_HOM) / N_NM) |>
@@ -149,25 +190,15 @@ combined_plot
 ***
 
 ```{r sex_summary, results='asis', echo=FALSE}
-sex_data <- system(
-  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc3.sexcheck"),
-  intern = TRUE
-)
-
-temp_file <- tempfile(fileext = ".txt")
-writeLines(sex_data, temp_file)
-
 sex_tbl <- read.table(
-  file = temp_file,
-  header = FALSE,  # Header is included in sex_data
+  file = sexcheck_file,
+  header = FALSE,
   skip = 1,        # Skip the header row
   col.names = c("FID", "IID", "PEDSEX", "SNPSEX", "STATUS", "F", "YCOUNT"),
   colClasses = c("character", "character", "integer", "integer", "character", "numeric", "integer"),
   sep = ""  # Let read.table auto-detect whitespace (spaces or tabs)
 ) %>%
-  as_tibble()  # Convert to tibble for consistency
-
-file.remove(temp_file)
+  as_tibble()
 
 datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 ```
@@ -179,14 +210,9 @@ datatable(sex_tbl, caption = 'Table 3. Sex ambiguities')
 ***
 
 ```{r kinship_summary, results='asis', echo=FALSE}
-kinship_data <- system(
-  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc4.pcrelate.kin"),
-  intern = TRUE
-)
+kinship_tbl <- read_tsv(file = kinship_file, col_types = cols())
 
-kinship_tbl <- read_tsv(file = I(kinship_data), col_types = cols())
-
-datatable(kinship_tbl, caption = 'Table 4. Related samples') 
+datatable(kinship_tbl, caption = 'Table 4. Related samples')
 ```
 
 ***
@@ -198,14 +224,10 @@ datatable(kinship_tbl, caption = 'Table 4. Related samples')
 #### All
 
 ```{r ancestry_summary, results='asis', echo=FALSE}
-ancestry_data <- system(
-  paste0("cat ", in_dir, "eqtl_genotypes_hg19.qc5.ancestry_inference.txt | cut -f 1-9"),
-  intern = TRUE
-)
+ancestry_tbl <- read_tsv(file = ancestry_file, col_types = cols()) |>
+  select(1:9)
 
-ancestry_tbl <- read_tsv(file = I(ancestry_data), col_types = cols())
-
-datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample') 
+datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample')
 ```
 
 ***
@@ -216,7 +238,7 @@ datatable(ancestry_tbl, caption = 'Table 5. Ancestry prediction per sample')
 ancestry_nonEur_tbl <- ancestry_tbl |>
   filter(biogeographic_prediction != 'European')
 
-datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) prediction per sample') 
+datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) prediction per sample')
 ```
 
 **Non-European sample IDs**: `r ancestry_tbl |> filter(biogeographic_prediction != 'European') |> pull(FID)`
@@ -228,17 +250,17 @@ datatable(ancestry_nonEur_tbl, caption = 'Table 6. Ancestry (non European) predi
 ***
 
 + `r glue("{length(readLines(ambig_snp_lst))} ambiguous SNPs with MAF > 0.4 removed")`
-+ `r glue("{readLines(paste0(in_dir, 'rm_rare_snps.txt'))} SNPs with MAF < 0.01 removed")`
++ `r glue("{grep('removed', readLines(rare_snps_log), value = TRUE)} SNPs with MAF < 0.01 removed")`
 
 
 ***
 
 ```{r, snp counts, echo = FALSE, message = FALSE, warning = FALSE}
-pre_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'gQC2hrc_vcf_chr_counts.tsv'), col_names = c('chr', 'gQCtoHRC_cnts'))
-post_snp_cnts_tbl <- read_tsv(paste0(in_dir, 'final_vcf_chr_counts.tsv'), col_names = c('chr', 'final_cnts'))
+pre_snp_cnts_tbl <- read_tsv(qc2hrc_counts_file, col_names = c('chr', 'gQCtoHRC_cnts'))
+post_snp_cnts_tbl <- read_tsv(final_counts_file, col_names = c('chr', 'final_cnts'))
 final_snp_cnt_tbl <- pre_snp_cnts_tbl |>
   left_join(post_snp_cnts_tbl)
-datatable(final_snp_cnt_tbl, caption = 'Table 7. SNP counts after GenotypeQCtoHRC and post-SNP checks') 
+datatable(final_snp_cnt_tbl, caption = 'Table 7. SNP counts after GenotypeQCtoHRC and post-SNP checks')
 ```
 
 ***
@@ -250,25 +272,33 @@ datatable(final_snp_cnt_tbl, caption = 'Table 7. SNP counts after GenotypeQCtoHR
 #### Table
 
 ```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
-# List all benchmark files
+# Benchmark files: reports/benchmarks/03genotypes_pre_impute.<rule>[_<wildcards>].benchmark.txt
+# Files are matched against the current rules, so benchmarks of removed rules drop out
+smk_rules <- c("convert_raw", "add_sex_to_fam", "rm_dup_sample", "check_het",
+               "make_kgp3_pgen", "genotype_qc2hrc", "cat_genotypes", "rm_maf_ambig",
+               "rm_rare_snps", "split_chrs", "gather_stats", "geno_pre_report")
+valid_wildcards <- ""
+
 files <- list.files(bmark_dir, pattern = "^03genotypes_pre_impute\\..*\\.benchmark\\.txt$", full.names = TRUE)
 
-# Read and combine
 benchmarks <- map_dfr(files, function(f) {
+  stem <- str_remove(basename(f), "^03genotypes_pre_impute\\.") |> str_remove("\\.benchmark\\.txt$")
+  rule <- smk_rules[stem == smk_rules | startsWith(stem, paste0(smk_rules, "_"))][1]
+  if (is.na(rule)) return(NULL)
+  wildcards <- str_remove(stem, paste0("^", rule, "_?"))
+  if (!wildcards %in% valid_wildcards) return(NULL)
   df <- read.table(f, header = TRUE, sep = "\t")
-  # Add rule + sublib from filename
-  parts <- strsplit(basename(f), "\\.")[[1]]
+
   tibble(
     file = f,
-    rule = parts[2],           # e.g., "cellsnp_lite", "sort_bam"
-    sublib = parts[3],         # e.g., "10_plate1"
-    runtime_sec = df$s,        # runtime in seconds
-    runtime_hms = df$h.m.s.,   # hh:mm:ss string
-    max_rss = df$max_rss       # peak RAM in MB
+    rule = rule,
+    runtime_sec = df$s,
+    runtime_hms = df$h.m.s.,
+    max_rss = df$max_rss
   )
 })
 
-# Summarize across replicates
+# Summarise by rule
 summary <- benchmarks %>%
   group_by(rule) %>%
   summarise(
@@ -276,11 +306,47 @@ summary <- benchmarks %>%
     mean_runtime_min = mean(runtime_sec) / 60,
     sd_runtime_min = sd(runtime_sec) / 60,
     mean_ram_gb = mean(max_rss) / 1024,
-    sd_ram_gb = sd(max_rss) / 1024
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
   ) %>%
-  mutate(across(where(is.numeric), ~round(., 3))) 
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  arrange(rule)
 
-datatable(summary, caption = 'Table 8. Rule benchmarking. Sd is null when only on instance of job is run.')
+# Table
+summary %>%
+  gt() %>%
+  tab_header(
+    title = "Table 8. Benchmarking",
+    subtitle = "Means and SD across replicates"
+  ) %>%
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) %>%
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) %>%
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
 ```
 
 ***
@@ -289,16 +355,16 @@ datatable(summary, caption = 'Table 8. Rule benchmarking. Sd is null when only o
 
 ***
 
-```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10,10)}
-runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min), 
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
                                  y = mean_runtime_min)) +
   geom_col(fill = "steelblue") +
-  geom_errorbar(aes(ymin = mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min),
+  geom_errorbar(aes(ymin = pmax(mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min), 0),
                     ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "Runtime (minutes)", 
-       title = "Mean runtime per rule (± SD)") +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
   theme_classic(base_size = 16) +
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
@@ -308,17 +374,15 @@ runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
     panel.grid.minor = element_blank()
   )
 
-
-
-mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb), 
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
                                 y = mean_ram_gb)) +
   geom_col(fill = "darkorange") +
-  geom_errorbar(aes(ymin = mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb),
+  geom_errorbar(aes(ymin = pmax(mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb), 0),
                     ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
                 width = 0.3, colour = "black", linewidth = 0.6) +
   coord_flip() +
-  labs(x = "Rule", y = "RAM (GB)", 
-       title = "Mean RAM usage per rule (± SD)") +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
   theme_classic(base_size = 16) +
   theme(
     plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
@@ -330,5 +394,3 @@ mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
 
 plot_grid(runtime_plt, mem_plt)
 ```
-
-***
