@@ -35,6 +35,8 @@ cell_types:
   - "NPC-to-Glu-UL-Q4-Bin3"
   - "NPC-to-Glu-UL-Q4-Bin4"
 
+fetal_l1_types: ["Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"]
+
 exp_pc_map:
   Glu-UL: 50
   Glu-DL: 40
@@ -112,11 +114,7 @@ jang_l1_types:
   - "OD"
   - "OPC"
 
-# Jang L1 display / matrix order: types matched to a fetal L1 type first
 jang_l1_order: ["Ext", "IN", "MG", "OPC", "End", "Ast", "OD"]
-
-# Fetal L1 cell types (06 replication and eQTL sharing)
-fetal_l1_types: ["Glu-UL", "Glu-DL", "GABA", "NPC", "OPC", "MG", "Endo-Peri"]
 
 eqtl_fdr: 0.05
 
@@ -130,7 +128,6 @@ write_full_susie: TRUE
 
 annot_types:
   - maxCPP
-  - CS95   # Rm on freeze 2
  
 p_smr: 0.05
 p_heidi: 0.01
@@ -160,8 +157,6 @@ containers:
   susie: ../resources/containers/susier.sif
   ubuntu: ../resources/containers/ubuntu_22.04.sif
   twas: ../resources/containers/twas.sif
-#  singler: ../resources/containers/singler.sif   # retired
-#  mashr: ../resources/containers/mashr.sif   # retired
   tensorqtl: ../resources/containers/tensorqtl.sif
 
 # Environment modules (Falcon); one module per key, comment lists the pipelines using it
@@ -358,11 +353,11 @@ scanpy:
     benchmark: reports/benchmarks/02scanpy.scanpy_subclustering.benchmark.txt
     log: ../results/00LOG/02SCANPY/scanpy_subclustering.log
 
-  clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad   # written by the clustering notebooks
+  clusters_h5ad: ../results/02SCANPY/adata_clusters_v3.h5ad                             # written by the clustering notebooks
   subclusters_h5ad: ../results/02SCANPY/subclustering/adata_{l1_pop}_subclusters.h5ad   # scanpy_subclustering notebook
-  metadata_per_sample: reports/02SCANPY/02_metadata_per_sample.tsv   # sex and PCW per sample (notebooks)
-  pseudobulk_csv: ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv   # scanpy_pseudobulk notebook
-  l1_cell_counts: reports/02SCANPY/scanpy_L1_cell_type_counts.tsv   # nuclei per L1 cell type (annotation notebook)
+  metadata_per_sample: reports/02SCANPY/02_metadata_per_sample.tsv                      # sex and PCW per sample (notebooks)
+  pseudobulk_csv: ../results/02SCANPY/pseudobulk/{cell_type}_pseudobulk.csv             # scanpy_pseudobulk notebook
+  l1_cell_counts: reports/02SCANPY/scanpy_L1_cell_type_counts.tsv                       # nuclei per L1 cell type (annotation notebook)
 
   lisi:
     csv:           ../results/02SCANPY/batch_correction/lisi_results.csv
@@ -656,7 +651,7 @@ pseudotime:
     n_dcs:         15
     num_waypoints: 1000
     root_gene:     "PAX6"
-    terminal_markers:            # terminal cell = max expression of this gene in the terminal type
+    terminal_markers:
       Glu-DL: TLE4
       Glu-UL: SATB2
     benchmark: reports/benchmarks/06pseudotime.pseudotime_palantir_{trajectory}.benchmark.txt
@@ -778,7 +773,6 @@ replication_sc:
     benchmark: reports/benchmarks/07replication_sc.pi1_enrich_internal_{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}.benchmark.txt
     log: ../results/00LOG/07REPLICATION-SC/{cell_type}_vs_{ref_cell_type}_{norm_method}_genPC_{geno_pc}_expPC_{exp_pc}_expPCref_{ref_exp_pc}_pi1_enrich_internal.log
 
-  # Freeze 2 outputs are in 15EQTL-SHARING/; paths move in the rename pass
   pi1_enrich_jang:
     enrich: ../results/15EQTL-SHARING/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_enrich_tbl.rds
     pi1:    ../results/15EQTL-SHARING/pi1_jang/{cell_type}_vs_{jang_cell_type}_pi1_results_tbl.rds
@@ -875,7 +869,7 @@ prep_gwas:
     script: ../scripts/gwas_add_hg38_coords_to_gwas.py
 
   munge_sumstats:
-    output: ../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz # Chnage back to this for run over weekend
+    output: ../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready.sumstats.gz
     prefix: ../results/09PREP-GWAS/{gwas}_hg38_ldsr_ready
     log: ../results/00LOG/09PREP-GWAS/munge_sumstats_{gwas}.log
     benchmark: reports/benchmarks/09prep_gwas.munge_sumstats_{gwas}.benchmark.txt
@@ -936,8 +930,6 @@ susie:
 
 sldsr:
   get_hg38_refs:
-    # Single source of truth for hg38 ref paths: download dir, ldsc --bfile and
-    # --*-chr prefixes are derived from these in rules/11sldsr.smk
     baseline: ../resources/ldsr/ldsr_hg38_refs/baseline_v1.2/baseline.{chr}.l2.ldscore.gz
     weights: ../resources/ldsr/ldsr_hg38_refs/weights/weights.hm3_noMHC.{chr}.l2.ldscore.gz
     frq: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
@@ -948,7 +940,6 @@ sldsr:
     script: scripts/ldsr_get_hg38_refs.sh
 
   get_hg19_refs:
-    # Single source of truth for hg19 ref paths (as above)
     baseline: ../resources/ldsr/ldsr_hg19_refs/baseline_v1.2/baseline.{chr}.l2.ldscore.gz
     weights: ../resources/ldsr/ldsr_hg19_refs/weights/weights.hm3_noMHC.{chr}.l2.ldscore.gz
     frq: ../resources/ldsr/ldsr_hg19_refs/plink_files/1000G.EUR.QC.{chr}.frq
@@ -988,7 +979,6 @@ sldsr:
 
   ldsr_report:
     html: reports/11SLDSR/11ldsr_report.html
-    # Paths passed to the Rmd are relative to workflow/scripts/ (where it knits)
     in_dir: ../../results/11SLDSR/strat_bl_v12/
     output_file: ../reports/11SLDSR/11ldsr_report.html
     bmark_dir: ../reports/benchmarks/
@@ -1126,9 +1116,6 @@ twas_weights:
 # ------------  Pipeline 14: cTWAS  ------------
 
 ctwas:
-  # Significant cTWAS genes (ctwas_report, 16 ctwas_sig_tbl and smr_ctwas_venn_tbl):
-  # PIP > sig_pip_thresh, in a credible set, Bonferroni P < sig_bf_thresh
-  # (factor: testable genes per cell type)
   sig_pip_thresh: 0.8
   sig_bf_thresh: 0.05
 
@@ -1173,7 +1160,6 @@ ctwas:
 
 eqtl_sharing:
   extract_universe:
-    # A priori matched Jang L1 type per fetal L1 type; NPC has no adult equivalent
     jang_label_match:
       Glu-UL:    Ext
       Glu-DL:    Ext
@@ -1256,9 +1242,6 @@ eqtl_sharing:
     output_file: ../reports/15EQTL-SHARING/15eqtl_sharing_report.html
     benchmark: reports/benchmarks/15eqtl_sharing.eqtl_sharing_report.benchmark.txt
     log: ../results/00LOG/15EQTL-SHARING/eqtl_sharing_report.log
-
-
-# Replication bulk
 
 # ------------  Pipeline 16: Manuscript tables  ------------
 
@@ -1481,7 +1464,6 @@ figures:
 # ------------  Pipeline 18: Data sharing  ------------
 
 data_sharing:
-  # {cell_type} in these paths is the manuscript label (manuscript_labels)
   data_perm:
     script:    ../scripts/data_sharing_eQTL_perm.R
     out_file:  ../results/18DATA-SHARING/{cell_type}_cis_eQTL_perm.tsv.gz
