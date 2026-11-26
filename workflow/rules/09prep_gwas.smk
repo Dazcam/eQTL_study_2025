@@ -1,72 +1,34 @@
-localrules: get_gwas_sumstats
-
-
 ##  Settings  ------------------------------------------------------------------------------
 PG = config["prep_gwas"]
 
 
+##  Functions  -----------------------------------------------------------------------------
+def raw_gwas_file(wildcards):
+    gwas_dir = config["setup"]["get_gwas_sumstats"]["dir"].format(gwas = wildcards.gwas)
+    return f"{gwas_dir}/{config['gwas'][wildcards.gwas]['file']}"
+
+
 ##  Rules  ---------------------------------------------------------------------------------
 
-rule get_gwas_sumstats:
-    # Download GWAS sumsatts files
-    output:  PG["get_gwas_sumstats"]["output"]
-    params:  lambda wildcards: config['gwas'][wildcards.gwas]
-    message: "Download {wildcards.gwas} sumstats file"
-    benchmark: PG["get_gwas_sumstats"]["benchmark"]
-    log:     PG["get_gwas_sumstats"]["log"]
-    run:
-        
-             user_agent = '"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"'
-
-             if wildcards.gwas in ("scz", "bpd", "mdd"):
-
-                 shell("""
-
-                 wget -U {user_agent} -O - {params} | gunzip -c | sed '/##/d' > {output} 2> {log}
-
-                 """)
-
-             elif wildcards.gwas == "adhd":
-            
-                 shell("""
-                 
-                 wget -U {user_agent} -O temp_adhd.zip {params} 2> {log}
-                 unzip -p temp_adhd.zip ADHD2022_iPSYCH_deCODE_PGC.meta.gz | gunzip -c | sed '/##/d' > {output} 2>> {log}
-                 rm -f temp_adhd.zip
-                 
-                 """)
-
-             elif wildcards.gwas == "ptsd":
-
-                 shell("""
-
-                 wget -U {user_agent} -O temp_ptsd.zip {params} 2> {log}
-                 unzip -p temp_ptsd.zip eur_ptsd_pcs_v4_aug3_2021.vcf.gz | gunzip -c | sed '/##/d' > {output} 2>> {log}
-                 rm -f temp_ptsd.zip
-       	       	 
-                 """)
-
-             elif wildcards.gwas == "ocd":
-
-                 shell("""
-
-                 wget -U {user_agent} -O temp_ocd.zip {params} 2> {log}
-                 unzip -p temp_ocd.zip daner_OCD_full_wo23andMe_190522.gz | gunzip -c | sed '/##/d' > {output} 2>> {log}
-                 rm -f temp_ocd.zip
-
-                 """)
-
-             else:
-                 shell("""
-                 
-                 wget -U {user_agent} -O - {params} | gunzip -c > {output} 2> {log}
-                  
-                 """)
+rule extract_gwas_sumstats:
+    # Decompress the downloaded GWAS file and drop ## header lines
+    input:   done = config["setup"]["get_gwas_sumstats"]["output"]
+    output:  PG["extract_gwas_sumstats"]["output"]
+    wildcard_constraints: gwas = "|".join(config["gwas"])
+    params:  raw = raw_gwas_file
+    message: "Extract {wildcards.gwas} sumstats file"
+    benchmark: PG["extract_gwas_sumstats"]["benchmark"]
+    log:     PG["extract_gwas_sumstats"]["log"]
+    shell:
+             """
+             exec 2> {log}
+             gunzip -c {params.raw} | sed "/##/d" > {output}
+             """
 
 rule standardise_sumstats:
     # Standardises sumstats: SNP, CHR. BP, PVAL, A1, A2 + additional GWAS dependant cols
     # python convert available here: https://github.com/precimed/python_convert/tree/master
-    input:   rules.get_gwas_sumstats.output
+    input:   rules.extract_gwas_sumstats.output
     output:  PG["standardise_sumstats"]["output"]
     message: "Standardising {input}"
     benchmark: PG["standardise_sumstats"]["benchmark"]

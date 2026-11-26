@@ -139,11 +139,26 @@ smr_gene: 'ENSG00000214435' # is 'AS3MT'
 twas_run_test: FALSE
 
 gwas:
-  scz: https://figshare.com/ndownloader/files/34517828                  # PMID:35396580, EUR only
-  bpd: https://figshare.com/ndownloader/files/49760772                  # PMID:39843750
-  mdd: https://figshare.com/ndownloader/files/51487022                  # PMID:39814019
-  adhd: https://figshare.com/ndownloader/files/40036684                 # PMID:36702997
-  ocd: https://figshare.com/ndownloader/files/53357735                  # PMID:40360802
+  scz:  # PMID:35396580, EUR only
+    url: https://api.figshare.com/v2/file/download/34517828
+    file: PGC3_SCZ_wave3.european.autosome.public.v3.vcf.tsv.gz
+    md5: "6ebe2376f5cda972d37efa0f214c4df0"
+  bpd:  # PMID:39843750
+    url: https://api.figshare.com/v2/file/download/49760772
+    file: bip2024_eur_no23andMe.gz
+    md5: "ee30cead54d61a015dd71b773d442da0"
+  mdd:  # PMID:39814019
+    url: https://api.figshare.com/v2/file/download/51487022
+    file: pgc-mdd2025_no23andMe-noUKBB_eur_v3-49-24-11.tsv.gz
+    md5: "29d3ce57cfce19ca28eb1643d9e2e428"
+  adhd:  # PMID:36702997
+    url: https://api.figshare.com/v2/file/download/40036684
+    file: ADHD2022_iPSYCH_deCODE_PGC.meta.gz
+    md5: "ea57120c720e880e34f67f57483dcbb4"
+  ocd:  # PMID:40360802
+    url: https://api.figshare.com/v2/file/download/53357735
+    file: daner_OCD_full_wo23andMe_190522.gz
+    md5: "9ab61cb7412c42a0ba207856af6da0f8"
 
 mhc_region:    
   chr: "6"
@@ -242,6 +257,13 @@ setup:
     web_link: https://media.springernature.com/original/springer-static/esm/art%3A10.1186%2Fs13059-018-1567-1/MediaObjects/13059_2018_1567_MOESM1_ESM.xlsx
     log: ../results/00LOG/00SETUP/get_obrien_supp.log
     benchmark: reports/benchmarks/00setup.get_obrien_supp.benchmark.txt
+
+  get_gwas_sumstats:
+    dir: ../resources/gwas/{gwas}
+    figshare_token: ../config/passwords/figshare_token
+    output: ../resources/gwas/{gwas}/.get_gwas_sumstats.done
+    log: ../results/00LOG/00SETUP/get_gwas_sumstats_{gwas}.log
+    benchmark: reports/benchmarks/00setup.get_gwas_sumstats_{gwas}.benchmark.txt
 
 # ------------  Pipeline 01: Parse  ------------
 
@@ -828,10 +850,10 @@ replication_bulk:
 # ------------  Pipeline 09: Prep GWAS  ------------
 
 prep_gwas:
-  get_gwas_sumstats:
+  extract_gwas_sumstats:
     output: ../results/09PREP-GWAS/{gwas}_hg19_raw.tsv
-    log: ../results/00LOG/09PREP-GWAS/get_gwas_sumstats_{gwas}.log
-    benchmark: reports/benchmarks/09prep_gwas.get_gwas_sumstats_{gwas}.benchmark.txt
+    log: ../results/00LOG/09PREP-GWAS/extract_gwas_sumstats_{gwas}.log
+    benchmark: reports/benchmarks/09prep_gwas.extract_gwas_sumstats_{gwas}.benchmark.txt
 
   standardise_sumstats:
     output: ../results/09PREP-GWAS/{gwas}_hg19_standardised.tsv

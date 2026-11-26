@@ -1,4 +1,4 @@
-localrules: create_parse_json, setup_liftover
+localrules: create_parse_json, setup_liftover, get_gwas_sumstats
 
 
 ##  Settings  ------------------------------------------------------------------------------
@@ -127,6 +127,33 @@ rule get_obrien_supp:
     log:    SET["get_obrien_supp"]["log"]
     shell:   "wget -O {output} {params.web_link} > {log} 2>&1"
 
+rule get_gwas_sumstats:
+    output:  SET["get_gwas_sumstats"]["output"]
+    wildcard_constraints: gwas = "|".join(config["gwas"])
+    params:  url        = lambda w: config["gwas"][w.gwas]["url"],
+             file       = lambda w: config["gwas"][w.gwas]["file"],
+             md5        = lambda w: config["gwas"][w.gwas]["md5"],
+             dir        = SET["get_gwas_sumstats"]["dir"],
+             token_file = SET["get_gwas_sumstats"]["figshare_token"]
+    message: "Download {wildcards.gwas} GWAS summary statistics from figshare"
+    benchmark: SET["get_gwas_sumstats"]["benchmark"]
+    log:     SET["get_gwas_sumstats"]["log"]
+    shell:
+             """
+             exec > {log} 2>&1
+             if [ ! -s {params.token_file} ]; then
+                 echo "ERROR: figshare token file {params.token_file} missing or empty"
+                 exit 1
+             fi
+             mkdir -p {params.dir}
+             curl -fsSL -H "Authorization: token $(cat {params.token_file})" \
+                  -o {params.dir}/{params.file} "{params.url}"
+             ls -lh {params.dir}/{params.file}
+             md5sum {params.dir}/{params.file}
+             echo "{params.md5}  {params.dir}/{params.file}" | md5sum -c -
+             touch {output}
+             """
+
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
@@ -136,4 +163,5 @@ TARGETS["00setup"] = [rules.get_containers.output,
                       rules.get_fugita_data.output,
                       rules.get_jang_singlebrain.output,
                       rules.get_obrien_supp.output,
+                      expand(rules.get_gwas_sumstats.output, gwas = config["gwas"]),
                       rules.liftover_nott_peaks.output]
