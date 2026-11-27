@@ -1,0 +1,345 @@
+---
+title: "GWAS preparation summary"
+author: "Darren Cameron"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+params:
+  gwas: null
+  gwas_files: null
+  gwas_md5: null
+  unlifted: null
+  chain: null
+  snplist: null
+  log_dir: null
+  bmark_dir: null
+---
+
+## GWAS preparation pipeline steps {.tabset}
+
+***
+
+Standardise GWAS summary statistics, lifted from hg19 to hg38, munged for LDSR with
+[ldsc](https://github.com/bulik/ldsc) `munge_sumstats.py` (`--signed-sumstats Z,0`,
+`--merge-alleles` HapMap3 SNPs).
+
+LDSC citation: Bulik-Sullivan BK *et al.* (2015). LD Score regression distinguishes confounding
+from polygenicity in genome-wide association studies. *Nature Genetics* 47, 291-295.
+
+***
+
+```{r set_up, include = FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(gt)
+library(cowplot)
+
+# Set variables from params (paths are relative to workflow/)
+gwas_list <- strsplit(params$gwas, ",")[[1]]
+gwas_files <- strsplit(params$gwas_files, ",")[[1]]
+gwas_md5 <- strsplit(params$gwas_md5, ",")[[1]]
+unlifted_template <- params$unlifted
+log_dir <- params$log_dir
+bmark_dir <- params$bmark_dir
+```
+
+1. `extract_gwas_sumstats`: Decompress the downloaded GWAS and drop `##` header lines
+2. `standardise_sumstats`: Standardise column names with python_convert
+3. `add_z_score`: Add signed Z where the GWAS lacks it
+4. `add_N`: Add N
+5. `make_gwas_bed_hg19`: Make the hg19 bed file for liftOver
+6. `liftover_gwas_to_hg38`: Lift SNPs from hg19 to hg38
+7. `add_hg38_coords_to_gwas`: Replace hg19 with hg38 coordinates in the sumstats
+8. `munge_sumstats`: Format sumstats for LDSR
+9. `prep_gwas_report`: Summarise GWAS preparation
+
+***
+
+```{r functions, include = FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+# Logs from older runs use different wording to the current scripts, so patterns
+# match both
+read_log <- function(rule, gwas) {
+  f <- file.path(log_dir, paste0(rule, "_", gwas, ".log"))
+  if (file.exists(f)) read_lines(f) else character(0)
+}
+
+grab <- function(lines, pattern) {
+  hit <- str_match(lines, pattern)[, 2]
+  hit <- hit[!is.na(hit)]
+  if (length(hit) == 0) NA_character_ else hit[1]
+}
+
+to_num <- function(x) as.numeric(str_remove_all(x, ","))
+
+count_unlifted <- function(gwas) {
+  f <- str_replace(unlifted_template, fixed("{gwas}"), gwas)
+  if (!file.exists(f)) return(NA_real_)
+  sum(!str_starts(read_lines(f), "#"))
+}
+
+munge <- map(set_names(gwas_list), ~ read_log("munge_sumstats", .x))
+```
+
+### SNP counts
+
+***
+
+```{r snp_counts, echo = FALSE, message = FALSE, warning = FALSE}
+counts <- map_dfr(gwas_list, function(g) {
+  std <- read_log("standardise_sumstats", g)
+  z <- read_log("add_z_score", g)
+  hg38 <- read_log("add_hg38_coords_to_gwas", g)
+  tibble(
+    GWAS = toupper(g),
+    standardised = to_num(grab(std, "^Done\\. (\\d+) SNPs saved")),
+    with_z = to_num(grab(z, "Wrote ([0-9,]+) rows")),
+    lifted = to_num(grab(hg38, "(?:Lifted file processed|Lifted SNPs): (\\d+)")),
+    unlifted = count_unlifted(g),
+    hg38_rows = to_num(grab(hg38, "(?:Merged dataset|Merged SNPs): (\\d+)")),
+    munge_read = to_num(grab(munge[[g]], "^Read (\\d+) SNPs from --sumstats")),
+    munged = to_num(grab(munge[[g]], "\\((\\d+) with nonmissing beta\\)")))
+})
+
+counts |>
+  gt() |>
+  tab_header(title = "Table 1. SNPs at each step",
+             subtitle = "hg38 rows can exceed lifted SNPs where SNP IDs are duplicated (e.g. '.')") |>
+  cols_label(standardised = "Standardised", with_z = "With Z", lifted = "Lifted to hg38",
+             unlifted = "Failed liftOver", hg38_rows = "hg38 sumstats",
+             munge_read = "Read by munge", munged = "After munge") |>
+  fmt_integer(columns = -GWAS) |>
+  tab_options(table.font.size = px(14), heading.align = "center") |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels(everything()))
+```
+
+***
+
+### Munge QC
+
+***
+
+```{r munge_qc, echo = FALSE, message = FALSE, warning = FALSE}
+# Each "Removed N SNPs ..." line; the N filter threshold differs per GWAS, so it is
+# reported in its own table
+removed <- map_dfr(gwas_list, function(g) {
+  lines <- str_subset(munge[[g]], "^Removed \\d+ ")
+  tibble(
+    GWAS = toupper(g),
+    n = as.numeric(str_match(lines, "^Removed (\\d+) ")[, 2]),
+    filter = lines |>
+      str_remove("^Removed \\d+ (SNPs|variants) ") |>
+      str_remove(" \\(\\d+ SNPs remain\\)") |>
+      str_remove("\\.$") |>
+      str_replace("^with N < [0-9.]+$", "with N below threshold"))
+})
+
+removed |>
+  pivot_wider(names_from = GWAS, values_from = n) |>
+  gt() |>
+  tab_header(title = "Table 2. SNPs removed by munge filters") |>
+  cols_label(filter = "Filter") |>
+  fmt_integer(columns = -filter) |>
+  tab_options(table.font.size = px(14), heading.align = "center") |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels(everything()))
+
+map_dfr(gwas_list, function(g) {
+  tibble(
+    GWAS = toupper(g),
+    merge_snps = to_num(grab(munge[[g]], "^Read (\\d+) SNPs for allele merge")),
+    n_threshold = to_num(grab(munge[[g]], "with N < ([0-9.]+)")),
+    median_z = to_num(grab(munge[[g]], "^Median value of SIGNED_SUMSTATS was ([-0-9.e]+)")),
+    mean_chi2 = to_num(grab(munge[[g]], "^Mean chi\\^2 = ([0-9.]+)")),
+    lambda_gc = to_num(grab(munge[[g]], "^Lambda GC = ([0-9.]+)")),
+    max_chi2 = to_num(grab(munge[[g]], "^Max chi\\^2 = ([0-9.]+)")),
+    gws_snps = to_num(grab(munge[[g]], "^(\\d+) Genome-wide significant SNPs")))
+}) |>
+  gt() |>
+  tab_header(title = "Table 3. Munge summary") |>
+  cols_label(merge_snps = "SNPs in merge list", n_threshold = "N threshold",
+             median_z = "Median Z", mean_chi2 = "Mean chi^2", lambda_gc = "Lambda GC",
+             max_chi2 = "Max chi^2", gws_snps = "Genome-wide sig. SNPs") |>
+  fmt_integer(columns = c(merge_snps, n_threshold, gws_snps)) |>
+  tab_options(table.font.size = px(14), heading.align = "center") |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels(everything()))
+```
+
+***
+
+### Z scores
+
+***
+
+```{r z_scores, echo = FALSE, message = FALSE, warning = FALSE}
+map_dfr(gwas_list, function(g) {
+  z <- read_log("add_z_score", g)
+  formula <- grab(z, "Z = (.+)$")
+  if (is.na(formula) && any(str_detect(z, "keeping it"))) formula <- "Existing Z column"
+  tibble(GWAS = toupper(g), Z = formula)
+}) |>
+  gt() |>
+  tab_header(title = "Table 4. Source of Z") |>
+  tab_options(table.font.size = px(14), heading.align = "center") |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels(everything()))
+```
+
+***
+
+### Settings
+
+***
+
+```{r settings, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(GWAS = toupper(gwas_list), File = gwas_files, md5 = gwas_md5) |>
+  gt() |>
+  tab_header(title = "GWAS files") |>
+  tab_options(table.font.size = px(14), heading.align = "center") |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels(everything()))
+
+tibble(Setting = c("liftOver chain", "munge --merge-alleles SNP list"),
+       Value   = c(params$chain, params$snplist)) |>
+  gt() |>
+  tab_header(title = "Pipeline settings") |>
+  tab_options(table.font.size = px(14), heading.align = "center") |>
+  tab_style(style = cell_text(weight = "bold"),
+            locations = cells_column_labels(everything()))
+```
+
+***
+
+### Benchmarking {.tabset}
+
+***
+
+#### Table
+
+```{r benchmarking, echo = FALSE, message = FALSE, warning = FALSE}
+# Benchmark files: reports/benchmarks/09prep_gwas.<rule>[_<wildcards>].benchmark.txt
+# Rule names contain '_', so files are matched against the known rules, and only
+# current GWAS are kept (old runs drop out)
+smk_rules <- c("extract_gwas_sumstats", "standardise_sumstats", "add_z_score", "add_N",
+               "make_gwas_bed_hg19", "liftover_gwas_to_hg38", "add_hg38_coords_to_gwas",
+               "munge_sumstats", "prep_gwas_report")
+smk_rules <- smk_rules[order(-nchar(smk_rules))]
+valid_wildcards <- c("", gwas_list)
+
+files <- list.files(bmark_dir, pattern = "^09prep_gwas\\..*\\.benchmark\\.txt$",
+                    full.names = TRUE)
+
+benchmarks <- map_dfr(files, function(f) {
+  stem <- str_remove(basename(f), "^09prep_gwas\\.") |> str_remove("\\.benchmark\\.txt$")
+  rule <- smk_rules[stem == smk_rules | startsWith(stem, paste0(smk_rules, "_"))][1]
+  if (is.na(rule)) return(NULL)
+  wildcards <- str_remove(stem, paste0("^", rule, "_?"))
+  if (!wildcards %in% valid_wildcards) return(NULL)
+  df <- read.table(f, header = TRUE, sep = "\t")
+
+  tibble(
+    file = f,
+    rule = rule,
+    runtime_sec = df$s,
+    runtime_hms = df$h.m.s.,
+    max_rss = df$max_rss
+  )
+})
+
+# Summarise by rule
+summary <- benchmarks %>%
+  group_by(rule) %>%
+  summarise(
+    n = n(),
+    mean_runtime_min = mean(runtime_sec) / 60,
+    sd_runtime_min = sd(runtime_sec) / 60,
+    mean_ram_gb = mean(max_rss) / 1024,
+    sd_ram_gb = sd(max_rss) / 1024,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    sd_runtime_min = if_else(is.na(sd_runtime_min), 0, sd_runtime_min),
+    sd_ram_gb = if_else(is.na(sd_ram_gb), 0, sd_ram_gb)
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  arrange(rule)
+
+# Table
+summary %>%
+  gt() %>%
+  tab_header(
+    title = "Table 5. Benchmarking",
+    subtitle = "Means and SD across replicates"
+  ) %>%
+  cols_label(
+    rule = "Rule",
+    n = "N",
+    mean_runtime_min = "Mean Runtime (min)",
+    sd_runtime_min = "SD Runtime (min)",
+    mean_ram_gb = "Mean RAM (GB)",
+    sd_ram_gb = "SD RAM (GB)"
+  ) %>%
+  fmt_number(
+    columns = c(mean_runtime_min, sd_runtime_min, mean_ram_gb, sd_ram_gb),
+    decimals = 2
+  ) %>%
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  )
+```
+
+***
+
+#### Plot
+
+***
+
+```{r, runtime_plt, echo = FALSE, message = FALSE, warning = FALSE, fig.dim=c(10, 5)}
+runtime_plt <- ggplot(summary, aes(x = reorder(rule, mean_runtime_min),
+                                 y = mean_runtime_min)) +
+  geom_col(fill = "steelblue") +
+  geom_errorbar(aes(ymin = pmax(mean_runtime_min - ifelse(is.na(sd_runtime_min), 0, sd_runtime_min), 0),
+                    ymax = mean_runtime_min + ifelse(is.na(sd_runtime_min), 0, sd_runtime_min)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "Runtime (minutes)",
+       title = "Mean runtime per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+mem_plt <- ggplot(summary, aes(x = reorder(rule, mean_ram_gb),
+                                y = mean_ram_gb)) +
+  geom_col(fill = "darkorange") +
+  geom_errorbar(aes(ymin = pmax(mean_ram_gb - ifelse(is.na(sd_ram_gb), 0, sd_ram_gb), 0),
+                    ymax = mean_ram_gb + ifelse(is.na(sd_ram_gb), 0, sd_ram_gb)),
+                width = 0.3, colour = "black", linewidth = 0.6) +
+  coord_flip() +
+  labs(x = "Rule", y = "RAM (GB)",
+       title = "Mean RAM usage per rule") +
+  theme_classic(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 16),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_grid(runtime_plt, mem_plt)
+```

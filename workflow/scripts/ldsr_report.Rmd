@@ -56,31 +56,6 @@ understand the genetic architecture of diseases and complex traits.
 
 ***
 
-```{r settings, echo = FALSE, message = FALSE, warning = FALSE}
-tibble(
-  Setting = c("Cell types", "GWAS", "Annotations", "Baseline LD scores",
-              "Regression weights", "Allele frequencies", "Regression SNPs"),
-  Value   = c(paste(cell_types, collapse = ", "), paste(toupper(gwas), collapse = ", "),
-              paste(annot_types, collapse = ", "), params$ld_baseline,
-              params$ld_weights, params$ld_frq, params$ld_snps)) |>
-  gt() |>
-  tab_header(title = "Pipeline settings") |>
-  tab_options(
-    table.font.size = px(14),
-    table.border.top.style = "none",
-    table.border.bottom.style = "solid",
-    table.border.bottom.width = px(2),
-    table.border.bottom.color = "black",
-    heading.align = "center"
-  ) |>
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels(everything())
-  )
-```
-
-***
-
 ### MaxCPP {.tabset}
 
 ***
@@ -589,6 +564,35 @@ ldsr_tbl |>
     data_row.padding = px(3),
     heading.align = "center",
     column_labels.font.weight = "bold"
+  )
+```
+
+***
+
+### Settings
+
+***
+
+```{r settings, echo = FALSE, message = FALSE, warning = FALSE}
+tibble(
+  Setting = c("Cell types", "GWAS", "Annotations", "Baseline LD scores",
+              "Regression weights", "Allele frequencies", "Regression SNPs"),
+  Value   = c(paste(cell_types, collapse = ", "), paste(toupper(gwas), collapse = ", "),
+              paste(annot_types, collapse = ", "), params$ld_baseline,
+              params$ld_weights, params$ld_frq, params$ld_snps)) |>
+  gt() |>
+  tab_header(title = "Pipeline settings") |>
+  tab_options(
+    table.font.size = px(14),
+    table.border.top.style = "none",
+    table.border.bottom.style = "solid",
+    table.border.bottom.width = px(2),
+    table.border.bottom.color = "black",
+    heading.align = "center"
+  ) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
   )
 ```
 

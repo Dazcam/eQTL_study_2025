@@ -139,7 +139,7 @@ rule add_hg38_coords_to_gwas:
     input:   lifted = rules.liftover_gwas_to_hg38.output,
              sumstats = rules.add_N.output
     output:  PG["add_hg38_coords_to_gwas"]["output"]
-    resources: mem_mb = 20000, time="5:00:00"
+    resources: mem_mb = 8000, time="1:00:00"
     message: "Adding hg38 coords to {input.sumstats} sumstats"
     benchmark: PG["add_hg38_coords_to_gwas"]["benchmark"]
     log:     PG["add_hg38_coords_to_gwas"]["log"]
@@ -172,6 +172,39 @@ rule munge_sumstats:
              """
 
 
+rule prep_gwas_report:
+    input:   munged = expand(rules.munge_sumstats.output, gwas = config["gwas"]),
+             rmd_script = PG["prep_gwas_report"]["script"]
+    output:  PG["prep_gwas_report"]["html"]
+    params:  gwas = ",".join(config["gwas"]),
+             gwas_files = ",".join(config["gwas"][g]["file"] for g in config["gwas"]),
+             gwas_md5 = ",".join(config["gwas"][g]["md5"] for g in config["gwas"]),
+             unlifted = lambda w: PG["liftover_gwas_to_hg38"]["unlifted"],
+             chain = PG["liftover_gwas_to_hg38"]["chain"],
+             snplist = config["setup"]["make_hm3_snplist"]["output"],
+             log_dir = PG["prep_gwas_report"]["log_dir"],
+             bmark_dir = PG["prep_gwas_report"]["bmark_dir"]
+    singularity: config["containers"]["r_eqtl"]
+    message: "Generate GWAS prep report"
+    benchmark: PG["prep_gwas_report"]["benchmark"]
+    log:     PG["prep_gwas_report"]["log"]
+    shell:
+             """
+             Rscript -e "wd <- getwd(); rmarkdown::render('{input.rmd_script}', \
+                 output_file = file.path(wd, '{output}'), \
+                 knit_root_dir = wd, \
+                 params = list(gwas = '{params.gwas}', \
+                               gwas_files = '{params.gwas_files}', \
+                               gwas_md5 = '{params.gwas_md5}', \
+                               unlifted = '{params.unlifted}', \
+                               chain = '{params.chain}', \
+                               snplist = '{params.snplist}', \
+                               log_dir = '{params.log_dir}', \
+                               bmark_dir = '{params.bmark_dir}'))" > {log} 2>&1
+             """
+
+
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
-TARGETS["09prep_gwas"] = [expand(rules.munge_sumstats.output, gwas = config["gwas"])]
+TARGETS["09prep_gwas"] = [expand(rules.munge_sumstats.output, gwas = config["gwas"]),
+                          rules.prep_gwas_report.output]

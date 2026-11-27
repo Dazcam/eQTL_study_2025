@@ -936,6 +936,14 @@ prep_gwas:
     log: ../results/00LOG/09PREP-GWAS/munge_sumstats_{gwas}.log
     benchmark: reports/benchmarks/09prep_gwas.munge_sumstats_{gwas}.benchmark.txt
 
+  prep_gwas_report:
+    html: reports/09PREP-GWAS/09prep_gwas_report.html
+    log_dir: ../results/00LOG/09PREP-GWAS
+    bmark_dir: reports/benchmarks
+    log: ../results/00LOG/09PREP-GWAS/prep_gwas_report.log
+    benchmark: reports/benchmarks/09prep_gwas.prep_gwas_report.benchmark.txt
+    script: scripts/prep_gwas_report.Rmd
+
 # ------------  Pipeline 10: SuSiE  ------------
 
 susie:
