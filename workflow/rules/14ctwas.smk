@@ -1,3 +1,5 @@
+import os
+
 localrules: ctwas_report
 
 
@@ -9,7 +11,7 @@ CTW = config["ctwas"]
 
 rule create_ld_matrices:
     output: CTW["create_ld_matrices"]["output"]
-    params: ld_ref_dir = CTW["create_ld_matrices"]["ld_ref_dir"],
+    params: ld_ref_dir = os.path.dirname(config["setup"]["get_hg38_refs"]["bim"]) + "/",
             out_dir    = CTW["create_ld_matrices"]["out_dir"]
     resources: threads = 1, mem_mb = 10000, time="5:30:00"
     singularity: config["containers"]["twas"]
@@ -43,9 +45,9 @@ rule copy_fusion_weights:
 
 rule run_ctwas:
     input:  ld_mat      = rules.create_ld_matrices.output,
-            gwas        = CTW["run_ctwas"]["gwas"],
+            gwas        = config["prep_gwas"]["add_hg38_coords_to_gwas"]["output"],
             weights     = rules.copy_fusion_weights.output,
-            bim_file    = CTW["run_ctwas"]["bim_file"],
+            bim_file    = config["smr"]["cat_refs"]["cat_bim"],
             gene_lookup = config["gene_lookup"]
     output: CTW["run_ctwas"]["output"]
     params: ld_dir        = CTW["create_ld_matrices"]["out_dir"],

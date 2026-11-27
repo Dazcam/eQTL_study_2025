@@ -42,7 +42,7 @@ rule convert_vcf:
     shell:  """plink2 --vcf {input} --make-bed --out {params.prefix} > {log} 2>&1"""
 
 rule get_ldref_snplist:
-    input:       expand(TW["get_ldref_snplist"]["input"], chr = range(1, 23))
+    input:       expand(config["setup"]["get_hg38_refs"]["bim"], chr = range(1, 23))
     output:      TW["get_ldref_snplist"]["snp_lst"]
     message:    "Extract SNP IDs from LD reference .bim files"
     benchmark:  TW["get_ldref_snplist"]["benchmark"]

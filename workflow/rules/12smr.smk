@@ -36,10 +36,10 @@ rule get_smr_binary:
         """
 
 rule cat_refs:
-    input:  frq = expand(SMR["cat_refs"]["frq_in"], chr = range(1, 23)),
-            bed = expand(SMR["cat_refs"]["bed_in"], chr = range(1, 23)),
-            bim = expand(SMR["cat_refs"]["bim_in"], chr = range(1, 23)),
-            fam = SMR["cat_refs"]["fam_in"]
+    input:  frq = expand(config["setup"]["get_hg38_refs"]["frq"], chr = range(1, 23)),
+            bed = expand(config["setup"]["get_hg38_refs"]["bed"], chr = range(1, 23)),
+            bim = expand(config["setup"]["get_hg38_refs"]["bim"], chr = range(1, 23)),
+            fam = config["setup"]["get_hg38_refs"]["fam"].format(chr = 1)
     output: frq = SMR["cat_refs"]["cat_frq"],
             bed = SMR["cat_refs"]["cat_bed"],
             bim = SMR["cat_refs"]["cat_bim"],
@@ -116,7 +116,7 @@ rule create_besd:
         """
 
 rule format_gwas:
-    input:  gwas = SMR["format_gwas"]["gwas"],
+    input:  gwas = config["prep_gwas"]["add_hg38_coords_to_gwas"]["output"],
             frq  = rules.cat_refs.output.frq
     output: SMR["format_gwas"]["ma"]
     resources: mem_mb = 20000

@@ -168,6 +168,8 @@ rule get_hg38_refs:
             weights = expand(SET["get_hg38_refs"]["weights"], chr=range(1, 23)),
             frq = expand(SET["get_hg38_refs"]["frq"], chr=range(1, 23)),
             bim = expand(SET["get_hg38_refs"]["bim"], chr=range(1, 23)),
+            bed = expand(SET["get_hg38_refs"]["bed"], chr=range(1, 23)),
+            fam = expand(SET["get_hg38_refs"]["fam"], chr=range(1, 23)),
             snps = SET["get_hg38_refs"]["snps"]
     params: out_dir = ref_dir("hg38"),
             script  = SET["get_hg38_refs"]["script"]

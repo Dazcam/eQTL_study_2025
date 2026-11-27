@@ -277,6 +277,8 @@ setup:
     weights: ../resources/ldsr/ldsr_hg38_refs/weights/weights.hm3_noMHC.{chr}.l2.ldscore.gz
     frq: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
     bim: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
+    bed: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bed
+    fam: ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.fam
     snps: ../resources/ldsr/ldsr_hg38_refs/hm3_no_MHC.list.txt
     log: ../results/00LOG/00SETUP/get_hg38_refs.log
     benchmark: reports/benchmarks/00setup.get_hg38_refs.benchmark.txt
@@ -1065,10 +1067,6 @@ smr:
     benchmark: reports/benchmarks/12smr.create_besd_{cell_type}.benchmark.txt
 
   cat_refs:
-    frq_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.frq
-    bed_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bed
-    bim_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
-    fam_in:  ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.1.fam
     cat_frq: ../results/12SMR/smr_input/1000G.EUR.hg38.frq
     cat_bed: ../results/12SMR/smr_input/1000G.EUR.hg38.bed
     cat_bim: ../results/12SMR/smr_input/1000G.EUR.hg38.bim
@@ -1077,7 +1075,6 @@ smr:
     benchmark: reports/benchmarks/12smr.cat_refs.benchmark.txt
 
   format_gwas:
-    gwas:   ../results/09PREP-GWAS/{gwas}_hg38.tsv
     ma:     ../results/12SMR/smr_input/gwas/{gwas}_hg38.ma
     log:    ../results/00LOG/12SMR/format_gwas_{gwas}.log
     benchmark: reports/benchmarks/12smr.format_gwas_{gwas}.benchmark.txt
@@ -1124,7 +1121,6 @@ twas_weights:
     benchmark: reports/benchmarks/13twas_weights.convert_vcf.benchmark.txt
 
   get_ldref_snplist:
-    input:   ../resources/ldsr/ldsr_hg38_refs/plink_files/1000G.EUR.hg38.{chr}.bim
     snp_lst: ../results/13TWAS-WEIGHTS/fusion_input/ldref_snps.txt
     log:     ../results/00LOG/13TWAS-WEIGHTS/get_ldref_snplist.log
     benchmark: reports/benchmarks/13twas_weights.get_ldref_snplist.benchmark.txt
@@ -1171,7 +1167,6 @@ ctwas:
   create_ld_matrices:
     script:     ../scripts/ctwas_create_ld_matrices.R
     output:     ../results/14CTWAS/ld_mats/create_ctwas_ld_matrices.done
-    ld_ref_dir: ../resources/ldsr/ldsr_hg38_refs/plink_files/
     out_dir:    ../results/14CTWAS/ld_mats/
     benchmark:       reports/benchmarks/14ctwas.create_ld_matrices.benchmark.txt
     log:        ../results/00LOG/14CTWAS/create_ld_matrices.log
@@ -1186,8 +1181,6 @@ ctwas:
 
   run_ctwas:
     script:        ../scripts/ctwas_run.R
-    gwas:          ../results/09PREP-GWAS/{gwas}_hg38.tsv
-    bim_file:      ../results/12SMR/smr_input/1000G.EUR.hg38.bim
     output:        ../results/14CTWAS/output/ctwas_{cell_type}_{gwas}_ctwas.rds
     weights_dir:   ../results/14CTWAS/weights/{cell_type}/
     run_weight_qc: false
