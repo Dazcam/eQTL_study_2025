@@ -47,14 +47,12 @@ understand the genetic architecture of diseases and complex traits.
 
 ***
 
-1. `get_hg38_refs`: Download LDSC hg38 reference files
-2. `get_hg19_refs`: Download LDSC hg19 reference files
-3. `make_annot`: Make maxCPP and CS95 annotation files from SuSiE credible sets
-4. `lift_hapmap3_snps`: Lift HapMap3 reference SNPs to hg38
-5. `ldsr_ld_scores_hg38`: Generate LD scores for each cell type and annotation
-6. `ldsr_strat_hg38_bl_v12`: Run stratified LD score regression with baseline v1.2
-7. `ldsr_strat_summary`: Collect the annotation results per annotation type
-8. `ldsr_report`: Summarise S-LDSR results per cell type
+1. `make_annot`: Make maxCPP and CS95 annotation files from SuSiE credible sets
+2. `lift_hapmap3_snps`: Lift HapMap3 reference SNPs to hg38
+3. `ldsr_ld_scores_hg38`: Generate LD scores for each cell type and annotation
+4. `ldsr_strat_hg38_bl_v12`: Run stratified LD score regression with baseline v1.2
+5. `ldsr_strat_summary`: Collect the annotation results per annotation type
+6. `ldsr_report`: Summarise S-LDSR results per cell type
 
 ***
 
@@ -611,8 +609,6 @@ files <- list.files(bmark_dir, pattern = "^11sldsr\\..*\\.benchmark\\.txt$", ful
 # Rules with a benchmark: directive. Matched longest name first, as some rule
 # names share a prefix with each other or with another rule's wildcards.
 known_rules <- c(
-  "get_hg38_refs",
-  "get_hg19_refs",
   "make_annot",
   "lift_hapmap3_snps",
   "ldsr_ld_scores_hg38",

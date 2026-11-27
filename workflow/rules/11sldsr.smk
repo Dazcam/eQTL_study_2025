@@ -6,10 +6,10 @@ localrules: ldsr_strat_summary
 ##  Settings  ------------------------------------------------------------------------------
 LDS = config["sldsr"]
 
-# The get_hg38_refs / get_hg19_refs config patterns are the single source of truth for
-# reference paths; the directories and ldsc prefixes below are derived from them.
-HG38_REFS = LDS["get_hg38_refs"]
-HG19_REFS = LDS["get_hg19_refs"]
+# The 00 setup get_hg38_refs / get_hg19_refs config patterns are the single source of truth
+# for reference paths; the directories and ldsc prefixes below are derived from them.
+HG38_REFS = config["setup"]["get_hg38_refs"]
+HG19_REFS = config["setup"]["get_hg19_refs"]
 
 
 ##  Functions  -----------------------------------------------------------------------------
@@ -19,10 +19,6 @@ def strip_suffix(path, suffix):
         raise ValueError(f"Expected '{path}' to end with '{suffix}'")
     return path[: -len(suffix)]
 
-def ref_dir(build):
-    """Top-level reference directory for a build (parent of baseline_v1.2/)."""
-    return os.path.dirname(os.path.dirname(LDS[f"get_{build}_refs"]["baseline"]))
-
 def get_annot(wildcards):
     """Annotation file for the annot_type wildcard (maxCPP or CS95)."""
     key = {"maxCPP": "maxcpp", "CS95": "cs95"}[wildcards.annot_type]
@@ -31,30 +27,6 @@ def get_annot(wildcards):
 
 
 ##  Rules  ---------------------------------------------------------------------------------
-
-rule get_hg38_refs:
-    output: baseline = expand(HG38_REFS["baseline"], chr=range(1, 23)),
-            weights = expand(HG38_REFS["weights"], chr=range(1, 23)),
-            frq = expand(HG38_REFS["frq"], chr=range(1, 23)),
-            bim = expand(HG38_REFS["bim"], chr=range(1, 23)),
-            snps = HG38_REFS["snps"]
-    params: out_dir = ref_dir("hg38"),
-            script  = HG38_REFS["script"]
-    benchmark: HG38_REFS["benchmark"]
-    log:    HG38_REFS["log"]
-    shell: "{params.script} {params.out_dir} > {log} 2>&1"
-
-rule get_hg19_refs:
-    output: baseline = expand(HG19_REFS["baseline"], chr=range(1, 23)),
-            weights = expand(HG19_REFS["weights"], chr=range(1, 23)),
-            frq = expand(HG19_REFS["frq"], chr=range(1, 23)),
-            bim = expand(HG19_REFS["bim"], chr=range(1, 23)),
-            snps = HG19_REFS["snps"]
-    params: out_dir = ref_dir("hg19"),
-            script  = HG19_REFS["script"]
-    benchmark: HG19_REFS["benchmark"]
-    log:    HG19_REFS["log"]
-    shell: "{params.script} {params.out_dir} > {log} 2>&1"
 
 rule make_annot:
     input:  cred_set = config["susie"]["sort_susie"]["output"],
@@ -69,9 +41,9 @@ rule make_annot:
 
 rule lift_hapmap3_snps:
     # Lift HapMap3 SNPs to hg38
-    input:  snps = rules.get_hg19_refs.output.snps,
-            bim_hg19 = rules.get_hg19_refs.output.bim,
-            bim_hg38 = rules.get_hg38_refs.output.bim
+    input:  snps = HG19_REFS["snps"],
+            bim_hg19 = expand(HG19_REFS["bim"], chr=range(1, 23)),
+            bim_hg38 = expand(HG38_REFS["bim"], chr=range(1, 23))
     output: LDS["lift_hapmap3_snps"]["output"]
     params: hg19_dir = os.path.dirname(HG19_REFS["bim"]),
             hg38_dir = os.path.dirname(HG38_REFS["bim"]),
@@ -87,7 +59,7 @@ rule lift_hapmap3_snps:
 
 rule ldsr_ld_scores_hg38:
     input:  annot = get_annot,
-            bfile = rules.get_hg38_refs.output.bim,
+            bfile = expand(HG38_REFS["bim"], chr=range(1, 23)),
             snps = rules.lift_hapmap3_snps.output
     output: LDS["ldsr_ld_scores_hg38"]["output"]
     params: bfile = strip_suffix(HG38_REFS["bim"], ".bim"),

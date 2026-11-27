@@ -5,10 +5,10 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  11SLDSR | Rule: get_hg38_refs
+# Pipeline:  00SETUP | Rule: get_hg38_refs
 #            Upstream:   none (downloads from Zenodo)
-#            Downstream: make_annot, lift_hapmap3_snps, ldsr_ld_scores_hg38,
-#                        ldsr_strat_hg38_bl_v12
+#            Downstream: make_hm3_snplist; 11SLDSR make_annot, lift_hapmap3_snps,
+#                        ldsr_ld_scores_hg38, ldsr_strat_hg38_bl_v12
 #
 # Purpose:   - Download the GRCh38 LDSC reference bundle (Zenodo 7768714) and the
 #              HapMap3 no-MHC SNP list (Zenodo 10515792)

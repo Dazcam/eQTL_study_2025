@@ -147,7 +147,7 @@ rule add_hg38_coords_to_gwas:
 
 rule munge_sumstats:
     # Format sumstats for LDSR input
-    input:   snps = PG["munge_sumstats"]["snplist"],
+    input:   snps = config["setup"]["make_hm3_snplist"]["output"],
              gwas = rules.add_hg38_coords_to_gwas.output
     output:  PG["munge_sumstats"]["output"]
     envmodules: config["envmodules"]["miniforge"]

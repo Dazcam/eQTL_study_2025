@@ -5,9 +5,9 @@
 #
 #--------------------------------------------------------------------------------------
 #
-# Pipeline:  11SLDSR | Rule: get_hg19_refs
+# Pipeline:  00SETUP | Rule: get_hg19_refs
 #            Upstream:   none (downloads from Zenodo)
-#            Downstream: lift_hapmap3_snps
+#            Downstream: 11SLDSR lift_hapmap3_snps
 #
 # Purpose:   - Download the 1000G Phase 3 hg19 LDSC reference files (Zenodo 10515792)
 #            - Unpack and rename to baseline_v1.2, ldscores, plink_files and weights

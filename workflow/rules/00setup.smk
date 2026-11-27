@@ -1,9 +1,17 @@
+import os
+
 localrules: create_parse_json, setup_liftover, get_gwas_sumstats
 
 
 ##  Settings  ------------------------------------------------------------------------------
 SET    = config["setup"]
 PLATES = list(config["fastq"].keys())
+
+
+##  Functions  -----------------------------------------------------------------------------
+def ref_dir(build):
+    """Top-level LDSC reference directory for a build (parent of baseline_v1.2/)."""
+    return os.path.dirname(os.path.dirname(SET[f"get_{build}_refs"]["baseline"]))
 
 
 ##  Rules  ---------------------------------------------------------------------------------
@@ -155,6 +163,49 @@ rule get_gwas_sumstats:
              touch {output}
              """
 
+rule get_hg38_refs:
+    output: baseline = expand(SET["get_hg38_refs"]["baseline"], chr=range(1, 23)),
+            weights = expand(SET["get_hg38_refs"]["weights"], chr=range(1, 23)),
+            frq = expand(SET["get_hg38_refs"]["frq"], chr=range(1, 23)),
+            bim = expand(SET["get_hg38_refs"]["bim"], chr=range(1, 23)),
+            snps = SET["get_hg38_refs"]["snps"]
+    params: out_dir = ref_dir("hg38"),
+            script  = SET["get_hg38_refs"]["script"]
+    benchmark: SET["get_hg38_refs"]["benchmark"]
+    log:    SET["get_hg38_refs"]["log"]
+    shell: "{params.script} {params.out_dir} > {log} 2>&1"
+
+rule get_hg19_refs:
+    output: baseline = expand(SET["get_hg19_refs"]["baseline"], chr=range(1, 23)),
+            weights = expand(SET["get_hg19_refs"]["weights"], chr=range(1, 23)),
+            frq = expand(SET["get_hg19_refs"]["frq"], chr=range(1, 23)),
+            bim = expand(SET["get_hg19_refs"]["bim"], chr=range(1, 23)),
+            snps = SET["get_hg19_refs"]["snps"]
+    params: out_dir = ref_dir("hg19"),
+            script  = SET["get_hg19_refs"]["script"]
+    benchmark: SET["get_hg19_refs"]["benchmark"]
+    log:    SET["get_hg19_refs"]["log"]
+    shell: "{params.script} {params.out_dir} > {log} 2>&1"
+
+rule make_hm3_snplist:
+    # HapMap3 no-MHC SNPs in the hg38 weights, with A1 and A2 from the hg38 bim files
+    input:   bim = expand(SET["get_hg38_refs"]["bim"], chr=range(1, 23)),
+             weights = expand(SET["get_hg38_refs"]["weights"], chr=range(1, 23))
+    output:  SET["make_hm3_snplist"]["output"]
+    benchmark: SET["make_hm3_snplist"]["benchmark"]
+    log:     SET["make_hm3_snplist"]["log"]
+    shell:
+             """
+             exec 2> {log}
+             cat {input.bim} | awk 'BEGIN {{OFS="\t"; print "SNP", "A1", "A2"}} {{print $2, $5, $6}}' > {output}.bim_tmp
+             first=1
+             for f in {input.weights}; do
+                 if [ $first = 1 ]; then zcat $f; first=0; else zcat $f | tail -n +2; fi
+             done > {output}.weights_tmp
+             awk 'NR==FNR {{snp[$2]; next}} $1 in snp' {output}.weights_tmp {output}.bim_tmp > {output}
+             rm {output}.bim_tmp {output}.weights_tmp
+             """
+
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
@@ -165,4 +216,7 @@ TARGETS["00setup"] = [rules.get_containers.output,
                       rules.get_jang_singlebrain.output,
                       rules.get_obrien_supp.output,
                       expand(rules.get_gwas_sumstats.output, gwas = config["gwas"]),
-                      rules.liftover_nott_peaks.output]
+                      rules.liftover_nott_peaks.output,
+                      rules.get_hg38_refs.output,
+                      rules.get_hg19_refs.output,
+                      rules.make_hm3_snplist.output]
