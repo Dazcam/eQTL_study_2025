@@ -38,7 +38,7 @@ rule standardise_sumstats:
     run:
              if wildcards.gwas in ("mdd", "scz"):
                  shell("""
-                 cat {input} | sed 's/ID/SNP/g' | sed 's/#CHROM/CHR/g' | sed 's/CHROM/CHR/g' > {params.tmp};
+                 sed '1s/ID/SNP/g; 1s/#CHROM/CHR/g; 1s/CHROM/CHR/g' {input} > {params.tmp};
                  python {params.script} csv \
                    --sumstats {params.tmp} \
                    --out {output} --force --auto --head 5 \
@@ -49,18 +49,16 @@ rule standardise_sumstats:
 
              elif wildcards.gwas == "bpd":
                  shell("""
-                 cat {input} | sed 's/EFFECT_ALLELE/A1/g' | sed 's/OTHER_ALLELE/A2/g' > {params.tmp};
                  python {params.script} csv \
-                   --sumstats {params.tmp} \
+                   --sumstats {input} \
                    --out {output} --force --auto --head 5 \
                    --keep-cols NCA NCO \
-                   --log {log};
-                 rm {params.tmp}
+                   --log {log}
                  """)
 
              elif wildcards.gwas in ("adhd", "ocd"):
                  shell("""
-                 cat {input} | sed 's/Nca/NCA/g' | sed 's/Nco/NCO/g' > {params.tmp};
+                 sed '1s/Nca/NCA/g; 1s/Nco/NCO/g' {input} > {params.tmp};
                  python {params.script} csv \
                    --sumstats {params.tmp} \
                    --out {output} --force --auto --head 5 \

@@ -52,10 +52,12 @@ lifted['CHR'] = lifted['CHR'].str.replace('chr', '', regex=False)
 lifted['BP'] = lifted['START'] + 1
 lifted = lifted[['SNP', 'CHR', 'BP']]
 log.info(f"Lifted SNPs: {lifted.shape[0]}")
+log.info(f"Duplicated SNP IDs in lifted file: {lifted['SNP'].duplicated().sum()}")
 
 ##  Merge with sumstats  ---------------------------------------------------------------
 sumstats = pd.read_csv(sumstats_file, sep='\t')
 log.info(f"Sumstats SNPs: {sumstats.shape[0]}")
+log.info(f"Duplicated SNP IDs in sumstats: {sumstats['SNP'].duplicated().sum()}")
 
 merged = pd.merge(lifted, sumstats, on='SNP', how='inner')
 log.info(f"Merged SNPs: {merged.shape[0]}")
