@@ -297,6 +297,14 @@ setup:
     log: ../results/00LOG/00SETUP/make_hm3_snplist.log
     benchmark: reports/benchmarks/00setup.make_hm3_snplist.benchmark.txt
 
+  get_ldsc:
+    repo: https://github.com/bulik/ldsc.git
+    commit: aa33296abac9569a6422ee6ba7eb4b902422cc74
+    dir: ../resources/ldsr/ldsc
+    output: ../resources/ldsr/.get_ldsc.done
+    log: ../results/00LOG/00SETUP/get_ldsc.log
+    benchmark: reports/benchmarks/00setup.get_ldsc.benchmark.txt
+
 # ------------  Pipeline 01: Parse  ------------
 
 parse:

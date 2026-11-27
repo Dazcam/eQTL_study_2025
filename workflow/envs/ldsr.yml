@@ -57,4 +57,3 @@ dependencies:
       - pandas==0.20.0
       - pip==20.3.4
       - scipy==0.18.0
-prefix: /scratch/c.c1477909/.conda/envs/ldsr

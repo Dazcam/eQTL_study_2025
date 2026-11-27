@@ -1,6 +1,6 @@
 import os
 
-localrules: create_parse_json, setup_liftover, get_gwas_sumstats
+localrules: create_parse_json, setup_liftover, get_gwas_sumstats, get_ldsc
 
 
 ##  Settings  ------------------------------------------------------------------------------
@@ -206,6 +206,26 @@ rule make_hm3_snplist:
              rm {output}.bim_tmp {output}.weights_tmp
              """
 
+rule get_ldsc:
+    # Clone ldsc at the pinned commit; an existing clone is checked out, not cloned again
+    output:  SET["get_ldsc"]["output"]
+    params:  repo = SET["get_ldsc"]["repo"],
+             commit = SET["get_ldsc"]["commit"],
+             dir = SET["get_ldsc"]["dir"]
+    message: "Clone ldsc"
+    benchmark: SET["get_ldsc"]["benchmark"]
+    log:     SET["get_ldsc"]["log"]
+    shell:
+             """
+             exec > {log} 2>&1
+             if [ ! -d {params.dir}/.git ]; then
+                 git clone {params.repo} {params.dir}
+             fi
+             git -C {params.dir} checkout {params.commit}
+             git -C {params.dir} log -1 --format="%H %ad %s"
+             touch {output}
+             """
+
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------
 TARGETS = globals().setdefault("TARGETS", {})
@@ -219,4 +239,5 @@ TARGETS["00setup"] = [rules.get_containers.output,
                       rules.liftover_nott_peaks.output,
                       rules.get_hg38_refs.output,
                       rules.get_hg19_refs.output,
-                      rules.make_hm3_snplist.output]
+                      rules.make_hm3_snplist.output,
+                      rules.get_ldsc.output]
