@@ -97,11 +97,12 @@ rule liftover_nott_peaks:
            chain = SET["liftover_nott_hg38"]["chain"]
     output:  SET["liftover_nott_hg38"]["output"]
     singularity: config["containers"]["ubuntu"]
-    params: SET["liftover_nott_hg38"]["unlifted"]
+    params: unlifted = SET["liftover_nott_hg38"]["unlifted"],
+            liftover = config["tools"]["liftover"]
     benchmark: SET["liftover_nott_hg38"]["benchmark"]
     message: "Lifting over Nott et al. 2019 peaks from hg19 to hg38"
     log: SET["liftover_nott_hg38"]["log"]
-    shell: "../resources/liftover/liftOver {input.bed} {input.chain} {output} {params} 2> {log}"
+    shell: "{params.liftover} {input.bed} {input.chain} {output} {params.unlifted} 2> {log}"
 
 
 #rule get_obrien_data:

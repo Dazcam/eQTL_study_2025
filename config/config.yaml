@@ -182,7 +182,14 @@ envmodules:
   htslib:    HTSlib/1.23-GCC-14.3.0         # Pipelines 05, 06, 10
   samtools:  SAMtools/1.22.1-GCC-14.3.0     # Pipeline 04
   pigz:      pigz/2.8-GCCcore-14.3.0        # Pipeline 18
-  miniforge: Miniforge3/25.11.0-1           # Pipeline 02
+  miniforge: Miniforge3/25.11.0-1           # Pipelines 02, 09, 11
+
+tools:
+  python_convert: ../resources/python_convert/sumstats.py    # Pipeline 09
+  liftover:       ../resources/liftover/liftOver             # Pipelines 00, 09
+  ldsc:           ../resources/ldsr/ldsc/ldsc.py             # Pipeline 11
+  ldsc_munge:     ../resources/ldsr/ldsc/munge_sumstats.py   # Pipeline 09
+  ldsr_env:       ldsr                                       # conda env, Pipelines 09, 11
 
 # ------------  Pipeline 00: Setup  ------------
 
@@ -874,7 +881,7 @@ prep_gwas:
 
   make_gwas_bed_hg19:
     output: ../results/09PREP-GWAS/{gwas}_hg19.bed
-    log: ../results/00LOG/09PREP-GWAS/create_gwas_bed_hg19_{gwas}.log
+    log: ../results/00LOG/09PREP-GWAS/make_gwas_bed_hg19_{gwas}.log
     benchmark: reports/benchmarks/09prep_gwas.make_gwas_bed_hg19_{gwas}.benchmark.txt
 
   liftover_gwas_to_hg38:

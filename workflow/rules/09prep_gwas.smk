@@ -26,91 +26,54 @@ rule extract_gwas_sumstats:
              """
 
 rule standardise_sumstats:
-    # Standardises sumstats: SNP, CHR. BP, PVAL, A1, A2 + additional GWAS dependant cols
-    # python convert available here: https://github.com/precimed/python_convert/tree/master
+    # Standardise sumstats: SNP, CHR, BP, PVAL, A1, A2 + additional GWAS dependent cols
+    # python_convert: https://github.com/precimed/python_convert/tree/master
     input:   rules.extract_gwas_sumstats.output
     output:  PG["standardise_sumstats"]["output"]
+    params:  tmp = PG["standardise_sumstats"]["temp"],
+             script = config["tools"]["python_convert"]
     message: "Standardising {input}"
     benchmark: PG["standardise_sumstats"]["benchmark"]
-    params: PG["standardise_sumstats"]["temp"]
-    log:    PG["standardise_sumstats"]["log"] 
+    log:     PG["standardise_sumstats"]["log"]
     run:
-
              if wildcards.gwas in ("mdd", "scz"):
-
                  shell("""
-
-                 cat {input} | sed 's/ID/SNP/g' | sed 's/#CHROM/CHR/g' | sed 's/CHROM/CHR/g' > {params};
-                 python ../resources/python_convert/sumstats.py csv \
-                   --sumstats {params} \
+                 cat {input} | sed 's/ID/SNP/g' | sed 's/#CHROM/CHR/g' | sed 's/CHROM/CHR/g' > {params.tmp};
+                 python {params.script} csv \
+                   --sumstats {params.tmp} \
                    --out {output} --force --auto --head 5 \
                    --keep-cols NCAS NCON \
                    --log {log};
+                 rm {params.tmp}
+                 """)
 
-                 rm {params}
-
-                  """)
-
-             elif "bpd" in wildcards.gwas:
-
+             elif wildcards.gwas == "bpd":
                  shell("""
-                 cat {input} | sed 's/EFFECT_ALLELE/A1/g' | sed 's/OTHER_ALLELE/A2/g' > {params};
-    
-                 python ../resources/python_convert/sumstats.py csv \
-                   --sumstats {params} \
-       	           --out {output} --force --auto --head 5 \
+                 cat {input} | sed 's/EFFECT_ALLELE/A1/g' | sed 's/OTHER_ALLELE/A2/g' > {params.tmp};
+                 python {params.script} csv \
+                   --sumstats {params.tmp} \
+                   --out {output} --force --auto --head 5 \
                    --keep-cols NCA NCO \
                    --log {log};
-
-                 rm {params}
-             
-                  """)
+                 rm {params.tmp}
+                 """)
 
              elif wildcards.gwas in ("adhd", "ocd"):
-
                  shell("""
-              
-                 cat {input} | sed 's/Nca/NCA/g' | sed 's/Nco/NCO/g' > {params};
-                 python ../resources/python_convert/sumstats.py csv \
-                   --sumstats {params} \
+                 cat {input} | sed 's/Nca/NCA/g' | sed 's/Nco/NCO/g' > {params.tmp};
+                 python {params.script} csv \
+                   --sumstats {params.tmp} \
                    --out {output} --force --auto --head 5 \
                    --keep-cols NCA NCO \
                    --log {log};
-
-                 rm {params}
-
-                  """)
-
-             elif "ptsd" in wildcards.gwas:
-
-                 shell("""
-
-                 cat {input} | sed 's/NEFF/N/g' | sed 's/ID/SNP/g' | sed 's/#CHROM/CHR/g' | sed 's/POS/BP/g'> {params};
-                 python ../resources/python_convert/sumstats.py csv \
-                   --sumstats {params} \
-                   --out {output} --force --auto --head 5 \
-                   --keep-cols N \
-                   --log {log};
-
-                 rm {params}
-
-                  """)
-
+                 rm {params.tmp}
+                 """)
 
              else:
-
-                 shell("""
-
-                 python ../resources/python_convert/sumstats.py csv \
-                   --sumstats {input} \
-                   --out {output} --force --auto --head 5 \
-                   --keep-cols N \
-                   --log {log}
-
-                  """)
+                 raise ValueError(f"No standardise_sumstats branch for GWAS {wildcards.gwas}")
 
 rule add_z_score:
-    # Adds z-scores to GWAS sumstats lacking
+    # Add Z to sumstats that lack it
     input:   rules.standardise_sumstats.output
     output:  PG["add_z_score"]["output"]
     params:  script = PG["add_z_score"]["script"]
@@ -125,104 +88,90 @@ rule add_z_score:
              """
 
 rule add_N:
-    # N to GWAS sumstats lacking 
+    # Add N = cases + controls
     input:   rules.add_z_score.output
     output:  PG["add_N"]["output"]
-    message: "Adding N to {input} if required"
+    message: "Adding N to {input}"
     benchmark: PG["add_N"]["benchmark"]
     log:     PG["add_N"]["log"]
     run:
-        if wildcards.gwas in ("mdd", "scz"):
-            
-            shell("""
-            
-            awk -v OFS='\t' 'BEGIN{{FS=OFS="\t"}} NR==1{{for(i=1;i<=NF;i++) {{if($i=="NCAS") c1=i; if($i=="NCON") c2=i}} print $0,"N"}} NR>1{{print $0,$c1+$c2}}' {input} > {output} 2> {log}
-            
-            """)
-        
-        elif wildcards.gwas in ("bpd", "adhd", "ocd"):
-            
-            shell("""
-            
-            awk -v OFS='\t' 'BEGIN{{FS=OFS="\t"}} NR==1{{for(i=1;i<=NF;i++) {{if($i=="NCA") c1=i; if($i=="NCO") c2=i}} print $0,"N"}} NR>1{{print $0,$c1+$c2}}' {input} > {output} 2> {log}
-            
-            """)
-        
-        else:
-            
-            shell("""
-            
-            cp {input} {output} 2> {log}
-            
-            """)
+             if wildcards.gwas in ("mdd", "scz"):
+                 shell("""
+                 awk -v OFS='\t' 'BEGIN{{FS=OFS="\t"}} NR==1{{for(i=1;i<=NF;i++) {{if($i=="NCAS") c1=i; if($i=="NCON") c2=i}} print $0,"N"}} NR>1{{print $0,$c1+$c2}}' {input} > {output} 2> {log}
+                 """)
+
+             elif wildcards.gwas in ("bpd", "adhd", "ocd"):
+                 shell("""
+                 awk -v OFS='\t' 'BEGIN{{FS=OFS="\t"}} NR==1{{for(i=1;i<=NF;i++) {{if($i=="NCA") c1=i; if($i=="NCO") c2=i}} print $0,"N"}} NR>1{{print $0,$c1+$c2}}' {input} > {output} 2> {log}
+                 """)
+
+             else:
+                 raise ValueError(f"No add_N branch for GWAS {wildcards.gwas}")
 
 rule make_gwas_bed_hg19:
-    # Generate gwas hg19 bed file for lift over
+    # Generate GWAS hg19 bed file for liftOver
     input:   rules.add_N.output
     output:  PG["make_gwas_bed_hg19"]["output"]
     message: "Create bed input file for {input} hg19 to hg38 LiftOver"
     benchmark: PG["make_gwas_bed_hg19"]["benchmark"]
-    log: PG["make_gwas_bed_hg19"]["log"]
-    run:
-
-        shell("""
-        
-        awk 'BEGIN {{OFS="\t"}} NR > 1 {{print "chr"$2, $3-1, $3, $1}}' {input} > {output} 2> {log}
-
-        """)
+    log:     PG["make_gwas_bed_hg19"]["log"]
+    shell:
+             """
+             awk 'BEGIN {{OFS="\t"}} NR > 1 {{print "chr"$2, $3-1, $3, $1}}' {input} > {output} 2> {log}
+             """
 
 rule liftover_gwas_to_hg38:
     # Liftover sumstats from hg19 to hg38
-    input: bed = rules.make_gwas_bed_hg19.output,
-           chain = PG["liftover_gwas_to_hg38"]["chain"]
+    input:   bed = rules.make_gwas_bed_hg19.output,
+             chain = PG["liftover_gwas_to_hg38"]["chain"]
     output:  PG["liftover_gwas_to_hg38"]["output"]
     singularity: config["containers"]["ubuntu"]
-    params: PG["liftover_gwas_to_hg38"]["unlifted"]
-    benchmark: PG["liftover_gwas_to_hg38"]["benchmark"]
+    params:  unlifted = PG["liftover_gwas_to_hg38"]["unlifted"],
+             liftover = config["tools"]["liftover"]
     message: "Lifting over {input} from hg19 to hg38"
-    log: PG["liftover_gwas_to_hg38"]["log"]
+    benchmark: PG["liftover_gwas_to_hg38"]["benchmark"]
+    log:     PG["liftover_gwas_to_hg38"]["log"]
     shell:
-        """
-
-        ../resources/liftover/liftOver {input.bed} {input.chain} {output} {params} 2> {log}
-    
-        """
+             """
+             {params.liftover} {input.bed} {input.chain} {output} {params.unlifted} 2> {log}
+             """
 
 rule add_hg38_coords_to_gwas:
-    #Restore summary statistics file with hg38 coords
-    input: lifted = rules.liftover_gwas_to_hg38.output,
-           sumstats = rules.add_N.output
-    output: PG["add_hg38_coords_to_gwas"]["output"]
-    resources: threads = 5, mem_mb = 20000, time="5:00:00"
+    # Restore sumstats file with hg38 coords
+    input:   lifted = rules.liftover_gwas_to_hg38.output,
+             sumstats = rules.add_N.output
+    output:  PG["add_hg38_coords_to_gwas"]["output"]
+    resources: mem_mb = 20000, time="5:00:00"
     message: "Adding hg38 coords to {input.sumstats} sumstats"
     benchmark: PG["add_hg38_coords_to_gwas"]["benchmark"]
-    log: PG["add_hg38_coords_to_gwas"]["log"]
-    script: PG["add_hg38_coords_to_gwas"]["script"]
-
+    log:     PG["add_hg38_coords_to_gwas"]["log"]
+    script:  PG["add_hg38_coords_to_gwas"]["script"]
 
 rule munge_sumstats:
     # Format sumstats for LDSR input
     input:   snps = PG["munge_sumstats"]["snplist"],
              gwas = rules.add_hg38_coords_to_gwas.output
     output:  PG["munge_sumstats"]["output"]
-#    conda:   "../envs/ldsr.yml" # Struggling to get this to work, can create env, but snakemake can't
+    envmodules: config["envmodules"]["miniforge"]
+    params:  prefix = PG["munge_sumstats"]["prefix"],
+             script = config["tools"]["ldsc_munge"],
+             env = config["tools"]["ldsr_env"]
     message: "Munging sumstats for LDSR compatibility: {input.gwas}"
     benchmark: PG["munge_sumstats"]["benchmark"]
-    params:  PG["munge_sumstats"]["prefix"]
     log:     PG["munge_sumstats"]["log"]
     shell:
-        """
-        eval "$(/apps/languages/miniforge3/24.3.0-0/bin/conda shell.bash hook)"
-        conda activate ldsr
-        echo "Starting Snakemake script..." > {log}
-        which python >> {log}
-        python ../resources/ldsr/ldsc/munge_sumstats.py  --sumstats {input.gwas} \
-          --merge-alleles {input.snps} \
-          --out {params} \
-          --signed-sumstats Z,0 \
-          --p PVAL >> {log} 2>&1
-        echo "Finished at $(date)" >> {log}
-        """
+             """
+             eval "$(conda shell.bash hook)"
+             conda activate {params.env}
+             echo "Starting Snakemake script..." > {log}
+             which python >> {log}
+             python {params.script} --sumstats {input.gwas} \
+               --merge-alleles {input.snps} \
+               --out {params.prefix} \
+               --signed-sumstats Z,0 \
+               --p PVAL >> {log} 2>&1
+             echo "Finished at $(date)" >> {log}
+             """
 
 
 ##  Final outputs, collected by rule all in the Snakefile  ---------------------------------

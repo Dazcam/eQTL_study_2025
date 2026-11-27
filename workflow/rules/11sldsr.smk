@@ -92,15 +92,18 @@ rule ldsr_ld_scores_hg38:
     output: LDS["ldsr_ld_scores_hg38"]["output"]
     params: bfile = strip_suffix(HG38_REFS["bim"], ".bim"),
             ldscores = strip_suffix(LDS["ldsr_ld_scores_hg38"]["output"],
-                                    ".l2.ldscore.gz")
+                                    ".l2.ldscore.gz"),
+            script = config["tools"]["ldsc"],
+            env = config["tools"]["ldsr_env"]
+    envmodules: config["envmodules"]["miniforge"]
     benchmark: LDS["ldsr_ld_scores_hg38"]["benchmark"]
     message: "Generating LD scores on hg38 for {wildcards.cell_type}, {wildcards.annot_type}, chr {wildcards.chr}"
     log:    LDS["ldsr_ld_scores_hg38"]["log"]
     shell:
         """
-        eval "$(/apps/languages/miniforge3/24.3.0-0/bin/conda shell.bash hook)"
-        conda activate ldsr
-        python ../resources/ldsr/ldsc/ldsc.py --l2 \
+        eval "$(conda shell.bash hook)"
+        conda activate {params.env}
+        python {params.script} --l2 \
           --bfile {params.bfile} --ld-wind-cm 1 \
           --annot {input.annot} \
           --out {params.ldscores} \
@@ -118,18 +121,21 @@ rule ldsr_strat_hg38_bl_v12:
             ldscores = strip_suffix(LDS["ldsr_ld_scores_hg38"]["output"],
                                     "{chr}.l2.ldscore.gz"),
             out_prefix = strip_suffix(LDS["ldsr_strat_hg38_bl_v12"]["output"],
-                                      ".results")
+                                      ".results"),
+            script = config["tools"]["ldsc"],
+            env = config["tools"]["ldsr_env"]
+    envmodules: config["envmodules"]["miniforge"]
     message: "Running stratified LDSR with {wildcards.cell_type} using hg38 refs, baseline 1.2, {wildcards.annot_type} and {wildcards.gwas} GWAS"
     benchmark: LDS["ldsr_strat_hg38_bl_v12"]["benchmark"]
     log:    LDS["ldsr_strat_hg38_bl_v12"]["log"]
     shell:
         """
-        eval "$(/apps/languages/miniforge3/24.3.0-0/bin/conda shell.bash hook)"
-        conda activate ldsr
+        eval "$(conda shell.bash hook)"
+        conda activate {params.env}
         echo "Starting Snakemake script..." > {log}
         which python >> {log}
 
-        python ../resources/ldsr/ldsc/ldsc.py --h2 {input.gwas} \
+        python {params.script} --h2 {input.gwas} \
           --w-ld-chr {params.weights} \
           --ref-ld-chr {params.baseline},{params.ldscores} \
           --overlap-annot \
